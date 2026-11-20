@@ -9,12 +9,13 @@ forms:
       additionalProperties: false
       properties:
         leave_type:
+          title: 종류
           type: string
           enum: [annual, half_am, half_pm, sick, special]
           x-labels: {annual: 연차, half_am: 오전 반차, half_pm: 오후 반차, sick: 병가, special: 경조사}
-        start_date: {type: string, format: date}
-        end_date: {type: string, format: date}
-        reason: {type: string, maxLength: 200}
+        start_date: {title: 시작일, type: string, format: date}
+        end_date: {title: 종료일, type: string, format: date}
+        reason: {title: 사유, type: string, maxLength: 200}
     effects:
       on_final_approval: deduct_leave_balance
       on_withdraw_after_approval: restore_leave_balance
@@ -30,11 +31,11 @@ forms:
       required: [amount, spent_on, merchant, purpose]
       additionalProperties: false
       properties:
-        amount: {type: integer, minimum: 1}
-        spent_on: {type: string, format: date}
-        merchant: {type: string, maxLength: 100}
-        business_no: {type: string, pattern: "^[0-9]{3}-[0-9]{2}-[0-9]{5}$"}
-        purpose: {type: string, maxLength: 200}
+        amount: {title: 금액, type: integer, minimum: 1}
+        spent_on: {title: 사용일, type: string, format: date}
+        merchant: {title: 가맹점, type: string, maxLength: 100}
+        business_no: {title: 사업자번호, type: string, pattern: "^[0-9]{3}-[0-9]{2}-[0-9]{5}$"}
+        purpose: {title: 목적, type: string, maxLength: 200}
     amount_field: amount
     approval_line:
       - when: {amount_lte: 1000000}
@@ -50,11 +51,11 @@ forms:
       required: [item_code, quantity, unit_price, total_amount, reason]
       additionalProperties: false
       properties:
-        item_code: {type: string}
-        quantity: {type: integer, minimum: 1}
-        unit_price: {type: integer, minimum: 0}
-        total_amount: {type: integer, minimum: 0, description: quantity × unit_price와 같아야 합니다}
-        reason: {type: string, maxLength: 200}
+        item_code: {title: 품목 코드, type: string}
+        quantity: {title: 수량, type: integer, minimum: 1}
+        unit_price: {title: 단가, type: integer, minimum: 0}
+        total_amount: {title: 합계, type: integer, minimum: 0, description: quantity × unit_price와 같아야 합니다}
+        reason: {title: 사유, type: string, maxLength: 200}
     amount_field: total_amount
     approval_line:
       - when: {amount_lte: 5000000}
