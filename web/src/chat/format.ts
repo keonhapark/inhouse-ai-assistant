@@ -3,7 +3,22 @@ import type { Schemas } from '../api/client'
 type Change = Schemas['Change']
 export type ChangeRow = { field: string; before?: string; after?: string }
 
-const text = (v: unknown): string => (v === null || v === undefined ? '없음' : typeof v === 'object' ? JSON.stringify(v) : String(v))
+const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/
+const ymdhm = new Intl.DateTimeFormat('ko-KR', {
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+function text(v: unknown): string {
+  if (v === null || v === undefined) return '없음'
+  // 날짜·시각 문자열은 현지 시각으로 보여 줍니다.
+  if (typeof v === 'string' && ISO_DATETIME.test(v)) return ymdhm.format(new Date(v))
+  return typeof v === 'object' ? JSON.stringify(v) : String(v)
+}
 
 /** 미리보기의 바뀌는 값을 필드별 "전 → 후"로 폅니다. 같은 값은 뺍니다. */
 export function changeRows(c: Change): ChangeRow[] {

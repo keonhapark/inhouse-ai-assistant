@@ -28,6 +28,15 @@ export const employees: Employee[] = [
   },
 ]
 
+/** 로그인하지 않는 직원(결재선·대리인용). 이름은 지어낸 것입니다. */
+export const directory: Record<string, { name: string; unitName: string }> = {
+  'emp-1001': { name: '한지우', unitName: '인사팀' },
+  'emp-1002': { name: '박하늘', unitName: '인사팀' },
+  'emp-2001': { name: '서도윤', unitName: '인사팀' },
+  'emp-2002': { name: '윤서진', unitName: '재무팀' },
+  'emp-3001': { name: '임채원', unitName: '경영지원본부' },
+}
+
 export const agents: Schemas['AgentInfo'][] = [
   {
     id: 'assistant',

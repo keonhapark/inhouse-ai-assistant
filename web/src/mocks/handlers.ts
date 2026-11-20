@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import type { Schemas } from '../api/client'
 import { chatHandlers } from './chat'
+import { inboxHandlers } from './inbox'
 import { problem } from './problem'
 import { agents, employeeForToken, employees, MOCK_PASSWORD, tokenFor } from './data'
 
@@ -38,4 +39,5 @@ export const handlers = [
   }),
 
   ...chatHandlers,
+  ...inboxHandlers,
 ]

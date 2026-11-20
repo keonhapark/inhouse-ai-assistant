@@ -4,6 +4,7 @@ import { useAuth } from './auth/useAuth'
 import { DesignPage } from './pages/DesignPage'
 import { AppShell } from './pages/AppShell'
 import { ChatPage } from './chat/ChatPage'
+import { InboxPage } from './inbox/InboxPage'
 import { LoginPage } from './pages/LoginPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -27,6 +28,7 @@ export function App() {
         }
       >
         <Route path="/" element={<ChatPage />} />
+        <Route path="/inbox" element={<InboxPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
