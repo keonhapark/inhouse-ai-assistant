@@ -1,5 +1,6 @@
 package io.inhouse.erp.approval;
 
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,4 +37,11 @@ public interface ApprovalDocumentRepository extends JpaRepository<ApprovalDocume
             where s.delegationId = :delegationId
             order by d.createdAt desc""")
     List<ApprovalDocument> findActedUnderDelegation(@Param("delegationId") String delegationId);
+
+    /** 지금 단계 결재자가 approvers 중 하나인 진행 중 문서(대결 결재함). */
+    @Query("""
+            select d from ApprovalDocument d join d.steps s
+            where d.status = 'in_progress' and s.stepOrder = d.currentStep and s.approverId in :approvers
+            order by d.createdAt desc""")
+    List<ApprovalDocument> findInProgressAwaiting(@Param("approvers") Collection<String> approvers);
 }
