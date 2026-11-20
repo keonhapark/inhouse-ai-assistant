@@ -54,10 +54,11 @@ def test_긴_절이_여러_청크로_나뉘어도_모든_청크에_표지가_있
     assert all(c.text.endswith(MARKER_PREFIX + "MK-LONG-1") for c in chunks)
 
 
-@pytest.mark.parametrize("name", ["RAG_MARKERS_FILE", "RAG_EXTRA_DOCS"])
-def test_환경_변수가_빈_값이면_실패한다(pack, docs, name):
-    with pytest.raises(EvalDocsError):
-        apply_eval_files(docs, pack, {name: "  "})
+@pytest.mark.parametrize("value", ["", "  "])
+def test_환경_변수가_빈_값이면_꺼짐이다(pack, docs, value):
+    """compose가 `${VAR:-}`로 늘 빈 값을 넘겨도 기본 실행이 시작해야 합니다(#90)."""
+    env = {"RAG_MARKERS_FILE": value, "RAG_EXTRA_DOCS": value}
+    assert apply_eval_files(docs, pack, env) == chunk_documents(docs)
 
 
 @pytest.mark.parametrize(
