@@ -433,6 +433,16 @@ def build_router(chat: ChatService) -> APIRouter:
                   "callable": grant_matches(a.callable_by, who)} for a in chat.registry.all()]
         return JSONResponse({"items": [a for a in items if a["callable"]]})
 
+    @api.get("/agent-registry")
+    async def agent_registry(request: Request) -> JSONResponse:
+        """부를 수 없는 에이전트까지 모두 보여 줍니다. 팩 단계 밖 에이전트는 등록부에 싣지 않았으므로 빠집니다(#170)."""
+        who = await requester(request)
+        reg = chat.registry
+        body: dict[str, Any] = {"items": [reg.registry_entry(a, who) for a in reg.all()]}
+        if reg.fallback_agent is not None:
+            body["fallbackAgentId"] = reg.fallback_agent
+        return JSONResponse(body)
+
     @api.get("/conversations")
     async def list_conversations(request: Request) -> JSONResponse:
         who = await requester(request)
