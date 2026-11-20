@@ -42,6 +42,7 @@ class RunGraphState(TypedDict, total=False):
     current: dict[str, Any] | None
     pending: dict[str, Any] | None
     tainted: bool
+    conversation_tainted: bool
     actions: list[dict[str, Any]]
     undo_notes: list[str]
     citations: list[dict[str, Any]]
@@ -51,6 +52,7 @@ class RunGraphState(TypedDict, total=False):
     steps: int
 
 
+# conversation_tainted는 턴마다 풀지 않습니다(대화가 끝날 때까지 남음).
 TURN_RESET: RunGraphState = {
     "queue": [], "current": None, "pending": None, "tainted": False, "actions": [], "undo_notes": [],
     "citations": [], "blocked": [], "final": "", "status": "", "steps": 0,
@@ -163,10 +165,11 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
             return after_tool(state, {"messages": [*state["messages"], msg]})
         spec = ctx.spec(name)
         if spec is None or not visible_to_model(spec.meta, state["condition"]):
-            d_action, reason = "blocked", f"{name}은 이 대화에서 쓸 수 없는 도구입니다"
+            d_action, reason, undo_note = "blocked", f"{name}은 이 대화에서 쓸 수 없는 도구입니다", False
         else:
-            d = decide(ctx.agent, spec.meta, args, state["condition"], state.get("tainted", False), deps.wide)
-            d_action, reason = d.action, d.reason
+            d = decide(ctx.agent, spec.meta, args, state["condition"], state.get("tainted", False), deps.wide,
+                       state.get("conversation_tainted", False))
+            d_action, reason, undo_note = d.action, d.reason, d.undo_note
         if d_action in ("blocked", "deny"):
             deps.audit.write(tool_blocked(state["requesterId"], ctx.agent.id, state["conversationId"], name, args,
                                           spec.meta.risk if spec else None,
@@ -174,7 +177,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
             msg = tool_message(call, {"error": "blocked", "reason": reason})
             return after_tool(state, {"messages": [*state["messages"], msg],
                                       "blocked": [*state.get("blocked", []), reason]})
-        current = {"call": call, "args": args, "action": d_action}
+        current = {"call": call, "args": args, "action": d_action, "undo_note": undo_note}
         return Command(update={"current": current}, goto="preview" if d_action == "confirm" else "execute")
 
     async def preview(state: RunGraphState, runtime: Runtime[RunContext]) -> Command:
@@ -220,11 +223,12 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
             trusted = output_trusted(spec.service, out.payload, state["requesterId"], deps.trusted_docs)
             if not trusted:
                 update["tainted"] = True
+                update["conversation_tainted"] = True
             if "actionId" in out.payload:
                 action = {"tool": name, "actionId": out.payload["actionId"],
                           "summary": out.payload.get("summary", ""), "undoable": bool(out.payload.get("undoable"))}
                 update["actions"] = [*state.get("actions", []), action]
-                if cur["action"] == "auto_with_undo" and action["undoable"]:
+                if cur.get("undo_note") and action["undoable"]:
                     update["undo_notes"] = [*state.get("undo_notes", []),
                                             f"되돌릴 수 있습니다: {action['summary']} (행동 {action['actionId']})"]
             if spec.service == "rag":
@@ -262,8 +266,9 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
 def prepare_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """새 턴을 시작하기 전에 이전 기록을 고칩니다.
 
-    - 신뢰 불가 도구 출력의 본문은 걷어 냅니다. 턴이 바뀌면 신뢰 표시가 풀리므로, 앞 턴에서 읽은 지시가
-      다음 턴의 user_direct 도구를 움직이지 못하게 하려는 것입니다.
+    - 신뢰 불가 도구 출력의 본문은 걷어 냅니다. 앞 턴에서 읽은 지시가 다음 턴의 모델 판단에 남지 않게 하려는
+      것입니다. 모델이 쓴 문장과 막힌 호출의 인자는 남으므로, 그 대화의 user_direct 도구는 다음 턴부터
+      승인을 받습니다(conversation_tainted, policy.decide).
     - 응답이 없는 도구 호출(중간에 끊긴 턴)에는 건너뜀 응답을 채웁니다.
     """
     out: list[dict[str, Any]] = []
