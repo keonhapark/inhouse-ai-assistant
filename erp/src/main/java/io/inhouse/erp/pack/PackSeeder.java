@@ -11,6 +11,7 @@ import io.inhouse.erp.org.OrgUnit;
 import io.inhouse.erp.org.OrgUnitRepository;
 import io.inhouse.erp.room.Room;
 import io.inhouse.erp.room.RoomRepository;
+import io.inhouse.erp.ticket.TicketFixtures;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 시작할 때 팩을 DB에 적재합니다. 조직·직원·양식·회의실은 팩이 기준이라 매번 덮어쓰고,
- * 연차 잔여는 결재로 바뀌는 값이라 없을 때만 넣습니다.
+ * 연차 잔여와 IT 티켓은 쓰면서 바뀌는 값이라 없을 때만 넣습니다.
  */
 @Component
 public class PackSeeder implements ApplicationRunner {
@@ -37,9 +38,11 @@ public class PackSeeder implements ApplicationRunner {
     private final ApprovalFormRepository forms;
     private final RoomRepository rooms;
     private final LeaveBalanceRepository balances;
+    private final TicketFixtures tickets;
 
     public PackSeeder(Pack pack, OrgPolicy policy, OrgUnitRepository units, EmployeeRepository employees,
-                      ApprovalFormRepository forms, RoomRepository rooms, LeaveBalanceRepository balances) {
+                      ApprovalFormRepository forms, RoomRepository rooms, LeaveBalanceRepository balances,
+                      TicketFixtures tickets) {
         this.pack = pack;
         this.policy = policy;
         this.units = units;
@@ -47,6 +50,7 @@ public class PackSeeder implements ApplicationRunner {
         this.forms = forms;
         this.rooms = rooms;
         this.balances = balances;
+        this.tickets = tickets;
     }
 
     @Override
@@ -90,7 +94,9 @@ public class PackSeeder implements ApplicationRunner {
                 added++;
             }
         }
-        log.info("팩 {} 적재: 조직 {}, 직원 {}, 양식 {}, 회의실 {}, 새 연차 잔여 {}", pack.id(), pack.units().size(),
-                pack.employees().size(), pack.forms().size(), pack.rooms().size(), added);
+        int newTickets = tickets.seed(pack.tickets());
+        log.info("팩 {} 적재: 조직 {}, 직원 {}, 양식 {}, 회의실 {}, 새 연차 잔여 {}, 새 티켓 {}", pack.id(),
+                pack.units().size(), pack.employees().size(), pack.forms().size(), pack.rooms().size(), added,
+                newTickets);
     }
 }

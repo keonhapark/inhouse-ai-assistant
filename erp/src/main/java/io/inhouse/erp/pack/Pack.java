@@ -2,6 +2,7 @@ package io.inhouse.erp.pack;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,8 @@ public record Pack(
         List<FormDef> forms,
         List<EmployeeDef> employees,
         List<RoomDef> rooms,
-        List<BalanceDef> balances) {
+        List<BalanceDef> balances,
+        List<TicketDef> tickets) {
 
     public record Grade(String id, String name, int rank) {}
 
@@ -34,8 +36,8 @@ public record Pack(
     public record AccessTagDef(String id, String name, Grant grant) {}
 
     /** org.yaml erp_roles: 코어가 권한 판단에 쓰는 역할 ID. 항목이 없으면 hr_staff·auditor입니다. */
-    public record ErpRoles(String hr, String auditor) {
-        public static final ErpRoles DEFAULT = new ErpRoles("hr_staff", "auditor");
+    public record ErpRoles(String hr, String auditor, String ticketHandler) {
+        public static final ErpRoles DEFAULT = new ErpRoles("hr_staff", "auditor", "it_admin");
     }
 
     public record DelegationPolicy(int maxPeriodDays, List<String> registrableBy) {}
@@ -46,7 +48,7 @@ public record Pack(
     /** 양식 중 stage가 maxStage 이하인 것만 켠 팩. 나머지 설정과 고정 데이터는 그대로입니다. */
     public Pack withFormsUpTo(int maxStage) {
         return new Pack(id, stage, timezone, grades, units, roles, accessTags, erpRoles, delegationPolicy,
-                forms.stream().filter(f -> f.stage() <= maxStage).toList(), employees, rooms, balances);
+                forms.stream().filter(f -> f.stage() <= maxStage).toList(), employees, rooms, balances, tickets);
     }
 
 
@@ -66,6 +68,12 @@ public record Pack(
     public record RoomDef(String id, String name, int floor, int capacity) {}
 
     public record BalanceDef(String employeeId, int year, double annualTotal, double annualUsed) {}
+
+    /** 선택 파일 fixtures/tickets.json의 지어낸 IT 티켓. */
+    public record TicketDef(String id, String requesterId, String category, String priority, String title,
+                            String description, String status, OffsetDateTime createdAt, List<CommentDef> comments) {}
+
+    public record CommentDef(String authorId, String body, OffsetDateTime createdAt) {}
 
     public Optional<UnitDef> unit(String id) {
         return units.stream().filter(u -> u.id().equals(id)).findFirst();

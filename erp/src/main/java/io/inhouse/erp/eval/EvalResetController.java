@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 평가 전용 초기화. ERP_EVAL_RESET=1로 띄웠을 때만 빈이 생기고, 아니면 경로가 없어 404입니다.
- * 결재 문서·대결·예약·알림·행동·멱등 키·감사를 비우고 연차 잔여를 팩 고정 데이터로 다시 넣습니다.
+ * 결재 문서·대결·예약·IT 티켓·알림·행동·멱등 키·감사를 비우고 연차 잔여와 티켓을 팩 고정 데이터로 다시 넣습니다.
  */
 @RestController
 @ConditionalOnProperty(name = "erp.eval-reset", havingValue = "1")
@@ -37,7 +37,8 @@ public class EvalResetController {
     @Transactional
     public ResponseEntity<Void> reset() {
         jdbc.execute("truncate approval_step, approval_document, delegation, room_reservation, notification, "
-                + "action, idempotency_record, audit_event, leave_balance restart identity");
+                + "ticket_status_change, ticket_comment, ticket, action, idempotency_record, audit_event, leave_balance "
+                + "restart identity");
         seeder.run(null);
         return ResponseEntity.noContent().build();
     }

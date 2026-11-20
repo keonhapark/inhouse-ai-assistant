@@ -8,6 +8,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -35,6 +36,8 @@ public final class PackLoader {
         JsonNode emps = read(JSON, dir.resolve("fixtures/employees.json"));
         JsonNode rooms = read(JSON, dir.resolve("fixtures/rooms.json"));
         JsonNode bals = read(JSON, dir.resolve("fixtures/leave_balances.json"));
+        Path ticketsFile = dir.resolve("fixtures/tickets.json");
+        JsonNode tickets = Files.exists(ticketsFile) ? read(JSON, ticketsFile) : JSON.createObjectNode();
 
         String tz = pack.path("company").path("timezone").asText("Asia/Seoul");
         JsonNode policy = org.path("delegation_policy");
@@ -55,7 +58,8 @@ public final class PackLoader {
                 list(org.path("access_tags"), t -> new Pack.AccessTagDef(t.path("id").asText(),
                         t.path("name").asText(), grant(t.path("grant")))),
                 new Pack.ErpRoles(org.path("erp_roles").path("hr").asText(Pack.ErpRoles.DEFAULT.hr()),
-                        org.path("erp_roles").path("auditor").asText(Pack.ErpRoles.DEFAULT.auditor())),
+                        org.path("erp_roles").path("auditor").asText(Pack.ErpRoles.DEFAULT.auditor()),
+                        org.path("erp_roles").path("ticket_handler").asText(Pack.ErpRoles.DEFAULT.ticketHandler())),
                 new Pack.DelegationPolicy(policy.path("max_period_days").asInt(30),
                         strings(policy.path("registrable_by"))),
                 list(forms.path("forms"), PackLoader::form),
@@ -67,7 +71,16 @@ public final class PackLoader {
                         r.path("floor").asInt(), r.path("capacity").asInt())),
                 list(bals.path("balances"), b -> new Pack.BalanceDef(b.path("employee_id").asText(),
                         b.path("year").asInt(), b.path("annual_total").asDouble(),
-                        b.path("annual_used").asDouble())));
+                        b.path("annual_used").asDouble())),
+                list(tickets.path("tickets"), PackLoader::ticket));
+    }
+
+    private static Pack.TicketDef ticket(JsonNode t) {
+        return new Pack.TicketDef(t.path("id").asText(), t.path("requester_id").asText(), t.path("category").asText(),
+                t.path("priority").asText(), t.path("title").asText(), t.path("description").asText(),
+                t.path("status").asText(), OffsetDateTime.parse(t.path("created_at").asText()),
+                list(t.path("comments"), c -> new Pack.CommentDef(c.path("author_id").asText(),
+                        c.path("body").asText(), OffsetDateTime.parse(c.path("created_at").asText()))));
     }
 
     private static Pack.FormDef form(JsonNode f) {
