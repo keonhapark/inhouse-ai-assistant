@@ -155,6 +155,7 @@ class Caller:
     employee_id: str | None
     agent: AgentEntry | None
     conversation_id: str | None
+    token_id: str | None = None  # 위임 토큰 jti. 감사 이벤트 actor.delegationTokenId로 발급 기록과 잇습니다
 
     @property
     def via_token(self) -> bool:
@@ -223,7 +224,7 @@ class Egress:
         agent = self.registry.get(claims["agt"])
         if agent is None:
             raise ProblemError(403, "forbidden", "등록부에 없는 에이전트입니다", claims["agt"])
-        return Caller(claims["sub"], agent, claims["cid"])
+        return Caller(claims["sub"], agent, claims["cid"], claims.get("jti"))
 
     @staticmethod
     async def _body(request: Request) -> dict[str, Any]:
@@ -499,7 +500,7 @@ class Egress:
                          agent_id=caller.agent.id if caller.agent else None, via_token=caller.via_token,
                          conversation_id=caller.conversation_id,
                          model=dict(model) if model is not None else None, result=result,
-                         problem_type=problem_type, detail=detail)
+                         problem_type=problem_type, detail=detail, delegation_token_id=caller.token_id)
 
     def _estimate_cost(self, alias: str, usage: dict[str, int] | None) -> float | None:
         """LiteLLM 비용 머리글이 없을 때(스트림) 별칭 단가와 usage로 계산합니다. 모르면 None."""

@@ -78,7 +78,8 @@ def test_external_allowed_agent_sends_and_records_body(client, app, token_for, l
 def test_no_token_means_local_only(client, app, litellm):
     assert client.post("/v1/chat/completions", json={"model": "external", "messages": MSG}).status_code == 403
     assert client.post("/v1/chat/completions", json={"model": "local", "messages": MSG}).status_code == 200
-    assert _audit(app)[-1]["actor"] == {"employeeId": None, "viaDelegationToken": False, "agentId": None}
+    assert _audit(app)[-1]["actor"] == {"employeeId": None, "viaDelegationToken": False, "agentId": None,
+                                        "delegationTokenId": None}
 
 
 def test_token_is_not_forwarded_and_scrubbed_from_body(client, app, token_for, litellm):
@@ -660,3 +661,19 @@ def test_connect_failure_is_not_in_egress_log(client, app, token_for, litellm):
     client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
                 json={"model": "external", "messages": MSG})
     assert app.state.audit.egress.read_all() == []             # 나가지 않은 요청
+# ---------- 감사 이벤트의 위임 토큰 ID(#179) ----------
+def test_delegated_requests_carry_token_jti(client, app, login, issue, staff_no, litellm):
+    import jwt as _jwt
+
+    _, external_ok = _agent_ids(app)
+    issued = issue(login(staff_no), external_ok, "conv-9")
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": issued.token},
+                json={"model": "external", "messages": PII_MSG})                     # llm.redacted + llm.request
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": issued.token},
+                json={"model": "nope", "messages": MSG})                             # 거절도
+    jti = _jwt.decode(issued.token, options={"verify_signature": False})["jti"]
+    evs = [e for e in _audit(app) if e["actor"]["viaDelegationToken"]]
+    assert {e["kind"] for e in evs} >= {"llm.request", "llm.redacted"}
+    assert all(e["actor"]["delegationTokenId"] == jti for e in evs)
+    issued_ev = [e for e in _audit(app) if e["kind"] == "auth.delegation_token_issued"]
+    assert all(e["actor"]["delegationTokenId"] is None for e in issued_ev)  # 발급은 토큰으로 한 일이 아님
