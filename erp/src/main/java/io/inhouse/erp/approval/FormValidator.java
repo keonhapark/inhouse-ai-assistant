@@ -1,0 +1,49 @@
+package io.inhouse.erp.approval;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
+import com.networknt.schema.ValidationMessage;
+import io.inhouse.erp.common.ApiException;
+import io.inhouse.erp.pack.Pack;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.stereotype.Component;
+
+/** 양식 입력(fields)을 팩 forms.yaml의 JSON Schema(2020-12)로 검사합니다. 어기면 422 form-validation-failed입니다. */
+@Component
+public class FormValidator {
+
+    private final JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
+    private final Map<String, JsonSchema> cache = new ConcurrentHashMap<>();
+
+    public void validate(Pack.FormDef form, JsonNode fields) {
+        if (fields == null || !fields.isObject()) {
+            throw new ApiException(422, "form-validation-failed", "fields는 객체여야 합니다",
+                    List.of(new ApiException.FieldError("fields", "object required")));
+        }
+        JsonSchema schema = cache.computeIfAbsent(form.id(), id -> factory.getSchema(form.fields()));
+        List<ApiException.FieldError> errors = schema.validate(fields).stream()
+                .sorted(Comparator.comparing(ValidationMessage::getMessage))
+                .map(m -> new ApiException.FieldError(field(m), m.getMessage()))
+                .toList();
+        if (!errors.isEmpty()) {
+            throw new ApiException(422, "form-validation-failed", "양식 입력이 올바르지 않습니다", errors);
+        }
+    }
+
+    private static String field(ValidationMessage m) {
+        if ("required".equals(m.getType()) && m.getProperty() != null) {
+            return m.getProperty();
+        }
+        String loc = m.getInstanceLocation().toString();
+        String f = loc.startsWith("$.") ? loc.substring(2) : loc.equals("$") ? "" : loc;
+        if (f.isEmpty() && m.getProperty() != null) {
+            return m.getProperty();
+        }
+        return f.isEmpty() ? m.getType() : f;
+    }
+}
