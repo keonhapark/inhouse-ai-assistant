@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.inhouse.erp.PostgresTestBase;
+import io.inhouse.erp.common.OperationId;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-/** 구현한 모든 경로가 계약(erp.yaml)에 있고, scope·사람 화면 전용 표시가 계약과 같은지 봅니다. */
+/** 구현한 모든 경로가 계약(erp.yaml)에 있고, operationId·scope·사람 화면 전용 표시가 계약과 같은지 봅니다. */
 class ContractScopeTest extends PostgresTestBase {
 
     @Autowired
@@ -48,6 +49,11 @@ class ContractScopeTest extends PostgresTestBase {
                         continue;
                     }
                     checked++;
+                    OperationId opId = hm.getMethodAnnotation(OperationId.class);
+                    String wantOp = op.path("operationId").asText(null);
+                    if (opId == null || !opId.value().equals(wantOp)) {
+                        problems.add(where + ": @OperationId " + (opId == null ? null : opId.value()) + " != " + wantOp);
+                    }
                     RequiredScope rs = hm.getMethodAnnotation(RequiredScope.class);
                     String want = op.path("x-required-scope").asText(null);
                     boolean humanOnly = op.path("x-human-only").asBoolean(false);

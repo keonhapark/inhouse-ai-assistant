@@ -2,6 +2,7 @@ package io.inhouse.erp.auth;
 
 import io.inhouse.erp.audit.AuditService;
 import io.inhouse.erp.common.ApiException;
+import io.inhouse.erp.common.OperationId;
 import io.inhouse.erp.org.Employee;
 import io.inhouse.erp.org.EmployeeRepository;
 import io.inhouse.erp.org.OrgService;
@@ -39,6 +40,7 @@ public class LoginController {
 
     /** 데모 로그인: 사번과 공통 비밀번호(ERP_DEMO_PASSWORD). 틀리면 사번이 있는지 알려 주지 않고 401입니다. */
     @PostMapping("/auth/login")
+    @OperationId("login")
     @PublicEndpoint
     public LoginResponse login(@RequestBody LoginRequest req) {
         String given = req.password() == null ? "" : req.password();

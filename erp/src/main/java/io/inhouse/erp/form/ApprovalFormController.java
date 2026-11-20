@@ -1,7 +1,8 @@
 package io.inhouse.erp.form;
 
-import io.inhouse.erp.auth.RequiredScope;
 import com.fasterxml.jackson.databind.JsonNode;
+import io.inhouse.erp.auth.RequiredScope;
+import io.inhouse.erp.common.OperationId;
 import io.inhouse.erp.org.OrgViews.Items;
 import io.inhouse.erp.pack.Pack;
 import java.util.Set;
@@ -24,6 +25,7 @@ public class ApprovalFormController {
     }
 
     @GetMapping("/approval-forms")
+    @OperationId("listApprovalForms")
     @RequiredScope("approval:read")
     @Transactional(readOnly = true)
     public Items<FormView> list() {

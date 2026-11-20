@@ -6,7 +6,6 @@ import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Ids;
 import io.inhouse.erp.notification.Notifications;
-import io.inhouse.erp.org.Employee;
 import io.inhouse.erp.org.EmployeeRepository;
 import io.inhouse.erp.org.OrgService;
 import io.inhouse.erp.pack.Pack;
@@ -137,11 +136,11 @@ public class DelegationService {
 
     // ---------- 해지 ----------
 
-    /** 위임자 본인이나 인사 담당만 해지합니다. 이미 해지됐거나 끝났으면 409입니다. */
+    /** 위임자 본인이나 대신 등록할 수 있는 역할(팩 registrable_by, 예: 인사 담당)만 해지합니다. 이미 해지됐거나 끝났으면 409입니다. */
     public WriteOutcome revoke(ErpPrincipal p, String delegationId) {
         Delegation d = repo.lockById(delegationId).filter(x -> canSee(p.employeeId(), x))
                 .orElseThrow(() -> ApiException.notFound("위임이 없습니다"));
-        if (!p.employeeId().equals(d.getDelegatorId()) && !org.hasRole(p.employeeId(), OrgService.HR_ROLE)) {
+        if (!p.employeeId().equals(d.getDelegatorId()) && !canRegisterForOthers(p.employeeId())) {
             throw ApiException.forbidden("위임자 본인이나 인사 담당만 해지합니다");
         }
         OffsetDateTime now = OffsetDateTime.now(clock);
@@ -164,7 +163,7 @@ public class DelegationService {
             case "delegator" -> repo.findByDelegatorIdOrderByCreatedAtDesc(employeeId);
             case "delegate" -> repo.findByDelegateIdOrderByCreatedAtDesc(employeeId);
             case "all" -> {
-                if (!org.hasRole(employeeId, OrgService.HR_ROLE)) {
+                if (!canRegisterForOthers(employeeId)) {
                     throw ApiException.forbidden("인사 담당만 전체를 봅니다");
                 }
                 yield repo.findAllByOrderByCreatedAtDesc();
@@ -177,7 +176,7 @@ public class DelegationService {
                 .map(this::view).toList();
     }
 
-    /** 위임자, 대리인, 등록한 사람, 인사 담당만 봅니다. 그 밖에는 404입니다. */
+    /** 위임자, 대리인, 등록한 사람, 대신 등록할 수 있는 역할(인사 담당)만 봅니다. 그 밖에는 404입니다. */
     @Transactional(readOnly = true)
     public Delegation visible(String employeeId, String delegationId) {
         return repo.findById(delegationId).filter(d -> canSee(employeeId, d))
@@ -194,14 +193,14 @@ public class DelegationService {
 
     private boolean canSee(String employeeId, Delegation d) {
         return employeeId.equals(d.getDelegatorId()) || employeeId.equals(d.getDelegateId())
-                || employeeId.equals(d.getRegisteredBy()) || org.hasRole(employeeId, OrgService.HR_ROLE);
+                || employeeId.equals(d.getRegisteredBy()) || canRegisterForOthers(employeeId);
     }
 
+    /** 팩 registrable_by의 역할(self 제외). 대신 등록, 해지, 전체 조회, 열람을 같은 역할로 판단합니다. */
     private boolean canRegisterForOthers(String employeeId) {
-        Employee e = org.employee(employeeId);
         return pack.delegationPolicy().registrableBy().stream()
                 .filter(r -> !"self".equals(r))
-                .anyMatch(e::hasRole);
+                .anyMatch(r -> org.hasRole(employeeId, r));
     }
 
     private String name(String employeeId) {

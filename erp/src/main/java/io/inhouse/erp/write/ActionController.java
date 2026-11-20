@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.auth.RequiredScope;
 import io.inhouse.erp.common.ApiException;
+import io.inhouse.erp.common.OperationId;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -45,6 +46,7 @@ public class ActionController {
     }
 
     @GetMapping("/actions/{actionId}")
+    @OperationId("getAction")
     @RequiredScope("action:read")
     public ActionView get(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String actionId) {
         return ActionView.of(own(p, actionId));
@@ -52,6 +54,7 @@ public class ActionController {
 
     /** 행동을 한 사람(위임 토큰이면 토큰 주인)만 되돌립니다. 남의 행동은 있는지도 알려 주지 않고 404입니다. */
     @PostMapping("/actions/{actionId}/undo")
+    @OperationId("undoAction")
     @RequiredScope("action:undo")
     public ResponseEntity<Object> undo(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String actionId,
                                        @RequestParam(defaultValue = "false") boolean dryRun,
