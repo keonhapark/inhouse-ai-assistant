@@ -149,6 +149,9 @@ class WriteCommonTest extends PostgresTestBase {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.type").value("urn:problem:idempotency-key-reused"));
         assertThat(pending(emp)).isEqualByComparingTo("1");
+        Integer denied = jdbc.queryForObject("select count(*) from audit_event where actor_id = ? and kind = 'erp.denied'"
+                + " and event->>'problemType' = 'urn:problem:idempotency-key-reused'", Integer.class, emp);
+        assertThat(denied).isEqualTo(1);
     }
 
     @Test
@@ -162,19 +165,15 @@ class WriteCommonTest extends PostgresTestBase {
         assertThat(again).isNotEqualTo(first);
     }
 
-    @Test
-    void concurrentSameKeyRunsOnce() throws Exception {
-        String emp = someone();
-        String k = key();
-        int n = 6;
+    /** 같은 요청 n개를 동시에 보내고, 모두 201이며 actionId가 하나인지 봅니다. */
+    private Set<String> concurrently(int n, String path, String emp, String k, Object body) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(n);
         CountDownLatch go = new CountDownLatch(1);
         List<Future<MockHttpServletResponse>> futures = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             Callable<MockHttpServletResponse> c = () -> {
                 go.await();
-                return mvc.perform(write(WriteProbeController.PATH, emp, k, java.util.Map.of("days", 1)))
-                        .andReturn().getResponse();
+                return mvc.perform(write(path, emp, k, body)).andReturn().getResponse();
             };
             futures.add(pool.submit(c));
         }
@@ -182,12 +181,36 @@ class WriteCommonTest extends PostgresTestBase {
         Set<String> ids = new java.util.HashSet<>();
         for (Future<MockHttpServletResponse> f : futures) {
             MockHttpServletResponse r = f.get();
-            assertThat(r.getStatus()).isEqualTo(201);
+            assertThat(r.getStatus()).as(r.getContentAsString()).isEqualTo(201);
             ids.add(json(r).path("actionId").asText());
         }
         pool.shutdown();
-        assertThat(ids).hasSize(1);
+        return ids;
+    }
+
+    @Test
+    void concurrentSameKeyRunsOnce() throws Exception {
+        String emp = someone();
+        assertThat(concurrently(6, WriteProbeController.PATH, emp, key(), java.util.Map.of("days", 1))).hasSize(1);
         assertThat(pending(emp)).isEqualByComparingTo("1");
+    }
+
+    @Test
+    void concurrentSameKeyUndoReplaysInsteadOf409() throws Exception {
+        String emp = someone();
+        String actionId = add(emp, WriteProbeController.PATH).path("actionId").asText();
+        assertThat(concurrently(4, "/actions/" + actionId + "/undo", emp, key(), java.util.Map.of())).hasSize(1);
+        assertThat(pending(emp)).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void concurrentReuseOfExpiredKeyRunsOnce() throws Exception {
+        String emp = someone();
+        String k = key();
+        mvc.perform(write(WriteProbeController.PATH, emp, k, java.util.Map.of("days", 1))).andExpect(status().isCreated());
+        jdbc.update("update idempotency_record set created_at = now() - interval '25 hours' where owner_id = ?", emp);
+        assertThat(concurrently(4, WriteProbeController.PATH, emp, k, java.util.Map.of("days", 1))).hasSize(1);
+        assertThat(pending(emp)).isEqualByComparingTo("2");
     }
 
     @Test

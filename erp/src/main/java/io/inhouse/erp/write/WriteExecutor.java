@@ -89,39 +89,50 @@ public class WriteExecutor {
         ErpPrincipal p = req.principal();
         IdempotencyRecord.Key recordKey = new IdempotencyRecord.Key(p.employeeId(), key);
         String hash = requestHash(req);
-        Optional<ResponseEntity<Object>> replay = replay(recordKey, hash);
-        if (replay.isPresent()) {
-            return replay.get();
-        }
         try {
+            Optional<ResponseEntity<Object>> replay = replay(recordKey, hash);
+            if (replay.isPresent()) {
+                return replay.get();
+            }
             JsonNode body = inTx(() -> tx.execute(status -> {
-                Optional<IdempotencyRecord> existing = idempotency.findById(recordKey);
-                if (existing.isPresent()) {
-                    if (!expired(existing.get())) {
-                        // 처음 확인한 뒤 같은 키의 다른 요청이 먼저 끝났습니다.
-                        throw new AlreadyRecorded();
-                    }
-                    idempotency.delete(existing.get());
-                    actions.flush();
-                }
+                IdempotencyRecord claim = claim(recordKey, hash);
                 WriteOutcome out = command.get();
                 actions.flush();
-                return record(req, out, recordKey, hash);
+                return record(req, out, claim);
             }));
             return ResponseEntity.status(201).body(body);
+        } catch (AlreadyClaimed e) {
+            // 같은 키의 다른 요청이 먼저 커밋했습니다. 그 응답(또는 본문이 다르면 422)을 돌려줍니다.
+            try {
+                return replay(recordKey, hash).orElseThrow();
+            } catch (ApiException denied) {
+                auditDenied(req, denied);
+                throw denied;
+            }
         } catch (ApiException e) {
-            audit.recordSeparately(p, "erp.denied", req.operation(), e.status() == 409 ? "conflict" : "denied",
-                    new AuditService.Extra(null, null, null, req.undoOf()), e.code(), e.detail());
+            auditDenied(req, e);
             throw e;
-        } catch (AlreadyRecorded e) {
-            return replay(recordKey, hash).orElseThrow();
-        } catch (DataIntegrityViolationException e) {
-            // 같은 키로 동시에 들어온 요청: 먼저 끝난 쪽의 응답을 돌려줍니다.
-            return replay(recordKey, hash).orElseThrow(() -> e);
         }
     }
 
-    private JsonNode record(WriteRequest req, WriteOutcome out, IdempotencyRecord.Key recordKey, String hash) {
+    /**
+     * 멱등 키를 먼저 차지합니다. 기록 행을 업무보다 먼저 INSERT하므로 같은 키의 요청은 기본 키에서 줄을 서고,
+     * 먼저 온 요청이 커밋하면 뒤 요청은 충돌로 끝나 그 응답을 돌려받습니다. 먼저 온 요청이 실패해 되돌려지면
+     * 뒤 요청이 이어서 실행합니다. 보관 기간이 지난 같은 키는 지우고 새로 씁니다.
+     */
+    private IdempotencyRecord claim(IdempotencyRecord.Key recordKey, String hash) {
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        idempotency.deleteExpired(recordKey.ownerId(), recordKey.idemKey(), now.minus(KEY_TTL));
+        IdempotencyRecord claim = IdempotencyRecord.claim(recordKey, hash, now, mapper.createObjectNode());
+        try {
+            idempotency.saveAndFlush(claim);
+        } catch (DataIntegrityViolationException e) {
+            throw new AlreadyClaimed();
+        }
+        return claim;
+    }
+
+    private JsonNode record(WriteRequest req, WriteOutcome out, IdempotencyRecord claim) {
         ErpPrincipal p = req.principal();
         OffsetDateTime now = OffsetDateTime.now(clock);
         Action action = new Action(Ids.next("act"), req.operation(), p.employeeId(), p.viaDelegationToken(),
@@ -141,9 +152,15 @@ public class WriteExecutor {
         body.put("undoable", out.undoable());
         body.set("resource", mapper.valueToTree(out.resource()));
         body.put("undoOf", req.undoOf());
-        idempotency.save(new IdempotencyRecord(recordKey.ownerId(), recordKey.idemKey(), hash, 201, body, now));
+        claim.complete(201, body);
         actions.flush();
         return body;
+    }
+
+    private void auditDenied(WriteRequest req, ApiException e) {
+        audit.recordSeparately(req.principal(), "erp.denied", req.operation(),
+                e.status() == 409 ? "conflict" : "denied", new AuditService.Extra(null, null, null, req.undoOf()),
+                e.code(), e.detail());
     }
 
     private Optional<ResponseEntity<Object>> replay(IdempotencyRecord.Key recordKey, String hash) {
@@ -162,19 +179,22 @@ public class WriteExecutor {
         return !r.getCreatedAt().isAfter(OffsetDateTime.now(clock).minus(KEY_TTL));
     }
 
-    /** 같은 키의 기록이 트랜잭션 안에서 보였을 때 업무를 되돌리고 그 응답을 돌려주기 위한 신호입니다. */
-    private static final class AlreadyRecorded extends RuntimeException {
-        AlreadyRecorded() {
+    /** 같은 키를 다른 요청이 먼저 차지했을 때 업무를 되돌리고 그 응답을 돌려주기 위한 신호입니다. */
+    private static final class AlreadyClaimed extends RuntimeException {
+        AlreadyClaimed() {
             super(null, null, false, false);
         }
     }
 
-    /** 낙관적 락 충돌(같은 문서를 동시에 결재 등)은 409 version-conflict입니다. */
+    /** 낙관적 락 충돌(같은 문서를 동시에 결재 등)은 409 version-conflict, 그 밖의 제약 위반은 409 invalid-state입니다. */
     private <T> T inTx(Supplier<T> body) {
         try {
             return body.get();
         } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
             throw new ApiException(409, "version-conflict", "그사이 다른 요청이 같은 리소스를 바꿨습니다");
+        } catch (DataIntegrityViolationException e) {
+            // 업무 테이블의 제약 위반. 각 명령이 먼저 검사하지만, 동시 요청이 검사를 함께 지나면 여기로 옵니다.
+            throw new ApiException(409, "invalid-state", "같은 상태를 바꾸는 요청이 겹쳤습니다");
         }
     }
 

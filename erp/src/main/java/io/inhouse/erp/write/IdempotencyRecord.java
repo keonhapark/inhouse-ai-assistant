@@ -57,6 +57,16 @@ public class IdempotencyRecord implements Persistable<IdempotencyRecord.Key> {
         this.createdAt = createdAt;
     }
 
+    /** 업무보다 먼저 키를 차지하는 기록. 응답은 업무가 끝난 뒤 {@link #complete}로 채웁니다. */
+    static IdempotencyRecord claim(Key key, String requestHash, OffsetDateTime now, JsonNode empty) {
+        return new IdempotencyRecord(key.ownerId(), key.idemKey(), requestHash, 0, empty, now);
+    }
+
+    void complete(int status, JsonNode response) {
+        this.status = status;
+        this.response = response;
+    }
+
     @Override
     public Key getId() {
         return new Key(ownerId, idemKey);
