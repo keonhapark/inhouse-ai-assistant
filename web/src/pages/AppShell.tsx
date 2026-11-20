@@ -15,6 +15,7 @@ export function AppShell() {
           <NavLink to="/" end>
             채팅
           </NavLink>
+          <NavLink to="/inbox">승인함</NavLink>
         </nav>
         <span className="topbar__me">
           {me.name} <span className="muted">{me.unitName}</span>
