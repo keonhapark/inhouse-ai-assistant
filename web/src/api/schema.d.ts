@@ -470,8 +470,8 @@ export interface components {
             resource: string;
             /** @description 미리보기에서 새로 만들 것은 null */
             resourceId?: string | null;
-            before?: Record<string, never> | null;
-            after?: Record<string, never> | null;
+            before?: Record<string, unknown> | null;
+            after?: Record<string, unknown> | null;
         };
         WritePreview: {
             /** @constant */
@@ -500,7 +500,7 @@ export interface components {
             changes: components["schemas"]["Change"][];
             undoable: boolean;
             /** @description 실행 뒤 대상 리소스(ApprovalDocument, Delegation, RoomReservation 등). undo면 되돌린 뒤 상태 */
-            resource: Record<string, never>;
+            resource: Record<string, unknown>;
             /** @description undo 행동이면 원래 actionId */
             undoOf?: string | null;
         };
@@ -527,7 +527,7 @@ export interface components {
             title: string;
             requesterId: string;
             status: components["schemas"]["ApprovalStatus"];
-            fields: Record<string, never>;
+            fields: Record<string, unknown>;
             amount?: number | null;
             steps: components["schemas"]["ApprovalStep"][];
             /** @description 진행 중이면 지금 단계 order */
@@ -719,7 +719,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        keys: Record<string, never>[];
+                        keys: Record<string, unknown>[];
                     };
                 };
             };
