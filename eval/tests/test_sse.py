@@ -1,0 +1,54 @@
+import json
+
+import httpx
+
+from harness.sut import GatewayChat, parse_sse
+
+
+def test_parse_sse():
+    text = ('event: delta\ndata: {"type":"delta","text":"가"}\n\n'
+            ': keepalive\n\n'
+            'event: message\ndata: {"type":"message",\ndata: "text":"나"}\n\n'
+            'event: done\ndata: {"type":"done"}')
+    assert [e["type"] for e in parse_sse(text.split("\n"))] == ["delta", "message", "done"]
+
+
+def _sse(*events):
+    return "".join(f"event: {e['type']}\ndata: {json.dumps(e, ensure_ascii=False)}\n\n" for e in events)
+
+
+def test_gateway_chat_flow():
+    seen = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.append((req.method, req.url.path, req.headers.get("authorization")))
+        p = req.url.path
+        if p == "/api/auth/login":
+            who = json.loads(req.content)["employeeNo"]
+            return httpx.Response(200, json={"accessToken": f"tok-{who}"})
+        if p == "/api/conversations":
+            return httpx.Response(201, json={"conversationId": "c1", "createdAt": "x", "status": "active"})
+        if p == "/api/conversations/c1/messages":
+            return httpx.Response(200, text=_sse({"type": "message", "conversationId": "c1", "seq": 1, "text": "hi"},
+                                                 {"type": "done", "conversationId": "c1", "seq": 2}),
+                                  headers={"content-type": "text/event-stream"})
+        if p == "/api/execution-approvals/p1":
+            assert json.loads(req.content) == {"decision": "approve"}
+            return httpx.Response(200, text=_sse({"type": "done", "conversationId": "c1", "seq": 3}))
+        if p == "/api/audit-events":
+            if req.url.params.get("cursor") is None:
+                return httpx.Response(200, json={"items": [{"kind": "tool.called"}], "nextCursor": "n"})
+            return httpx.Response(200, json={"items": [{"kind": "erp.write"}], "nextCursor": None})
+        return httpx.Response(404)
+
+    c = httpx.Client(base_url="http://gw/api", transport=httpx.MockTransport(handler))
+    g = GatewayChat(c, auditor="E0050", password="pw", external_log=lambda cid: [f"body-{cid}"])
+    cid = g.start("E0016")
+    assert [e["type"] for e in g.send(cid, "안녕")] == ["message", "done"]
+    assert [e["type"] for e in g.decide(cid, "p1", "approve")] == ["done"]
+    got = g.collect(cid)
+    assert [a["kind"] for a in got.audit_events] == ["tool.called", "erp.write"]
+    assert got.external_requests == ["body-c1"]
+    chat_auth = {a for m, p, a in seen if p.startswith("/api/conversations")}
+    assert chat_auth == {"Bearer tok-E0016"}
+    assert {a for m, p, a in seen if p == "/api/audit-events"} == {"Bearer tok-E0050"}
