@@ -67,6 +67,7 @@ ALLOWED_FIELDS = frozenset({
 
 
 LOCAL_ONLY_FIELDS = frozenset({"think"})
+EVAL_TOOLCALL_PURPOSE = "eval-toolcall"
 # 외부 장애로 보고 로컬로 폴백하는 오류(시간 초과, 연결 실패, LiteLLM 5xx). 미지원(400)·정책 거절은 폴백하지 않습니다.
 FALLBACK_CODES = frozenset({"llm-timeout", "llm-unavailable", "llm-upstream-error"})
 EMBEDDING_FIELDS = frozenset({"model", "input", "encoding_format", "dimensions"})
@@ -207,8 +208,10 @@ class Egress:
                  unit_of: Callable[[str | None], str | None] = lambda _cid: None,
                  prices: dict[str, tuple[float, float]] | None = None,
                  provider_models: dict[str, str] | None = None,
-                 vision_alias: str | None = None):
+                 vision_alias: str | None = None, eval_mode: bool = False):
         self.locations = locations
+        # GATEWAY_EVAL_MODE=1: 토큰 없는 외부 호출을 받습니다(#268, 도구 호출 측정의 외부 기준). 측정 데이터는 지어낸 것입니다.
+        self.eval_mode = eval_mode
         self.vision_alias = vision_alias  # 이미지 입력을 보낼 로컬 별칭(model_info.vision). 없으면 이미지를 받지 않음
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
         self.redactor = redactor
@@ -315,6 +318,10 @@ class Egress:
 
         guards = CONDITION_GUARDS[self.condition_of(caller.conversation_id) or "full"]
         denial = policy_denial(caller, location) if guards.local_enforce else None
+        if denial and caller.agent is None and self.eval_mode:
+            # 평가 모드에서만 엽니다. 가림·기밀 판정·외부 기록은 그대로 거치고, 감사에 목적을 남겨 운영 호출과 가릅니다.
+            denial = None
+            note = f"purpose={EVAL_TOOLCALL_PURPOSE}: 평가 모드의 토큰 없는 외부 호출"
         if denial:
             self._audit(caller, model, "denied", "urn:problem:model-policy", denial)
             raise ProblemError(403, "model-policy", "모델 정책에 맞지 않습니다", denial)
@@ -366,7 +373,7 @@ class Egress:
             # 외부 장애는 위에서 알림·감사(error)를 남겼습니다. 같은 요청을 로컬 별칭으로 한 번 다시 보냅니다.
             local = {"name": self.local_alias, "location": "local", "externalSent": False, "redactions": 0}
             request.state.model = local
-            note = f"외부 장애({e.code})로 로컬 폴백"
+            note = (f"{note}; " if note else "") + f"외부 장애({e.code})로 로컬 폴백"
             return await self._dispatch(caller, local, before, fallback, note=note)
 
     async def _dispatch(self, caller: Caller, model: dict, before: dict, sent: dict,
