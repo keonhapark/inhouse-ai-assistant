@@ -416,3 +416,25 @@ def test_upstream_501_is_400_without_alert(client, app, token_for, litellm, aler
 def test_embedding_rejection_is_audited(client, app):
     assert client.post("/v1/embeddings", json={"model": "nope", "input": "x"}).status_code == 422
     assert _llm_events(app)[-1]["model"] == {"name": "nope"}
+
+
+# ---------- 차례별 사용 모델(#121) ----------
+def test_usage_records_models_sent_for_begun_conversation(client, app, token_for, litellm):
+    local_only, external_ok = _agent_ids(app)
+    usage = app.state.egress.usage
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                json={"model": "local", "messages": MSG})
+    assert usage.take("conv-9") is None                        # begin 전에는 모으지 않음
+    usage.begin("conv-9")
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                json={"model": "external", "messages": MSG})
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                json={"model": "local", "messages": MSG})
+    assert usage.take("conv-9") == {"name": "external", "location": "external"}   # 한 번이라도 외부면 외부
+    usage.begin("conv-9")
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(local_only)},
+                json={"model": "external", "messages": MSG})          # 정책 거절: 보내지 않음
+    litellm.mode = "down"
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(local_only)},
+                json={"model": "local", "messages": MSG})             # 연결 실패: 보내지 않음
+    assert usage.take("conv-9") is None

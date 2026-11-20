@@ -29,6 +29,8 @@ class FakeAgent:
         self.down = False
         self.waiting: dict[str, str] = {}   # approvalId -> conversationId
         self.broken_resume = False          # True면 /resume이 계약에 맞지 않는 RunState를 돌려줌
+        self.usage = None                   # gateway ModelUsage. 있으면 /run·/resume에서 출구를 쓴 것처럼 기록
+        self.uses: list[tuple[str, str]] = []
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         if self.down:
@@ -40,6 +42,9 @@ class FakeAgent:
             return self._ok("RouteDecision", {"agentId": self.route_to, "method": "keyword", "reason": "키워드 일치",
                                               "confidence": None, "suggestedAgentId": None})
         agent_id = jwt.decode(token, options={"verify_signature": False})["agt"]
+        if self.usage is not None:
+            for alias, loc in self.uses:
+                self.usage.record(body["conversationId"], alias, loc)
         if request.url.path == "/run":
             if "예약" in body["message"]:
                 ap = "ap_" + str(len(self.calls))
@@ -322,3 +327,31 @@ def test_eval_condition_header(chat, h, agent):
     cid2 = _new(chat, h)
     events(chat.post(f"/api/conversations/{cid2}/messages", headers=h, json={"content": "규정"}))
     assert "condition" not in [c for c in agent.calls if c[0] == "/run"][-1][1]
+
+
+# ---------- 쓴 모델 표시(#121) ----------
+def test_message_and_done_carry_model_used(chat, h, agent):
+    agent.usage = chat.app_ref.state.egress.usage
+    cid = _new(chat, h)
+    agent.uses = [("local", "local")]
+    ev = events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "규정"}))
+    by = {e["type"]: e for e in ev}
+    assert by["message"]["model"] == {"name": "local", "location": "local"}
+    assert by["done"]["model"] == {"name": "local", "location": "local"}
+
+    agent.uses = [("external", "external"), ("local", "local")]
+    ev = events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "또"}))
+    assert ev[-1]["model"] == {"name": "external", "location": "external"}
+
+    agent.uses = []
+    ev = events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "모델 안 씀"}))
+    assert "model" not in ev[-1]
+
+
+def test_resume_events_carry_model(chat, h, agent):
+    agent.usage = chat.app_ref.state.egress.usage
+    agent.uses = [("local", "local")]
+    cid, ap = _wait_approval(chat, h)
+    ev = events(chat.post(f"/api/execution-approvals/{ap}", headers=h, json={"decision": "approve"}))
+    assert ev[-1]["model"] == {"name": "local", "location": "local"}
+    assert next(e for e in ev if e["type"] == "message")["model"]["location"] == "local"

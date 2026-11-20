@@ -28,6 +28,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from gateway.audit import AuditLog
 from gateway.delegation import DelegationService, load_requester
+from gateway.egress import ModelUsage
 from gateway.erp_client import ErpClient
 from gateway.problems import ProblemError
 from gateway.registry import Registry, Requester, grant_matches
@@ -118,6 +119,11 @@ class Conversation:
         return ev
 
 
+def done(c: Conversation, model: dict[str, str] | None) -> dict[str, Any]:
+    """마지막 이벤트. 이 차례에서 출구가 실제로 쓴 모델이 있으면 model(name, location)을 붙입니다."""
+    return c.event("done", **({"model": model} if model else {}))
+
+
 def sse(ev: dict[str, Any]) -> bytes:
     return f"event: {ev['type']}\ndata: {json.dumps(ev, ensure_ascii=False)}\n\n".encode()
 
@@ -128,7 +134,8 @@ def agent_requester(who: Requester) -> dict[str, Any]:
 
 class ChatService:
     def __init__(self, erp: ErpClient, registry: Registry, delegation: DelegationService, agent: AgentClient,
-                 audit: AuditLog, eval_mode: bool = False):
+                 audit: AuditLog, eval_mode: bool = False, usage: ModelUsage | None = None):
+        self.usage = usage or ModelUsage()
         self.eval_mode = eval_mode
         self.erp, self.registry, self.delegation, self.agent, self.audit = erp, registry, delegation, agent, audit
         self.conversations: dict[str, Conversation] = {}
@@ -171,14 +178,15 @@ class ChatService:
         except (AssertionError, AttributeError, KeyError, TypeError):
             return False
 
-    def _state_events(self, c: Conversation, who: Requester, state: dict[str, Any]) -> list[dict[str, Any]]:
+    def _state_events(self, c: Conversation, who: Requester, state: dict[str, Any],
+                      model: dict[str, str] | None = None) -> list[dict[str, Any]]:
         if not self._valid_state(state):
             return [c.event("error", error={"message": "에이전트 응답 형식이 틀렸습니다", "retryable": False})]
         out = []
         for a in state.get("actions") or []:
             out.append(c.event("action", action={k: a[k] for k in ("actionId", "tool", "summary", "undoable")}))
         for m in state.get("messages") or []:
-            out.append(c.event("message", text=m["content"]))
+            out.append(c.event("message", text=m["content"], **({"model": model} if model else {})))
         if state.get("citations"):
             out.append(c.event("citations", citations=state["citations"]))
         status = state.get("status")
@@ -255,14 +263,17 @@ class ChatService:
                         "requester": agent_requester(who)}
                 if c.condition:
                     body["condition"] = c.condition
+                self.usage.begin(c.id)
                 state = await self.agent.run(token, body)
             except AgentUnavailable:
+                self.usage.take(c.id)
                 yield self._agent_down(c)
                 yield c.event("done")
                 return
-            for ev in self._state_events(c, who, state):
+            model = self.usage.take(c.id)
+            for ev in self._state_events(c, who, state, model):
                 yield ev
-            yield c.event("done")
+            yield done(c, model)
 
     async def _expire(self, ap: Approval, c: Conversation, who: Requester) -> list[dict[str, Any]]:
         ap.decided = "reject"
@@ -309,12 +320,15 @@ class ChatService:
             if comment:
                 body["comment"] = comment
             try:
+                self.usage.begin(c.id)
                 r = await self.agent.resume(self._token(who, c), body)
             except AgentUnavailable:
+                self.usage.take(c.id)
                 ap.decided = None  # agent에 닿지 않았으면 다시 결정할 수 있게 둡니다
                 yield self._agent_down(c)
                 yield c.event("done")
                 return
+            model = self.usage.take(c.id)
             if r.status_code == 409:
                 c.status, c.pending = "active", None
                 yield c.event("error", error={"message": "에이전트가 이 승인을 기다리고 있지 않습니다",
@@ -329,9 +343,9 @@ class ChatService:
                     state = None
                 if not self._valid_state(state):
                     ap.decided = None
-                for ev in self._state_events(c, who, state):
+                for ev in self._state_events(c, who, state, model):
                     yield ev
-            yield c.event("done")
+            yield done(c, model)
 
 
 _running: set[asyncio.Task] = set()
