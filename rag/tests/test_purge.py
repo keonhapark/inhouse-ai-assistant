@@ -171,3 +171,34 @@ def test_파기_뒤_답의_판_대조표를_다시_만든다(setup):
     assert answerer.book._texts
     purge(client, "law-travel-expense")
     assert all(doc != "law-travel-expense" for doc, _ in answerer.book._texts)
+
+
+def test_운영자_키는_Bearer_형식만_받는다(setup):
+    start, _ = setup
+    client, index, _ = start()
+    r = client.delete(f"/documents/{DOC}", headers={"Authorization": ADMIN})
+    assert r.status_code == 401 and any(c.doc_id == DOC for c in index.chunks)
+
+
+def test_답을_기다리는_동안_파기되면_그_문서의_인용을_내지_않는다(setup):
+    """근거는 파기 전에 잡았고 모델 응답은 파기 뒤에 온 경우(보안 검토에서 재현)."""
+    from rag.answer import NOT_FOUND, Answerer
+    from rag.purge import purge_document
+
+    start, tmp_path = setup
+    _, index, _ = start()
+    purge_list = PurgeList(tmp_path / "purged.txt")
+
+    class PurgingChat:
+        model = location = "local"
+
+        def complete(self, messages, delegation_token):
+            user = messages[1]["content"]
+            n = next(i for i in range(1, 21) if f"[{i}] " in user and MARK in user.split(f"[{i}] ", 1)[1].split("\n[", 1)[0])
+            assert purge_document(index, DOC, purge_list) is not None  # 모델을 기다리는 사이 파기
+            return json.dumps({"found": True, "answer": "답", "citations": [{"ref": n, "quote": f"관리 표지: {MARK}"}]},
+                              ensure_ascii=False)
+
+    result = Answerer(index, PurgingChat()).answer("팀장 기본급 급여 기준 관리 표지", set(ALL), "t")
+    assert result.found is False and result.answer == NOT_FOUND
+    assert MARK not in json.dumps(result.body(), ensure_ascii=False)

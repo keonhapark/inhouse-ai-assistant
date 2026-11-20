@@ -15,6 +15,7 @@ import json
 import logging
 import math
 import os
+import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -115,8 +116,14 @@ class CachedEmbedder:
         self._cache: dict[str, list[float]] = (
             json.loads(self._path.read_text(encoding="utf-8")) if self._path.exists() else {}
         )
+        # 파기가 동시에 둘 오면, 앞서 떠 둔 상태를 뒤늦게 써서 지운 벡터가 파일에 되살아날 수 있습니다.
+        self._lock = threading.Lock()
 
     def embed(self, texts: list[str]) -> list[list[float]]:
+        with self._lock:
+            return self._embed(texts)
+
+    def _embed(self, texts: list[str]) -> list[list[float]]:
         keys = [hashlib.sha256(t.encode()).hexdigest() for t in texts]
         missing = list({k: t for k, t in zip(keys, texts, strict=True) if k not in self._cache}.items())
         if missing:
@@ -127,12 +134,13 @@ class CachedEmbedder:
 
     def forget(self, texts: set[str]) -> int:
         """글들의 캐시 항목을 지우고 파일에 바로 씁니다(파기). 지운 항목 수를 돌려줍니다."""
-        keys = {hashlib.sha256(t.encode()).hexdigest() for t in texts} & self._cache.keys()
-        for k in keys:
-            del self._cache[k]
-        if keys:
-            self._save()
-        return len(keys)
+        with self._lock:
+            keys = {hashlib.sha256(t.encode()).hexdigest() for t in texts} & self._cache.keys()
+            for k in keys:
+                del self._cache[k]
+            if keys:
+                self._save()
+            return len(keys)
 
     def _save(self) -> None:
         """임시 파일에 쓰고 바꿔 끼웁니다. 쓰는 도중 멈춰도 지운 항목이 든 옛 파일과 반쯤 쓴 파일이 섞이지 않습니다."""

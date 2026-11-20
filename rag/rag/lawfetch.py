@@ -218,6 +218,33 @@ def _q(text: str) -> str:
     return urllib.parse.quote(text)
 
 
+_APPENDIX = re.compile(
+    r"\[별표\s*(\d+(?:의\d+)?)\]\s*([^<]+?)\s*</a>\s*"
+    r'<a href="flDownload\.do\?gubun=&amp;flSeq=(\d+)&amp;bylClsCd=\d+">\s*<img alt="HWP파일 다운로드"'
+)
+
+
+def appendix_links(page: str) -> dict[str, tuple[str, str]]:
+    """본문 HTML의 별표 목록. {"2": ("국내 여비 지급표(…)", HWP 파일 일련번호)}"""
+    return {m.group(1): (_clean(m.group(2)), m.group(3)) for m in _APPENDIX.finditer(page)}
+
+
+def fetch_appendices(doc_id: str, page: str, wanted: list[Any]) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """별표 HWP를 받아 표를 글 줄로 옮긴 절 목록과 파일별 SHA-256을 돌려줍니다."""
+    from rag.hwp import blocks_text, read_hwp  # 받을 때만 씁니다(의존 그룹 fetch)
+
+    links = appendix_links(page)
+    sections, hashes = [], {}
+    for n in (str(x) for x in wanted):
+        if n not in links:
+            raise ValueError(f"{doc_id}: 별표 {n}을 본문에서 찾지 못했습니다")
+        title, fl_seq = links[n]
+        blob = _get(f"{BASE}/flDownload.do?flSeq={fl_seq}")
+        sections.append({"label": f"별표 {n}", "heading": title, "text": blocks_text(read_hwp(blob))})
+        hashes[f"별표 {n}"] = hashlib.sha256(blob).hexdigest()
+    return sections, hashes
+
+
 def _law_page(doc_id: str, spec: dict[str, Any], lsi_seq: str, ef_yd: str | None) -> dict[str, Any]:
     query = f"lsiSeq={lsi_seq}&chrClsCd=010202&urlMode=lsInfoP" + (f"&efYd={ef_yd}" if ef_yd else "")
     raw = _get(f"{BASE}/lsInfoR.do?{query}")
@@ -232,6 +259,7 @@ def _law_page(doc_id: str, spec: dict[str, Any], lsi_seq: str, ef_yd: str | None
         "rawSha256": hashlib.sha256(raw).hexdigest(),
         "extent": "본칙 전체(부칙·별표 제외)",
         "sections": parsed["sections"],
+        "page": raw.decode("utf-8"),
     }
 
 
@@ -244,12 +272,20 @@ def fetch_law(doc_id: str, spec: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(f"{doc_id}: 법령 일련번호를 찾지 못했습니다")
     got = _law_page(doc_id, spec, seq.group(1), ef.group(1) if ef else None)
     got["url"] = f"{BASE}/lsInfoP.do?lsiSeq={seq.group(1)}"
+    if spec.get("appendices"):
+        sections, hashes = fetch_appendices(doc_id, got.pop("page"), spec["appendices"])
+        got["sections"] += sections
+        got["appendixSha256"] = hashes
+        names = "·".join(str(x) for x in spec["appendices"])
+        got["extent"] = f"본칙 전체(부칙 제외)와 별표 {names}(HWP 표를 행마다 \"머리: 값\" 줄로 옮김)"
+    got.pop("page", None)
     return got
 
 
 def fetch_law_edition(doc_id: str, spec: dict[str, Any], edition: dict[str, Any]) -> dict[str, Any]:
     """옛 판. `sources.yaml`의 `editions` 항목(연혁 화면의 lsiSeq와 시행일 efYd)으로 받습니다."""
     got = _law_page(doc_id, spec, str(edition["lsiSeq"]), str(edition["efYd"]))
+    got.pop("page")
     ef = str(edition["efYd"])
     want = f"{ef[:4]}-{ef[4:6]}-{ef[6:]}"
     if got["effectiveDate"] != want:

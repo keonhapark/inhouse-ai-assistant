@@ -209,10 +209,11 @@ class Answerer:
     def book(self) -> EditionBook:
         """판 대조표. 파기로 색인이 바뀌면 다시 만들어, 지운 문서의 옛 판 글이 revisions로 새지 않게 합니다."""
         version = self.index.version
+        book = self._book
         if version != self._book_version:
-            self._book = EditionBook(list(self.index.chunks))
-            self._book_version = version
-        return self._book
+            book = EditionBook(list(self.index.chunks))
+            self._book, self._book_version = book, version
+        return book
 
     def answer(
         self, question: str, doc_scopes: set[str], delegation_token: str, as_of: date | None = None
@@ -241,6 +242,11 @@ class Answerer:
                     citations.append(_citation(source, quote, today))
                     sources.append(source)
         tried = len(raw) if isinstance(raw, list) else 0
+        # 모델을 기다리는 동안 파기된 문서의 인용은 뺍니다. 근거는 파기 전 색인에서 잡은 것이라, 그대로 두면
+        # 파기가 끝난 뒤 도착한 응답에 지운 본문이 나갑니다(이미 모델에 보낸 근거는 되돌릴 수 없습니다).
+        live = self.index.doc_ids()
+        kept = [(c, ch) for c, ch in zip(citations, sources, strict=True) if ch.doc_id in live]
+        citations, sources = [c for c, _ in kept], [ch for _, ch in kept]
         verified = len(citations)
         answer = reply.get("answer")
         found = reply.get("found") is True or reply.get("found") == "true"
@@ -255,14 +261,15 @@ class Answerer:
         if not numbers_supported(answer, [c.text for c in sources]):
             return AnswerResult(False, NOT_FOUND, [], model, "답의 숫자가 인용한 근거에 없음", withheld)
         detail = f"근거 후보 {len(hits)}건, 인용 {tried}개 중 대조 통과 {verified}개"
-        return AnswerResult(True, answer.strip(), citations, model, detail, withheld, self._revisions(sources, today))
+        revisions = self._revisions(sources, today, doc_scopes)
+        return AnswerResult(True, answer.strip(), citations, model, detail, withheld, revisions)
 
-    def _revisions(self, sources: list[Chunk], today: date) -> list[dict[str, Any]]:
+    def _revisions(self, sources: list[Chunk], today: date, doc_scopes: set[str]) -> list[dict[str, Any]]:
         """인용한 조문마다 글이 다른 앞뒤 판. 같은 조문을 여러 번 인용해도 한 번만 넣습니다."""
         out: list[dict[str, Any]] = []
         seen: set[tuple[str, str | None, str]] = set()
         for chunk in sources:
-            for r in self.book.revisions(chunk):
+            for r in self.book.revisions(chunk, doc_scopes):
                 key = (r.doc_id, section_key(r.article), r.edition.effective_from.isoformat())
                 if key not in seen:
                     seen.add(key)

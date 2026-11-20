@@ -184,3 +184,11 @@ def test_생성_문서_근거에는_판_정보가_없다(client):
 
 def test_asOf_형식이_틀리면_422(client):
     assert post(client, {"query": "연가", "asOf": "2026-13-01"}, token(STAFF)).status_code == 422
+
+
+def test_별표_표의_행을_찾는다(client):
+    q = {"query": "국내 출장 제2호 숙박비 상한액 서울특별시", "method": "bm25", "topK": 3}
+    hits = post(client, q, token(STAFF)).json()["hits"]
+    top = hits[0]
+    assert top["docId"] == "law-travel-expense" and top["article"].startswith("별표 2(")
+    assert "숙박비 (1박당): 실비 (상한액: 서울특별시 100,000" in top["text"]

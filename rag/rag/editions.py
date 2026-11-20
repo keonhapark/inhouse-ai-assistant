@@ -58,8 +58,11 @@ class EditionBook:
                 continue
             self._texts.setdefault((c.doc_id, key), {}).setdefault(c.edition, []).append(c)
 
-    def revisions(self, cited: Chunk) -> list[Revision]:
-        """인용한 판 바로 앞뒤로 글이 다른 판을 하나씩(가까운 것) 돌려줍니다. 앞 판, 뒤 판 순서입니다."""
+    def revisions(self, cited: Chunk, doc_scopes: set[str]) -> list[Revision]:
+        """인용한 판 바로 앞뒤로 글이 다른 판을 하나씩(가까운 것) 돌려줍니다. 앞 판, 뒤 판 순서입니다.
+
+        판들은 같은 문서라 ACL이 같지만, 대조표가 검색을 거치지 않으므로 doc_scopes를 한 번 더 봅니다.
+        """
         key = section_key(cited.section)
         if cited.edition is None or key is None:
             return []
@@ -72,6 +75,8 @@ class EditionBook:
         for relation, candidates in (("earlier", reversed(earlier)), ("later", later)):
             for e in candidates:
                 chunks = by_edition[e]
+                if not chunks[0].acl_tags & doc_scopes:
+                    continue
                 if _text(chunks) != mine:
                     out.append(Revision(cited.doc_id, chunks[0].title, chunks[0].section, _text(chunks), e, relation))
                     break

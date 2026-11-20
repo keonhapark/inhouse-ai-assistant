@@ -139,6 +139,10 @@ class SearchIndex:
                 self.version += 1
             return removed
 
+    def doc_ids(self) -> set[str]:
+        """색인에 남은 문서 ID."""
+        return {c.doc_id for c in self._state.chunks}
+
     def indexed_texts(self) -> set[str]:
         """색인에 남은 청크의 임베딩 입력 글."""
         return {index_text(c) for c in self._state.chunks}

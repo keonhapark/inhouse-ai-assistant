@@ -148,8 +148,8 @@ def create_app(
         # 운영자 키가 없으면 경로를 두지 않아 404입니다(계약).
         @api.delete("/documents/{doc_id}", status_code=204, response_model=None)
         def purge(doc_id: str, authorization: Annotated[str | None, Header()] = None) -> JSONResponse | None:
-            given = (authorization or "").removeprefix("Bearer ").strip()
-            if not given or not hmac.compare_digest(given.encode(), admin_token.encode()):
+            scheme, _, given = (authorization or "").partition(" ")
+            if scheme != "Bearer" or not given or not hmac.compare_digest(given.encode(), admin_token.encode()):
                 record("rag.access_denied", "denied", None, "purge", problem="unauthorized", detail="운영자 키 불일치")
                 return problem(401, "unauthorized", "인증 실패", "운영자 키가 맞지 않습니다")
             result = purge_document(index, doc_id, purge_list)

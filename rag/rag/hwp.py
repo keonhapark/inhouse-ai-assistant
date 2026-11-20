@@ -23,6 +23,9 @@ LIST_HEADER = TAG_BEGIN + 56
 TABLE = TAG_BEGIN + 61
 TABLE_CTRL = b"tbl "
 
+MAX_SECTION_BYTES = 64 * 1024 * 1024  # 압축을 푼 구역 하나의 상한(압축 폭탄 방지)
+MAX_TABLE_CELLS = 10_000  # 표 머리에 적힌 행×열 상한(행렬을 만들 때 메모리 방지)
+
 # 글자 하나(2바이트)만 차지하는 제어 문자. 나머지 0~31은 확장·인라인 제어로 8글자(16바이트)를 차지합니다.
 _CHAR_CONTROLS = {0, 10, 13, 24, 25, 26, 27, 28, 29, 30, 31}
 
@@ -45,7 +48,12 @@ class Cell:
     col: int
     rowspan: int
     colspan: int
-    text: str
+    paragraphs: list[str] = field(default_factory=list)
+
+    @property
+    def text(self) -> str:
+        """셀 글 한 줄. 문단과 문단 속 줄바꿈을 빈칸으로 잇습니다."""
+        return " ".join(" ".join(p.split()) for p in self.paragraphs)
 
 
 @dataclass
@@ -133,22 +141,22 @@ def _table(ctrl: Record) -> Table:
     if info is None or len(info.data) < 8:
         raise HwpError("표 정보 레코드가 없습니다")
     rows, cols = struct.unpack_from("<HH", info.data, 4)
+    if rows * cols > MAX_TABLE_CELLS:
+        raise HwpError(f"표가 너무 큽니다({rows}×{cols})")
     cells: list[Cell] = []
-    current: Cell | None = None
-    parts: list[str] = []
     for c in ctrl.children:
         if c.tag == LIST_HEADER:
-            if current is not None:
-                current.text = " ".join(parts)
+            if len(c.data) < 16:
+                raise HwpError("셀 머리 레코드가 짧습니다")
             col, row, colspan, rowspan = struct.unpack_from("<HHHH", c.data, 8)
-            current, parts = Cell(row, col, rowspan, colspan, ""), []
-            cells.append(current)
-        elif c.tag == PARA_HEADER and current is not None:
+            cells.append(Cell(row, col, rowspan, colspan))
+        elif c.tag == PARA_HEADER and cells:
             for b in _paragraph_blocks(c):
-                parts.append(b if isinstance(b, str) else " / ".join(" ".join(x for x in row if x)
-                                                                       for row in _dedupe_rows(b.grid())))
-    if current is not None:
-        current.text = " ".join(parts)
+                if isinstance(b, str):
+                    cells[-1].paragraphs.append(b)
+                else:  # 셀 안의 표는 행을 " / "로 이어 한 문단으로
+                    rows_text = (" ".join(x for x in row if x) for row in _dedupe_rows(b.grid()))
+                    cells[-1].paragraphs.append(" / ".join(rows_text))
     return Table(rows, cols, cells)
 
 
@@ -184,11 +192,19 @@ def read_hwp(blob: bytes) -> list[Block]:
     blocks: list[Block] = []
     for entry in sections:
         raw = ole.openstream("/".join(entry)).read()
-        data = zlib.decompress(raw, -15) if compressed else raw
+        data = _inflate(raw) if compressed else raw
         for root in build_tree(read_records(data)):
             if root.tag == PARA_HEADER:
                 blocks.extend(_paragraph_blocks(root))
     return blocks
+
+
+def _inflate(raw: bytes) -> bytes:
+    d = zlib.decompressobj(-15)
+    out = d.decompress(raw, MAX_SECTION_BYTES)
+    if d.unconsumed_tail:
+        raise HwpError("압축을 푼 본문이 상한보다 큽니다")
+    return out
 
 
 def table_lines(table: Table) -> list[str]:
@@ -199,12 +215,13 @@ def table_lines(table: Table) -> list[str]:
       다시 적어, 한 줄만 떼어 읽어도 뜻이 통하게 합니다.
     """
     grid = table.grid()
-    full = {c.row for c in table.cells if c.col == 0 and c.colspan >= table.cols}
+    full = {c.row: c for c in table.cells if c.col == 0 and c.colspan >= table.cols}
     lines: list[str] = []
     header: list[str] | None = None
     for r, row in enumerate(grid):
         if r in full:
-            lines.append(row[0])
+            # 제목·비고는 문단마다 한 줄로 둡니다. 긴 비고가 청크 경계에서 문장 중간으로 잘리지 않게 하려는 것입니다.
+            lines.extend(" ".join(p.split()) for p in full[r].paragraphs)
             continue
         if header is None:
             header = row
