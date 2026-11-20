@@ -29,3 +29,4 @@ erp:
   demo-password: ${ERP_DEMO_PASSWORD:demo}
   delegation-public-key: ${DELEGATION_TOKEN_PUBLIC_KEY:}
   eval-reset: ${ERP_EVAL_RESET:0}
+  stage: ${ERP_STAGE:}

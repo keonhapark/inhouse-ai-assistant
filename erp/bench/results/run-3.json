@@ -1,0 +1,92 @@
+{
+  "measuredAt": "2026-11-20T23:06:57+09:00",
+  "machine": "arm64 Darwin 25.5.0",
+  "base": "http://localhost:8140/api/v1",
+  "concurrency": 50,
+  "rounds": 20,
+  "scenarios": [
+    {
+      "scenario": "room_contention",
+      "requests": 1000,
+      "seconds": 5.71,
+      "throughput_rps": 175.1,
+      "status": {
+        "201": 20,
+        "409": 980
+      },
+      "problems": {
+        "room-conflict": 980
+      },
+      "server_errors": 0,
+      "latency_ms": {
+        "p50": 157.1,
+        "p95": 288.9,
+        "p99": 346.5,
+        "max": 382.1
+      },
+      "violations": 0,
+      "notes": "라운드 20번 × 같은 회의실·시간대 동시 50건. 위반 = 201이 1건이 아닌 라운드 + room-conflict가 아닌 실패"
+    },
+    {
+      "scenario": "room_throughput",
+      "requests": 1000,
+      "seconds": 4.5,
+      "throughput_rps": 222.1,
+      "status": {
+        "201": 1000
+      },
+      "problems": {},
+      "server_errors": 0,
+      "latency_ms": {
+        "p50": 120.2,
+        "p95": 619.3,
+        "p99": 954.9,
+        "max": 1367.0
+      },
+      "violations": 0,
+      "notes": "일꾼 50개 × 겹치지 않는 예약 20건. 위반 = 201이 아닌 응답"
+    },
+    {
+      "scenario": "approval_contention",
+      "requests": 1000,
+      "seconds": 5.32,
+      "throughput_rps": 187.8,
+      "status": {
+        "201": 20,
+        "409": 980
+      },
+      "problems": {
+        "invalid-state": 940,
+        "version-conflict": 40
+      },
+      "server_errors": 0,
+      "latency_ms": {
+        "p50": 141.4,
+        "p95": 246.6,
+        "p99": 267.9,
+        "max": 315.4
+      },
+      "violations": 0,
+      "notes": "라운드 20번 × 같은 문서·같은 version 동시 승인 50건(상신 시간 포함하지 않은 지연, 처리량은 상신 포함 경과 시간 기준). 위반 = 201이 1건이 아닌 라운드 + 409 version-conflict/invalid-state가 아닌 실패"
+    },
+    {
+      "scenario": "approval_throughput",
+      "requests": 1000,
+      "seconds": 4.44,
+      "throughput_rps": 225.0,
+      "status": {
+        "201": 1000
+      },
+      "problems": {},
+      "server_errors": 0,
+      "latency_ms": {
+        "p50": 144.8,
+        "p95": 703.5,
+        "p99": 1024.3,
+        "max": 1637.7
+      },
+      "violations": 0,
+      "notes": "서로 다른 문서 1000개를 일꾼 50개가 동시에 승인. 위반 = 201이 아닌 응답"
+    }
+  ]
+}

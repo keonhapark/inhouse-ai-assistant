@@ -82,6 +82,37 @@ class ApprovalApiTest extends ApiTestBase {
         assertThat(approvers(expense(leader("sales"), 2_000_000))).containsExactly(leader("sales-div"));
     }
 
+    private JsonNode purchase(String emp, long total) throws Exception {
+        MockHttpServletResponse r = post("/approval-documents", emp, Map.of("formId", "purchase", "fields",
+                Map.of("item_code", "P-100", "quantity", 1, "unit_price", total, "total_amount", total, "reason", "시험")));
+        assertThat(r.getStatus()).as(r.getContentAsString()).isEqualTo(201);
+        return json(r).path("resource");
+    }
+
+    /** 2단계 양식: 지출 100만 원, 구매 500만 원을 경계로 팀장 / 팀장+본부장(팩 forms.yaml). */
+    @Test
+    void stage2FormsUseAmountBoundaries() throws Exception {
+        String member = members("rnd").get(0);
+        String team = leader("rnd");
+        String division = leader("rnd-center");
+        assertThat(approvers(purchase(member, 5_000_000))).containsExactly(team);
+        JsonNode big = purchase(member, 5_000_001);
+        assertThat(approvers(big)).containsExactly(team, division);
+        assertThat(big.path("amount").asLong()).isEqualTo(5_000_001);
+        assertThat(approvers(expense(member, 1_000_000))).containsExactly(team);
+        assertThat(approvers(expense(member, 1_000_001))).containsExactly(team, division);
+        // 팀장이 올리면 팀장 단계가 본부장으로 올라가 한 단계
+        assertThat(approvers(purchase(team, 9_000_000))).containsExactly(division);
+        // 두 단계를 차례로 결재해야 승인
+        assertThat(approve(team, big).getStatus()).isEqualTo(201);
+        JsonNode mid = json(get("/approval-documents/" + big.path("id").asText(), member));
+        assertThat(mid.path("status").asText()).isEqualTo("in_progress");
+        assertThat(json(approve(division, mid)).path("resource").path("status").asText()).isEqualTo("approved");
+        // 양식 목록에 2단계 양식이 켜져 있음
+        assertThat(json(get("/approval-forms", member)).path("items").findValuesAsText("id"))
+                .containsExactly("leave", "expense", "purchase");
+    }
+
     @Test
     void formValidationReportsFields() throws Exception {
         String emp = members("quality").get(1);

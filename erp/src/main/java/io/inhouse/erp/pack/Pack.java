@@ -33,8 +33,19 @@ public record Pack(
 
     public record DelegationPolicy(int maxPeriodDays, List<String> registrableBy) {}
 
-    public record FormDef(String id, String name, JsonNode fields, String amountField,
+    public record FormDef(String id, String name, int stage, JsonNode fields, String amountField,
                           Map<String, String> effects, List<LineRule> approvalLine) {}
+
+    /** 양식 중 stage가 maxStage 이하인 것만 켠 팩. 나머지 설정과 고정 데이터는 그대로입니다. */
+    public Pack withFormsUpTo(int maxStage) {
+        return new Pack(id, timezone, grades, units, roles, accessTags, delegationPolicy,
+                forms.stream().filter(f -> f.stage() <= maxStage).toList(), employees, rooms, balances);
+    }
+
+    /** 팩 양식의 가장 높은 stage(양식이 없으면 1). */
+    public int maxFormStage() {
+        return forms.stream().mapToInt(FormDef::stage).max().orElse(1);
+    }
 
     /** 결재선 규칙 하나. 조건(when)이 맞으면 steps의 결재자 해석 규칙을 차례로 씁니다. */
     public record LineRule(Long amountLte, Long amountGt, List<String> steps) {
