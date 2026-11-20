@@ -28,6 +28,7 @@ class FakeAgent:
         self.route_to = "assistant"
         self.down = False
         self.waiting: dict[str, str] = {}   # approvalId -> conversationId
+        self.broken_resume = False          # True면 /resume이 계약에 맞지 않는 RunState를 돌려줌
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         if self.down:
@@ -56,6 +57,8 @@ class FakeAgent:
                 "messages": [{"role": "assistant", "content": "규정은 이렇습니다"}],
                 "citations": [{"docId": "d1", "title": "복무 규정", "article": "제3조", "quote": "출장비는", "verified": True}]})
         if request.url.path == "/resume":
+            if self.broken_resume:
+                return httpx.Response(200, json={"status": "completed", "messages": [{"role": "assistant"}]})
             if self.waiting.pop(body["approvalId"], None) is None:
                 return httpx.Response(409, json={"type": "urn:problem:invalid-state", "title": "x", "status": 409})
             if body["decision"] == "reject":
@@ -238,3 +241,68 @@ def test_validation(chat, h):
     assert chat.post("/api/conversations", headers=h, json={"agentId": "nope"}).status_code == 403
     assert chat.post("/api/execution-approvals/x", headers=h, json={"decision": "maybe"}).status_code == 422
     assert chat.get("/api/conversations").status_code == 401
+
+
+# ---------- 리뷰에서 고친 것 ----------
+def _wait_approval(chat, h):
+    cid = _new(chat, h)
+    ev = events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "회의실 예약"}))
+    return cid, next(e for e in ev if e["type"] == "approval_required")["approval"]["approvalId"]
+
+
+def test_expired_approval_is_rejected_and_conversation_continues(chat, h, agent):
+    from datetime import timedelta
+
+    from gateway.chat import now
+
+    cid, ap = _wait_approval(chat, h)
+    chat.app_ref.state.chat.approvals[ap].expires_at = now() - timedelta(seconds=1)
+    r = chat.post(f"/api/execution-approvals/{ap}", headers=h, json={"decision": "approve"})
+    assert r.status_code == 409
+    ev = events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "그냥 규정 알려 줘"}))
+    assert ev[0]["type"] == "approval_decided" and ev[0]["decision"]["decision"] == "reject"
+    assert "message" in [e["type"] for e in ev]
+    resume = next(c for c in agent.calls if c[0] == "/resume")
+    assert resume[1]["decision"] == "reject" and resume[1]["approvalId"] == ap
+    assert chat.get(f"/api/conversations/{cid}", headers=h).json()["status"] == "active"
+
+
+def test_malformed_agent_reply_lets_requester_decide_again(chat, h, agent):
+    cid, ap = _wait_approval(chat, h)
+    agent.broken_resume = True
+    ev = events(chat.post(f"/api/execution-approvals/{ap}", headers=h, json={"decision": "approve"}))
+    assert [e["type"] for e in ev] == ["approval_decided", "error", "done"]
+    assert chat.get(f"/api/conversations/{cid}", headers=h).json()["status"] == "awaiting_approval"
+    agent.broken_resume = False
+    ev = events(chat.post(f"/api/execution-approvals/{ap}", headers=h, json={"decision": "approve"}))
+    assert ev[1]["type"] == "action"
+
+
+def test_error_mid_stream_still_ends_with_done(chat, h, agent):
+    cid = _new(chat, h)
+    events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "안녕"}))
+    # 라우팅 뒤 에이전트가 등록부에서 빠지면 토큰 발급이 실패합니다(ProblemError).
+    chat.app_ref.state.delegation.registry = type("Empty", (), {"get": lambda self, _: None})()
+    ev = events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "또"}))
+    assert [e["type"] for e in ev] == ["error", "done"]
+
+
+def test_processing_continues_when_screen_disconnects():
+    import asyncio
+    from datetime import datetime, timezone
+
+    from gateway.chat import Conversation, stream
+
+    async def go():
+        c = Conversation(id="c1", owner="E1", created_at=datetime.now(timezone.utc))
+
+        async def gen():
+            await asyncio.sleep(0.01)
+            yield c.event("message", text="끝까지 감")
+            yield c.event("done")
+
+        stream(c, gen())                  # 응답 본문을 읽지 않음(화면이 끊긴 것과 같음)
+        await asyncio.sleep(0.05)
+        return [e["type"] for e in c.events]
+
+    assert asyncio.run(go()) == ["message", "done"]
