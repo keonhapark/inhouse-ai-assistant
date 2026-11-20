@@ -33,6 +33,7 @@ npm run gen:api  # 계약이 바뀌면 src/api/schema.d.ts를 다시 만듭니�
 | `src/pages/` | 로그인, 상단바, 디자인 부품(`/design`) |
 | `src/inbox/` | 팀장 승인함(탭 4개, 결재선, 승인·반려)과 대결 설정(대리인 찾기, 양식 범위, 미리보기 → 등록, 해지) |
 | `src/org/` | 조직도(부서 나무, 상위 경로, 구성원과 부서장, 담당 에이전트)와 에이전트 등록부(담당 부서, 위험 등급별 실행, 도구, 모델 정책). `/org`, `/agents` |
+| `src/admin/` | 관리자 콘솔(auditor만). 기간 필터, 운영 지표(합계, 에이전트별, 차단 이유, 입구 라우팅, 비용 상한), 외부 전송 기록(가린 자리 표시), 감사 로그(필터, 더 보기). `/admin` |
 | `src/chat/` | 직원 채팅. SSE 읽기(`sse.ts`), ChatEvent를 화면 상태로 바꾸는 리듀서(`thread.ts`), 미리보기·행동·근거 부품 |
 | `src/mocks/` | gateway 계약 모의 서버(MSW)와 지어낸 직원 데이터 |
 | `Dockerfile`, `nginx/` | 정적 파일과 `/api` 프록시, `GET /health` |
@@ -131,6 +132,16 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 | ![조직도 다크](docs/images/org-dark.png) | ![등록부 다크](docs/images/agents-dark.png) |
 
 조직도·등록부 경로(`GET /org/units`, `GET /agent-registry`)는 계약(#220)만 있고 gateway 구현 전이라 모의 서버 화면입니다.
+
+| 관리자 콘솔: 운영 지표(7일) | 다크 모드 |
+|---|---|
+| ![운영 지표](docs/images/admin-metrics-light.png) | ![운영 지표 다크](docs/images/admin-metrics-dark.png) |
+
+| 외부 전송 기록(가린 자리) | 감사 로그 |
+|---|---|
+| ![외부 전송](docs/images/admin-egress-light.png) | ![감사 로그](docs/images/admin-audit-light.png) |
+
+관리자 콘솔은 auditor 역할 직원(모의 서버 `E2008`)만 메뉴에 보입니다. 운영 지표·외부 전송 기록(`GET /ops/metrics`, `GET /ops/egress`)은 계약(#210)만 있고 gateway 구현(#211) 전이라 모의 서버 화면입니다. 막대는 크기만 한 색으로 보여 주고 값은 옆 글자로 읽게 했습니다.
 
 | 로그인 오류 | 디자인 부품 |
 |---|---|
