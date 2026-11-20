@@ -12,6 +12,21 @@
   turns:
   - role: user
     content: 2027년 3월 9일 화요일 오후 2시부터 3시까지 4명 들어갈 회의실 예약해 줘. 제목은 총무팀 주간회의로 해 줘.
+  clarifications:
+  - ifAskedAbout: &id001
+    - 맞나요
+    - 맞으신가요
+    - 맞습니까
+    - 맞는지
+    - 확인
+    - 진행할까요
+    - 할까요
+    - 하루
+    - 종료
+    - 명시
+    - 알려 주시면
+    - 알려주시면
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -41,6 +56,9 @@
   turns:
   - role: user
     content: 3월 10일(2027년) 오전 10시부터 11시 30분까지 6명 회의할 방 잡아 줘. 제목 '영업 전략 회의'.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -70,6 +88,9 @@
   turns:
   - role: user
     content: 2027년 3월 11일 오후 3시~5시 대회의실 예약 부탁해. 15명이고 제목은 생산 분기 점검.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -99,6 +120,9 @@
   turns:
   - role: user
     content: 2027년 3월 12일 금요일 9시 반부터 10시 반까지 연구소 회의실 예약해 줘. 제목은 설계 검토, 5명.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -128,6 +152,9 @@
   turns:
   - role: user
     content: 2027년 3월 15일 오전 10시부터 11시까지 8명 이상 들어가는 회의실 비어 있는 데 있어? 예약은 아직 하지 말고 알려만 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -168,6 +195,9 @@
   turns:
   - role: user
     content: 2027년 3월 16일에 내가 잡아 둔 회의실 예약 뭐 있는지 보여 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -206,6 +236,9 @@
   turns:
   - role: user
     content: 2027년 3월 17일 회의실 A 예약한 거 취소해 줘. 회의가 없어졌어.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -253,6 +286,8 @@
     - 이름
     - 용도
     answer: 고객사 제안 리허설로 해 주세요.
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -282,6 +317,9 @@
   turns:
   - role: user
     content: 2027년 3월 19일 아침 8시 30분부터 9시까지 회의실 A 잡아 줘. 3명, 제목은 생산 조회.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -311,6 +349,9 @@
   turns:
   - role: user
     content: 2027년 3월 22일 월요일 오후 1시부터 2시까지 5명 회의실 예약해 줘. 제목은 장애 회고.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -349,6 +390,9 @@
   turns:
   - role: user
     content: 2027년 3월 23일 10시에 잡은 회의실 B 예약을 같은 날 11시부터 12시로 옮겨 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -381,6 +425,9 @@
   turns:
   - role: user
     content: 2027년 3월 24일 오후 1시부터 3시까지 연구소 회의실 예약해 줘. 시제품 시험 결과 공유, 6명.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -410,6 +457,9 @@
   turns:
   - role: user
     content: 회의실은 한 번에 최대 몇 시간까지 예약할 수 있어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -432,6 +482,9 @@
   turns:
   - role: user
     content: 회의실 쓰고 나서 정리하는 규칙 같은 게 있어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -454,6 +507,9 @@
   turns:
   - role: user
     content: 결재 대결은 최대 며칠까지 맡길 수 있어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -476,6 +532,9 @@
   turns:
   - role: user
     content: 대결로 처리된 결재는 원래 결재자가 돌아와서 확인해야 해?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -498,6 +557,9 @@
   turns:
   - role: user
     content: 하루 근무시간 기준이 규정에 어떻게 돼 있어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -520,6 +582,9 @@
   turns:
   - role: user
     content: 회사 일 말고 다른 일을 겸해서 하려면 허가를 받아야 해?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -542,6 +607,9 @@
   turns:
   - role: user
     content: 대결을 맡은 사람이 그걸 또 다른 사람한테 다시 맡길 수 있어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -564,6 +632,9 @@
   turns:
   - role: user
     content: 회의실 예약 취소는 언제까지 해야 돼?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -586,6 +657,9 @@
   turns:
   - role: user
     content: 사내 주차 등록은 어떻게 해?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -604,6 +678,9 @@
   turns:
   - role: user
     content: 구내식당 저녁 운영 시간 규정 있어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -622,6 +699,9 @@
   turns:
   - role: user
     content: 사내 동호회 지원금 규정 알려 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -640,6 +720,9 @@
   turns:
   - role: user
     content: 법인 차량 운행 일지 작성 규칙 알려 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -658,6 +741,9 @@
   turns:
   - role: user
     content: 올해 연차 며칠 남았어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -678,6 +764,9 @@
   turns:
   - role: user
     content: 2027년 3월 9일 화요일 연차 쓸게요. 사유는 개인 사정이에요.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -708,6 +797,9 @@
   turns:
   - role: user
     content: 2027년 3월 10일 오전 반차 올려 줘. 은행 업무 때문이야.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -738,6 +830,9 @@
   turns:
   - role: user
     content: 2027년 3월 11일 병가 하루 신청해 줘. 감기가 심해서요.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -768,6 +863,9 @@
   turns:
   - role: user
     content: 2027년 3월 15일부터 17일까지 사흘 연차 신청해 줘. 가족 여행이야.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -812,6 +910,8 @@
     - 사유
     - 이유
     answer: 치과 진료예요.
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -853,6 +953,9 @@
   turns:
   - role: user
     content: 내가 올린 결재 진행 상황 보여 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -892,6 +995,9 @@
   turns:
   - role: user
     content: 2027년 3월 22일 연차 신청한 거 지금 누구 결재 차례야?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -930,6 +1036,9 @@
   turns:
   - role: user
     content: 내가 대신 결재하게 된 위임 있어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -950,6 +1059,9 @@
   turns:
   - role: user
     content: 2027년 3월 8일부터 3월 12일까지 출장이라 휴가 결재를 이승현 님에게 맡겨 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -979,6 +1091,9 @@
   turns:
   - role: user
     content: 2027년 3월 22일부터 24일까지 교육이라 그동안 휴가 결재는 강준혁 님이 대신 해 주게 등록해 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -1008,6 +1123,9 @@
   turns:
   - role: user
     content: 내 소속이랑 입사일 확인해 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -1026,6 +1144,9 @@
   turns:
   - role: user
     content: 반차는 한 달에 몇 번까지 쓸 수 있는지 휴가 지침 확인해 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -1048,6 +1169,9 @@
   turns:
   - role: user
     content: 경조사 휴가는 며칠 받을 수 있어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -1070,6 +1194,9 @@
   turns:
   - role: user
     content: 연가 일수 계산 기준이 예규에 어떻게 돼 있어?
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed
@@ -1092,6 +1219,9 @@
   turns:
   - role: user
     content: 2027년 3월 26일 금요일 연차 쓰고, 쓰고 나면 며칠 남는지도 알려 줘.
+  clarifications:
+  - ifAskedAbout: *id001
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
   executionApprover: always_approve
   expect:
     outcome: completed

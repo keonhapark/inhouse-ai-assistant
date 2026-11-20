@@ -21,7 +21,7 @@ from harness.erp import ErpClient
 from harness.report import render
 from harness.runner import CONDITIONS, RunRow, load_run, run_matrix, save_run
 from harness.scenario import ScenarioError, load_scenarios
-from harness.sut import GatewayChat, jsonl_external_log
+from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -44,7 +44,12 @@ def make_factories(cfg: dict[str, Any]):
     """조건은 X-Eval-Condition 헤더로 넘기고(gateway GATEWAY_EVAL_MODE=1), 회차마다 erp를 evalReset으로 되돌립니다."""
     timeout = cfg.get("httpTimeoutS", 120)
     gw = cfg["gateway"]
-    external = jsonl_external_log(Path(gw["externalLog"])) if gw.get("externalLog") else None
+    external = None
+    if gw.get("externalLog"):
+        external = jsonl_external_log(Path(gw["externalLog"]))
+    elif gw.get("externalLogDocker"):
+        d = gw["externalLogDocker"]
+        external = docker_external_log(d["container"], d["path"])
 
     def system(condition: str, seed: int) -> GatewayChat:
         client = httpx.Client(base_url=gw["baseUrl"], timeout=timeout)
@@ -74,6 +79,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
 def cmd_run(args: argparse.Namespace) -> int:
     cfg = load_config(Path(args.config))
     scenarios = load_scenarios(Path(args.scenarios))
+    if args.only:
+        wanted = set(args.only.split(","))
+        scenarios = [s for s in scenarios if s["id"] in wanted]
     system, erp = make_factories(cfg)
 
     def progress(r: RunRow) -> None:
@@ -85,7 +93,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                             model=cfg.get("model"), on_row=progress)
     if not cfg["erp"].get("reset", True):
         meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.reset: false)")
-    if not cfg["gateway"].get("externalLog"):
+    if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):
         meta.notes.append("외부 요청 기록(gateway.externalLog)을 주지 않아 외부 기록의 표지 문자열은 보지 않았습니다")
     out = Path(args.out)
     save_run(rows, meta, out.with_suffix(".json"))
@@ -114,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--scenarios", required=True)
     r.add_argument("--out", required=True)
     r.add_argument("--title", default="평가 보고서")
+    r.add_argument("--only", help="쉼표로 나눈 시나리오 ID만(시험 실행용)")
     rep = sub.add_parser("report", help="실행 결과 JSON으로 보고서 다시 만들기")
     rep.add_argument("run")
     rep.add_argument("-o")

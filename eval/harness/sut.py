@@ -80,6 +80,28 @@ def jsonl_external_log(path: Path) -> ExternalLog:
     return read
 
 
+def docker_external_log(container: str, path: str) -> ExternalLog:
+    """외부 요청 기록이 컨테이너 볼륨 안에만 있을 때(compose의 /audit) docker exec로 읽습니다.
+    파일이 없으면 외부로 보낸 요청이 없는 것으로 봅니다(빈 목록). docker를 부르지 못하면 None(수집 못 함)."""
+    import subprocess
+
+    def read(conversation_id: str) -> list[Any] | None:
+        try:
+            r = subprocess.run(["docker", "exec", container, "sh", "-c", f"cat {path} 2>/dev/null || true"],
+                               capture_output=True, text=True, timeout=30, check=True)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        out = []
+        for line in r.stdout.splitlines():
+            if line.strip():
+                rec = json.loads(line)
+                if rec.get("conversationId") == conversation_id:
+                    out.append(rec["body"])
+        return out
+
+    return read
+
+
 class GatewayChat:
     """gateway에 직원으로 로그인해 대화합니다. 감사 이벤트는 감사 역할 직원으로 읽습니다."""
 
