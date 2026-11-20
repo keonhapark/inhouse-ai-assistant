@@ -54,6 +54,7 @@ services:
       DELEGATION_TOKEN_PUBLIC_KEY: /keys/delegation-es256.pub.pem
       ERP_EVAL_RESET: ${ERP_EVAL_RESET:-}
       ERP_STAGE: ${PACK_STAGE:-}
+      ERP_SERVICE_LOGIN_SECRET: ${ERP_SERVICE_LOGIN_SECRET:-}
     volumes:
       - ../packs:/packs:ro
       - ../infra/dev-keys:/keys:ro
@@ -143,9 +144,13 @@ services:
       GATEWAY_EVAL_MODE: ${GATEWAY_EVAL_MODE:-}
       GATEWAY_EXTERNAL_LOG: ${GATEWAY_EXTERNAL_LOG:-}
       GATEWAY_PACK_STAGE: ${PACK_STAGE:-}
+      SLACK_BRIDGE_SECRET: ${SLACK_BRIDGE_SECRET:-}
+      SLACK_USERS_FILE: /slack/slack-users.json
+      ERP_SERVICE_LOGIN_SECRET: ${ERP_SERVICE_LOGIN_SECRET:-}
     volumes:
       - ../infra/dev-keys:/keys:ro
       - audit:/audit
+      - ../infra/slack:/slack:ro
     ports:
       - "${PORT_GATEWAY:-8010}:8000"
     depends_on:
@@ -160,6 +165,19 @@ services:
       gateway: {condition: service_healthy}
     ports:
       - "${PORT_WEB:-8000}:80"
+
+  # 슬랙 입구(#102). docker compose --profile full --profile slack up
+  slack:
+    profiles: [slack]
+    build: {context: ../channels/slack}
+    environment:
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:?SLACK_APP_TOKEN을 .env에 넣습니다}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:?SLACK_BOT_TOKEN을 .env에 넣습니다}
+      SLACK_BRIDGE_SECRET: ${SLACK_BRIDGE_SECRET:?SLACK_BRIDGE_SECRET을 .env에 넣습니다}
+      GATEWAY_URL: http://gateway:8000/api
+      WEB_URL: http://localhost:${PORT_WEB:-8000}
+    depends_on:
+      gateway: {condition: service_healthy}
 
 volumes:
   pgdata:
