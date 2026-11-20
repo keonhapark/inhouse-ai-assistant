@@ -373,6 +373,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ops/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description auditor 역할만(관리자 콘솔). 기간 안의 감사 이벤트·외부 요청 기록에서 에이전트별 운영 지표를 셉니다.
+         *     - 호출 수: `route.decided` 이벤트 수(직접 고른 대화의 `explicit` 포함)
+         *     - 정책 차단: `tool.blocked`·`rag.access_denied`와 gateway가 막은 요청을 ChatEvent `blocked.code`로 나눈 수
+         *     - 외부·로컬: `llm.request`의 `model.location`
+         *     - 외부 비용: 외부 요청 기록(`events/external-request.schema.json`)의 `costUsd` 합. `null`인 요청은 `unpricedRequests`로 셉니다
+         *     - 비용 상한: 팩 `budgets.yaml` 대비 사용량. 기간 필터와 관계없이 지금 누적 기간(`period`)의 값입니다
+         */
+        get: operations["getOpsMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ops/egress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description auditor 역할만(관리자 콘솔). 외부 모델로 실제 보낸 요청을 최근 것부터 돌려줍니다.
+         *     가림 뒤 본문과 가린 자리(종류·위치)만 돌려주고, 가림 전 원문은 저장하지도 돌려주지도 않습니다.
+         *     화면은 `redactions`의 위치로 가린 자리를 표시합니다.
+         */
+        get: operations["listEgressRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -494,6 +539,100 @@ export interface components {
             delegatorName: string;
             delegateName: string;
         };
+        OpsMetrics: {
+            /** Format: date-time */
+            since: string;
+            /** Format: date-time */
+            until: string;
+            totals: components["schemas"]["OpsCounts"];
+            /** @description 팩에 있는 에이전트마다 한 줄(기간 안에 호출이 없어도 0으로) */
+            agents: ({
+                agentId: string;
+                agentName: string;
+            } & components["schemas"]["OpsCounts"])[];
+            /** @description 입구 라우팅 결과(`route.decided`의 `routing.method`)별 수 */
+            routing: {
+                total: number;
+                byMethod: {
+                    llm?: number;
+                    keyword?: number;
+                    fallback?: number;
+                    explicit?: number;
+                };
+            };
+            /** @description 팩 `budgets.yaml`이 없으면 null */
+            budgets?: {
+                /** @enum {string} */
+                period: "day" | "month";
+                /**
+                 * Format: date-time
+                 * @description 지금 누적 기간의 시작(팩 시간대 기준)
+                 */
+                periodStart: string;
+                agents: components["schemas"]["BudgetUsage"][];
+                units: components["schemas"]["BudgetUsage"][];
+            } | null;
+        };
+        OpsCounts: {
+            /** @description 에이전트 실행 수(`route.decided`) */
+            calls: number;
+            blocked: {
+                total: number;
+                /** @description ChatEvent `blocked.code` 값 → 수. 0인 코드는 빼도 됩니다 */
+                byCode: {
+                    [key: string]: number;
+                };
+            };
+            llmRequests: {
+                local: number;
+                external: number;
+            };
+            externalCostUsd: number;
+            /** @description 외부 요청 중 비용을 모르는(`costUsd: null`) 수 */
+            unpricedRequests?: number;
+        };
+        BudgetUsage: {
+            /** @description 에이전트 ID 또는 부서 ID */
+            id: string;
+            name?: string;
+            limitUsd: number;
+            usedUsd: number;
+            /** @description 상한을 넘어 외부 요청을 로컬로 내리는 중 */
+            exceeded?: boolean;
+        };
+        /** @description 외부 요청 기록 한 건. 가림 전 원문은 없습니다 */
+        EgressRecord: {
+            recordId: string;
+            /** Format: date-time */
+            at: string;
+            agentId: string | null;
+            agentName?: string | null;
+            conversationId: string | null;
+            /** @description 요청한 직원(위임 토큰 sub) */
+            actorId?: string | null;
+            /** @description LiteLLM에 넘긴 실제 모델 이름 */
+            model: string;
+            usage?: {
+                promptTokens?: number;
+                completionTokens?: number;
+            } | null;
+            costUsd?: number | null;
+            /** @description 외부로 보낸 요청 본문의 messages(가림 뒤). 문자열이 아닌 content는 텍스트 부분만 이어 붙입니다 */
+            messages: {
+                role: string;
+                content: string;
+            }[];
+            /** @description 가린 자리. 위치는 가림 뒤 `messages[messageIndex].content`에서 바꿔 넣은 표시(`placeholder`)의 UTF-16 범위입니다(JavaScript 문자열 위치와 같음) */
+            redactions: {
+                /** @description 가린 종류(예: KR_RRN, KR_PHONE, EMAIL_ADDRESS) */
+                entity: string;
+                /** @description 바꿔 넣은 표시(예: [주민등록번호]) */
+                placeholder: string;
+                messageIndex: number;
+                start: number;
+                end: number;
+            }[];
+        };
         /** @description 팩 agents.yaml 항목을 화면용으로 옮긴 것(이름은 camelCase) */
         AgentRegistryEntry: {
             id: string;
@@ -532,8 +671,11 @@ export interface components {
                 irreversible: components["schemas"]["RiskAction"];
                 overrides?: {
                     tool: string;
-                    /** @enum {string} */
-                    when: "wide_scope" | "always";
+                    /** @description 팩 `risk_policy.overrides[].when`. wide_scope·always, 또는 도구 인자 `arg`가 `gt`보다 클 때 */
+                    when: ("wide_scope" | "always") | {
+                        arg: string;
+                        gt: number;
+                    };
                     action: components["schemas"]["RiskAction"];
                 }[];
             };
@@ -1478,6 +1620,64 @@ export interface operations {
                     };
                 };
             };
+            403: components["responses"]["Problem"];
+        };
+    };
+    getOpsMetrics: {
+        parameters: {
+            query?: {
+                /** @description 없으면 until의 24시간 전 */
+                since?: string;
+                /** @description 없으면 지금 */
+                until?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 운영 지표 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpsMetrics"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    listEgressRecords: {
+        parameters: {
+            query?: {
+                since?: string;
+                until?: string;
+                agentId?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 외부 전송 기록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["EgressRecord"][];
+                        nextCursor?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
         };
     };

@@ -79,6 +79,9 @@ describe('에이전트 등록부', () => {
     expect(within(assistant).getByText('허용 안 함')).toBeInTheDocument()
     expect(within(assistant).getByText('room_reserve')).toBeInTheDocument()
     expect(screen.getAllByRole('region')).toHaveLength(4)
+
+    const finance = screen.getByRole('region', { name: '재무' })
+    expect(within(finance).getByText(/amount가 1,000,000보다 클 때 실행 전 확인/)).toBeInTheDocument()
   })
 
   it('불러오지 못하면 problem title을 보여 줍니다', async () => {

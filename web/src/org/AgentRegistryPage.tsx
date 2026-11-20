@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge, RiskBadge, type Risk } from '../components/Badge'
 import { Card } from '../components/Card'
-import { callableByText, OVERRIDE_WHEN, RISK_ACTION } from './labels'
+import { callableByText, overrideWhen, RISK_ACTION } from './labels'
 import '../inbox/inbox.css'
 import './org.css'
 
@@ -118,8 +118,8 @@ function AgentCard({ agent: a, isFallback }: { agent: Entry; isFallback: boolean
         </tbody>
       </table>
       {a.riskPolicy.overrides?.map((o) => (
-        <p key={`${o.tool}-${o.when}`} className="muted">
-          예외: <code>{o.tool}</code>은 {OVERRIDE_WHEN[o.when]} {RISK_ACTION[o.action]}
+        <p key={`${o.tool}-${JSON.stringify(o.when)}`} className="muted">
+          예외: <code>{o.tool}</code>은 {overrideWhen(o.when)} {RISK_ACTION[o.action]}
         </p>
       ))}
 
