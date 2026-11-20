@@ -25,6 +25,8 @@ from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 
 LANG = "ko"
+# 가리지 않는 구조 키(값이 사람이 쓴 글이 아님). image_url 같은 데이터 URL도 건드리지 않습니다.
+STRUCTURAL_KEYS = frozenset({"role", "type", "id", "tool_call_id", "url", "detail"})
 THRESHOLD = 0.5
 
 LABELS = {
@@ -189,22 +191,25 @@ class KoreanRedactor:
         return Redaction(out.text, Counter(i.entity_type for i in out.items))
 
     def __call__(self, body: dict[str, Any]) -> tuple[dict[str, Any], Counter]:
-        """messages의 문자열 내용을 가린 새 본문과 개체 종류별 개수를 돌려줍니다."""
+        """messages 안의 모든 문자열(내용, 도구 호출 인자 등)을 가린 새 본문과 개체 종류별 개수를 돌려줍니다.
+
+        구조 키(role, type, id 등)는 건드리지 않습니다. 도구 호출 인자는 JSON 문자열이라 통째로 가려도
+        자리표시가 문자열 안에 들어가 형식이 깨지지 않습니다.
+        """
         total: Counter = Counter()
-        messages = []
-        for m in body.get("messages", []):
-            m = dict(m)
-            content = m.get("content")
-            if isinstance(content, str):
-                r = self.redact_text(content)
-                m["content"], total = r.text, total + r.counts
-            elif isinstance(content, list):
-                parts = []
-                for p in content:
-                    if isinstance(p, dict) and p.get("type") == "text" and isinstance(p.get("text"), str):
-                        r = self.redact_text(p["text"])
-                        p, total = {**p, "text": r.text}, total + r.counts
-                    parts.append(p)
-                m["content"] = parts
-            messages.append(m)
-        return {**body, "messages": messages}, total
+
+        def walk(node: Any, key: str | None = None) -> Any:
+            nonlocal total
+            if isinstance(node, str):
+                if key in STRUCTURAL_KEYS:
+                    return node
+                r = self.redact_text(node)
+                total += r.counts
+                return r.text
+            if isinstance(node, list):
+                return [walk(x, key) for x in node]
+            if isinstance(node, dict):
+                return {k: walk(v, k) for k, v in node.items()}
+            return node
+
+        return {**body, "messages": walk(body.get("messages", []))}, total

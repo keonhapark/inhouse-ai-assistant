@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -67,14 +66,19 @@ class Glossary:
 
 
 def _texts(body: dict[str, Any]) -> str:
-    """messages의 글자와 그 밖의 문자열 필드(도구 정의 등)를 한 덩어리로 모읍니다."""
+    """messages와 tools 안의 모든 문자열(내용, 도구 호출 인자, 도구 정의)을 한 덩어리로 모읍니다."""
     out: list[str] = []
-    for m in body.get("messages", []):
-        c = m.get("content") if isinstance(m, dict) else None
-        if isinstance(c, str):
-            out.append(c)
-        elif isinstance(c, list):
-            out += [p.get("text", "") for p in c if isinstance(p, dict) and isinstance(p.get("text"), str)]
-        if isinstance(m, dict) and m.get("tool_calls"):
-            out.append(json.dumps(m["tool_calls"], ensure_ascii=False))
+
+    def walk(node: Any) -> None:
+        if isinstance(node, str):
+            out.append(node)
+        elif isinstance(node, list):
+            for x in node:
+                walk(x)
+        elif isinstance(node, dict):
+            for v in node.values():
+                walk(v)
+
+    walk(body.get("messages", []))
+    walk(body.get("tools", []))
     return "\n".join(out)

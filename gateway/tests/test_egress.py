@@ -208,3 +208,66 @@ def test_confidential_term_to_local_model_passes(client, litellm, glossary):
     r = client.post("/v1/chat/completions", json={"model": "local",
                                                    "messages": [{"role": "user", "content": "원가표 요약"}]})
     assert r.status_code == 200
+
+
+# ---------- 리뷰에서 고친 것 ----------
+def test_tool_call_arguments_are_redacted(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    msgs = [{"role": "user", "content": "등록해 줘"},
+            {"role": "assistant", "content": None, "tool_calls": [{"id": "call_1", "type": "function", "function": {
+                "name": "register", "arguments": "{\"phone\": \"010-1234-5678\"}"}}]},
+            {"role": "tool", "tool_call_id": "call_1", "content": "계좌 110-123-456789 확인"}]
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": msgs})
+    assert r.status_code == 200
+    sent = litellm.last_body()["messages"]
+    assert sent[1]["tool_calls"][0]["function"]["arguments"] == "{\"phone\": \"[전화번호]\"}"
+    assert sent[1]["tool_calls"][0]["id"] == "call_1" and sent[2]["tool_call_id"] == "call_1"
+    assert sent[2]["content"] == "계좌 [계좌번호] 확인"
+
+
+def test_glossary_looks_into_tool_definitions(client, app, token_for, litellm, glossary):
+    _, external_ok = _agent_ids(app)
+    tools = [{"type": "function", "function": {"name": "f", "description": "원가표 조회", "parameters": {}}}]
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": MSG, "tools": tools})
+    assert r.status_code == 403 and litellm.requests == []
+
+
+@pytest.mark.parametrize("field,value", [
+    ("fallbacks", ["external"]), ("api_base", "http://elsewhere"), ("mock_response", "x"), ("metadata", {}),
+])
+def test_unlisted_fields_are_rejected(client, app, token_for, litellm, field, value):
+    local_only, _ = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(local_only)},
+                    json={"model": "local", "messages": MSG, field: value})
+    assert r.status_code == 422 and field in r.json()["detail"]
+    assert litellm.requests == []
+
+
+def test_stream_closed_by_caller_is_still_recorded(app, token_for):
+    import asyncio
+    import json as _json
+
+    from starlette.requests import Request
+
+    _, external_ok = _agent_ids(app)
+    raw = _json.dumps({"model": "external", "messages": MSG, "stream": True}).encode()
+    token = token_for(external_ok)
+
+    async def receive():
+        return {"type": "http.request", "body": raw, "more_body": False}
+
+    async def go():
+        scope = {"type": "http", "method": "POST", "path": "/v1/chat/completions", "query_string": b"",
+                 "headers": [(b"x-delegation-token", token.encode()), (b"content-type", b"application/json")]}
+        resp = await app.state.egress.handle(Request(scope, receive))
+        it = resp.body_iterator
+        await it.__anext__()          # 조각 하나만 받고
+        await it.aclose()             # 호출한 쪽이 끊음
+
+    asyncio.run(go())
+    ev = _audit(app)[-1]
+    assert ev["kind"] == "llm.request" and ev["result"] == "error"
+    assert ev["problemType"] == "urn:problem:llm-stream-aborted" and ev["model"]["externalSent"] is True
+    assert "안녕" in app.state.audit.egress.read_all()[-1]["response"]

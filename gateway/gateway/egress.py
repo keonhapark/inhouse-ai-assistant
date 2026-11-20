@@ -48,6 +48,15 @@ def no_redaction(body: dict[str, Any]) -> tuple[dict[str, Any], Counter]:
     return body, Counter()
 
 
+# LiteLLM에 넘기는 본문 필드. 그 밖의 필드(fallbacks, api_base, metadata, mock_response 등)는 정책 검사를 건너뛰어
+# 다른 모델로 보내게 만들 수 있어 422로 거절합니다.
+ALLOWED_FIELDS = frozenset({
+    "model", "messages", "stream", "stream_options", "temperature", "top_p", "max_tokens",
+    "max_completion_tokens", "stop", "seed", "presence_penalty", "frequency_penalty", "tools", "tool_choice",
+    "parallel_tool_calls", "response_format", "think",
+})
+
+
 def load_model_locations(config_path: Path) -> dict[str, str]:
     doc = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     out: dict[str, str] = {}
@@ -119,8 +128,12 @@ class Egress:
             body = json.loads(await request.body())
         except ValueError:
             raise ProblemError(422, "validation", "JSON 본문이 아닙니다")
-        if not isinstance(body, dict) or not isinstance(body.get("model"), str) or "messages" not in body:
-            raise ProblemError(422, "validation", "model과 messages가 필요합니다")
+        if not isinstance(body, dict) or not isinstance(body.get("model"), str) \
+                or not isinstance(body.get("messages"), list):
+            raise ProblemError(422, "validation", "model과 messages(배열)가 필요합니다")
+        extra = sorted(set(body) - ALLOWED_FIELDS)
+        if extra:
+            raise ProblemError(422, "validation", "받지 않는 필드가 있습니다", ", ".join(extra))
         return body
 
     # ---------- 처리 ----------
@@ -201,19 +214,20 @@ class Egress:
 
         async def relay() -> AsyncIterator[bytes]:
             chunks: list[bytes] = []
+            result, problem, detail = "error", "urn:problem:llm-stream-aborted", "호출한 쪽이 끊음"
             try:
                 async for chunk in r.aiter_bytes():  # 압축은 풀어서 넘깁니다(content-encoding 헤더를 넘기지 않음)
                     chunks.append(chunk)
                     yield chunk
+                result, problem, detail = "ok", None, None
             except httpx.HTTPError as e:
+                problem, detail = "urn:problem:llm-stream-broken", type(e).__name__
                 await self.alerter.alert(f"LLM 스트림 중단 model={model['name']} ({type(e).__name__})")
-                self._egress(caller, model, before, sent, r.status_code, b"".join(chunks).decode("utf-8", "replace"))
-                self._audit(caller, model, "error", "urn:problem:llm-stream-broken", type(e).__name__)
-                return
             finally:
+                # 호출한 쪽이 끊어 생성기가 닫혀도(GeneratorExit·취소) 이미 나간 요청은 기록합니다.
+                self._egress(caller, model, before, sent, r.status_code, b"".join(chunks).decode("utf-8", "replace"))
+                self._audit(caller, model, result, problem, detail)
                 await r.aclose()
-            self._egress(caller, model, before, sent, r.status_code, b"".join(chunks).decode("utf-8", "replace"))
-            self._audit(caller, model, "ok")
 
         return StreamingResponse(relay(), status_code=r.status_code,
                                  media_type=r.headers.get("content-type", "text/event-stream"))
