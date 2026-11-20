@@ -297,7 +297,7 @@ class Egress:
                                     self.unit_of(caller.conversation_id))
             if over is not None:
                 # 상한을 넘었으면 이 요청부터 로컬로 내립니다(가림 전 본문, 로컬은 사내에서 돎).
-                note = (f"비용 상한 초과({over.kind} {over.id} ${over.spent:.4f}/${over.limit:g})로 로컬 모델로 내림")
+                note = (f"비용 상한 초과({over.kind} {over.id} ${over.spent:.6g}/${over.limit:.6g})로 로컬 모델로 내림")
                 model.update(name=self.local_alias, location="local")
                 sent = {**sent, "model": self.local_alias}
         if model["location"] == "external":
