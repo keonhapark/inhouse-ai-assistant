@@ -1,0 +1,21 @@
+name: 사용자 결정
+description: 사용자가 골라야 하는 설계 지점
+labels: [decision]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: 정할 것
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: 선택지와 장단점
+    validations:
+      required: true
+  - type: textarea
+    id: draft
+    attributes:
+      label: 지금 초안
+      description: 계약·팩에 들어가 있는 값과 위치

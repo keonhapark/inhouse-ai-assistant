@@ -1,0 +1,222 @@
+name: ci
+
+# 워크플로 하나에서 바뀐 경로에 해당하는 job만 돌립니다. 필수 검사는 항상 도는 ci-summary 하나입니다.
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      contracts: ${{ steps.f.outputs.contracts }}
+      core: ${{ steps.f.outputs.core }}
+      erp: ${{ steps.f.outputs.erp }}
+      gateway: ${{ steps.f.outputs.gateway }}
+      agent: ${{ steps.f.outputs.agent }}
+      rag: ${{ steps.f.outputs.rag }}
+      eval: ${{ steps.f.outputs.eval }}
+      web: ${{ steps.f.outputs.web }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: f
+        with:
+          filters: |
+            contracts:
+              - 'contracts/**'
+              - 'packs/**'
+              - '.github/workflows/**'
+            core:
+              - 'erp/**'
+              - 'gateway/**'
+              - 'agent/**'
+              - 'rag/**'
+            erp:
+              - 'erp/**'
+              - 'contracts/**'
+              - 'packs/**'
+            gateway:
+              - 'gateway/**'
+            agent:
+              - 'agent/**'
+            rag:
+              - 'rag/**'
+            eval:
+              - 'eval/**'
+            web:
+              - 'web/**'
+
+  contracts:
+    needs: changes
+    if: needs.changes.outputs.contracts == 'true' || needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --frozen
+      - name: 계약 파일·팩·가짜 erp 행동 시험
+        run: uv run pytest -q
+      - name: 팩 참조 검사
+        run: uv run python -m tools.check_packs
+      - name: 코어 업종 용어 검사
+        run: uv run python -m tools.check_core_terms
+      - name: OpenAPI 하위 호환 검사(oasdiff)
+        if: github.event_name == 'pull_request'
+        working-directory: .
+        run: |
+          mkdir -p /tmp/base
+          git archive "origin/${{ github.base_ref }}" contracts | tar -x -C /tmp/base || true
+          status=0
+          for spec in contracts/openapi/*.yaml; do
+            if [ -f "/tmp/base/$spec" ]; then
+              echo "== $spec"
+              docker run --rm -v /tmp/base:/base:ro -v "$PWD":/head:ro tufin/oasdiff:v1.35.0 \
+                breaking "/base/$spec" "/head/$spec" --fail-on ERR || status=1
+            fi
+          done
+          exit $status
+
+  erp:
+    needs: changes
+    if: needs.changes.outputs.erp == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: erp 빌드 파일 확인
+        id: has
+        run: if [ -f erp/build.gradle ] || [ -f erp/build.gradle.kts ]; then echo "erp=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-java@v6
+        if: steps.has.outputs.erp == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v6
+        if: steps.has.outputs.erp == 'true'
+      - name: 모듈 시험(JUnit 5 + Testcontainers)
+        if: steps.has.outputs.erp == 'true'
+        working-directory: erp
+        run: ./gradlew test --no-daemon
+      - uses: astral-sh/setup-uv@v10
+        if: steps.has.outputs.erp == 'true'
+      - name: 실제 erp에 행동 계약 시험
+        if: steps.has.outputs.erp == 'true' && hashFiles('erp/ci/start.sh') != ''
+        run: |
+          bash scripts/dev-keys.sh
+          export ERP_DEMO_PASSWORD=demo
+          export DELEGATION_TOKEN_PUBLIC_KEY="$PWD/infra/dev-keys/delegation-es256.pub.pem"
+          ERP_JWT_SECRET="$(openssl rand -hex 32)"
+          export ERP_JWT_SECRET
+          bash erp/ci/start.sh
+          cd contracts && uv sync --frozen
+          ERP_BASE_URL=http://localhost:8040/api/v1 \
+          ERP_TEST_DELEGATION_PRIVATE_KEY="$GITHUB_WORKSPACE/infra/dev-keys/delegation-es256.pem" \
+            uv run pytest -q tests/test_erp_behavior.py
+
+  python:
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [gateway, agent, rag, eval]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        if: needs.changes.outputs[matrix.module] == 'true'
+      - name: 바뀌지 않았거나 아직 없는 모듈은 건너뜀
+        id: gate
+        if: needs.changes.outputs[matrix.module] == 'true'
+        run: if [ -f "${{ matrix.module }}/pyproject.toml" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: astral-sh/setup-uv@v10
+        if: steps.gate.outputs.run == 'true'
+      - name: 모듈 시험
+        if: steps.gate.outputs.run == 'true'
+        working-directory: ${{ matrix.module }}
+        run: |
+          uv sync --frozen
+          uv run pytest -q
+
+  web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: web 패키지 확인
+        id: has
+        run: if [ -f web/package.json ]; then echo "web=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v7
+        if: steps.has.outputs.web == 'true'
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: 설치·검사·시험·빌드
+        if: steps.has.outputs.web == 'true'
+        working-directory: web
+        run: |
+          npm ci
+          npm run lint --if-present
+          npm test --if-present
+          npm run build
+
+  paths:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: 담당 경로 밖 변경 검사
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/changed.txt
+          python3 scripts/ci/check_paths.py "${HEAD_REF}" /tmp/changed.txt
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: 비밀값 검사(gitleaks, MIT)
+        run: |
+          docker run --rm -v "$PWD":/repo zricethezav/gitleaks:v8.30.1 \
+            git /repo --redact --no-banner --exit-code 1
+
+  ci-summary:
+    name: ci-summary
+    if: always()
+    needs: [changes, contracts, erp, python, web, paths, secrets]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 실패하거나 취소된 job이 있으면 실패
+        run: |
+          cat > /tmp/needs.json <<'JSON'
+          ${{ toJSON(needs) }}
+          JSON
+          python3 - <<'PY'
+          import json, sys
+          needs = json.load(open("/tmp/needs.json"))
+          bad = 0
+          for name, v in needs.items():
+              print(name, v["result"])
+              bad += v["result"] in ("failure", "cancelled")
+          sys.exit(1 if bad else 0)
+          PY
