@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inhouse-ai-assistant.invalid/contracts/auth/delegation-token.schema.json",
+  "title": "위임 토큰 클레임",
+  "description": "gateway가 대화마다 발급하는 ES256 JWT의 페이로드입니다. 유효 10분. erp·rag·MCP 서버는 gateway 공개 키(GET /.well-known/jwks.json)로 서명을 확인합니다. 토큰은 모델 문맥·프롬프트·로그에 넣지 않습니다.",
+  "type": "object",
+  "required": ["iss", "aud", "sub", "agt", "cid", "scopes", "doc_scopes", "iat", "exp", "jti"],
+  "properties": {
+    "iss": {"const": "gateway"},
+    "aud": {
+      "type": "array",
+      "items": {"enum": ["erp", "rag", "mcp"]},
+      "minItems": 1
+    },
+    "sub": {"type": "string", "description": "요청한 직원 ID"},
+    "agt": {"type": "string", "description": "라우팅된 에이전트 ID(agents.yaml)"},
+    "cid": {"type": "string", "description": "conversationId"},
+    "scopes": {
+      "type": "array",
+      "description": "erp scope(contracts/auth/scopes.json). 요청자 권한 ∩ 에이전트 도구의 required_scope",
+      "items": {"type": "string"}
+    },
+    "tools": {
+      "type": "array",
+      "description": "이 대화에서 쓸 수 있는 MCP 도구 이름(에이전트 등록부 기준)",
+      "items": {"type": "string"}
+    },
+    "doc_scopes": {
+      "type": "array",
+      "description": "문서 접근 태그. 요청자 태그 ∩ 에이전트 doc_scopes",
+      "items": {"type": "string"}
+    },
+    "iat": {"type": "integer"},
+    "exp": {"type": "integer", "description": "iat + 600"},
+    "jti": {"type": "string"}
+  },
+  "additionalProperties": false
+}

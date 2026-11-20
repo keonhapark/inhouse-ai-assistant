@@ -1,0 +1,615 @@
+openapi: 3.1.0
+info:
+  title: gateway (출구와 화면용 API)
+  version: 0.1.0
+  description: |
+    web 화면이 부르는 유일한 서버입니다. 직원은 erp JWT로 로그인하고, gateway는 대화마다 위임 토큰(10분, ES256)을 발급해
+    agent에 넘깁니다. 결재함·대결·되돌리기는 직원 JWT로 erp를 그대로 부릅니다(사람 화면 경로).
+
+    용어
+    - 실행 승인(`approvalId`): 에이전트가 위험 등급 confirm인 도구를 실행하기 전에 요청자 본인에게 받는 확인입니다.
+    - 결재(`documentId`): erp 결재 문서. 팀장 승인함에서 승인·반려합니다. 에이전트는 결재 승인 도구가 없습니다.
+
+    LLM 출구
+    - `POST /v1/chat/completions` 등 OpenAI 호환 엔드포인트는 LiteLLM 프록시가 그대로 노출하고, 이 문서에는 적지 않습니다
+      (https://docs.litellm.ai). rag·agent는 여기만 부릅니다. 요청에 `X-Delegation-Token`을 붙이면 gateway가 `agt` 클레임으로
+      에이전트 모델 정책(local_only 등)을 강제하고, 가림·기밀 판정·외부 전송 기록을 남깁니다.
+
+    스트림
+    - `POST /conversations/{conversationId}/messages`와 `POST /execution-approvals/{approvalId}`는 `text/event-stream`으로 답합니다.
+      SSE `event:` 이름은 `ChatEvent.type`과 같고 `data:`는 `ChatEvent` JSON 한 줄입니다. 마지막은 항상 `done`입니다.
+servers:
+  - url: http://localhost:{port}/api
+    variables:
+      port: {default: "8010", description: PORT_BASE + 10}
+security:
+  - bearer: []
+tags:
+  - name: auth
+  - name: chat
+  - name: execution-approvals
+  - name: actions
+  - name: inbox
+  - name: delegations
+  - name: audit
+  - name: system
+
+paths:
+  /health:
+    get:
+      tags: [system]
+      operationId: health
+      security: []
+      responses:
+        "200":
+          description: 살아 있음
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {const: ok}
+
+  /.well-known/jwks.json:
+    get:
+      tags: [system]
+      operationId: getJwks
+      security: []
+      description: 위임 토큰 검증용 공개 키(JWK Set). erp·rag·MCP 서버가 씁니다.
+      responses:
+        "200":
+          description: JWK Set
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [keys]
+                properties:
+                  keys:
+                    type: array
+                    items: {type: object}
+
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      security: []
+      description: erp `/auth/login`에 그대로 넘기고 결과를 돌려줍니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeNo, password]
+              properties:
+                employeeNo: {type: string}
+                password: {type: string}
+      responses:
+        "200":
+          description: 직원 JWT
+          content:
+            application/json:
+              schema: {$ref: "erp.yaml#/components/schemas/LoginResponse"}
+        "401": {$ref: "#/components/responses/Problem"}
+
+  /me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      responses:
+        "200":
+          description: 로그인한 직원
+          content:
+            application/json:
+              schema: {$ref: "erp.yaml#/components/schemas/Employee"}
+
+  /agents:
+    get:
+      tags: [chat]
+      operationId: listAgents
+      description: 로그인한 직원이 부를 수 있는 에이전트. 채팅 화면의 부서 선택에 씁니다.
+      responses:
+        "200":
+          description: 에이전트
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "agent.yaml#/components/schemas/AgentInfo"}
+
+  /conversations:
+    get:
+      tags: [chat]
+      operationId: listConversations
+      responses:
+        "200":
+          description: 내 대화
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "#/components/schemas/ConversationSummary"}
+    post:
+      tags: [chat]
+      operationId: createConversation
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                agentId:
+                  type: string
+                  description: 직원이 부서 에이전트를 직접 고르면 넣습니다. 없으면 첫 메시지에서 입구 라우터가 고릅니다(한 번만)
+      responses:
+        "201":
+          description: 새 대화
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ConversationSummary"}
+        "403": {$ref: "#/components/responses/Problem"}
+
+  /conversations/{conversationId}:
+    get:
+      tags: [chat]
+      operationId: getConversation
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      responses:
+        "200":
+          description: 대화와 지금까지의 이벤트
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Conversation"}
+        "404": {$ref: "#/components/responses/Problem"}
+
+  /conversations/{conversationId}/messages:
+    post:
+      tags: [chat]
+      operationId: postMessage
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              additionalProperties: false
+              properties:
+                content: {type: string, maxLength: 4000}
+      responses:
+        "200":
+          description: SSE 스트림. 각 이벤트의 data는 ChatEvent
+          content:
+            text/event-stream:
+              schema: {$ref: "#/components/schemas/ChatEvent"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409":
+          description: 실행 승인을 기다리는 중이라 새 메시지를 받지 않음
+          content:
+            application/problem+json:
+              schema: {$ref: "erp.yaml#/components/schemas/Problem"}
+
+  /execution-approvals/{approvalId}:
+    post:
+      tags: [execution-approvals]
+      operationId: decideExecutionApproval
+      description: 미리보기 카드에서 요청자 본인이 실행을 승인하거나 거절합니다. 이어지는 실행을 스트림으로 돌려줍니다.
+      parameters:
+        - name: approvalId
+          in: path
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              additionalProperties: false
+              properties:
+                decision: {type: string, enum: [approve, reject]}
+                comment: {type: string, maxLength: 200}
+      responses:
+        "200":
+          description: SSE 스트림
+          content:
+            text/event-stream:
+              schema: {$ref: "#/components/schemas/ChatEvent"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /actions/{actionId}/undo:
+    post:
+      tags: [actions]
+      operationId: undoAction
+      description: 직원 JWT로 erp `POST /actions/{actionId}/undo`를 부릅니다. 응답·오류는 erp와 같습니다.
+      parameters:
+        - name: actionId
+          in: path
+          required: true
+          schema: {type: string}
+        - $ref: "erp.yaml#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: 되돌림
+          content:
+            application/json:
+              schema: {$ref: "erp.yaml#/components/schemas/ActionResult"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /inbox:
+    get:
+      tags: [inbox]
+      operationId: listInbox
+      description: 팀장 승인함. erp `GET /approval-documents`에 요청자·원 결재자 이름을 붙여 돌려줍니다.
+      parameters:
+        - name: box
+          in: query
+          required: true
+          schema: {type: string, enum: [inbox, delegated, done, outbox]}
+      responses:
+        "200":
+          description: 결재 문서
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "#/components/schemas/InboxItem"}
+
+  /inbox/{documentId}:
+    get:
+      tags: [inbox]
+      operationId: getInboxItem
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: 결재 문서
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/InboxItem"}
+        "404": {$ref: "#/components/responses/Problem"}
+
+  /inbox/{documentId}/approve:
+    post:
+      tags: [inbox]
+      operationId: approveInboxItem
+      description: 직원 JWT로 erp approve를 부릅니다. 대결이면 erp가 위임을 확인합니다.
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+        - $ref: "erp.yaml#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "erp.yaml#/components/schemas/DecisionRequest"}
+      responses:
+        "201":
+          description: 승인됨
+          content:
+            application/json:
+              schema: {$ref: "erp.yaml#/components/schemas/ActionResult"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /inbox/{documentId}/reject:
+    post:
+      tags: [inbox]
+      operationId: rejectInboxItem
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+        - $ref: "erp.yaml#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "erp.yaml#/components/schemas/DecisionRequest"}
+      responses:
+        "201":
+          description: 반려됨
+          content:
+            application/json:
+              schema: {$ref: "erp.yaml#/components/schemas/ActionResult"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /delegations:
+    get:
+      tags: [delegations]
+      operationId: listDelegations
+      description: 대결 설정 화면. erp `GET /delegations`에 이름을 붙여 돌려줍니다.
+      parameters:
+        - name: role
+          in: query
+          required: true
+          schema: {type: string, enum: [delegator, delegate, all]}
+      responses:
+        "200":
+          description: 위임
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "#/components/schemas/DelegationView"}
+    post:
+      tags: [delegations]
+      operationId: createDelegation
+      description: 직원 JWT로 erp `POST /delegations`를 부릅니다. dryRun으로 미리보기를 먼저 보여 줍니다.
+      parameters:
+        - $ref: "erp.yaml#/components/parameters/DryRun"
+        - $ref: "erp.yaml#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "erp.yaml#/components/schemas/DelegationCreate"}
+      responses:
+        "200":
+          description: 미리보기
+          content:
+            application/json:
+              schema: {$ref: "erp.yaml#/components/schemas/WritePreview"}
+        "201":
+          description: 등록됨
+          content:
+            application/json:
+              schema: {$ref: "erp.yaml#/components/schemas/ActionResult"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /delegations/{delegationId}/revoke:
+    post:
+      tags: [delegations]
+      operationId: revokeDelegation
+      parameters:
+        - name: delegationId
+          in: path
+          required: true
+          schema: {type: string}
+        - $ref: "erp.yaml#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: 해지됨
+          content:
+            application/json:
+              schema: {$ref: "erp.yaml#/components/schemas/ActionResult"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+
+  /notifications:
+    get:
+      tags: [inbox]
+      operationId: listNotifications
+      responses:
+        "200":
+          description: erp 알림(후열 포함)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "erp.yaml#/components/schemas/Notification"}
+
+  /audit-events:
+    get:
+      tags: [audit]
+      operationId: listAuditEvents
+      description: auditor 역할만. gateway·agent·MCP·rag·erp 감사 이벤트를 시각 순으로 합쳐 돌려줍니다.
+      parameters:
+        - {name: conversationId, in: query, schema: {type: string}}
+        - {name: actorId, in: query, schema: {type: string}}
+        - {name: agentId, in: query, schema: {type: string}}
+        - {name: kind, in: query, schema: {type: string}}
+        - {name: since, in: query, schema: {type: string, format: date-time}}
+        - {name: until, in: query, schema: {type: string, format: date-time}}
+        - {name: cursor, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 100}}
+      responses:
+        "200":
+          description: 감사 이벤트
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "../events/audit.schema.json"}
+                  nextCursor: {type: [string, "null"]}
+        "403": {$ref: "#/components/responses/Problem"}
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: erp가 발급한 직원 JWT
+
+  parameters:
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema: {type: string}
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema: {type: string}
+
+  responses:
+    Problem:
+      description: RFC 9457 오류
+      content:
+        application/problem+json:
+          schema: {$ref: "erp.yaml#/components/schemas/Problem"}
+
+  schemas:
+    ConversationSummary:
+      type: object
+      required: [conversationId, createdAt, status]
+      properties:
+        conversationId: {type: string, description: LangGraph thread_id와 같음}
+        agentId: {type: [string, "null"], description: 라우팅 전이면 null}
+        agentName: {type: [string, "null"]}
+        title: {type: [string, "null"]}
+        status: {type: string, enum: [active, awaiting_approval, closed]}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+
+    Conversation:
+      allOf:
+        - $ref: "#/components/schemas/ConversationSummary"
+        - type: object
+          required: [events]
+          properties:
+            events:
+              type: array
+              description: 지금까지의 사용자 메시지와 ChatEvent(화면 복원용)
+              items:
+                oneOf:
+                  - type: object
+                    required: [type, content, at]
+                    properties:
+                      type: {const: user_message}
+                      content: {type: string}
+                      at: {type: string, format: date-time}
+                  - $ref: "#/components/schemas/ChatEvent"
+
+    ChatEvent:
+      type: object
+      required: [type, conversationId, seq]
+      description: SSE 이벤트 하나. type마다 쓰는 필드가 다릅니다
+      properties:
+        type:
+          type: string
+          enum: [route, delta, message, tool_call, approval_required, approval_decided, action, citations, blocked, error, done]
+        conversationId: {type: string}
+        seq: {type: integer, minimum: 0, description: 대화 안에서 늘어나는 번호}
+        at: {type: string, format: date-time}
+        route:
+          description: type=route. 입구 라우터 결과(대화마다 한 번)
+          type: object
+          properties:
+            agentId: {type: string}
+            agentName: {type: string}
+            method: {type: string, enum: [llm, keyword, fallback, explicit]}
+            reason: {type: string}
+            suggestedAgentId: {type: [string, "null"]}
+        text:
+          type: string
+          description: type=delta(조각) 또는 message(완성된 답)
+        toolCall:
+          description: type=tool_call. 읽기 도구 실행 기록(화면에는 접어서 보여 줌)
+          type: object
+          properties:
+            tool: {type: string}
+            risk: {type: string, enum: [read, reversible_write, irreversible]}
+            status: {type: string, enum: [ok, error, blocked]}
+        approval:
+          description: type=approval_required. 실행 전 미리보기 카드
+          type: object
+          required: [approvalId, tool, risk, preview]
+          properties:
+            approvalId: {type: string}
+            tool: {type: string}
+            toolLabel: {type: string}
+            risk: {type: string, enum: [read, reversible_write, irreversible]}
+            preview: {$ref: "erp.yaml#/components/schemas/WritePreview"}
+            expiresAt: {type: string, format: date-time}
+        decision:
+          description: type=approval_decided
+          type: object
+          properties:
+            approvalId: {type: string}
+            decision: {type: string, enum: [approve, reject]}
+        action:
+          description: type=action. 실행된 erp 행동. undoable이면 화면에 되돌리기 버튼
+          type: object
+          required: [actionId, tool, summary, undoable]
+          properties:
+            actionId: {type: string}
+            tool: {type: string}
+            summary: {type: string}
+            undoable: {type: boolean}
+        citations:
+          description: type=citations. 근거 조문
+          type: array
+          items: {$ref: "rag.yaml#/components/schemas/Citation"}
+        blocked:
+          description: type=blocked. 장치가 막은 이유(사용자에게 보여 줄 문장)
+          type: object
+          properties:
+            reason: {type: string}
+            code:
+              type: string
+              enum: [agent_not_callable, tool_not_allowed, trust_violation, policy_denied, scope_missing, model_policy]
+        error:
+          type: object
+          properties:
+            message: {type: string}
+            retryable: {type: boolean}
+        model:
+          description: type=message·done. 쓴 모델(화면의 "로컬에서 처리" 표시)
+          type: object
+          properties:
+            name: {type: string}
+            location: {type: string, enum: [local, external]}
+
+    InboxItem:
+      allOf:
+        - $ref: "erp.yaml#/components/schemas/ApprovalDocument"
+        - type: object
+          required: [formName, requesterName]
+          properties:
+            formName: {type: string}
+            requesterName: {type: string}
+            requesterUnitName: {type: string}
+            viaDelegation:
+              type: [object, "null"]
+              description: 대결로 내 함에 들어온 것이면 원 결재자와 위임
+              properties:
+                delegationId: {type: string}
+                originalApproverId: {type: string}
+                originalApproverName: {type: string}
+                endsAt: {type: string, format: date-time}
+
+    DelegationView:
+      allOf:
+        - $ref: "erp.yaml#/components/schemas/Delegation"
+        - type: object
+          required: [delegatorName, delegateName]
+          properties:
+            delegatorName: {type: string}
+            delegateName: {type: string}

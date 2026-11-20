@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inhouse-ai-assistant.invalid/contracts/mcp/tools.schema.json",
+  "title": "MCP 도구 목록 형식",
+  "type": "object",
+  "required": ["version", "tools"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"type": "string"},
+    "version": {"type": "string"},
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "inputSchema", "risk", "trust_required", "required_scope", "backend", "stage"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
+          "description": {"type": "string", "description": "모델에게 보이는 설명(한국어)"},
+          "inputSchema": {"type": "object"},
+          "risk": {
+            "enum": ["read", "reversible_write", "irreversible"],
+            "description": "read: 상태 불변. reversible_write: 실행 뒤 POST /actions/{id}/undo로 되돌림. irreversible: 되돌리기 없음"
+          },
+          "trust_required": {
+            "enum": ["any", "user_direct"],
+            "description": "user_direct: 인자가 사용자 발화에서 나와야 합니다. 문서·도구 출력(신뢰 불가 등급)에서 온 지시로는 부를 수 없습니다"
+          },
+          "required_scope": {"type": "string"},
+          "backend": {
+            "type": "object",
+            "required": ["service", "operationId"],
+            "additionalProperties": false,
+            "properties": {
+              "service": {"enum": ["erp", "rag"]},
+              "operationId": {"type": "string"},
+              "fixed": {"type": "object", "description": "도구가 고정해 넘기는 값(예: formId)"}
+            }
+          },
+          "stage": {"type": "integer", "minimum": 1}
+        }
+      }
+    }
+  }
+}

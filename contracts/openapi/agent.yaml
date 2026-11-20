@@ -1,0 +1,208 @@
+openapi: 3.1.0
+info:
+  title: agent (에이전트 런타임과 입구 라우터)
+  version: 0.1.0
+  description: |
+    gateway만 부르는 내부 API입니다. `/route`는 요청을 에이전트 하나로 한 번만 넘깁니다(에이전트끼리 넘기지 않음).
+    `/run`·`/resume`은 LangGraph thread(= conversationId)를 이어 갑니다. 위임 토큰은 `X-Delegation-Token` 헤더로만 받고
+    MCP 요청 헤더로만 넘깁니다. 모델 문맥·로그에는 넣지 않습니다.
+    위험 등급이 confirm인 도구는 실행 전에 멈추고(`awaiting_approval`) 미리보기(erp dryRun 결과)를 돌려줍니다.
+servers:
+  - url: http://localhost:{port}
+    variables:
+      port: {default: "8020", description: PORT_BASE + 20}
+paths:
+  /health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: 살아 있음
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {const: ok}
+  /agents:
+    get:
+      operationId: listAgents
+      description: 팩 등록부의 에이전트(이 단계에서 켜진 것)
+      responses:
+        "200":
+          description: 에이전트
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "#/components/schemas/AgentInfo"}
+  /route:
+    post:
+      operationId: route
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message, requester]
+              additionalProperties: false
+              properties:
+                message: {type: string}
+                requester: {$ref: "#/components/schemas/Requester"}
+                method:
+                  type: string
+                  enum: [llm, keyword]
+                  default: llm
+                  description: keyword는 기준선 비교용
+      responses:
+        "200":
+          description: 라우팅 결과
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/RouteDecision"}
+  /run:
+    post:
+      operationId: run
+      parameters:
+        - $ref: "#/components/parameters/DelegationToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversationId, agentId, message, requester]
+              additionalProperties: false
+              properties:
+                conversationId: {type: string}
+                agentId: {type: string}
+                message: {type: string}
+                requester: {$ref: "#/components/schemas/Requester"}
+                condition:
+                  $ref: "#/components/schemas/Condition"
+      responses:
+        "200":
+          description: 실행 상태
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/RunState"}
+  /resume:
+    post:
+      operationId: resume
+      parameters:
+        - $ref: "#/components/parameters/DelegationToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversationId, approvalId, decision]
+              additionalProperties: false
+              properties:
+                conversationId: {type: string}
+                approvalId: {type: string}
+                decision: {type: string, enum: [approve, reject]}
+                comment: {type: string}
+      responses:
+        "200":
+          description: 실행 상태
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/RunState"}
+        "409":
+          description: 이미 결정됐거나 기다리는 승인이 아님
+components:
+  parameters:
+    DelegationToken:
+      name: X-Delegation-Token
+      in: header
+      required: true
+      schema: {type: string}
+  schemas:
+    Condition:
+      type: string
+      enum: [no_guard, write_blocked, approve_all, baseline_tools, full]
+      default: full
+      description: 평가 다섯 조건. 운영에서는 full만 씁니다
+    Requester:
+      type: object
+      required: [employeeId, unitId, grade, roles]
+      properties:
+        employeeId: {type: string}
+        unitId: {type: string}
+        grade: {type: string}
+        roles: {type: array, items: {type: string}}
+    AgentInfo:
+      type: object
+      required: [id, name, description, modelPolicy]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        description: {type: string}
+        modelPolicy: {type: string, enum: [external_allowed, local_only]}
+        callable: {type: boolean, description: 요청자가 부를 수 있는지(route에 requester를 줄 때)}
+    RouteDecision:
+      type: object
+      required: [agentId, method, reason]
+      properties:
+        agentId: {type: string, description: 고르지 못하면 fallback 에이전트}
+        method: {type: string, enum: [llm, keyword, fallback, explicit]}
+        reason: {type: string}
+        confidence: {type: [number, "null"]}
+        suggestedAgentId: {type: [string, "null"], description: fallback일 때 안내만 하는 부서 에이전트}
+    ToolPreview:
+      type: object
+      required: [tool, risk, arguments, preview]
+      properties:
+        tool: {type: string}
+        risk: {type: string, enum: [read, reversible_write, irreversible]}
+        arguments: {type: object}
+        preview:
+          type: object
+          description: erp WritePreview(summary, changes, undoable, warnings)
+    ExecutedAction:
+      type: object
+      required: [tool, actionId, summary, undoable]
+      properties:
+        tool: {type: string}
+        actionId: {type: string}
+        summary: {type: string}
+        undoable: {type: boolean}
+    RunState:
+      type: object
+      required: [conversationId, agentId, status, messages]
+      properties:
+        conversationId: {type: string}
+        agentId: {type: string}
+        status:
+          type: string
+          enum: [completed, awaiting_approval, awaiting_user, blocked, failed]
+          description: awaiting_user는 되묻기
+        messages:
+          type: array
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role: {type: string, enum: [assistant]}
+              content: {type: string}
+        pendingApproval:
+          type: [object, "null"]
+          required: [approvalId, toolPreview]
+          properties:
+            approvalId: {type: string}
+            toolPreview: {$ref: "#/components/schemas/ToolPreview"}
+        actions:
+          type: array
+          items: {$ref: "#/components/schemas/ExecutedAction"}
+        citations:
+          type: array
+          items: {type: object, description: rag Citation}
+        blockedReason: {type: [string, "null"]}

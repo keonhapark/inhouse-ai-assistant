@@ -1,0 +1,378 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inhouse-ai-assistant.invalid/contracts/pack/pack.schema.json",
+  "title": "업종 팩 형식",
+  "description": "packs/<업종>/의 파일마다 $defs 하나를 씁니다. pack.yaml→pack, org.yaml→org, agents.yaml→agents, forms.yaml→forms, docs.yaml→docs, fixtures/*.json→fixtures_*. 참조 검사(도구가 tools.json에 있는지, ACL 태그가 org.yaml에 있는지 등)는 contracts/tools/check_packs.py가 합니다.",
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+    "idList": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+    "grant": {
+      "description": "all, 또는 units·roles·grades 중 하나라도 맞으면 부여",
+      "oneOf": [
+        {"const": "all"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "units": {"$ref": "#/$defs/idList"},
+            "roles": {"$ref": "#/$defs/idList"},
+            "grades": {"$ref": "#/$defs/idList"}
+          }
+        }
+      ]
+    },
+
+    "pack": {
+      "type": "object",
+      "required": ["id", "name", "version", "company", "locale", "requires_erp_features", "stage"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+        "company": {
+          "type": "object",
+          "required": ["name", "description", "headcount", "timezone"],
+          "additionalProperties": false,
+          "properties": {
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "headcount": {"type": "integer", "minimum": 1},
+            "timezone": {"type": "string"}
+          }
+        },
+        "locale": {"type": "string"},
+        "requires_erp_features": {
+          "type": "array",
+          "items": {"enum": ["org", "approval_documents", "delegations", "leave", "rooms", "doc_access", "expense", "purchase", "tickets"]}
+        },
+        "stage": {"type": "integer", "minimum": 1}
+      }
+    },
+
+    "org": {
+      "type": "object",
+      "required": ["grades", "units", "roles", "access_tags", "approver_resolution", "delegation_policy"],
+      "additionalProperties": false,
+      "properties": {
+        "grades": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "rank"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "name": {"type": "string"},
+              "rank": {"type": "integer", "minimum": 1}
+            }
+          }
+        },
+        "units": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "kind"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "name": {"type": "string"},
+              "kind": {"enum": ["division", "team"]},
+              "parent": {"$ref": "#/$defs/id"}
+            }
+          }
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "grant"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "name": {"type": "string"},
+              "grant": {"$ref": "#/$defs/grant"}
+            }
+          }
+        },
+        "access_tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "grant"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "name": {"type": "string"},
+              "grant": {"$ref": "#/$defs/grant"}
+            }
+          }
+        },
+        "approver_resolution": {
+          "type": "object",
+          "description": "결재선 단계 이름 → 설명. 단계 해석 규칙 자체는 erp 코어에 있습니다",
+          "additionalProperties": {"type": "string"},
+          "propertyNames": {"enum": ["team_leader", "division_head", "ceo"]}
+        },
+        "delegation_policy": {
+          "type": "object",
+          "required": ["max_period_days", "registrable_by", "allow_redelegation", "allow_self_approval", "scope_units", "wide_scope"],
+          "additionalProperties": false,
+          "properties": {
+            "max_period_days": {"type": "integer", "minimum": 1},
+            "registrable_by": {"type": "array", "items": {"type": "string"}, "description": "self 또는 역할 ID"},
+            "allow_redelegation": {"const": false},
+            "allow_self_approval": {"const": false},
+            "scope_units": {"type": "array", "items": {"enum": ["form_type", "max_amount"]}},
+            "wide_scope": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period_days_over": {"type": "integer", "minimum": 0},
+                "max_amount_over": {"type": "integer", "minimum": 0},
+                "all_form_types": {"type": "boolean"}
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "agents": {
+      "type": "object",
+      "required": ["fallback_agent", "agents"],
+      "additionalProperties": false,
+      "properties": {
+        "fallback_agent": {"$ref": "#/$defs/id"},
+        "agents": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "version", "stage", "owner_unit", "description", "callable_by", "tools", "allowed_risk", "doc_scopes", "model_policy", "risk_policy", "routing"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "name": {"type": "string"},
+              "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+              "stage": {"type": "integer", "minimum": 1},
+              "owner_unit": {"$ref": "#/$defs/id"},
+              "description": {"type": "string"},
+              "callable_by": {"$ref": "#/$defs/grant"},
+              "tools": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+              "allowed_risk": {"type": "array", "items": {"enum": ["read", "reversible_write", "irreversible"]}},
+              "doc_scopes": {"$ref": "#/$defs/idList"},
+              "model_policy": {
+                "type": "object",
+                "required": ["mode"],
+                "additionalProperties": false,
+                "properties": {
+                  "mode": {"enum": ["external_allowed", "local_only"]},
+                  "reason": {"type": "string"}
+                }
+              },
+              "risk_policy": {
+                "type": "object",
+                "required": ["read", "reversible_write", "irreversible"],
+                "additionalProperties": false,
+                "properties": {
+                  "read": {"$ref": "#/$defs/riskAction"},
+                  "reversible_write": {"$ref": "#/$defs/riskAction"},
+                  "irreversible": {"$ref": "#/$defs/riskAction"},
+                  "overrides": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["tool", "when", "action"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "tool": {"type": "string"},
+                        "when": {"enum": ["wide_scope", "always"]},
+                        "action": {"$ref": "#/$defs/riskAction"}
+                      }
+                    }
+                  }
+                }
+              },
+              "routing": {
+                "type": "object",
+                "required": ["keywords", "examples"],
+                "additionalProperties": false,
+                "properties": {
+                  "keywords": {"type": "array", "items": {"type": "string"}},
+                  "examples": {"type": "array", "items": {"type": "string"}}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "riskAction": {
+      "enum": ["auto", "auto_with_undo", "confirm", "deny"],
+      "description": "auto: 바로 실행. auto_with_undo: 실행하고 되돌리기 안내. confirm: 미리보기 카드로 실행 승인을 받음. deny: 이 에이전트에서 금지"
+    },
+
+    "forms": {
+      "type": "object",
+      "required": ["forms"],
+      "additionalProperties": false,
+      "properties": {
+        "forms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "stage", "fields", "approval_line"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "name": {"type": "string"},
+              "stage": {"type": "integer", "minimum": 1},
+              "fields": {"type": "object", "description": "JSON Schema"},
+              "amount_field": {"type": "string"},
+              "effects": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "on_final_approval": {"enum": ["deduct_leave_balance"]},
+                  "on_withdraw_after_approval": {"enum": ["restore_leave_balance"]}
+                }
+              },
+              "approval_line": {
+                "type": "array",
+                "minItems": 1,
+                "description": "위에서부터 처음 맞는 규칙 하나를 씁니다",
+                "items": {
+                  "type": "object",
+                  "required": ["when", "steps"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "when": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "amount_lte": {"type": "integer"},
+                        "amount_gt": {"type": "integer"}
+                      }
+                    },
+                    "steps": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {"enum": ["team_leader", "division_head", "ceo"]}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "docs": {
+      "type": "object",
+      "required": ["documents"],
+      "additionalProperties": false,
+      "properties": {
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "kind", "source", "acl_tags", "trust", "stage", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "title": {"type": "string"},
+              "kind": {"enum": ["regulation", "guide", "notice", "standard", "manual", "ticket"]},
+              "source": {
+                "type": "object",
+                "required": ["type", "license"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": {"enum": ["law_open_api", "generated", "public_dataset"]},
+                  "url": {"type": "string"},
+                  "note": {"type": "string"},
+                  "generator": {"type": "string"},
+                  "license": {"type": "string"}
+                }
+              },
+              "acl_tags": {"$ref": "#/$defs/idList", "minItems": 1},
+              "trust": {"enum": ["trusted", "untrusted"]},
+              "stage": {"type": "integer", "minimum": 1},
+              "status": {"enum": ["candidate", "planned", "ready"]}
+            }
+          }
+        }
+      }
+    },
+
+    "fixtures_employees": {
+      "type": "object",
+      "required": ["seed", "employees"],
+      "properties": {
+        "seed": {"type": "integer"},
+        "employees": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "employee_no", "name", "unit_id", "grade", "email", "hired_on"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"type": "string", "pattern": "^E\\d{4}$"},
+              "employee_no": {"type": "string"},
+              "name": {"type": "string"},
+              "unit_id": {"$ref": "#/$defs/id"},
+              "grade": {"$ref": "#/$defs/id"},
+              "email": {"type": "string", "pattern": "@example\\.invalid$"},
+              "hired_on": {"type": "string", "format": "date"}
+            }
+          }
+        }
+      }
+    },
+    "fixtures_rooms": {
+      "type": "object",
+      "required": ["rooms"],
+      "properties": {
+        "rooms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "floor", "capacity"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "name": {"type": "string"},
+              "floor": {"type": "integer"},
+              "capacity": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    },
+    "fixtures_leave_balances": {
+      "type": "object",
+      "required": ["seed", "balances"],
+      "properties": {
+        "seed": {"type": "integer"},
+        "balances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["employee_id", "year", "annual_total", "annual_used"],
+            "additionalProperties": false,
+            "properties": {
+              "employee_id": {"type": "string"},
+              "year": {"type": "integer"},
+              "annual_total": {"type": "number", "minimum": 0},
+              "annual_used": {"type": "number", "minimum": 0}
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "$comment": "erp scope 목록. 위임 토큰 scopes = 요청자 권한 ∩ 라우팅된 에이전트 도구들의 required_scope. approval:decide와 audit:read는 사람 화면 전용이라 MCP 도구에 쓰지 않습니다.",
+  "scopes": [
+    {"id": "profile:read", "description": "본인 정보와 문서 접근 태그"},
+    {"id": "org:read", "description": "조직도와 직원 공개 정보"},
+    {"id": "approval:read", "description": "내가 관련된 결재 문서 조회"},
+    {"id": "approval:request", "description": "모든 양식 상신. approval:request:<formId>로 좁힐 수 있음"},
+    {"id": "approval:withdraw", "description": "내 결재 문서 회수"},
+    {"id": "approval:decide", "description": "결재 승인·반려", "human_only": true},
+    {"id": "delegation:read", "description": "대결 위임 조회"},
+    {"id": "delegation:write", "description": "대결 위임 등록·해지"},
+    {"id": "leave:read", "description": "연차 잔여 조회"},
+    {"id": "room:read", "description": "회의실과 예약 조회"},
+    {"id": "room:write", "description": "회의실 예약·취소"},
+    {"id": "action:read", "description": "내 행동 조회"},
+    {"id": "action:undo", "description": "내 행동 되돌리기"},
+    {"id": "notification:read", "description": "알림 조회"},
+    {"id": "audit:read", "description": "감사 이벤트 조회", "human_only": true}
+  ]
+}

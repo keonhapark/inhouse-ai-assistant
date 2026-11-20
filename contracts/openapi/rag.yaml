@@ -1,0 +1,137 @@
+openapi: 3.1.0
+info:
+  title: rag (규정 질의)
+  version: 0.1.0
+  description: |
+    규정·안내 문서 검색과 근거 붙은 답. 문서 접근은 위임 토큰의 `doc_scopes`만 봅니다(`X-Delegation-Token`).
+    토큰이 없거나 서명이 틀리면 401입니다. 답을 만들 때 LLM은 gateway의 OpenAI 호환 엔드포인트만 부릅니다.
+    근거에서 찾지 못하면 `found: false`와 정해진 문구 "규정에서 찾지 못했습니다."를 돌려줍니다.
+servers:
+  - url: http://localhost:{port}
+    variables:
+      port: {default: "8030", description: PORT_BASE + 30}
+paths:
+  /health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: 살아 있음
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {const: ok}
+  /search:
+    post:
+      operationId: search
+      parameters:
+        - $ref: "#/components/parameters/DelegationToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              additionalProperties: false
+              properties:
+                query: {type: string, maxLength: 500}
+                topK: {type: integer, minimum: 1, maximum: 20, default: 5}
+                method:
+                  type: string
+                  enum: [hybrid, bm25, vector]
+                  default: hybrid
+                  description: bm25는 기준선 비교용
+      responses:
+        "200":
+          description: 근거 후보
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [hits]
+                properties:
+                  hits:
+                    type: array
+                    items: {$ref: "#/components/schemas/Passage"}
+        "401": {$ref: "#/components/responses/Problem"}
+  /answer:
+    post:
+      operationId: answer
+      parameters:
+        - $ref: "#/components/parameters/DelegationToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              additionalProperties: false
+              properties:
+                question: {type: string, maxLength: 500}
+                conversationId: {type: string}
+      responses:
+        "200":
+          description: 답과 근거
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Answer"}
+        "401": {$ref: "#/components/responses/Problem"}
+components:
+  parameters:
+    DelegationToken:
+      name: X-Delegation-Token
+      in: header
+      required: true
+      schema: {type: string}
+  responses:
+    Problem:
+      description: RFC 9457
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            required: [type, title, status]
+            properties:
+              type: {type: string}
+              title: {type: string}
+              status: {type: integer}
+              detail: {type: string}
+  schemas:
+    Passage:
+      type: object
+      required: [docId, title, article, text, score, trust]
+      properties:
+        docId: {type: string, description: docs.yaml의 문서 ID}
+        title: {type: string}
+        article: {type: [string, "null"], description: "조문·항 표시(예: 제15조 제2항)"}
+        text: {type: string}
+        score: {type: number}
+        trust: {type: string, enum: [trusted, untrusted]}
+    Citation:
+      type: object
+      required: [docId, title, article, quote, verified]
+      properties:
+        docId: {type: string}
+        title: {type: string}
+        article: {type: [string, "null"]}
+        quote: {type: string, description: 근거 원문 일부}
+        verified: {type: boolean, description: 인용 대조로 quote가 원문에 있는지 확인했는지}
+    Answer:
+      type: object
+      required: [found, answer, citations]
+      properties:
+        found: {type: boolean}
+        answer: {type: string}
+        citations:
+          type: array
+          items: {$ref: "#/components/schemas/Citation"}
+        model:
+          type: object
+          properties:
+            name: {type: string}
+            location: {type: string, enum: [local, external]}

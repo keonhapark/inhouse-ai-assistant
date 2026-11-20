@@ -1,0 +1,248 @@
+{
+  "$schema": "./tools.schema.json",
+  "version": "0.1.0",
+  "tools": [
+    {
+      "name": "hr_get_my_profile",
+      "description": "내 인사 정보(이름, 소속, 직급, 입사일)를 봅니다.",
+      "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "profile:read",
+      "backend": {"service": "erp", "operationId": "getMe"},
+      "stage": 1
+    },
+    {
+      "name": "org_search_employees",
+      "description": "이름이나 팀으로 동료를 찾습니다. 이름·팀·직급만 나옵니다.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {"type": "string", "description": "이름 일부"},
+          "unitId": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "org:read",
+      "backend": {"service": "erp", "operationId": "searchEmployees"},
+      "stage": 1
+    },
+    {
+      "name": "leave_get_balance",
+      "description": "내 연차 잔여를 봅니다(총, 사용, 결재 중, 남은 일수).",
+      "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "leave:read",
+      "backend": {"service": "erp", "operationId": "getLeaveBalance"},
+      "stage": 1
+    },
+    {
+      "name": "leave_request",
+      "description": "휴가·반차 결재를 올립니다. 결재선은 erp가 정합니다. 실행 전에 미리보기를 보여 줍니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["leave_type", "start_date", "end_date", "reason"],
+        "properties": {
+          "leave_type": {"enum": ["annual", "half_am", "half_pm", "sick", "special"]},
+          "start_date": {"type": "string", "format": "date"},
+          "end_date": {"type": "string", "format": "date"},
+          "reason": {"type": "string", "maxLength": 200}
+        },
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "approval:request:leave",
+      "backend": {"service": "erp", "operationId": "createApprovalDocument", "fixed": {"formId": "leave"}},
+      "stage": 1
+    },
+    {
+      "name": "approval_list_mine",
+      "description": "내가 올린 결재 문서 목록과 상태를 봅니다.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {"enum": ["in_progress", "approved", "rejected", "withdrawn"]}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "approval:read",
+      "backend": {"service": "erp", "operationId": "listApprovalDocuments", "fixed": {"box": "outbox"}},
+      "stage": 1
+    },
+    {
+      "name": "approval_get",
+      "description": "결재 문서 하나의 결재선과 진행 상태를 봅니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["documentId"],
+        "properties": {"documentId": {"type": "string"}},
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "approval:read",
+      "backend": {"service": "erp", "operationId": "getApprovalDocument"},
+      "stage": 1
+    },
+    {
+      "name": "approval_withdraw",
+      "description": "내가 올린 결재를 회수합니다. 되돌릴 수 없어 실행 전에 확인을 받습니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["documentId"],
+        "properties": {
+          "documentId": {"type": "string"},
+          "reason": {"type": "string", "maxLength": 200}
+        },
+        "additionalProperties": false
+      },
+      "risk": "irreversible",
+      "trust_required": "user_direct",
+      "required_scope": "approval:withdraw",
+      "backend": {"service": "erp", "operationId": "withdrawApprovalDocument"},
+      "stage": 1
+    },
+    {
+      "name": "delegation_list",
+      "description": "내가 맡긴 대결 위임이나 내가 맡은 위임을 봅니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["role"],
+        "properties": {"role": {"enum": ["delegator", "delegate"]}},
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "delegation:read",
+      "backend": {"service": "erp", "operationId": "listDelegations"},
+      "stage": 1
+    },
+    {
+      "name": "delegation_register",
+      "description": "내 부재 기간에 결재를 대신할 사람(대결)을 등록합니다. 기간과 범위(양식, 금액 한도)를 정합니다. 범위가 넓으면 실행 전에 확인을 받습니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["delegateId", "startsAt", "endsAt", "formTypes", "reason"],
+        "properties": {
+          "delegateId": {"type": "string"},
+          "startsAt": {"type": "string", "format": "date-time"},
+          "endsAt": {"type": "string", "format": "date-time"},
+          "formTypes": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "maxAmount": {"type": ["integer", "null"], "minimum": 0},
+          "reason": {"type": "string", "maxLength": 200}
+        },
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "delegation:write",
+      "backend": {"service": "erp", "operationId": "createDelegation"},
+      "stage": 1
+    },
+    {
+      "name": "delegation_revoke",
+      "description": "내가 등록한 대결 위임을 해지합니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["delegationId"],
+        "properties": {"delegationId": {"type": "string"}},
+        "additionalProperties": false
+      },
+      "risk": "irreversible",
+      "trust_required": "user_direct",
+      "required_scope": "delegation:write",
+      "backend": {"service": "erp", "operationId": "revokeDelegation"},
+      "stage": 1
+    },
+    {
+      "name": "room_list_availability",
+      "description": "시간대와 인원으로 빈 회의실을 찾습니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["startsAt", "endsAt"],
+        "properties": {
+          "startsAt": {"type": "string", "format": "date-time"},
+          "endsAt": {"type": "string", "format": "date-time"},
+          "minCapacity": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "room:read",
+      "backend": {"service": "erp", "operationId": "getRoomAvailability"},
+      "stage": 1
+    },
+    {
+      "name": "room_list_my_reservations",
+      "description": "내 회의실 예약을 봅니다.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {"date": {"type": "string", "format": "date"}},
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "room:read",
+      "backend": {"service": "erp", "operationId": "listRoomReservations", "fixed": {"mine": true}},
+      "stage": 1
+    },
+    {
+      "name": "room_reserve",
+      "description": "회의실을 예약합니다. 30분 단위, 최대 4시간입니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["roomId", "startsAt", "endsAt", "title"],
+        "properties": {
+          "roomId": {"type": "string"},
+          "startsAt": {"type": "string", "format": "date-time"},
+          "endsAt": {"type": "string", "format": "date-time"},
+          "title": {"type": "string", "maxLength": 100},
+          "attendees": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "room:write",
+      "backend": {"service": "erp", "operationId": "createRoomReservation"},
+      "stage": 1
+    },
+    {
+      "name": "room_cancel_reservation",
+      "description": "내 회의실 예약을 취소합니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["reservationId"],
+        "properties": {"reservationId": {"type": "string"}},
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "room:write",
+      "backend": {"service": "erp", "operationId": "cancelRoomReservation"},
+      "stage": 1
+    },
+    {
+      "name": "policy_search",
+      "description": "사내 규정과 안내 문서를 검색해 근거 조문과 함께 답합니다. 내가 볼 수 있는 문서만 찾습니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["question"],
+        "properties": {"question": {"type": "string", "maxLength": 500}},
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "profile:read",
+      "backend": {"service": "rag", "operationId": "answer"},
+      "stage": 1
+    }
+  ]
+}
