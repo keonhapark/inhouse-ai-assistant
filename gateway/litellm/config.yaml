@@ -10,6 +10,9 @@ model_list:
       num_ctx: 8192                                  # docs/measurements/0-memory.md: 세션 동시 실행 메모리 여유
     model_info:
       location: local
+      # Ollama 0.40의 MLX 실행기에서 qwen3.5:9b는 구조화 출력(format)을 지원하지 않습니다
+      # ("structured output is unavailable"). gateway가 response_format 요청을 400으로 돌려줍니다.
+      supports_response_format: false
 
   - model_name: local-embed                          # rag 벡터 검색용 임베딩. 로컬만
     litellm_params:

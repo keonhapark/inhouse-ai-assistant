@@ -22,7 +22,7 @@ from gateway.audit import AuditLog, JsonlWriter
 from gateway.config import Settings
 from gateway.delegation import DelegationService
 from gateway.confidential import Glossary
-from gateway.egress import Egress, load_model_locations
+from gateway.egress import Egress, load_model_info
 from gateway.pii import KoreanRedactor
 from gateway.erp_client import ErpClient
 from gateway.problems import ProblemError, problem_response
@@ -56,11 +56,15 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     erp = ErpClient(settings.erp_base_url, transport=erp_transport)
     audit = AuditLog(settings.audit_dir)
     alerter = Alerter(settings.alert_webhook_url, transport=alert_transport)
-    egress = Egress(base_url=settings.litellm_base_url, locations=load_model_locations(settings.litellm_config),
+    model_info = load_model_info(settings.litellm_config)
+    egress = Egress(base_url=settings.litellm_base_url,
+                    locations={alias: info["location"] for alias, info in model_info.items()},
                     registry=registry, issuer=issuer, audit=audit, alerter=alerter,
                     timeout=settings.llm_timeout_seconds, api_key=os.environ.get("LITELLM_MASTER_KEY") or None,
                     transport=llm_transport, redactor=KoreanRedactor(), glossary=Glossary.load(settings.pack_dir),
-                    external_log=JsonlWriter(settings.external_log) if settings.external_log else None)
+                    external_log=JsonlWriter(settings.external_log) if settings.external_log else None,
+                    no_response_format=frozenset(a for a, i in model_info.items()
+                                                 if i.get("supports_response_format") is False))
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):

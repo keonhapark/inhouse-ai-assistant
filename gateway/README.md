@@ -24,6 +24,10 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
   - 스트림(`"stream": true`)은 받은 대로 흘려보내고, 끝나면 기록합니다.
+  - 출구가 요청을 거절하면(형식 422, 인증 401, 정책·등록부 403, 미지원 400) 감사 이벤트 `llm.request`에 대화 ID, 에이전트,
+    요청한 별칭, 상태와 이유를 남깁니다(본문은 넣지 않음).
+  - `response_format`: `model_info.supports_response_format: false`인 별칭(`local`, Ollama MLX 실행기의 qwen3.5:9b)은 보내기 전에
+    400 `unsupported-parameter`입니다. LiteLLM 501(기능 미지원)도 장애 알림 없이 400으로 돌려줍니다.
 - 평가 경로(#63)
   - `GATEWAY_EXTERNAL_LOG`(파일 경로)가 있을 때만 외부 모델로 실제 보낸 본문(가림 뒤)을
     `contracts/events/external-request.schema.json` 형식으로 씁니다. 로컬 요청, 정책으로 막힌 요청, 연결 전에 실패한 요청은 쓰지 않습니다.

@@ -76,6 +76,9 @@ class FakeLiteLLM:
             raise httpx.ReadTimeout("slow", request=request)
         if self.mode == "down":
             raise httpx.ConnectError("down", request=request)
+        if self.mode == "501":
+            return httpx.Response(501, json={"error": {"message": "litellm.APIError: structured output is unavailable\nmore",
+                                                       "code": "501"}})
         if self.mode == "500":
             return httpx.Response(500, json={"error": {"message": "provider failed"}})
         if request.url.path.endswith("/embeddings"):
