@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse, Response
 
 from gateway import redact
 from gateway.alerts import Alerter
-from gateway import audit_query
+from gateway import audit_query, ops
 from gateway.chat import AgentClient, ChatService
 from gateway.chat import build_router as chat_router
 from gateway.audit import AuditLog, JsonlWriter
@@ -127,6 +127,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     app.include_router(api)
     app.include_router(build_router(erp), prefix="/api")
     app.include_router(chat_router(app.state.chat), prefix="/api")
+    app.include_router(ops.build_router(erp, audit, registry), prefix="/api")
     app.include_router(audit_query.build_router(erp, audit, settings.audit_event_files), prefix="/api")
 
     # LLM 출구는 OpenAI 호환 경로라 /api 밖에 둡니다(agent·rag의 GATEWAY_LLM_URL=http://gateway:8000/v1).
