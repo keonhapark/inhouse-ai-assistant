@@ -1,72 +1,87 @@
 {
-  "0a7510f267cc805591525ceaf2ecc0716fefbc08a16834be9b4a6668e5c6f483": {
-    "content": "{\"agentId\": \"finance\", \"confidence\": 1.0, \"reason\": \"출장 숙박비 한도 등 재무 규정에 대한 질의는 finance 에이전트의 업무 범위에 해당합니다.\"}",
+  "1bf64e60822c81a0ec7cccc01ae3b213d749ced746a46e1a4c79543edd8209a8": {
+    "content": "{\"agentId\": \"it_ops\", \"confidence\": 0.95, \"reason\": \"VPN 접속 장애는 IT 운영 규정 및 계정/권한 문제와 관련된 요청으로 it_ops 에이전트가 담당합니다.\"}",
     "model": "qwen3.5:9b",
-    "user": "해외 출장 일비 기준이 어떻게 돼?"
+    "user": "VPN이 아침부터 계속 끊겨요"
   },
-  "26aa736b139970cf93ab23e9ce9ef83bb2668ab0fc4a653c0ec06b8693f8272d": {
-    "content": "{\"agentId\": \"assistant\", \"confidence\": 1.0, \"reason\": \"회의실 예약 요청은 공통 규정 및 일반 안내를 담당하는 assistant 에이전트의 업무입니다.\"}",
+  "255230e961075dac8efd0b5dc98403e834ac27634e123555089c49f736f5f432": {
+    "content": "{\n\"agentId\": \"procurement\",\n\"confidence\": 1.0,\n\"reason\": \"새 모니터 3 대를 구매하려는 요청은 구매 절차와 결재를 담당하는 procurement 에이전트의 업무 범위에 해당합니다.\"\n}",
     "model": "qwen3.5:9b",
-    "user": "내일 오전 10시에 6명 회의실 잡아 줘"
+    "user": "새 모니터 3대 구매 요청하려고 해"
   },
-  "4658b93070e7b2136d2d60b868ca5cdd1c56e590a22fb667e1cd6d74330f064a": {
-    "content": "{\"agentId\": \"none\", \"confidence\": 0.9, \"reason\": \"구매 절차와 관련된 구체적인 금액 기준에 대한 질의는 구매 담당 에이전트 (procurement) 의 업무 범위에 해당합니다.\"}",
-    "model": "qwen3.5:9b",
-    "user": "견적 두 군데 받아야 하는 금액 기준이 뭐야?"
-  },
-  "56993359b86321059a7f70d91ae9303295277b9a3446a3d97eb534973e98ece8": {
-    "content": "{\"agentId\": \"finance\", \"confidence\": 0.95, \"reason\": \"택시비 영수증을 이용한 경비 정산 요청은 재무 규정 및 경비 처리와 관련된 업무이므로 finance 에이전트가 담당합니다.\"}",
-    "model": "qwen3.5:9b",
-    "user": "어제 택시비 영수증 있는데 어떻게 청구해?"
-  },
-  "5c309293a39eecf486c30ae33bcb9fb55ee98ba670053f361bd05b67137ce0d1": {
-    "content": "{\"agentId\": \"hr\", \"confidence\": 1.0, \"reason\": \"사용자가 휴가 기간 중 결재 대결 등록을 요청하고 있습니다.\"}",
-    "model": "qwen3.5:9b",
-    "user": "휴가 동안 결재를 박 과장한테 맡겨 줘"
-  },
-  "665e15030d8423fc7c446be458da7d4aa6e6574ec0a96190e541e36d778215d0": {
-    "content": "{\n\"agentId\": \"none\",\n\"confidence\": 0.95,\n\"reason\": \"사내 메신저 비밀번호 변경은 IT 부서나 보안 관련 업무로 보이며 주어진 후보 에이전트 (일반 안내/인사/재무/구매) 의 범위에 포함되지 않습니다.\"\n}",
-    "model": "qwen3.5:9b",
-    "user": "사내 메신저 비밀번호는 어디서 바꿔?"
-  },
-  "691ec829eeb5ba0b96eddd144fe4934d7df02f01a48b8bfdf4db2fd083075401": {
-    "content": "{\"agentId\": \"procurement\", \"confidence\": 0.95, \"reason\": \"구매 단가 변동에 따른 재구매 요청은 구매 업무의 핵심 사항입니다.\"}",
-    "model": "qwen3.5:9b",
-    "user": "자재 단가가 올랐는데 구매 요청 다시 올려야 해?"
-  },
-  "6ebfd78d6f2dfa4a4d8c98d87458ea1e4d592f67c4475f2b3862709ad44ed6de": {
-    "content": "{\"agentId\": \"finance\", \"confidence\": 0.95, \"reason\": \"법인카드 결제된 회식비는 경비 정산에 해당하므로 재무 담당 에이전트가 처리합니다.\"}",
-    "model": "qwen3.5:9b",
-    "user": "법인카드로 결제한 회식비 처리해야 해"
-  },
-  "700d79e72dbd97ab492be4d92bda96239fd82d73b289c3312bbd4d7af5599f18": {
-    "content": "{\"agentId\": \"hr\", \"confidence\": 1.0, \"reason\": \"반차 사용 요청은 인사(HR) 업무에 해당합니다.\"}",
+  "2c3e15659573854f6d78a23a9110b3a54385dcdfdf0c9c7c5ca9e3e6bec132a2": {
+    "content": "{\"agentId\": \"hr\", \"confidence\": 1.0, \"reason\": \"반차 사용 요청은 인사 업무에 해당하므로 hr 에이전트를 선택합니다.\"}",
     "model": "qwen3.5:9b",
     "user": "다음 주 수요일 반차 쓸게"
   },
-  "cf003dc35a3466971854d23bbdb73a60c9e7a0b1fcffb2f12bc2cae49f050bca": {
-    "content": "{\"agentId\": \"finance\", \"confidence\": 1.0, \"reason\": \"출장 숙박비에 대한 정산 요청은 재무 규정 및 경비 처리를 담당하는 finance 에이전트의 업무입니다.\"}",
-    "model": "qwen3.5:9b",
-    "user": "지난주 부산 출장 숙박비 12만 원 정산 올려 줘"
-  },
-  "d135c9e1279e6cac662099cb4550b8c84bca8e8ee4e0014a50400221fad4663c": {
+  "466b0bb588def9682818c0ced105e3027f91212b981bba74b17403fbab162ebc": {
     "content": "{\"agentId\": \"hr\", \"confidence\": 1.0, \"reason\": \"본인 휴가 잔여 조회 요청이므로 HR 에이전트가 담당합니다.\"}",
     "model": "qwen3.5:9b",
     "user": "내 연차 며칠 남았어?"
   },
-  "d90a9d8595e1cb455be2b25163a06c7a5d70fafbfaee2cc4640bc6b9be08b668": {
-    "content": "{\n\"agentId\": \"procurement\",\n\"confidence\": 1.0,\n\"reason\": \"새 모니터를 구매하려는 요청은 구매 절차와 결재를 담당하는 procurement 에이전트의 업무입니다.\"\n}",
+  "4a87fd5091c7d5218b41ee861abd31ba995674f348625c943c8ddf70ace0370b": {
+    "content": "{\n\"agentId\": \"procurement\",\n\"confidence\": 0.95,\n\"reason\": \"사용자가 볼트 구매를 위한 발주 요청을 하고 있어 구매 담당 에이전트가 적합합니다.\"\n}",
     "model": "qwen3.5:9b",
-    "user": "새 모니터 3대 구매 요청하려고 해"
+    "user": "볼트 M8 500개 발주 넣어 줘"
   },
-  "e86bf96a44f5f843d1f22fcfe9d15d3c2f5c2368928fef1d386a014da114fc99": {
+  "6093618c8a0c7185ef6fc02f842fc0ca850e347bee75536ddf0299be9cce075b": {
+    "content": "{\"agentId\": \"it_ops\", \"confidence\": 0.95, \"reason\": \"사내 메신저의 비밀번호 변경은 계정 및 권한 관련 문제로 IT 운영 부서의 관할 사항입니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "사내 메신저 비밀번호는 어디서 바꿔?"
+  },
+  "6c540b0b470dd6fb5e2fc340e87fa9836b0d6d0a2b49f61164bc14fd0bf49a5b": {
+    "content": "{\"agentId\": \"finance\", \"confidence\": 0.95, \"reason\": \"출장 숙박비 한도 등 재무 규정에 대한 질의는 finance 에이전트의 업무 범위에 해당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "해외 출장 일비 기준이 어떻게 돼?"
+  },
+  "6ec95467679c502ef4e9b5e3596dc1ebc11604e45d1144f397ef9ff783758601": {
     "content": "{\"agentId\": \"assistant\", \"confidence\": 0.95, \"reason\": \"회의실 사용 가능 여부 확인은 공통 규정 및 안내 업무로 assistant 가 담당합니다.\"}",
     "model": "qwen3.5:9b",
     "user": "3층 회의실 오후에 비어 있어?"
   },
-  "febb555c3ff30c7ed990bd7d1897298d89fd799d6e323f76bbe1a7127a488e7c": {
-    "content": "{\"agentId\": \"procurement\", \"confidence\": 0.95, \"reason\": \"사용자가 볼트 구매를 위한 발주 요청을 하고 있어 구매 담당 에이전트가 적합합니다.\"}",
+  "7984d0496439b8ccc9390ee7818628b8cc2b8436172316cc3358a9f526c231d4": {
+    "content": "{\"agentId\": \"hr\", \"confidence\": 1.0, \"reason\": \"사용자가 휴가 기간 중 결재 대결 등록을 요청하고 있습니다.\"}",
     "model": "qwen3.5:9b",
-    "user": "볼트 M8 500개 발주 넣어 줘"
+    "user": "휴가 동안 결재를 박 과장한테 맡겨 줘"
+  },
+  "7dc62bcc64620a9c0eb859a5bcc50577ff78613a25a1083d256a61e2a1a75af3": {
+    "content": "{\"agentId\": \"finance\", \"confidence\": 0.95, \"reason\": \"택시비 영수증을 이용한 경비 정산 요청은 재무 규정 및 경비 처리와 관련된 업무이므로 finance 에이전트가 담당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "어제 택시비 영수증 있는데 어떻게 청구해?"
+  },
+  "bc9f979b278e2dc650d22d7bb21e3877ff72aed94ba5f3b1578d54990e2d395b": {
+    "content": "{\"agentId\": \"it_ops\", \"confidence\": 1.0, \"reason\": \"프린터 고장 티켓 조회는 IT 운영 관련 업무로 it_ops 에이전트가 담당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "어제 올린 프린터 고장 티켓 처리됐어?"
+  },
+  "bf83eafb81cad1e913ae036ebe8c001e974d40a80412a22a2282d8b6b353cf40": {
+    "content": "{\"agentId\": \"finance\", \"confidence\": 1.0, \"reason\": \"출장 숙박비 정산 요청은 재무 규정 및 경비 정산 업무에 해당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "지난주 부산 출장 숙박비 12만 원 정산 올려 줘"
+  },
+  "c1d8e8421afb15ecc7afd5a1e8a993c8e7b7a7531a3665066a41d878b2c1b296": {
+    "content": "{\"agentId\": \"finance\", \"confidence\": 0.95, \"reason\": \"법인카드 결제된 회식비는 경비 정산에 해당하므로 재무 담당 에이전트가 처리합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "법인카드로 결제한 회식비 처리해야 해"
+  },
+  "d40dd088d50e390a3b52b46323f81be6fe011e9f269bd29ca4631163e88600d1": {
+    "content": "{\n\"agentId\": \"assistant\",\n\"confidence\": 0.95,\n\"reason\": \"회의실 예약 요청은 공통 규정 및 일반 안내를 담당하는 assistant 에이전트의 업무입니다.\"\n}",
+    "model": "qwen3.5:9b",
+    "user": "내일 오전 10시에 6명 회의실 잡아 줘"
+  },
+  "d93f181d1d9799e6b45e7efde43f87071072f1b66ae4b951a64aa50067f64c42": {
+    "content": "{\n\"agentId\": \"procurement\",\n\"confidence\": 0.95,\n\"reason\": \"자재 단가 상승으로 인한 구매 요청 재제출은 구매 업무의 핵심 사항이므로 구매 에이전트가 담당합니다.\"\n}",
+    "model": "qwen3.5:9b",
+    "user": "자재 단가가 올랐는데 구매 요청 다시 올려야 해?"
+  },
+  "e7bb1f21f104d735133c990e1360f956e7f4e3458b4aa63f66a91a1dde1d538f": {
+    "content": "{\"agentId\": \"none\", \"confidence\": 0.9, \"reason\": \"구매 절차 및 금액 기준에 대한 질의는 구매 담당 에이전트 (procurement) 의 업무 범위에 해당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "견적 두 군데 받아야 하는 금액 기준이 뭐야?"
+  },
+  "ef10b1fdfa6bf11020f897e34611b6e1b845c21175c27671467ee3867f87f490": {
+    "content": "{\"agentId\": \"it_ops\", \"confidence\": 0.95, \"reason\": \"권한 요청은 IT 운영 규정 및 계정 관리의 영역에 해당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "영업 관리 화면 조회 권한 신청하고 싶어"
   }
 }

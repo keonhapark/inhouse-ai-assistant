@@ -1,4 +1,4 @@
-"""2단계 등록부(재무·구매자재 포함)에서의 입구 라우터. 문장은 직접 썼고(평가 셋 아님) LLM 응답은 녹화본으로 돕니다.
+"""2단계 등록부(재무·구매자재·IT운영 포함)에서의 입구 라우터. 문장은 직접 썼고(평가 셋 아님) LLM 응답은 녹화본으로 돕니다.
 
 LLM 라우터와 키워드 기준선을 같은 문장으로 돌려 정답 비율을 비교합니다. 비율은 시험 출력(-s)에 찍습니다.
 """
@@ -37,7 +37,11 @@ CASES = [
     # 전사 비서
     ("내일 오전 10시에 6명 회의실 잡아 줘", "assistant"),
     ("3층 회의실 오후에 비어 있어?", "assistant"),
-    ("사내 메신저 비밀번호는 어디서 바꿔?", "assistant"),
+    # IT운영
+    ("사내 메신저 비밀번호는 어디서 바꿔?", "it_ops"),
+    ("VPN이 아침부터 계속 끊겨요", "it_ops"),
+    ("영업 관리 화면 조회 권한 신청하고 싶어", "it_ops"),
+    ("어제 올린 프린터 고장 티켓 처리됐어?", "it_ops"),
 ]
 
 
@@ -74,4 +78,4 @@ def test_llm_vs_keyword_on_same_cases(reg2: Registry, chat2: ChatClient) -> None
     kw_ok = sum(kw.route(m, ME, "keyword").agent_id == e for m, e in pairs)
     print(f"\n라우터 2단계 문장 {len(pairs)}개: LLM {llm_ok}, 키워드 {kw_ok}")
     # 녹화본 기준 값입니다. 프롬프트·등록부를 바꿔 다시 녹화하면 함께 고칩니다.
-    assert (llm_ok, kw_ok) == (13, 13)
+    assert (llm_ok, kw_ok) == (16, 15)

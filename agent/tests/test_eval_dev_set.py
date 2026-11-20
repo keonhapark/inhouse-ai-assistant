@@ -64,4 +64,5 @@ def test_dev_set_covers_categories_and_agents() -> None:
     assert set(cats) == {"direct", "clarify", "confusable", "resolve"} and cats["clarify"] >= 8
     reg = Registry.load(PACK_DIR, stage=2)
     owners = {a.id for a in reg.agents for i in data if i["targetTool"] in a.tools}
-    assert owners == {"assistant", "hr", "finance", "procurement"}
+    # it_ops는 policy_search로만 걸립니다(티켓 도구 항목은 아직 없음).
+    assert owners == {"assistant", "hr", "finance", "procurement", "it_ops"}
