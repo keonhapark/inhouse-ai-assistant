@@ -18,7 +18,9 @@ from gateway.alerts import Alerter
 from gateway.audit import AuditLog
 from gateway.config import Settings
 from gateway.delegation import DelegationService
+from gateway.confidential import Glossary
 from gateway.egress import Egress, load_model_locations
+from gateway.pii import KoreanRedactor
 from gateway.erp_client import ErpClient
 from gateway.problems import ProblemError, problem_response
 from gateway.registry import Registry
@@ -59,7 +61,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     egress = Egress(base_url=settings.litellm_base_url, locations=load_model_locations(settings.litellm_config),
                     registry=registry, issuer=issuer, audit=audit, alerter=alerter,
                     timeout=settings.llm_timeout_seconds, api_key=os.environ.get("LITELLM_MASTER_KEY") or None,
-                    transport=llm_transport)
+                    transport=llm_transport, redactor=KoreanRedactor(), glossary=Glossary.load(settings.pack_dir))
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
