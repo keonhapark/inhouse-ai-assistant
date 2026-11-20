@@ -1,0 +1,19 @@
+# 규모 시험 질문. gold는 정답 문서 ID와 조문 번호(절 표시의 괄호 앞)입니다.
+# 늘린 문서(bench/scale.py)에는 여기 나온 정답 조문을 넣지 않습니다.
+questions:
+  - {id: leave-days, question: 재직기간에 따라 연가는 며칠인가요, doc: law-civil-service-duty, article: 제15조}
+  - {id: sick-leave, question: 병가는 1년에 며칠까지 쓸 수 있나요, doc: law-civil-service-duty, article: 제18조}
+  - {id: leave-saving, question: 쓰지 못한 연가를 저축할 수 있나요, doc: law-civil-service-duty, article: 제16조의3}
+  - {id: per-diem, question: 출장 중 일비와 숙박비와 식비는 어떻게 지급하나요, doc: law-travel-expense, article: 제16조}
+  - {id: lodging-cap, question: 국내 출장 숙박비 상한액은 서울특별시가 얼마인가요, doc: law-travel-expense, article: 별표 2}
+  - {id: airfare, question: 항공운임은 어떻게 지급하나요, doc: law-travel-expense, article: 제12조}
+  - {id: room-booking, question: 회의실 예약은 어떻게 하나요, doc: gen-room-guide, article: 제3조}
+  - {id: half-day, question: 반차는 어떻게 쓰나요, doc: gen-leave-guide, article: 제4조}
+  - {id: family-event, question: 경조사 휴가는 며칠인가요, doc: gen-leave-guide, article: 제6조}
+  - {id: delegation-register, question: 대결 위임은 누가 등록하나요, doc: gen-delegation-rule, article: 제4조}
+  - {id: quotes, question: 구매할 때 견적은 몇 군데에서 받아야 하나요, doc: gen-purchase-rule, article: 제4조}
+  - {id: urgent-purchase, question: 긴급 구매 한도는 얼마인가요, doc: gen-purchase-rule, article: 제6조}
+  - {id: incident-grade, question: 장애 1등급이면 몇 분 안에 대응을 시작하나요, doc: gen-incident-response, article: 제4조}
+  - {id: leaver-account, question: 퇴사자 계정은 언제 잠그나요, doc: gen-account-access, article: 제5조}
+  - {id: admin-approval, question: 관리자 권한은 누가 승인하나요, doc: gen-account-access, article: 제4조}
+  - {id: base-pay, question: 팀장 기본급은 얼마인가요, doc: gen-salary-standard, article: 제2조}
