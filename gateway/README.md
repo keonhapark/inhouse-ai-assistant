@@ -14,6 +14,8 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - 에이전트 `callable_by`에 맞지 않는 요청자는 403입니다.
 - LLM 출구 `POST /v1/chat/completions`(OpenAI 호환, `/api` 밖): 정책을 확인한 뒤 LiteLLM 프록시로 넘깁니다(`gateway/egress.py`).
   - `model`은 `litellm/config.yaml`의 별칭만 받습니다: `local`(Ollama `qwen3.5:9b`, 문맥 8192), `external`(Claude Haiku 5.5, `claude-haiku-5-5`).
+    `local-gguf`(같은 Qwen3.5-9B의 GGUF Q4_K_M 판, llama.cpp 실행기, digest `56671c2ab938`)는 구조화 출력(`response_format`)이 됩니다.
+    `local`(safetensors nvfp4, MLX 실행기, digest `d63f830f28d5`)은 되지 않아 400입니다(#205). 폴백·로컬 내림은 `local`을 씁니다.
     별칭마다 `model_info.location`이 있고, gateway는 이것으로 로컬·외부를 가릅니다.
   - `X-Delegation-Token`이 있으면 서명·만료를 확인하고 `agt`의 `model_policy`를 따릅니다. `local_only` 에이전트와
     토큰 없는 호출은 `external`을 쓰면 403 `model-policy`이고, 밖으로 아무것도 나가지 않습니다.
