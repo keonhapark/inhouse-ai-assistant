@@ -27,3 +27,4 @@
 | 2026-11-20 | erp | #226 | 팩 org.yaml 선택 항목 `erp_roles`(hr, auditor, 없으면 hr_staff·auditor), erp.yaml 역할 설명을 팩 항목으로 | #166 코어에 역할 이름을 두지 않음 | 직접 PR |
 | 2026-11-20 | erp | #228 | erp.yaml `ProblemCode`에 `internal`, 머리말에 405(`validation`)·500(`internal`) 한 줄 | #166 구현이 내는 응답이 계약에 없음 | 직접 PR |
 | 2026-11-21 | erp | #238 | erp.yaml IT 티켓(`/tickets` 목록·상세·작성·댓글·상태 변경), scope `ticket:read·write·manage`, tools.json `ticket_list·get·create·comment`(stage 2), 팩 `erp_roles.ticket_handler`·`fixtures/tickets.json`(선택) | #99 IT운영 에이전트 | 직접 PR |
+| 2026-11-21 | gateway | #263 | gateway LLM 출구 이미지 입력: `image_url`(jpeg·png data URL, 한 장 5MB)은 `local-vision`으로만, 413 `payload-too-large`·415 `unsupported-media-type` | #261 영수증 읽기(#100) | contract/gateway-vision PR |
