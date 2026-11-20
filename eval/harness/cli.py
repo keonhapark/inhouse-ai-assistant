@@ -10,7 +10,9 @@ run은 <이름>.json(회차별 결과)과 <이름>.md(보고서)를 씁니다. �
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +21,7 @@ import yaml
 
 from harness.erp import ErpClient
 from harness.report import render
-from harness.runner import CONDITIONS, RunRow, load_run, run_matrix, save_run
+from harness.runner import CONDITIONS, RunRow, load_rows_jsonl, load_run, run_matrix, save_run
 from harness.scenario import ScenarioError, load_scenarios
 from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
 
@@ -82,20 +84,36 @@ def cmd_run(args: argparse.Namespace) -> int:
     if args.only:
         wanted = set(args.only.split(","))
         scenarios = [s for s in scenarios if s["id"] in wanted]
+    if args.set:
+        scenarios = [s for s in scenarios if s["set"] == args.set]
     system, erp = make_factories(cfg)
+    out = Path(args.out)
+    rows_file = out.with_suffix(".rows.jsonl")
+    done, started_at = [], None
+    if args.resume:
+        done = load_rows_jsonl(rows_file)
+        if out.with_suffix(".json").exists():
+            started_at = load_run(out.with_suffix(".json"))[1].started_at
+        print(f"이어 돌리기: 끝난 회차 {len(done)}개를 건너뜁니다", flush=True)
+    elif rows_file.exists():
+        raise SystemExit(f"{rows_file}가 이미 있습니다. 이어 돌리려면 --resume을 붙입니다")
+    rows_file.parent.mkdir(parents=True, exist_ok=True)
 
     def progress(r: RunRow) -> None:
+        with rows_file.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(asdict(r), ensure_ascii=False) + "\n")
         print(f"{r.repeat} {r.condition:<15} {r.scenario_id:<40} {r.outcome}", flush=True)
 
     rows, meta = run_matrix(scenarios, system, erp, conditions=list(cfg["gateway"]["conditions"]),
                             repeats=cfg.get("repeats", 3), base_seed=cfg.get("baseSeed", 0),
                             cost_cap_usd=cfg.get("costCapUsd"), time_limit_s=cfg.get("timeLimitS", 300),
-                            model=cfg.get("model"), on_row=progress)
+                            model=cfg.get("model"), on_row=progress, done_rows=done,
+                            max_runs=args.max_runs, started_at=started_at)
     if not cfg["erp"].get("reset", True):
         meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.reset: false)")
     if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):
         meta.notes.append("외부 요청 기록(gateway.externalLog)을 주지 않아 외부 기록의 표지 문자열은 보지 않았습니다")
-    out = Path(args.out)
+    meta.notes.extend(cfg.get("notes", []))
     save_run(rows, meta, out.with_suffix(".json"))
     out.with_suffix(".md").write_text(render(rows, meta, args.title), encoding="utf-8")
     print(f"{out.with_suffix('.json')}, {out.with_suffix('.md')}")
@@ -123,6 +141,9 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--out", required=True)
     r.add_argument("--title", default="평가 보고서")
     r.add_argument("--only", help="쉼표로 나눈 시나리오 ID만(시험 실행용)")
+    r.add_argument("--set", choices=["dev", "normal", "confirm"], help="이 셋의 시나리오만")
+    r.add_argument("--max-runs", type=int, help="이번에 새로 돌릴 회차 수 상한(나눠 돌리기)")
+    r.add_argument("--resume", action="store_true", help="<out>.rows.jsonl의 끝난 회차를 건너뛰고 이어 돌림")
     rep = sub.add_parser("report", help="실행 결과 JSON으로 보고서 다시 만들기")
     rep.add_argument("run")
     rep.add_argument("-o")

@@ -6,6 +6,8 @@ baseSeed: 0              # 회차 시드 = baseSeed + 회차
 costCapUsd: 5            # 넘으면 시나리오 경계에서 멈추고 보고서에 일부 실행으로 표시
 timeLimitS: 300          # 시나리오 한 회차 시간 제한
 httpTimeoutS: 120
+notes:                   # 보고서 실행 정보에 그대로 적을 말(프로토콜과 다르게 돌린 이유 등)
+  - 예: 반복 수를 바꾼 이유는 docs/decisions/NNNN에 있습니다
 
 erp:
   baseUrl: http://localhost:8540/api/v1   # S5 erp(PORT_BASE+40)

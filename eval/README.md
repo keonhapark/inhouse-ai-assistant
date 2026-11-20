@@ -32,6 +32,11 @@ uv run python -m harness.cli run --config conditions.local.yaml \
 uv run python -m harness.cli report reports/<이름>.json -o reports/<이름>.md
 ```
 
+- 회차마다 `<이름>.rows.jsonl`에 한 줄씩 씁니다. 끊기면 같은 명령에 `--resume`을 붙여 끝난 회차를 건너뛰고 이어 돌립니다(하네스 오류가 난 회차는 다시 돌림).
+- `--max-runs N`이면 이번 실행은 새 회차 N개까지만 돌리고 멈춥니다. `--resume`과 같이 써서 여러 번에 나눠 돌립니다.
+- `--set normal`이면 정상 셋만, `--only <ID,...>`면 지정한 시나리오만 돌립니다.
+- 설정의 `notes`는 보고서 실행 정보에 그대로 적힙니다(프로토콜과 다르게 돌린 이유 등).
+
 ## 시험
 
 ```

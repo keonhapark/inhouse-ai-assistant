@@ -122,16 +122,27 @@ def run_one(scenario: dict[str, Any], condition: str, repeat: int, seed: int, sy
 def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, erp_factory: ErpFactory, *,
                conditions: tuple[str, ...] | list[str] = CONDITIONS, repeats: int = 3, base_seed: int = 0,
                cost_cap_usd: float | None = None, time_limit_s: float = 300, model: str | None = None,
-               on_row: Callable[[RunRow], None] | None = None) -> tuple[list[RunRow], RunMeta]:
+               on_row: Callable[[RunRow], None] | None = None,
+               done_rows: list[RunRow] | None = None, max_runs: int | None = None,
+               started_at: str | None = None) -> tuple[list[RunRow], RunMeta]:
+    """done_rows는 앞서 끝낸 회차입니다(이어 돌리기). 같은 (시나리오, 조건, 회차)는 다시 돌리지 않습니다.
+    max_runs는 이번에 새로 돌릴 회차 수 상한입니다(나눠 돌리기)."""
     unknown = [c for c in conditions if c not in CONDITIONS]
     if unknown:
         raise ValueError(f"계약에 없는 조건: {unknown}")
     packs = sorted({s["pack"] for s in scenarios})
     meta = RunMeta(commit=_git("rev-parse", "HEAD"), dirty=bool(_git("status", "--porcelain")),
-                   machine=f"{platform.platform()} {platform.machine()}", started_at=_now(), model=model,
+                   machine=f"{platform.platform()} {platform.machine()}", started_at=started_at or _now(), model=model,
                    pack=",".join(packs), conditions=list(conditions), repeats=repeats, base_seed=base_seed,
                    cost_cap_usd=cost_cap_usd, planned_runs=len(scenarios) * len(conditions) * repeats)
-    rows: list[RunRow] = []
+    rows: list[RunRow] = list(done_rows or [])
+    done_keys = {(r.scenario_id, r.condition, r.repeat) for r in rows}
+    for r in rows:
+        if r.cost_usd is None:
+            meta.cost_unknown_runs += 1
+        else:
+            meta.cost_spent_usd += r.cost_usd
+    new_runs = 0
     for repeat in range(1, repeats + 1):
         seed = base_seed + repeat
         for scenario in scenarios:
@@ -140,6 +151,12 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                                        "멈췄습니다")
                 break
             for condition in conditions:
+                if (scenario["id"], condition, repeat) in done_keys:
+                    continue
+                if max_runs is not None and new_runs >= max_runs:
+                    meta.stopped_reason = f"나눠 돌리기: 이번 실행은 {max_runs}회차까지 돌렸습니다"
+                    break
+                new_runs += 1
                 row = run_one(scenario, condition, repeat, seed, system_factory, erp_factory, time_limit_s)
                 rows.append(row)
                 if row.cost_usd is None:
@@ -148,6 +165,8 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                     meta.cost_spent_usd += row.cost_usd
                 if on_row:
                     on_row(row)
+            if meta.stopped_reason:
+                break
         if meta.stopped_reason:
             break
     meta.done_runs = len(rows)
@@ -164,6 +183,19 @@ def save_run(rows: list[RunRow], meta: RunMeta, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = {"meta": asdict(meta), "rows": [asdict(r) for r in rows]}
     path.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def load_rows_jsonl(path: Path) -> list[RunRow]:
+    """실행 중에 한 줄씩 쓴 회차 기록을 읽습니다. 같은 회차가 여러 번 있으면 마지막 것을 씁니다.
+    하네스 오류(error)가 있는 회차는 이어 돌릴 때 다시 돌리도록 뺍니다."""
+    if not path.exists():
+        return []
+    latest: dict[tuple[str, str, int], RunRow] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            r = RunRow(**json.loads(line))
+            latest[(r.scenario_id, r.condition, r.repeat)] = r
+    return [r for r in latest.values() if not r.error]
 
 
 def load_run(path: Path) -> tuple[list[RunRow], RunMeta]:
