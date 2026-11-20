@@ -23,7 +23,7 @@
 
 ## 2. 이슈 루프(모듈 세션)
 
-1. 자기 모듈 라벨이 붙고 `blocked`가 아닌 열린 이슈 중 번호가 가장 작은 것을 고릅니다(`gh issue list -l <모듈> -s open`). 이슈에 자기를 담당으로 적는 대신 코멘트로 "시작"을 남깁니다.
+1. 자기 모듈 라벨이 붙고 `blocked`가 아닌 열린 이슈 중 번호가 가장 작은 것을 고릅니다(`gh issue list -l <모듈> -s open`). `blocked` 이슈라도 `blocked by`의 이슈가 모두 닫혔으면 라벨을 떼고 고릅니다. 이슈에 자기를 담당으로 적는 대신 코멘트로 "시작"을 남깁니다.
 2. 최신 `develop`에서 브랜치를 만듭니다: `git fetch origin && git switch -c feat/<모듈>-<주제> origin/develop`
 3. 구현하고 시험을 붙입니다. 모듈 시험이 로컬에서 통과해야 합니다.
 4. PR을 엽니다. 제목은 커밋 형식, 본문은 PR 양식, `Closes #<번호>`를 적습니다.
@@ -37,7 +37,7 @@
 
 ## 3. 의존과 순서
 
-- 의존은 이슈 본문의 `blocked by #<번호>`와 `blocked` 라벨로 적습니다. 막은 이슈가 닫히면 프로젝트 리드가 라벨을 뗍니다.
+- 의존은 이슈 본문의 `blocked by #<번호>`와 `blocked` 라벨로 적습니다. `blocked by`의 이슈가 모두 닫히면 모듈 세션이 직접 라벨을 떼고(`gh issue edit <번호> --remove-label blocked`) 시작합니다. 리드를 기다리지 않습니다.
 - 남을 기다리지 않도록 각 모듈은 계약과 가짜로 먼저 만듭니다.
   - agent·eval·gateway는 가짜 erp(`contracts/fakes/erp`)를 씁니다.
   - gateway는 rag·agent를 계약 스텁으로 대신합니다.
