@@ -28,3 +28,6 @@ coverage/
 .idea/
 .vscode/
 *.log
+
+# 슬랙 사용자 매핑(워크스페이스마다 다름)
+infra/slack/slack-users.json
