@@ -105,6 +105,46 @@ paths:
             application/json:
               schema: {$ref: "erp.yaml#/components/schemas/Employee"}
 
+  /employees:
+    get:
+      tags: [org]
+      operationId: searchEmployees
+      description: 대리인 고르기. erp `GET /employees`를 그대로 넘깁니다(공개 필드만).
+      parameters:
+        - {name: q, in: query, schema: {type: string}, description: 이름 일부}
+        - {name: unitId, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        "200":
+          description: 직원 목록
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "erp.yaml#/components/schemas/EmployeeSummary"}
+
+  /approval-forms:
+    get:
+      tags: [inbox]
+      operationId: listApprovalForms
+      description: 대결 범위의 양식 고르기. erp `GET /approval-forms`를 그대로 넘깁니다.
+      responses:
+        "200":
+          description: 양식
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "erp.yaml#/components/schemas/ApprovalForm"}
+
   /agents:
     get:
       tags: [chat]
@@ -148,7 +188,7 @@ paths:
           required: false
           description: >-
             평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의
-            agent /run·/resume에 condition으로 그대로 넘깁니다. 값은 agent.yaml의 Condition과 같습니다.
+            agent /run에 condition으로 넘깁니다(이어지는 /resume은 agent 실행 상태가 조건을 기억합니다). 값은 agent.yaml의 Condition과 같습니다.
           schema: {enum: [no_guard, write_blocked, approve_all, baseline_tools, full]}
       requestBody:
         required: false
@@ -605,6 +645,15 @@ components:
             formName: {type: string}
             requesterName: {type: string}
             requesterUnitName: {type: string}
+            steps:
+              type: array
+              description: erp 결재선 단계에 이름을 붙입니다
+              items:
+                type: object
+                required: [approverName]
+                properties:
+                  approverName: {type: string}
+                  actedByName: {type: [string, "null"]}
             viaDelegation:
               type: [object, "null"]
               description: 대결로 내 함에 들어온 것이면 원 결재자와 위임

@@ -11,3 +11,6 @@
 | 2026-11-20 | eval | - | scenario `expect.markerSources`, `eval/markers.schema.json`(RAG_MARKERS_FILE), `eval/injected-docs.schema.json`(RAG_EXTRA_DOCS) | 표지 대상 지정, 표지·주입 문서 심기 | 반영, rag 구현 이슈 |
 | 2026-11-20 | eval | - | gateway `X-Eval-Condition` 헤더(GATEWAY_EVAL_MODE=1) | 조건별 실행 | 반영, gateway 구현 이슈 |
 | 2026-11-20 | eval | - | erp `POST /_eval/reset`(ERP_EVAL_RESET=1), 가짜 erp 구현 | 회차 사이 초기화 | 반영, erp 구현 이슈 |
+| 2026-11-20 | web | #67 | gateway `GET /employees`, `GET /approval-forms`, `InboxItem.steps[]` 이름 | 대결 설정·결재선 화면 | 반영 |
+| 2026-11-20 | gateway | - | `X-Eval-Condition`은 /run에만 넘김(설명 정정) | agent.yaml /resume에 condition 없음 | 반영 |
+| 2026-11-20 | agent | - | MCP 요청 `_meta`(dryRun, idempotencyKey, trustLevel)를 `contracts/mcp/README.md`에 적음 | LLM이 고를 수 없는 값 | 반영 |
