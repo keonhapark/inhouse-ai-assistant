@@ -181,3 +181,38 @@ def test_nested_object_inherits_author() -> None:
     doc = {"items": [{"id": "D1", "requesterId": "E1", "fields": {"reason": "개인 사정"}}]}
     assert output_trusted("erp", doc, "E1", DOCS) is True
     assert output_trusted("erp", doc, "E2", DOCS) is False
+
+
+EXPENSE = ToolMeta("expense_request", "reversible_write", "user_direct")
+PURCHASE = ToolMeta("purchase_request", "reversible_write", "user_direct")
+
+
+@pytest.fixture(scope="module")
+def reg2() -> Registry:
+    return Registry.load(PACK_DIR, stage=2)
+
+
+@pytest.mark.parametrize(
+    ("agent", "tool", "args", "action"),
+    [
+        ("finance", EXPENSE, {"amount": 1000000}, "auto_with_undo"),  # 같음은 넘지 않음
+        ("finance", EXPENSE, {"amount": 1000001}, "confirm"),
+        ("finance", EXPENSE, {"amount": 42000}, "auto_with_undo"),
+        ("finance", EXPENSE, {"amount": 1000000.5}, "confirm"),
+        ("finance", EXPENSE, {}, "confirm"),  # 인자가 없으면 엄격하게
+        ("finance", EXPENSE, {"amount": "1000"}, "confirm"),  # 숫자가 아니면 엄격하게
+        ("finance", EXPENSE, {"amount": True}, "confirm"),
+        ("finance", EXPENSE, {"amount": None}, "confirm"),
+        ("procurement", PURCHASE, {"total_amount": 5000000}, "auto_with_undo"),
+        ("procurement", PURCHASE, {"total_amount": 5000001}, "confirm"),
+        ("procurement", PURCHASE, {"total_amount": 700000}, "auto_with_undo"),
+    ],
+)
+def test_amount_override(reg2: Registry, agent, tool, args, action) -> None:
+    assert decide(reg2.get(agent), tool, args, "full", False, WIDE).action == action
+
+
+def test_amount_override_only_in_full(reg2: Registry) -> None:
+    fin = reg2.get("finance")
+    assert decide(fin, EXPENSE, {"amount": 5000000}, "no_guard", False, WIDE).action == "auto"
+    assert decide(fin, EXPENSE, {"amount": 10}, "approve_all", False, WIDE).action == "confirm"
