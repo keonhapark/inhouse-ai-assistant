@@ -500,3 +500,4 @@ def test_외부를_요청했어도_gateway가_로컬로_보냈으면_로컬로_�
     assert body["found"] is True and body["model"] == {"name": "local", "location": "local"}
     [event] = [e for e in events(audit) if e["kind"] == "rag.answered"]
     assert event["model"]["externalSent"] is False and event["model"]["location"] == "local"
+

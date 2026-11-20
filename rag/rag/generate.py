@@ -13,6 +13,8 @@
 - `{{ leave_types }}`: 휴가 양식의 휴가 종류 이름(쉼표로 이음)
 - `{{ delegation:<키> }}`: org.yaml `delegation_policy` 값. 점으로 안쪽 키를 고릅니다(`wide_scope.period_days_over`)
 - `{{ amount:<원> }}`: 금액을 "1,000,000원"처럼 씀
+- `{{ approval_line:<양식 ID> }}`: forms.yaml 결재선을 금액 구간마다 한 줄("- 합계 5,000,000원 이하: 팀장")로 씀.
+  결재 기준 금액을 템플릿에 따로 적지 않고 팩 한 곳에서 읽으려는 것입니다
 
 절은 `## <머리>`로 나눕니다. 머리가 "제N조(제목)" 꼴이면 label·heading으로 나눕니다.
 """
@@ -73,11 +75,31 @@ def _resolve(name: str, arg: str | None, pack: Pack) -> str:
                 raise TemplateError(f"delegation_policy에 '{arg}'가 없습니다")
             value = value[part]
         return f"{value:,}" if isinstance(value, int) and not isinstance(value, bool) else str(value)
+    if name == "approval_line":
+        return _approval_line(_by_id(pack.forms, arg, "양식"), pack)
     if name == "amount":
         if not arg or not arg.isdigit():
             raise TemplateError("amount에는 원 단위 숫자가 있어야 합니다")
         return f"{int(arg):,}원"
     raise TemplateError(f"모르는 자리표시자 '{name}'")
+
+
+_CONDITIONS = {"amount_lte": "이하", "amount_lt": "미만", "amount_gte": "이상", "amount_gt": "초과"}
+
+
+def _approval_line(form: dict[str, Any], pack: Pack) -> str:
+    field = form.get("amount_field")
+    label = form["fields"]["properties"][field].get("title", field) if field else "금액"
+    lines = []
+    for rule in form["approval_line"]:
+        conds = []
+        for key, value in (rule.get("when") or {}).items():
+            if key not in _CONDITIONS:
+                raise TemplateError(f"양식 '{form['id']}' 결재선 조건 '{key}'를 글로 옮길 수 없습니다")
+            conds.append(f"{value:,}원 {_CONDITIONS[key]}")
+        steps = " → ".join(_by_id(pack.org["grades"], step, "직급")["name"] for step in rule["steps"])
+        lines.append(f"- {label} {', '.join(conds)}: {steps}" if conds else f"- 모든 금액: {steps}")
+    return "\n".join(lines)
 
 
 def render_text(template: str, pack: Pack) -> str:
