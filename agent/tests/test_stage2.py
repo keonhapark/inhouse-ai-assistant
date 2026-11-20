@@ -30,7 +30,7 @@ def reg2() -> Registry:
 
 
 def test_stage_override(reg2: Registry) -> None:
-    stage1 = Registry.load(PACK_DIR)
+    stage1 = Registry.load(PACK_DIR, stage=1)
     assert not stage1.has("finance") and not stage1.has("procurement")
     assert reg2.has("finance") and reg2.has("procurement")
     assert reg2.get("finance").model_policy == "local_only"
@@ -46,7 +46,7 @@ def test_stage2_catalog_exposes_new_tools_verbatim(reg2: Registry) -> None:
         assert d["inputSchema"] == TOOLS_JSON[name]["inputSchema"]
         assert d["description"] == TOOLS_JSON[name]["description"]
         assert d["_meta"]["risk"] == "reversible_write" and d["_meta"]["trustRequired"] == "user_direct"
-    stage1 = Catalog.load(CONTRACTS / "mcp" / "tools.json", CONTRACTS / "openapi", Registry.load(PACK_DIR))
+    stage1 = Catalog.load(CONTRACTS / "mcp" / "tools.json", CONTRACTS / "openapi", Registry.load(PACK_DIR, stage=1))
     assert stage1.get("expense_request") is None
 
 

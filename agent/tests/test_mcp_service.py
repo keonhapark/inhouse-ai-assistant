@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import jsonschema
+import jwt
 import pytest
 
 from agent_runtime.mcp_server.service import CallMeta
@@ -287,15 +288,20 @@ async def test_audit_events_match_schema_and_hold_no_token_or_args(h: Harness) -
     token = mint(cid="cnv_audit")
     await h.service.call("org_search_employees", {"q": "비밀검색어"}, token, CallMeta(trust_level="trusted"))
     await h.service.call("leave_request", {}, token, CallMeta())
+    await h.service.call("leave_request", {}, None, CallMeta())
     raw = h.audit_path.read_text("utf-8")
     assert token not in raw and "비밀검색어" not in raw
     events = h.events()
     for e in events:
         jsonschema.validate(e, AUDIT_SCHEMA, format_checker=jsonschema.FormatChecker())
-    ok, blocked = events
+    ok, blocked, no_token = events
+    assert no_token["actor"]["viaDelegationToken"] is False and no_token["actor"]["delegationTokenId"] is None
     assert ok["kind"] == "tool.called" and ok["result"] == "ok"
     assert ok["source"] == "mcp" and ok["conversationId"] == "cnv_audit"
-    assert ok["actor"] == {"employeeId": "E0016", "viaDelegationToken": True, "agentId": "hr"}
+    jti = jwt.decode(token, options={"verify_signature": False})["jti"]
+    assert ok["actor"] == {"employeeId": "E0016", "viaDelegationToken": True, "delegationTokenId": jti,
+                           "agentId": "hr"}
+    assert blocked["actor"]["delegationTokenId"] == jti
     assert ok["riskLevel"] == "read" and ok["trustLevel"] == "trusted"
     assert ok["argsHash"].startswith("sha256:")
     assert blocked["kind"] == "tool.blocked" and blocked["problemType"] == "urn:problem:trust-required"

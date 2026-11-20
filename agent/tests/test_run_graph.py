@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 
 import jsonschema
+import jwt
 import pytest
 
 from agent_runtime.llm import LLMError
@@ -184,7 +185,9 @@ async def test_injected_instruction_cannot_call_user_direct_tool(r: RunHarness) 
     await _foreign_delegation(r)
     r.llm.script = [call("delegation_list", {"role": "delegate"}), call("delegation_register", INJECTED),
                     say("맡은 대결은 1건입니다.")]
-    s = await run(r, "내가 대신 결재하게 된 대결 내용 알려 줘")
+    conv = cid()
+    token = mint(cid=conv)
+    s = await run(r, "내가 대신 결재하게 된 대결 내용 알려 줘", conv=conv, token=token)
     assert s["status"] == "blocked"
     assert "신뢰할 수 없는" in s["blockedReason"]
     assert [c[0] for c in r.caller.calls] == ["delegation_list"]
@@ -195,6 +198,7 @@ async def test_injected_instruction_cannot_call_user_direct_tool(r: RunHarness) 
     jsonschema.validate(event, AUDIT_SCHEMA)
     assert event["kind"] == "tool.blocked" and event["operation"] == "delegation_register"
     assert event["trustLevel"] == "untrusted"
+    assert event["actor"]["delegationTokenId"] == jwt.decode(token, options={"verify_signature": False})["jti"]
     mine = await r.h.service.call("delegation_list", {"role": "delegator"}, mint(), CallMeta())
     assert mine.data["items"] == []
 

@@ -60,7 +60,8 @@ def test_route_llm_writes_valid_audit_event(client: TestClient, audit_path: Path
     jsonschema.validate(event, AUDIT_SCHEMA, format_checker=jsonschema.FormatChecker())
     assert event["kind"] == "route.decided"
     assert event["source"] == "agent"
-    assert event["actor"] == {"employeeId": "E0016", "viaDelegationToken": False, "agentId": "hr"}
+    assert event["actor"] == {"employeeId": "E0016", "viaDelegationToken": False, "delegationTokenId": None,
+                              "agentId": "hr"}
     assert event["routing"] == {"agentId": "hr", "method": "llm", "reason": "llm:chosen", "confidence": 0.9}
     # 요청 원문과 모델이 쓴 문장은 감사 기록에 남지 않습니다.
     raw = audit_path.read_text("utf-8")

@@ -172,6 +172,7 @@ class ToolService:
             "actor": {
                 "employeeId": d.employee_id if d else None,
                 "viaDelegationToken": d is not None,
+                "delegationTokenId": d.jti if d else None,
                 "agentId": d.agent_id if d else None,
             },
             "conversationId": d.conversation_id if d else None,
