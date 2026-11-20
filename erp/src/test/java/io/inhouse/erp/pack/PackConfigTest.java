@@ -55,4 +55,16 @@ class PackConfigTest {
         String dir = packWithStage(tmp, "").toString();
         assertThatThrownBy(() -> new PackConfig().pack(dir, "")).isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void erpRolesComeFromOrgYamlOrDefault(@TempDir Path tmp) throws IOException {
+        assertThat(PackLoader.load(PACK).erpRoles()).isEqualTo(new Pack.ErpRoles("hr_staff", "auditor"));
+        Path dir = packWithStage(tmp, "stage: 2");
+        Path org = dir.resolve("org.yaml");
+        String text = Files.readString(org);
+        Files.writeString(org, text.replace("  hr: hr_staff\n", "  hr: people_ops\n"));
+        assertThat(PackLoader.load(dir).erpRoles()).isEqualTo(new Pack.ErpRoles("people_ops", "auditor"));
+        Files.writeString(org, text.replaceFirst("(?m)^erp_roles:\n(  .*\n)+", ""));
+        assertThat(PackLoader.load(dir).erpRoles()).isEqualTo(Pack.ErpRoles.DEFAULT);
+    }
 }
