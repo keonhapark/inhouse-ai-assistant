@@ -101,6 +101,24 @@ def test_ops_examples_follow_schema() -> None:
         "usage": {"promptTokens": 120, "completionTokens": 30}, "costUsd": 0.000027,
         "messages": [{"role": "user", "content": "[전화번호]로 회의 안내 보내 줘"}],
         "redactions": [{"entity": "KR_PHONE", "placeholder": "[전화번호]", "messageIndex": 0, "start": 0, "end": 6}]})
+def test_agent_registry_matches_pack() -> None:
+    """팩 agents.yaml의 항목을 등록부 스키마로 옮길 수 있어야 합니다(gateway 구현과 같은 변환)."""
+    tools = {t["name"]: t for t in load(CONTRACTS / "mcp/tools.json")["tools"]}
+    for pack in sorted(p for p in PACKS.iterdir() if (p / "agents.yaml").exists()):
+        for a in load(pack / "agents.yaml")["agents"]:
+            rp = a["risk_policy"]
+            entry = {
+                "id": a["id"], "name": a["name"], "version": a["version"], "stage": a["stage"],
+                "ownerUnitId": a["owner_unit"], "ownerUnitName": None, "description": a["description"],
+                "callable": True, "callableBy": a["callable_by"],
+                "tools": [{"name": n, "risk": tools[n]["risk"]} for n in a["tools"]],
+                "allowedRisk": a["allowed_risk"], "docScopes": a.get("doc_scopes", []),
+                "modelPolicy": a["model_policy"],
+                "riskPolicy": {"read": rp["read"], "reversibleWrite": rp["reversible_write"],
+                               "irreversible": rp["irreversible"], "overrides": rp.get("overrides", [])},
+                "routingKeywords": a.get("routing", {}).get("keywords", []),
+            }
+            validate("openapi/gateway.yaml", "AgentRegistryEntry", entry)
 
 
 def test_no_human_only_operation_is_a_tool() -> None:

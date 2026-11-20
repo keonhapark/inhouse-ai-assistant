@@ -131,6 +131,45 @@ paths:
                     type: array
                     items: {$ref: "erp.yaml#/components/schemas/EmployeeSummary"}
 
+  /org/units:
+    get:
+      tags: [org]
+      operationId: listUnits
+      description: 조직도의 본부·팀. erp `GET /org/units`를 그대로 넘깁니다. 로그인한 직원 누구나 봅니다.
+      responses:
+        "200":
+          description: 본부·팀
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "erp.yaml#/components/schemas/Unit"}
+
+  /agent-registry:
+    get:
+      tags: [org]
+      operationId: listAgentRegistry
+      description: |
+        에이전트 등록부. 팩 `agents.yaml`의 모든 에이전트(요청자가 부를 수 없는 것 포함)를 담당 부서·도구·정책과 함께 돌려줍니다.
+        로그인한 직원 누구나 봅니다. 라우팅 예문과 비밀값은 넣지 않습니다.
+      responses:
+        "200":
+          description: 등록부
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  fallbackAgentId: {type: string}
+                  items:
+                    type: array
+                    items: {$ref: "#/components/schemas/AgentRegistryEntry"}
+
   /approval-forms:
     get:
       tags: [inbox]
@@ -852,3 +891,71 @@ components:
               messageIndex: {type: integer, minimum: 0}
               start: {type: integer, minimum: 0}
               end: {type: integer, minimum: 0}
+
+    AgentRegistryEntry:
+      type: object
+      description: 팩 agents.yaml 항목을 화면용으로 옮긴 것(이름은 camelCase)
+      required: [id, name, version, stage, ownerUnitId, description, tools, allowedRisk, modelPolicy, riskPolicy]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        version: {type: string}
+        stage: {type: integer, minimum: 1}
+        ownerUnitId: {type: string}
+        ownerUnitName: {type: [string, "null"]}
+        description: {type: string}
+        callable: {type: boolean, description: 요청자가 부를 수 있는지}
+        callableBy:
+          description: 팩 `callable_by`. all 또는 units·roles·grades
+          oneOf:
+            - {type: string, const: all}
+            - type: object
+              properties:
+                units: {type: array, items: {type: string}}
+                roles: {type: array, items: {type: string}}
+                grades: {type: array, items: {type: string}}
+        tools:
+          type: array
+          items:
+            type: object
+            required: [name, risk]
+            properties:
+              name: {type: string, description: contracts/mcp/tools.json 도구 이름}
+              title: {type: string, description: 도구 설명 첫 문장}
+              risk: {type: string, enum: [read, reversible_write, irreversible]}
+        allowedRisk:
+          type: array
+          items: {type: string, enum: [read, reversible_write, irreversible]}
+        docScopes:
+          type: array
+          items: {type: string}
+        modelPolicy:
+          type: object
+          required: [mode]
+          properties:
+            mode: {type: string, enum: [external_allowed, local_only]}
+            reason: {type: string}
+        riskPolicy:
+          type: object
+          required: [read, reversibleWrite, irreversible]
+          properties:
+            read: {$ref: "#/components/schemas/RiskAction"}
+            reversibleWrite: {$ref: "#/components/schemas/RiskAction"}
+            irreversible: {$ref: "#/components/schemas/RiskAction"}
+            overrides:
+              type: array
+              items:
+                type: object
+                required: [tool, when, action]
+                properties:
+                  tool: {type: string}
+                  when: {type: string, enum: [wide_scope, always]}
+                  action: {$ref: "#/components/schemas/RiskAction"}
+        routingKeywords:
+          type: array
+          items: {type: string}
+
+    RiskAction:
+      type: string
+      enum: [auto, auto_with_undo, confirm, deny]
+      description: "auto: 바로 실행. auto_with_undo: 실행하고 되돌리기 안내. confirm: 미리보기 카드로 실행 승인. deny: 이 에이전트에서 금지"
