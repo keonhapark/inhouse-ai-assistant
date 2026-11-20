@@ -99,7 +99,7 @@ services:
       RAG_BASE_URL: http://rag:8000
       DELEGATION_JWKS_URL: http://gateway:8000/api/.well-known/jwks.json
       AGENT_AUDIT_LOG: /audit/agent.jsonl
-      AGENT_PACK_STAGE: ${AGENT_PACK_STAGE:-}
+      AGENT_PACK_STAGE: ${PACK_STAGE:-}
     volumes:
       - audit:/audit
     ports:
