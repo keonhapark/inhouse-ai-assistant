@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable
 
-from harness.runner import CONDITIONS, RunMeta, RunRow
+from harness.runner import CONDITIONS, RunMeta, RunRow, signature_counts
 from harness.stats import clopper_pearson, newcombe_paired, pass_k, percentile
 
 CONCERN_TYPES = [("leak", "유출"), ("out_of_scope_doc", "권한 밖 문서"), ("cross_dept_bypass", "부서 간 우회"),
@@ -190,6 +190,25 @@ def _common_section(rows: list[RunRow], conds: list[str]) -> list[str]:
     return out
 
 
+def _signatures(rows: list[RunRow]) -> str:
+    def label(sig: tuple[str | None, str | None, int | None]) -> str:
+        commit, stack, stage = sig
+        if commit is None:
+            return "기록 없음(회차별 기록 전)"
+        text = f"하네스 `{commit[:7]}`"
+        if stack:
+            text += f", 스택 `{stack[:7]}`"
+        if stage is not None:
+            text += f", 단계 {stage}"
+        return text
+
+    counts = signature_counts(rows)
+    out = "; ".join(f"{label(sig)} {n}회차" for sig, n in sorted(counts.items(), key=lambda x: -x[1]))
+    if len(counts) > 1:
+        out += " (서로 다른 시스템의 회차가 섞여 있습니다)"
+    return out or "-"
+
+
 def render(rows: list[RunRow], meta: RunMeta, title: str = "평가 보고서") -> str:
     conds = [c for c in CONDITIONS if c in meta.conditions]
     out = [f"# {title}", ""]
@@ -205,6 +224,7 @@ def render(rows: list[RunRow], meta: RunMeta, title: str = "평가 보고서") -
         ["팩", pack], ["모델(설정)", meta.model or "-"],
         ["모델(실행 기록)", ", ".join(f"{m} {n}회차" for m, n in sorted(seen.items())) or "-"],
         ["기기", meta.machine],
+        ["회차별 실행 시스템", _signatures(rows)],
         ["실행", f"{meta.started_at} ~ {meta.finished_at}"],
         ["조건", ", ".join(f"{COND_LABEL[c]}(`{c}`)" for c in conds)],
         ["반복", f"{meta.repeats}회. 회차 번호 {meta.base_seed}+회차를 시드로 기록만 하고 대상 시스템에는 넘기지 않습니다"

@@ -22,8 +22,8 @@ import yaml
 
 from harness.erp import ErpClient
 from harness.report import render
-from harness.runner import (CONDITIONS, MAX_RETRIES, HealthCheck, RunRow, count_retries, load_rows_jsonl, load_run,
-                            run_matrix, save_run)
+from harness.runner import (CONDITIONS, MAX_RETRIES, HealthCheck, RunRow, _git, count_retries, load_rows_jsonl,
+                            load_run, run_matrix, save_run, signature_counts)
 from harness.scenario import ScenarioError, load_scenarios
 from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
 
@@ -118,6 +118,12 @@ def cmd_run(args: argparse.Namespace) -> int:
         if out.with_suffix(".json").exists():
             started_at = load_run(out.with_suffix(".json"))[1].started_at
         print(f"이어 돌리기: 끝난 회차 {len(done)}개를 건너뜁니다", flush=True)
+        now = (_git("rev-parse", "HEAD"), cfg.get("stackCommit"), cfg.get("packStage"))
+        other = {sig: n for sig, n in signature_counts(done).items() if sig != now}
+        if other and not args.allow_mixed:
+            raise SystemExit(f"앞선 회차가 지금과 다른 (하네스 커밋, 스택 커밋, 팩 단계)에서 돌았습니다: {other}. "
+                             f"지금은 {now}입니다. 섞어서 보고하려면 --allow-mixed를 붙입니다(보고서에 커밋별 회차 수가 "
+                             "나옵니다)")
     elif rows_file.exists():
         raise SystemExit(f"{rows_file}가 이미 있습니다. 이어 돌리려면 --resume을 붙입니다")
     rows_file.parent.mkdir(parents=True, exist_ok=True)
@@ -132,7 +138,8 @@ def cmd_run(args: argparse.Namespace) -> int:
                             cost_cap_usd=cfg.get("costCapUsd"), time_limit_s=cfg.get("timeLimitS", 300),
                             model=cfg.get("model"), on_row=progress, done_rows=done,
                             max_runs=args.max_runs, started_at=started_at, health_check=health,
-                            prior_cost_usd=prior_cost, pack_stage=cfg.get("packStage"))
+                            prior_cost_usd=prior_cost, pack_stage=cfg.get("packStage"),
+                            stack_commit=cfg.get("stackCommit"))
     if not cfg["erp"].get("reset", True):
         meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.reset: false)")
     if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):
@@ -175,6 +182,8 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--set", choices=["dev", "normal", "confirm"], help="이 셋의 시나리오만")
     r.add_argument("--max-runs", type=int, help="이번에 새로 돌릴 회차 수 상한(나눠 돌리기)")
     r.add_argument("--resume", action="store_true", help="<out>.rows.jsonl의 끝난 회차를 건너뛰고 이어 돌림")
+    r.add_argument("--allow-mixed", action="store_true",
+                   help="앞선 회차와 하네스 커밋·스택 커밋·팩 단계가 달라도 이어 돌림(보고서에 커밋별 회차 수)")
     rep = sub.add_parser("report", help="실행 결과 JSON으로 보고서 다시 만들기")
     rep.add_argument("run")
     rep.add_argument("-o")
