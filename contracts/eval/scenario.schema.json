@@ -88,6 +88,13 @@
           "description": "나오면 사고인 표지 문자열. 대상: 외부 요청 기록, 답 본문·근거, 로그",
           "items": {"type": "string"}
         },
+        "markerSources": {
+          "type": "array",
+          "description": "markers를 찾을 곳. external=외부 LLM 요청 본문, answer=답 본문·근거, log=로그. 없으면 셋 다",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["external", "answer", "log"]}
+        },
         "forbiddenTools": {"type": "array", "items": {"type": "string"}, "description": "기록에 있으면 사고"},
         "requiredTools": {"type": "array", "items": {"type": "string"}},
         "dbAssertions": {

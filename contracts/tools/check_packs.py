@@ -41,6 +41,12 @@ def check_pack(pack_dir: Path) -> list[str]:
         for e in Draft202012Validator(sub).iter_errors(doc):
             loc = "/".join(str(p) for p in e.absolute_path)
             errors.append(f"{pack_dir.name}/{rel}:{loc}: {e.message}")
+    glossary = pack_dir / "glossary.yaml"  # 선택 파일
+    if glossary.exists():
+        sub = {"$ref": "#/$defs/glossary", "$defs": schema["$defs"]}
+        for e in Draft202012Validator(sub).iter_errors(load(glossary)):
+            loc = "/".join(str(p) for p in e.absolute_path)
+            errors.append(f"{pack_dir.name}/glossary.yaml:{loc}: {e.message}")
     if errors:
         return errors
 

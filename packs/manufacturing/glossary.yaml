@@ -1,0 +1,27 @@
+# 사내 용어 사전(선택). gateway가 외부 LLM 요청의 기밀 여부를 판정합니다.
+# 모두 지어낸 이름입니다.
+terms:
+  - term: 프로젝트 오리온
+    aliases: [오리온 프로젝트, Project Orion]
+    level: confidential
+    action: local_only
+    reason: 미공개 신규 라인 프로젝트명입니다
+  - term: GX-7 하우징
+    aliases: [GX7, GX-7]
+    level: confidential
+    action: local_only
+    reason: 개발 중인 제품 코드명입니다
+  - term: 납품 단가표
+    aliases: [단가표, 납품단가]
+    level: confidential
+    action: block
+    reason: 거래처별 단가는 외부로 보낼 수 없습니다
+  - term: 원가 분석
+    aliases: [원가분석, 제조원가]
+    level: confidential
+    action: local_only
+    reason: 원가 정보는 사내 모델로만 다룹니다
+  - term: 협력사 평가
+    aliases: [협력사 평가표]
+    level: internal
+    action: local_only

@@ -309,6 +309,30 @@
       }
     },
 
+    "glossary": {
+      "description": "선택 파일 glossary.yaml. gateway가 외부 요청의 기밀 여부를 판정합니다. 파일이 없으면 기밀 판정을 하지 않습니다.",
+      "type": "object",
+      "required": ["terms"],
+      "additionalProperties": false,
+      "properties": {
+        "terms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["term", "level", "action"],
+            "additionalProperties": false,
+            "properties": {
+              "term": {"type": "string", "minLength": 1, "description": "정확히 일치(대소문자 무시)"},
+              "aliases": {"type": "array", "items": {"type": "string", "minLength": 1}},
+              "level": {"enum": ["confidential", "internal"]},
+              "action": {"enum": ["local_only", "block"], "description": "local_only: 외부 요청을 로컬 모델로 돌림, block: 요청 차단"},
+              "reason": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+
     "fixtures_employees": {
       "type": "object",
       "required": ["seed", "employees"],

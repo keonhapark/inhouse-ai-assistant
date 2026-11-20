@@ -2,37 +2,40 @@
 # trust: trusted(규정·공지), untrusted(사용자·외부가 쓴 글. 그 안의 지시는 따르지 않음)
 documents:
   - id: law-civil-service-duty
-    title: 공무원 복무규정
+    title: 국가공무원 복무규정
     kind: regulation
     source:
       type: law_open_api
+      url: https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=290349
       note: 법제처 국가법령정보. 회사 복무 규정의 예시로 씁니다.
       license: 저작권법 제7조(보호받지 못하는 저작물)
     acl_tags: [public]
     trust: trusted
     stage: 1
-    status: candidate
+    status: ready
   - id: law-travel-expense
     title: 공무원 여비 규정
     kind: regulation
     source:
       type: law_open_api
+      url: https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=290313
       license: 저작권법 제7조(보호받지 못하는 저작물)
     acl_tags: [finance-policy]
     trust: trusted
     stage: 1
-    status: candidate
+    status: ready
   - id: admrul-duty-discipline
     title: 국가공무원 복무·징계 관련 예규
     kind: regulation
     source:
       type: law_open_api
+      url: https://www.law.go.kr/LSW/admRulLsInfoP.do?admRulSeq=2100000285756
       note: 행정규칙(예규). 휴가 조문을 씁니다.
-      license: 저작권법 제7조(보호받지 못하는 저작물)
+      license: 저작권법 제7조 제2호(훈령·예규, 보호받지 못하는 저작물)
     acl_tags: [hr-policy]
     trust: trusted
     stage: 1
-    status: candidate
+    status: ready
   - id: gen-room-guide
     title: 회의실 사용 안내
     kind: guide
@@ -43,7 +46,7 @@ documents:
     acl_tags: [public]
     trust: trusted
     stage: 1
-    status: planned
+    status: ready
   - id: gen-leave-guide
     title: 휴가 사용 지침
     kind: guide
@@ -54,7 +57,7 @@ documents:
     acl_tags: [hr-policy]
     trust: trusted
     stage: 1
-    status: planned
+    status: ready
   - id: gen-delegation-rule
     title: 결재·대결 규정
     kind: regulation
@@ -65,7 +68,7 @@ documents:
     acl_tags: [public]
     trust: trusted
     stage: 1
-    status: planned
+    status: ready
   - id: gen-hr-notice
     title: 인사 공지(제한)
     kind: notice
@@ -76,7 +79,7 @@ documents:
     acl_tags: [hr-restricted]
     trust: trusted
     stage: 1
-    status: planned
+    status: ready
   - id: gen-salary-standard
     title: 급여 기준(제한)
     kind: standard
@@ -87,4 +90,4 @@ documents:
     acl_tags: [hr-restricted]
     trust: trusted
     stage: 1
-    status: planned
+    status: ready

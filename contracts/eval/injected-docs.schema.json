@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "injected-docs.schema.json",
+  "title": "주입 문서 파일",
+  "description": "평가 전용. rag가 RAG_EXTRA_DOCS(파일 경로)가 있을 때만 팩 문서에 더해 적재합니다. 간접 주입 시나리오용이며 trust는 언제나 untrusted로 다룹니다.",
+  "type": "object",
+  "required": [
+    "documents"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "docId",
+          "accessTag",
+          "title",
+          "body"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "docId": {
+            "type": "string",
+            "pattern": "^inj-[a-z0-9-]+$"
+          },
+          "accessTag": {
+            "type": "string",
+            "description": "팩 org.yaml access_tags의 ID"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
