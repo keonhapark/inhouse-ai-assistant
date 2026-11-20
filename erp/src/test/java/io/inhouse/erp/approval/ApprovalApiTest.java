@@ -284,4 +284,29 @@ class ApprovalApiTest extends ApiTestBase {
         assertThat(get("/leave/balance", members("quality").get(0), "employeeId", emp).getStatus()).isEqualTo(403);
         assertThat(get("/leave/balance", members("hr").get(0), "employeeId", emp).getStatus()).isEqualTo(200);
     }
+
+    /** 구매 합계는 수량 × 단가와 같아야 합니다(팩 amount_product_of). long 넘침으로 비켜 가지 못합니다. */
+    @Test
+    void purchaseTotalMustEqualQuantityTimesPrice() throws Exception {
+        String emp = members("procurement").get(0);
+        for (Map<String, Object> fields : List.<Map<String, Object>>of(
+                Map.of("item_code", "P-1", "quantity", 1000, "unit_price", 100000, "total_amount", 1, "reason", "x"),
+                // 2^32 × 2^32 = 2^64는 long으로 곱하면 0이 됩니다
+                Map.of("item_code", "P-2", "quantity", 4294967296L, "unit_price", 4294967296L, "total_amount", 0,
+                        "reason", "x"))) {
+            for (String dry : List.of("true", "false")) {
+                MockHttpServletResponse r = mvc.perform(org.springframework.test.web.servlet.request
+                        .MockMvcRequestBuilders.post("/approval-documents").param("dryRun", dry)
+                        .header("Authorization", "Bearer " + jwt(emp))
+                        .header("Idempotency-Key", java.util.UUID.randomUUID().toString())
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(Map.of("formId", "purchase", "fields", fields))))
+                        .andReturn().getResponse();
+                assertThat(r.getStatus()).as(r.getContentAsString()).isEqualTo(422);
+                assertThat(problem(r)).isEqualTo("form-validation-failed");
+                assertThat(json(r).path("errors").findValuesAsText("field")).containsExactly("total_amount");
+            }
+        }
+        assertThat(purchase(emp, 6_000_000).path("steps").size()).isEqualTo(2);
+    }
 }

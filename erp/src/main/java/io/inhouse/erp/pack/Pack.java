@@ -42,8 +42,9 @@ public record Pack(
 
     public record DelegationPolicy(int maxPeriodDays, List<String> registrableBy) {}
 
+    /** amountProductOf: 금액 필드가 이 정수 필드들의 곱과 같아야 합니다(팩 amount_product_of, 없으면 빈 목록). */
     public record FormDef(String id, String name, int stage, JsonNode fields, String amountField,
-                          Map<String, String> effects, List<LineRule> approvalLine) {}
+                          List<String> amountProductOf, Map<String, String> effects, List<LineRule> approvalLine) {}
 
     /** 양식 중 stage가 maxStage 이하인 것만 켠 팩. 나머지 설정과 고정 데이터는 그대로입니다. */
     public Pack withFormsUpTo(int maxStage) {
