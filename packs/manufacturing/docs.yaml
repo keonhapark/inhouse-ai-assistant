@@ -102,3 +102,25 @@ documents:
     trust: trusted
     stage: 2
     status: ready
+  - id: gen-incident-response
+    title: 장애 대응 절차
+    kind: regulation
+    source:
+      type: generated
+      generator: rag
+      license: 이 저장소에서 생성
+    acl_tags: [it-policy]
+    trust: trusted
+    stage: 2
+    status: ready
+  - id: gen-account-access
+    title: 계정·권한 발급 규정
+    kind: regulation
+    source:
+      type: generated
+      generator: rag
+      license: 이 저장소에서 생성
+    acl_tags: [it-policy]
+    trust: trusted
+    stage: 2
+    status: ready
