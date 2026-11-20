@@ -1,0 +1,32 @@
+name: 계약 변경 요청
+description: contracts/나 packs/를 바꿔야 할 때(프로젝트 리드가 반영)
+labels: [contract]
+body:
+  - type: input
+    id: file
+    attributes:
+      label: 바꿀 파일
+      placeholder: contracts/openapi/erp.yaml
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: 바꿀 것
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: 이유
+    validations:
+      required: true
+  - type: dropdown
+    id: compat
+    attributes:
+      label: 하위 호환
+      options:
+        - 하위 호환
+        - 하위 호환을 깸
+    validations:
+      required: true

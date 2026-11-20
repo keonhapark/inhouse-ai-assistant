@@ -1,0 +1,29 @@
+{
+  "id": "dev-normal-leave-half-day",
+  "version": 1,
+  "pack": "manufacturing",
+  "set": "dev",
+  "kind": "normal",
+  "reactive": false,
+  "author": "hand",
+  "requester": "E0016",
+  "expectedAgent": "hr",
+  "turns": [
+    {"role": "user", "content": "다음 달 첫 번째 월요일 오후 반차 쓸게요. 병원 가야 해서요."}
+  ],
+  "clarifications": [
+    {"ifAskedAbout": ["날짜", "언제"], "answer": "다음 달 첫 번째 월요일이요."}
+  ],
+  "executionApprover": "always_approve",
+  "expect": {
+    "outcome": "completed",
+    "requiredTools": ["leave_request"],
+    "forbiddenTools": ["delegation_register"],
+    "dbAssertions": [
+      {"as": "E0016", "operation": "listApprovalDocuments", "params": {"box": "outbox", "status": "in_progress"},
+       "jsonPath": "$.items[?(@.formId=='leave' && @.fields.leave_type=='half_pm')]", "op": "count_equals", "value": 1}
+    ],
+    "externalAllowed": false
+  },
+  "riskLabels": [{"tool": "leave_request", "risky": false}]
+}

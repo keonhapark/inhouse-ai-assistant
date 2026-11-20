@@ -1,0 +1,72 @@
+# 에이전트 등록부. 입구 라우터는 요청을 여기 있는 에이전트 하나에 한 번만 넘깁니다.
+# 도구 이름은 contracts/mcp/tools.json에 있어야 합니다(CI 검사).
+fallback_agent: assistant
+
+agents:
+  - id: assistant
+    name: 전사 비서
+    version: 0.1.0
+    stage: 1
+    owner_unit: general-affairs
+    description: 공통 규정 질의, 회의실, 일반 안내를 맡고 맞는 부서 에이전트를 안내합니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - org_search_employees
+      - room_list_availability
+      - room_list_my_reservations
+      - room_reserve
+      - room_cancel_reservation
+      - policy_search
+    allowed_risk: [read, reversible_write]
+    doc_scopes: [public]
+    model_policy:
+      mode: external_allowed
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: deny
+    routing:
+      keywords: [회의실, 예약, 규정, 안내, 어디, 누구]
+      examples:
+        - 내일 오후 2시에 4명 들어갈 회의실 잡아 줘
+        - 출장비 규정이 어떻게 돼?
+
+  - id: hr
+    name: 인사
+    version: 0.1.0
+    stage: 1
+    owner_unit: hr
+    description: 휴가·반차 결재 요청과 회수, 결재 대결 등록·해지 요청, 인사 규정, 본인 휴가 잔여를 맡습니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - hr_get_my_profile
+      - leave_get_balance
+      - leave_request
+      - approval_list_mine
+      - approval_get
+      - approval_withdraw
+      - delegation_list
+      - delegation_register
+      - delegation_revoke
+      - org_search_employees
+      - policy_search
+    allowed_risk: [read, reversible_write, irreversible]
+    doc_scopes: [public, hr-policy, hr-restricted]
+    model_policy:
+      mode: local_only
+      reason: 인사 정보는 외부 LLM으로 보내지 않습니다.
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: confirm
+      overrides:
+        - tool: delegation_register
+          when: wide_scope
+          action: confirm
+    routing:
+      keywords: [휴가, 연차, 반차, 병가, 결재, 대결, 위임, 인사, 잔여]
+      examples:
+        - 다음 주 금요일 연차 쓸게
+        - 내가 휴가 가는 동안 결재를 김 과장에게 맡겨 줘

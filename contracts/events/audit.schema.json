@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inhouse-ai-assistant.invalid/contracts/events/audit.schema.json",
+  "title": "감사 이벤트",
+  "description": "누가, 어느 에이전트를 거쳐, 무엇을, 어떤 결과로 했는지 남깁니다. 서비스마다 JSON Lines로 쓰고 erp 것은 GET /audit-events로도 봅니다. 위임 토큰 문자열, 가림 전 원문, 비밀값은 넣지 않습니다. 필드 목록은 사용자 결정 지점입니다(docs/decisions).",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "source", "kind", "actor", "result"],
+  "additionalProperties": false,
+  "properties": {
+    "eventId": {"type": "string"},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "source": {"enum": ["erp", "gateway", "agent", "mcp", "rag", "web"]},
+    "kind": {
+      "enum": [
+        "erp.write",
+        "erp.undo",
+        "erp.denied",
+        "auth.login",
+        "auth.delegation_token_issued",
+        "route.decided",
+        "tool.called",
+        "tool.blocked",
+        "execution_approval.requested",
+        "execution_approval.decided",
+        "llm.request",
+        "llm.redacted",
+        "rag.answered",
+        "rag.access_denied"
+      ]
+    },
+    "actor": {
+      "type": "object",
+      "required": ["employeeId"],
+      "additionalProperties": false,
+      "properties": {
+        "employeeId": {"type": ["string", "null"], "description": "요청한 직원. 시스템 동작이면 null"},
+        "viaDelegationToken": {"type": "boolean"},
+        "agentId": {"type": ["string", "null"]}
+      }
+    },
+    "onBehalfOf": {"type": ["string", "null"], "description": "결재 대결이면 원 결재자 ID"},
+    "delegationId": {"type": ["string", "null"], "description": "결재 대결 위임 ID"},
+    "conversationId": {"type": ["string", "null"]},
+    "executionApprovalId": {"type": ["string", "null"], "description": "에이전트 실행 승인(gateway approvalId)"},
+    "actionId": {"type": ["string", "null"], "description": "erp 행동 ID"},
+    "undoOf": {"type": ["string", "null"], "description": "되돌리기면 원래 actionId"},
+    "operation": {"type": ["string", "null"], "description": "erp operationId 또는 MCP 도구 이름"},
+    "argsHash": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$", "description": "정렬한 JSON 인자의 SHA-256"},
+    "riskLevel": {"enum": ["read", "reversible_write", "irreversible", null]},
+    "trustLevel": {"enum": ["trusted", "untrusted", "user_direct", null], "description": "도구 호출을 이끈 입력의 신뢰 등급"},
+    "routing": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "agentId": {"type": "string"},
+        "method": {"enum": ["llm", "keyword", "fallback", "explicit"]},
+        "reason": {"type": "string"},
+        "confidence": {"type": ["number", "null"]}
+      }
+    },
+    "model": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "location": {"enum": ["local", "external"]},
+        "externalSent": {"type": "boolean"},
+        "redactions": {"type": "integer", "minimum": 0}
+      }
+    },
+    "result": {"enum": ["ok", "denied", "conflict", "error", "pending"]},
+    "problemType": {"type": ["string", "null"], "description": "실패면 urn:problem:<코드>"},
+    "detail": {"type": ["string", "null"]}
+  }
+}

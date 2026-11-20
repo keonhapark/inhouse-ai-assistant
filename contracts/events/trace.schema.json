@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inhouse-ai-assistant.invalid/contracts/events/trace.schema.json",
+  "title": "추적 스팬",
+  "description": "요청 하나가 web → gateway → agent → MCP → erp/rag → gateway(LLM)를 지나는 경로입니다. 지연·토큰·비용 측정에 씁니다. traceId는 W3C traceparent로 서비스 사이에 넘깁니다.",
+  "type": "object",
+  "required": ["traceId", "spanId", "service", "name", "startedAt", "durationMs", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "traceId": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "spanId": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+    "parentSpanId": {"type": ["string", "null"], "pattern": "^[0-9a-f]{16}$"},
+    "service": {"enum": ["web", "gateway", "agent", "mcp", "erp", "rag", "eval"]},
+    "name": {"type": "string", "description": "예: route, plan, tool:room_reserve, llm, retrieve"},
+    "startedAt": {"type": "string", "format": "date-time"},
+    "durationMs": {"type": "number", "minimum": 0},
+    "status": {"enum": ["ok", "error", "timeout", "blocked"]},
+    "conversationId": {"type": ["string", "null"]},
+    "agentId": {"type": ["string", "null"]},
+    "scenarioId": {"type": ["string", "null"], "description": "평가 실행이면 시나리오 ID"},
+    "llm": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "model": {"type": "string"},
+        "location": {"enum": ["local", "external"]},
+        "inputTokens": {"type": "integer", "minimum": 0},
+        "outputTokens": {"type": "integer", "minimum": 0},
+        "costUsd": {"type": "number", "minimum": 0},
+        "cached": {"type": "boolean"}
+      }
+    },
+    "attributes": {"type": "object", "description": "그 밖의 값. 원문·토큰 문자열은 넣지 않습니다"}
+  }
+}
