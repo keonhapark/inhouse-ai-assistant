@@ -17,6 +17,9 @@ class PackLoaderTest {
         assertThat(pack.units()).extracting(Pack.UnitDef::id).contains("hr", "rnd-center");
         assertThat(pack.employees()).hasSizeGreaterThanOrEqualTo(50);
         assertThat(pack.forms()).extracting(Pack.FormDef::id).containsExactly("leave", "expense", "purchase");
+        assertThat(pack.forms()).extracting(Pack.FormDef::stage).containsExactly(1, 2, 2);
+        assertThat(pack.maxFormStage()).isEqualTo(2);
+        assertThat(pack.withFormsUpTo(1).forms()).extracting(Pack.FormDef::id).containsExactly("leave");
         assertThat(pack.rooms()).isNotEmpty();
         assertThat(pack.balances()).isNotEmpty();
         assertThat(pack.delegationPolicy().maxPeriodDays()).isEqualTo(30);

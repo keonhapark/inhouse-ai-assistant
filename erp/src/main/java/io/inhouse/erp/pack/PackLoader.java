@@ -71,7 +71,8 @@ public final class PackLoader {
             return new Pack.LineRule(longOrNull(w, "amount_lte"), longOrNull(w, "amount_gt"),
                     strings(r.path("steps")));
         });
-        return new Pack.FormDef(f.path("id").asText(), f.path("name").asText(), f.path("fields").deepCopy(),
+        return new Pack.FormDef(f.path("id").asText(), f.path("name").asText(), f.path("stage").asInt(1),
+                f.path("fields").deepCopy(),
                 textOrNull(f, "amount_field"), effects, line);
     }
 
