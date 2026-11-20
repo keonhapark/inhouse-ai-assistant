@@ -41,12 +41,16 @@ def check_pack(pack_dir: Path) -> list[str]:
         for e in Draft202012Validator(sub).iter_errors(doc):
             loc = "/".join(str(p) for p in e.absolute_path)
             errors.append(f"{pack_dir.name}/{rel}:{loc}: {e.message}")
-    glossary = pack_dir / "glossary.yaml"  # 선택 파일
-    if glossary.exists():
-        sub = {"$ref": "#/$defs/glossary", "$defs": schema["$defs"]}
-        for e in Draft202012Validator(sub).iter_errors(load(glossary)):
+    for optional, def_name in (("glossary.yaml", "glossary"), ("budgets.yaml", "budgets")):  # 선택 파일
+        f = pack_dir / optional
+        if not f.exists():
+            continue
+        doc = load(f)
+        data[optional] = doc
+        sub = {"$ref": f"#/$defs/{def_name}", "$defs": schema["$defs"]}
+        for e in Draft202012Validator(sub).iter_errors(doc):
             loc = "/".join(str(p) for p in e.absolute_path)
-            errors.append(f"{pack_dir.name}/glossary.yaml:{loc}: {e.message}")
+            errors.append(f"{pack_dir.name}/{optional}:{loc}: {e.message}")
     if errors:
         return errors
 
@@ -91,6 +95,13 @@ def check_pack(pack_dir: Path) -> list[str]:
             errors.append(f"{p}agents.yaml: 에이전트 ID 중복 '{dup}'")
     if agents["fallback_agent"] not in agent_ids:
         errors.append(f"{p}agents.yaml: fallback_agent '{agents['fallback_agent']}'가 없습니다")
+    budgets = data.get("budgets.yaml") or {}
+    for a in budgets.get("agents", {}):
+        if a not in agent_ids:
+            errors.append(f"{p}budgets.yaml agents: 없는 에이전트 '{a}'")
+    for u in budgets.get("units", {}):
+        if u not in unit_ids:
+            errors.append(f"{p}budgets.yaml units: 없는 부서 '{u}'")
     for a in agents["agents"]:
         w = f"{p}agents.yaml {a['id']}"
         if a["owner_unit"] not in unit_ids:
