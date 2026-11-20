@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+# 외부 데이터(RCAEval)는 내려받기 스크립트로만 받습니다
+data/external/
+.stack-secrets
