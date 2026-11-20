@@ -1,11 +1,15 @@
 # 팩 docs.yaml의 law_open_api 문서를 국가법령정보센터의 어느 규정으로 받는지 적습니다(python -m rag.lawfetch).
 # kind: law(법령, 조문 단위) / admrul(행정규칙 첨부 PDF, chapter 장만)
+# editions: 옛 판. 국가법령정보센터 연혁 화면(lsHstListR.do)의 lsiSeq와 시행일 efYd. 현행판 바로 앞부터 빈틈없이 적습니다.
 law-civil-service-duty:
   kind: law
   name: 국가공무원 복무규정
 law-travel-expense:
   kind: law
   name: 공무원 여비 규정
+  editions:
+    - {lsiSeq: "287535", efYd: "20260701"}  # 대통령령 제36492호, 2026. 6. 30., 일부개정
+    - {lsiSeq: "282471", efYd: "20260102"}  # 대통령령 제36013호, 2026. 1. 2., 타법개정
 admrul-duty-discipline:
   kind: admrul
   name: 국가공무원 복무·징계 관련 예규

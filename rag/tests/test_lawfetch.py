@@ -109,3 +109,45 @@ def test_쪽_번호를_못_읽은_쪽도_장_안에_있으면_고른다():
 def test_목차에_장이_없으면_실패한다():
     with pytest.raises(ValueError):
         chapter_pages(PAGES, 12)
+
+
+# ---------------------------------------------------------------- 옛 판 받기
+
+
+def _serve(monkeypatch, seen):
+    import rag.lawfetch as lf
+
+    page = (FIXTURES / "law_sample.html").read_bytes()
+
+    def fake_get(url):
+        seen.append(url)
+        return page
+
+    monkeypatch.setattr(lf, "_get", fake_get)
+
+
+def test_옛_판은_연혁의_일련번호와_시행일로_받고_주소에_시행일을_남긴다(monkeypatch):
+    from rag.lawfetch import fetch_law_edition
+
+    seen = []
+    _serve(monkeypatch, seen)
+    got = fetch_law_edition("d", {"name": "국가공무원 복무규정"}, {"lsiSeq": "123", "efYd": "20261002"})
+    assert "lsiSeq=123" in seen[0] and "efYd=20261002" in seen[0]
+    assert got["effectiveDate"] == "2026-10-02"
+    assert got["url"].endswith("lsiSeq=123&efYd=20261002")
+
+
+def test_받은_판의_시행일이_요청과_다르면_실패한다(monkeypatch):
+    from rag.lawfetch import fetch_law_edition
+
+    _serve(monkeypatch, [])
+    with pytest.raises(ValueError, match="시행일"):
+        fetch_law_edition("d", {"name": "국가공무원 복무규정"}, {"lsiSeq": "123", "efYd": "20260101"})
+
+
+def test_옛_판의_법령_이름이_다르면_실패한다(monkeypatch):
+    from rag.lawfetch import fetch_law_edition
+
+    _serve(monkeypatch, [])
+    with pytest.raises(ValueError, match="이름"):
+        fetch_law_edition("d", {"name": "공무원 여비 규정"}, {"lsiSeq": "123", "efYd": "20261002"})

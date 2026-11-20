@@ -1,0 +1,29 @@
+# 개정 전후로 글이 다른 조문(공무원 여비 규정 제12조·제18조·제19조, 2026-07-01 시행 개정)을 묻는 질문.
+# asOf: 질문의 기준일. 없으면 실행한 날(KST)입니다. 그날 시행 중인 판이 맞는 판입니다.
+questions:
+  - id: q12-donate
+    question: 공적 항공마일리지를 기부활동에 쓸 수 있나요?
+    article: 제12조
+  - id: q12-convert
+    question: 공적 항공마일리지를 사적 항공마일리지로 전환하는 방법은 무엇인가요?
+    article: 제12조
+  - id: q18-define
+    question: 여비 규정에서 근무지 내 국내 출장은 어떤 출장을 말하나요?
+    article: 제18조
+  - id: q18-integrated
+    question: 통합특별시에서는 근무지 내 국내 출장을 어떤 기준으로 판단하나요?
+    article: 제18조
+  - id: q19-elsewhere
+    question: 국내 이전자가 신임지 외의 지역으로 이사하면 이전비를 받을 수 있나요?
+    article: 제19조
+  - id: q19-abroad
+    question: 국외 이전비는 누구에게 지급하나요? 몇 항에 있나요?
+    article: 제19조
+  - id: q18-define-past
+    question: 여비 규정에서 근무지 내 국내 출장은 어떤 출장을 말하나요?
+    article: 제18조
+    asOf: "2026-03-01"
+  - id: q12-convert-past
+    question: 공적 항공마일리지를 사적 항공마일리지로 전환하는 방법은 무엇인가요?
+    article: 제12조
+    asOf: "2026-03-01"

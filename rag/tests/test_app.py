@@ -164,3 +164,23 @@ def test_공개_키_파일_경로로도_만든다(tmp_path: Path, monkeypatch):
     p.write_text(PUBLIC_PEM, encoding="utf-8")
     monkeypatch.setenv("DELEGATION_TOKEN_PUBLIC_KEY", str(p))
     assert TokenVerifier.from_env().verify(token(STAFF))["doc_scopes"] == STAFF
+
+
+def test_법령_근거에는_판_정보가_있고_기준일로_옛_판을_고른다(client):
+    q = {"query": "여비 규정 제18조 근무지 내 국내 출장", "method": "bm25", "topK": 3}
+    now = post(client, q, token(STAFF)).json()["hits"][0]
+    assert now["article"].startswith("제18조") and now["edition"]["current"] is True
+    old = post(client, {**q, "asOf": "2026-03-01"}, token(STAFF)).json()["hits"][0]
+    assert old["edition"] == {"effectiveFrom": "2026-01-02", "effectiveTo": "2026-06-30", "current": False,
+                              "promulgation": "대통령령 제36013호, 2026. 1. 2., 타법개정"}
+    assert old["text"] != now["text"]
+
+
+def test_생성_문서_근거에는_판_정보가_없다(client):
+    hits = post(client, {"query": "회의실 예약", "method": "bm25", "topK": 5}, token(STAFF)).json()["hits"]
+    assert any(h["docId"].startswith("gen-") for h in hits)
+    assert all(("edition" in h) == (not h["docId"].startswith("gen-")) for h in hits)
+
+
+def test_asOf_형식이_틀리면_422(client):
+    assert post(client, {"query": "연가", "asOf": "2026-13-01"}, token(STAFF)).status_code == 422

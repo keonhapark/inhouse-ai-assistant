@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from rag.corpus import Document, Section
+from rag.corpus import Document, Edition, Section
 
 MAX_CHARS = 700
 _PARAGRAPH = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
@@ -22,13 +22,15 @@ _ITEM = re.compile(r"^\((\d+)\)")
 
 @dataclass(frozen=True)
 class Chunk:
-    id: str  # "<문서 ID>#<순번>"
+    id: str  # "<문서 ID>#<순번>", 옛 판은 "<문서 ID>@<시행일>#<순번>"
     doc_id: str
     title: str
     article: str | None
     text: str
     trust: str
     acl_tags: frozenset[str]
+    edition: Edition | None = None
+    section: str | None = None  # 나누기 전 절 표시(예: "제18조(근무지 내 국내 출장 시의 여비)"). 판끼리 같은 조문을 맞출 때 씁니다
 
 
 def _marker(line: str) -> tuple[str, int] | None:
@@ -128,13 +130,15 @@ def chunk_documents(docs: list[Document], max_chars: int = MAX_CHARS) -> list[Ch
                 n += 1
                 chunks.append(
                     Chunk(
-                        id=f"{doc.id}#{n}",
+                        id=f"{doc.key}#{n}",
                         doc_id=doc.id,
                         title=doc.title,
                         article=article,
                         text=body,
                         trust=doc.trust,
                         acl_tags=frozenset(doc.acl_tags),
+                        edition=doc.edition,
+                        section=section.article,
                     )
                 )
     return chunks

@@ -122,11 +122,26 @@ class CachedEmbedder:
         if missing:
             got = self.inner.embed([t for _, t in missing])
             self._cache.update({k: v for (k, _), v in zip(missing, got, strict=True)})
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            fd = os.open(self._path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(json.dumps(self._cache))
+            self._save()
         return [self._cache[k] for k in keys]
+
+    def forget(self, texts: set[str]) -> int:
+        """글들의 캐시 항목을 지우고 파일에 바로 씁니다(파기). 지운 항목 수를 돌려줍니다."""
+        keys = {hashlib.sha256(t.encode()).hexdigest() for t in texts} & self._cache.keys()
+        for k in keys:
+            del self._cache[k]
+        if keys:
+            self._save()
+        return len(keys)
+
+    def _save(self) -> None:
+        """임시 파일에 쓰고 바꿔 끼웁니다. 쓰는 도중 멈춰도 지운 항목이 든 옛 파일과 반쯤 쓴 파일이 섞이지 않습니다."""
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self._path.with_suffix(".tmp")
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(json.dumps(self._cache))
+        os.replace(tmp, self._path)
 
     def embed_query(self, text: str) -> list[float]:
         return self.inner.embed([text])[0]
