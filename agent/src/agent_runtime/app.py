@@ -1,4 +1,4 @@
-"""agent HTTP API(contracts/openapi/agent.yaml): /health, /agents, /route, /run, /resume.
+"""agent HTTP API(contracts/openapi/agent.yaml): /health, /agents, /route, /run, /resume, /baseline/slots.
 
 환경 변수
 - PACK_DIR: 업종 팩 폴더(필수)
@@ -12,8 +12,10 @@
 
 from __future__ import annotations
 
+import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 from typing import Literal
 
@@ -21,6 +23,8 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from agent_runtime import audit
+from agent_runtime.baseline.llm_filler import LlmSlotFiller, load_slot_tools
+from agent_runtime.baseline.slots import KST, RuleSlotFiller, SlotFiller
 from agent_runtime.llm import ChatClient, LLMSettings
 from agent_runtime.registry import Registry, Requester
 from agent_runtime.mcp_server.tokens import TokenVerifier
@@ -73,6 +77,13 @@ class ResumeIn(BaseModel):
     comment: str | None = None
 
 
+class SlotsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    message: str
+    today: date | None = None
+    method: Literal["rule", "llm"]
+
+
 class RouteOut(BaseModel):
     agentId: str
     method: Literal["llm", "keyword", "fallback", "explicit"]
@@ -87,6 +98,8 @@ class Services:
     router: Router
     audit_log: audit.AuditLog
     runner: Runner | None = None
+    slot_fillers: dict[str, SlotFiller] = field(default_factory=lambda: {"rule": RuleSlotFiller()})
+    rooms: list[dict] = field(default_factory=list)
 
 
 def services_from_env() -> Services:
@@ -105,7 +118,20 @@ def services_from_env() -> Services:
     if os.environ.get("AGENT_ALLOW_UNVERIFIED_TOKENS") != "1":
         verifier = TokenVerifier.from_env()
     runner = Runner(registry, build_graph(deps), deps.caller, verifier)
-    return Services(registry, Router(registry, chat, min_conf), log, runner)
+    contracts = Path(os.environ.get("CONTRACTS_DIR", "../contracts"))
+    fillers: dict[str, SlotFiller] = {"rule": RuleSlotFiller(),
+                                      "llm": LlmSlotFiller(chat, load_slot_tools(contracts / "mcp" / "tools.json"))}
+    return Services(registry, Router(registry, chat, min_conf), log, runner, fillers, load_rooms(Path(pack_dir)))
+
+
+def load_rooms(pack_dir: Path) -> list[dict]:
+    """슬롯 파서가 회의실 이름을 ID로 바꿀 때 쓰는 팩 고정 데이터(fixtures/rooms.json). 없으면 빈 목록입니다."""
+    path = pack_dir / "fixtures" / "rooms.json"
+    if not path.is_file():
+        return []
+    raw = json.loads(path.read_text("utf-8"))
+    rooms = raw.get("rooms", []) if isinstance(raw, dict) else raw
+    return [{"id": r["id"], "name": r["name"]} for r in rooms if "id" in r and "name" in r]
 
 
 def create_app(services: Services | None = None) -> FastAPI:
@@ -134,6 +160,14 @@ def create_app(services: Services | None = None) -> FastAPI:
         if svc.runner is None:
             raise HTTPException(503, "업무 실행이 설정되지 않았습니다")
         return svc.runner
+
+    @app.post("/baseline/slots")
+    def baseline_slots(body: SlotsIn) -> dict:
+        filler = svc.slot_fillers.get(body.method)
+        if filler is None:
+            raise HTTPException(503, f"{body.method} 슬롯 채우기가 설정되지 않았습니다")
+        today = body.today or datetime.now(KST).date()
+        return filler.fill(body.message, today, svc.rooms).to_dict()
 
     @app.post("/run")
     async def run(body: RunIn, x_delegation_token: str = Header(...)) -> dict:
