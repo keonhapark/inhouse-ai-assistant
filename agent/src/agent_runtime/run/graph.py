@@ -24,7 +24,7 @@ from agent_runtime.audit import AuditLog, tool_blocked
 from agent_runtime.llm import ChatClient, LLMError
 from agent_runtime.registry import Agent
 from agent_runtime.run.policy import WideScope, decide, visible_to_model
-from agent_runtime.run.tools import ToolCaller, ToolSpec, openai_tool
+from agent_runtime.run.tools import ToolCaller, ToolOutcome, ToolSpec, openai_tool
 from agent_runtime.run.trust import output_trusted
 
 MAX_PLAN_STEPS = 6
@@ -110,6 +110,13 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
     def now() -> datetime:
         return deps.now() if deps.now else datetime.now(ZoneInfo(deps.timezone))
 
+    async def safe_call(name: str, args: dict[str, Any], token: str, meta: dict[str, Any]) -> ToolOutcome:
+        # MCP 서버에 닿지 못해도 그래프가 멈추지 않게 도구 오류로 바꿔 모델에 돌려줍니다.
+        try:
+            return await deps.caller.call(name, args, token, meta)
+        except Exception as e:  # noqa: BLE001
+            return ToolOutcome(False, {"error": "tool_unavailable", "detail": type(e).__name__})
+
     def after_tool(state: RunGraphState, update: dict[str, Any]) -> Command:
         queue = list(state.get("queue", []))[1:]
         update = {**update, "queue": queue, "current": None, "pending": None}
@@ -174,7 +181,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         ctx = runtime.context
         cur = state["current"]
         name = cur["call"]["function"]["name"]
-        out = await deps.caller.call(name, cur["args"], ctx.token, {"dryRun": True, **_trust_meta(state)})
+        out = await safe_call(name, cur["args"], ctx.token, {"dryRun": True, **_trust_meta(state)})
         if not out.ok:
             msg = tool_message(cur["call"], out.payload)
             return after_tool(state, {"messages": [*state["messages"], msg]})
@@ -189,8 +196,11 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         if isinstance(answer, dict) and answer.get("decision") == "approve":
             return Command(goto="execute")
         call = state["current"]["call"]
-        msg = tool_message(call, {"error": "rejected", "detail": "요청자가 실행을 거절했습니다"})
-        return Command(update={"messages": [*state["messages"], msg], "queue": [], "current": None, "pending": None,
+        msgs = [tool_message(call, {"error": "rejected", "detail": "요청자가 실행을 거절했습니다"})]
+        # 같은 응답의 남은 도구 호출에도 응답을 붙여야 다음 턴의 모델 호출이 형식 오류가 나지 않습니다.
+        msgs += [tool_message(c, {"error": "skipped", "detail": "앞선 실행을 거절해 부르지 않았습니다"})
+                 for c in state.get("queue", [])[1:]]
+        return Command(update={"messages": [*state["messages"], *msgs], "queue": [], "current": None, "pending": None,
                                "final": f"요청하신 작업({pending['tool']})을 실행하지 않았습니다."},
                        goto="finish")
 
@@ -203,7 +213,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         meta = dict(_trust_meta(state))
         if spec.meta.risk != "read":
             meta["idempotencyKey"] = idempotency_key(state["conversationId"], call["id"])
-        out = await deps.caller.call(name, args, ctx.token, meta)
+        out = await safe_call(name, args, ctx.token, meta)
         update: dict[str, Any] = {}
         trusted = True
         if out.ok:
@@ -249,6 +259,28 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
     return g.compile(checkpointer=checkpointer or InMemorySaver())
 
 
+def prepare_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """새 턴을 시작하기 전에 이전 기록을 고칩니다.
+
+    - 신뢰 불가 도구 출력의 본문은 걷어 냅니다. 턴이 바뀌면 신뢰 표시가 풀리므로, 앞 턴에서 읽은 지시가
+      다음 턴의 user_direct 도구를 움직이지 못하게 하려는 것입니다.
+    - 응답이 없는 도구 호출(중간에 끊긴 턴)에는 건너뜀 응답을 채웁니다.
+    """
+    out: list[dict[str, Any]] = []
+    answered = {m.get("tool_call_id") for m in messages if m.get("role") == "tool"}
+    for m in messages:
+        if m.get("role") == "tool" and str(m.get("content", "")).startswith(UNTRUSTED_NOTE):
+            m = {**m, "content": f"{UNTRUSTED_NOTE} (이전 턴의 출력이라 본문을 뺐습니다)"}
+        out.append(m)
+        if m.get("role") == "assistant":
+            for c in m.get("tool_calls") or []:
+                if c["id"] not in answered:
+                    out.append({"role": "tool", "tool_call_id": c["id"],
+                                "content": json.dumps({"error": "skipped"}, ensure_ascii=False)})
+                    answered.add(c["id"])
+    return out
+
+
 def _trust_meta(state: RunGraphState) -> dict[str, str]:
     # 신뢰 등급은 full 조건에서만 씁니다. 그 밖의 조건은 MCP 서버의 신뢰 검사도 끕니다.
     if state["condition"] == "full" and state.get("tainted"):
@@ -261,5 +293,6 @@ def _normalize_call(c: dict[str, Any], index: int, step: int) -> dict[str, Any]:
     args = fn.get("arguments")
     if not isinstance(args, str):
         args = json.dumps(args or {}, ensure_ascii=False)
-    return {"id": c.get("id") or f"call_{step}_{index}", "type": "function",
+    # id가 없으면 대화 안에서 겹치지 않게 만듭니다(멱등 키 재료).
+    return {"id": c.get("id") or f"call_{step}_{index}_{uuid.uuid4().hex[:12]}", "type": "function",
             "function": {"name": fn.get("name", ""), "arguments": args}}

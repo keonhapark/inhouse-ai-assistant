@@ -20,10 +20,11 @@ LangGraph로 계획 → 판정 → 미리보기 → 승인 interrupt → 실행 
 - 도구 호출마다 판정합니다(`run/policy.py`).
   - `full`: 위험 등급이 에이전트 `allowed_risk` 밖이면 금지, 그 밖은 `risk_policy`(auto, auto_with_undo, confirm, deny)와 `overrides`를 따릅니다. `when: wide_scope`는 팩 `org.yaml`의 `delegation_policy.wide_scope`(기간, 금액 한도, 모든 양식)로 판단하고, 판단할 수 없으면 넓다고 봅니다.
   - `no_guard`: 모두 바로 실행 / `write_blocked`: 쓰기 도구를 모델에 보이지 않고 호출도 막음 / `approve_all`, `baseline_tools`: 쓰기는 모두 승인
-- 신뢰 등급(`full`만, `run/trust.py`): 한 턴 안에 신뢰 불가 출력이 들어오면 그 턴이 끝날 때까지 `trust_required=user_direct` 도구를 막습니다. 신뢰 불가 출력은 다른 사람이 쓴 자유 문장이 든 erp 출력(사유·제목·의견 등, 작성자가 요청자가 아니거나 모름)과, 팩 `docs.yaml`에서 `trust: trusted`가 아닌 문서를 인용한 rag 답입니다. 신뢰 불가 출력에는 표시를 붙여 모델에 넘깁니다.
+- 신뢰 등급(`full`만, `run/trust.py`): 한 턴 안에 신뢰 불가 출력이 들어오면 그 턴이 끝날 때까지 `trust_required=user_direct` 도구를 막습니다. 신뢰 불가 출력은 다른 사람이 쓴 자유 문장이 든 erp 출력(사유·제목·의견 등, 작성자가 요청자가 아니거나 모름)과, 팩 `docs.yaml`에서 `trust: trusted`가 아닌 문서를 인용한 rag 답입니다. 신뢰 불가 출력에는 표시를 붙여 모델에 넘기고, 다음 턴을 시작할 때 그 본문을 기록에서 뺍니다(앞 턴에서 읽은 지시가 다음 턴의 도구를 움직이지 못하게).
 - confirm이면 erp 미리보기(dryRun)를 받아 `awaiting_approval`과 `pendingApproval`로 멈춥니다. `/resume`의 `approvalId`가 기다리는 것과 다르거나 이미 결정됐으면 409입니다. 거절하면 실행하지 않고 끝냅니다.
 - 쓰기 실행은 `conversationId`와 도구 호출 ID로 만든 멱등 키를 씁니다. auto_with_undo로 실행한 되돌릴 수 있는 행동은 답 끝에 행동 ID와 함께 안내합니다.
-- 요청자가 부를 수 없는 에이전트(fallback 포함, `callable_by`)면 도구 없이 안내만 합니다. 토큰을 확인할 키가 있으면 토큰의 에이전트·요청자·대화가 요청과 같은지 봅니다.
+- 요청자가 부를 수 없는 에이전트(fallback 포함, `callable_by`)면 도구 없이 안내만 합니다. 토큰의 에이전트·요청자·대화가 요청과 같은지 봅니다. 토큰 확인 키(`DELEGATION_TOKEN_PUBLIC_KEY`나 `DELEGATION_JWKS_URL`)가 없으면 시작하지 않고, 개발 때만 `AGENT_ALLOW_UNVERIFIED_TOKENS=1`로 끕니다.
+- 도구 호출이 MCP 서버에 닿지 못하면 도구 오류로 모델에 돌려주고, 그래프 오류는 `failed`로 돌려줍니다(승인 대기 상태가 남지 않음).
 - 상태: 막힌 도구 호출이 있으면 `blocked`, 답이 되묻기 모양("?", "~까요", "~주세요" 등)이면 `awaiting_user`, 모델·도구 목록 오류나 단계 초과(6번)는 `failed`
 - 정책으로 막은 호출은 감사 이벤트 `tool.blocked`(source agent)로 남깁니다.
 

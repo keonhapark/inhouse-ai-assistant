@@ -13,7 +13,8 @@ from typing import Any
 import yaml
 
 FREE_TEXT_KEYS = frozenset({"reason", "title", "comment", "memo", "content", "body", "description", "note", "message"})
-AUTHOR_KEYS = ("requesterId", "delegatorId", "registeredBy", "reservedBy", "actorId", "authorId", "createdBy")
+AUTHOR_KEYS = ("requesterId", "delegatorId", "registeredBy", "reservedBy", "actorId", "authorId", "createdBy",
+               "approverId")
 
 
 def trusted_docs(pack_dir: Path) -> frozenset[str]:
@@ -28,17 +29,17 @@ def output_trusted(service: str, data: Any, requester_id: str, trusted_doc_ids: 
     if service == "rag":
         cites = data.get("citations", []) if isinstance(data, dict) else []
         return all(isinstance(c, dict) and c.get("docId") in trusted_doc_ids for c in cites)
-    return not _has_foreign_text(data, requester_id)
+    return not _has_foreign_text(data, requester_id, ())
 
 
-def _has_foreign_text(node: Any, requester_id: str) -> bool:
+def _has_foreign_text(node: Any, requester_id: str, inherited: tuple[str, ...]) -> bool:
+    """작성자 필드가 없는 하위 객체(예: 결재 문서의 fields)는 가장 가까운 상위 객체의 작성자를 물려받습니다."""
     if isinstance(node, list):
-        return any(_has_foreign_text(x, requester_id) for x in node)
+        return any(_has_foreign_text(x, requester_id, inherited) for x in node)
     if not isinstance(node, dict):
         return False
+    authors = tuple(node[k] for k in AUTHOR_KEYS if isinstance(node.get(k), str)) or inherited
     texts = [k for k, v in node.items() if k in FREE_TEXT_KEYS and isinstance(v, str) and v.strip()]
-    if texts:
-        authors = [node[k] for k in AUTHOR_KEYS if isinstance(node.get(k), str)]
-        if not authors or any(a != requester_id for a in authors):
-            return True
-    return any(_has_foreign_text(v, requester_id) for v in node.values() if isinstance(v, (dict, list)))
+    if texts and (not authors or any(a != requester_id for a in authors)):
+        return True
+    return any(_has_foreign_text(v, requester_id, authors) for v in node.values() if isinstance(v, (dict, list)))

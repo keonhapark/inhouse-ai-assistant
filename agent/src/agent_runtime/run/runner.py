@@ -9,7 +9,7 @@ from langgraph.types import Command
 
 from agent_runtime.mcp_server.tokens import TokenError, TokenVerifier
 from agent_runtime.registry import Agent, Registry, Requester
-from agent_runtime.run.graph import TURN_RESET, RunContext
+from agent_runtime.run.graph import TURN_RESET, RunContext, prepare_history
 from agent_runtime.run.tools import ToolCaller
 
 
@@ -38,11 +38,14 @@ class Runner:
             ctx = await self._context(token, agent, requester)
         except Exception as e:  # noqa: BLE001 - MCP 서버에 닿지 못하면 실패 상태로 돌려줍니다
             return _failed(conversation_id, agent_id, f"도구 목록을 가져오지 못했습니다({type(e).__name__})")
-        prior = (snapshot.values or {}).get("messages", [])
+        prior = prepare_history((snapshot.values or {}).get("messages", []))
         state = {**TURN_RESET, "conversationId": conversation_id, "agentId": agent_id,
                  "requesterId": requester.employee_id, "condition": condition,
                  "messages": [*prior, {"role": "user", "content": message}]}
-        await self.graph.ainvoke(state, config, context=ctx)
+        try:
+            await self.graph.ainvoke(state, config, context=ctx)
+        except Exception as e:  # noqa: BLE001 - 그래프 오류는 failed 상태로 돌려줍니다
+            return _failed(conversation_id, agent_id, f"실행 중 오류({type(e).__name__})")
         return self._view(conversation_id, agent_id, await self.graph.aget_state(config))
 
     async def resume(self, token: str, conversation_id: str, approval_id: str, decision: str,
@@ -63,7 +66,10 @@ class Runner:
             ctx = await self._context(token, agent, None)
         except Exception as e:  # noqa: BLE001
             return _failed(conversation_id, agent_id, f"도구 목록을 가져오지 못했습니다({type(e).__name__})")
-        await self.graph.ainvoke(Command(resume={"decision": decision}), config, context=ctx)
+        try:
+            await self.graph.ainvoke(Command(resume={"decision": decision}), config, context=ctx)
+        except Exception as e:  # noqa: BLE001
+            return _failed(conversation_id, agent_id, f"실행 중 오류({type(e).__name__})")
         return self._view(conversation_id, agent_id, await self.graph.aget_state(config))
 
     def _check(self, token: str, conversation_id: str, agent_id: str, requester: Requester,

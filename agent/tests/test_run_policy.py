@@ -153,3 +153,9 @@ def test_asks_user(text: str, asks: bool) -> None:
     from agent_runtime.run.graph import asks_user
 
     assert asks_user(text) is asks
+
+
+def test_nested_object_inherits_author() -> None:
+    doc = {"items": [{"id": "D1", "requesterId": "E1", "fields": {"reason": "개인 사정"}}]}
+    assert output_trusted("erp", doc, "E1", DOCS) is True
+    assert output_trusted("erp", doc, "E2", DOCS) is False

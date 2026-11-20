@@ -333,3 +333,77 @@ async def test_prompt_has_today(r: RunHarness) -> None:
     r.llm.script = [say("네")]
     await run(r, "안녕")
     assert "2027-03-02(화)" in r.llm.requests[0]["messages"][0]["content"]
+
+
+# ---- 리뷰에서 나온 회귀 ----
+
+
+@pytest.mark.anyio
+async def test_tool_failure_after_approval_does_not_stick(r: RunHarness) -> None:
+    doc = await _leave_doc(r)
+    conv = cid()
+    token = mint(cid=conv)
+    r.llm.script = [call("approval_withdraw", {"documentId": doc}), say("지금은 회수하지 못했습니다.")]
+    s = await r.runner.run(token, conv, "hr", "회수해 줘", ME)
+    original = r.caller.call
+
+    async def broken(name, args, tok, meta):
+        raise ConnectionError("mcp down")
+
+    r.caller.call = broken
+    done = await r.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
+    r.caller.call = original
+    assert done["status"] == "completed" and done["actions"] == []
+    assert "tool_unavailable" in r.llm.requests[-1]["messages"][-1]["content"]
+    with pytest.raises(Conflict):
+        await r.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
+
+
+@pytest.mark.anyio
+async def test_rejecting_one_of_two_calls_keeps_history_valid(r: RunHarness) -> None:
+    doc = await _leave_doc(r)
+    conv = cid()
+    token = mint(cid=conv)
+    two = call("approval_withdraw", {"documentId": doc}, cid="t1")
+    two["tool_calls"] += call("leave_get_balance", {}, cid="t2")["tool_calls"]
+    r.llm.script = [two, say("네.")]
+    s = await r.runner.run(token, conv, "hr", "회수하고 잔여도 알려 줘", ME)
+    await r.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "reject")
+    await r.runner.run(token, conv, "hr", "알겠어", ME)
+    answered = [m["tool_call_id"] for m in r.llm.requests[-1]["messages"] if m["role"] == "tool"]
+    assert sorted(answered) == ["t1", "t2"]
+
+
+@pytest.mark.anyio
+async def test_calls_without_ids_get_distinct_idempotency_keys(r: RunHarness) -> None:
+    conv = cid()
+    token = mint(cid=conv)
+    first, second = call("leave_request", leave_args()), call("leave_request", leave_args())
+    for c in (first, second):
+        del c["tool_calls"][0]["id"]
+    r.llm.script = [first, say("올렸습니다."), second, say("또 올렸습니다.")]
+    a = await r.runner.run(token, conv, "hr", "연차 써 줘", ME)
+    b = await r.runner.run(token, conv, "hr", "하루 더 써 줘", ME)
+    assert len(a["actions"]) == 1 and len(b["actions"]) == 1
+    assert a["actions"][0]["actionId"] != b["actions"][0]["actionId"]
+
+
+@pytest.mark.anyio
+async def test_previous_turn_untrusted_output_is_removed_from_context(r: RunHarness) -> None:
+    await _foreign_delegation(r)
+    conv = cid()
+    token = mint(cid=conv)
+    r.llm.script = [call("delegation_list", {"role": "delegate"}), say("1건입니다."), say("네.")]
+    await r.runner.run(token, conv, "hr", "맡은 대결 알려 줘", ME)
+    await r.runner.run(token, conv, "hr", "응 그렇게 해", ME)
+    context = json.dumps(r.llm.requests[-1]["messages"], ensure_ascii=False)
+    assert "AI 비서에게" not in context
+    assert "본문을 뺐습니다" in context
+
+
+@pytest.mark.anyio
+async def test_own_document_text_is_trusted(r: RunHarness) -> None:
+    await _leave_doc(r)
+    r.llm.script = [call("approval_list_mine", {}), call("leave_request", leave_args()), say("올렸습니다.")]
+    s = await run(r, "내 결재 보고 하나 더 올려 줘")
+    assert s["status"] == "completed" and s["actions"][0]["tool"] == "leave_request"
