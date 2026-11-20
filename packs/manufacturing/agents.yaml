@@ -70,3 +70,60 @@ agents:
       examples:
         - 다음 주 금요일 연차 쓸게
         - 내가 휴가 가는 동안 결재를 김 과장에게 맡겨 줘
+
+  - id: finance
+    name: 재무
+    version: 0.1.0
+    stage: 2
+    owner_unit: finance
+    description: 경비 정산 결재 요청과 회수, 재무 규정(여비·경비) 질의를 맡습니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - expense_request
+      - approval_list_mine
+      - approval_get
+      - approval_withdraw
+      - policy_search
+    allowed_risk: [read, reversible_write, irreversible]
+    doc_scopes: [public, finance-policy]
+    model_policy:
+      mode: local_only
+      reason: 금액·거래처·사업자번호가 든 재무 정보는 외부 LLM으로 보내지 않습니다.
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: confirm
+    routing:
+      keywords: [경비, 정산, 영수증, 출장비, 여비, 법인카드, 지출]
+      examples:
+        - 어제 거래처 점심 4만 2천 원 경비 정산 올려 줘
+        - 출장 숙박비 한도가 얼마야?
+
+  - id: procurement
+    name: 구매자재
+    version: 0.1.0
+    stage: 2
+    owner_unit: procurement
+    description: 구매 요청 결재와 회수, 구매 절차 질의를 맡습니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - purchase_request
+      - approval_list_mine
+      - approval_get
+      - approval_withdraw
+      - policy_search
+    allowed_risk: [read, reversible_write, irreversible]
+    doc_scopes: [public, finance-policy]
+    model_policy:
+      mode: external_allowed
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: confirm
+    routing:
+      keywords: [구매, 발주, 자재, 품목, 단가, 수량, 견적]
+      examples:
+        - 베어링 BRG-6204 200개 개당 3,500원으로 구매 요청 올려 줘
+        - 500만 원 넘는 구매는 누가 결재해?

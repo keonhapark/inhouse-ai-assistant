@@ -16,3 +16,4 @@
 | 2026-11-20 | agent | - | MCP 요청 `_meta`(dryRun, idempotencyKey, trustLevel)를 `contracts/mcp/README.md`에 적음 | LLM이 고를 수 없는 값 | 반영 |
 | 2026-11-20 | agent | #15 | agent `POST /baseline/slots`(rule·llm, 실행 없이 도구·인자 반환) | 기준선과 LLM 경로를 같은 입력으로 비교 | 반영 |
 | 2026-11-20 | eval | - | 조건별 장치 구성 `contracts/eval/conditions.md`, external-request `usage`·`costUsd` | gateway 장치가 조건에 따라 켜지고 꺼지지 않음, 비용 상한 | 반영, gateway·agent 구현 이슈 |
+| 2026-11-20 | 리드 | #145 | tools.json `expense_request`·`purchase_request`, 팩 재무·구매자재 에이전트 | 2단계 부서 에이전트 | 반영. IT 티켓 도구는 erp 티켓 API가 필요해 장애 분석 epic #101로 |
