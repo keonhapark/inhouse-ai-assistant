@@ -41,6 +41,8 @@ class AuditLog:
             "actor": {
                 "employeeId": claims.get("sub") if claims else None,
                 "viaDelegationToken": claims is not None,
+                # gateway의 토큰 발급 이벤트와 잇는 값. 토큰 문자열은 넣지 않습니다.
+                "delegationTokenId": claims.get("jti") if claims else None,
                 "agentId": claims.get("agt") if claims else None,
             },
             "conversationId": claims.get("cid") if claims else None,
