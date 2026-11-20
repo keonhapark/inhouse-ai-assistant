@@ -35,3 +35,50 @@ def test_human_only_scopes_never_enter_agent_scopes():
 def test_unknown_tool_fails_fast():
     with pytest.raises(ValueError):
         Registry({"agents": [_agent(["nope"])]}, TOOLS, SCOPES)
+
+
+# ---------- 팩 단계(#170) ----------
+def test_stage_follows_pack_yaml_and_env_only_overrides():
+    import yaml
+
+    from .conftest import PACK, ROOT
+
+    agents = yaml.safe_load((PACK / "agents.yaml").read_text(encoding="utf-8"))["agents"]
+    pack_stage = yaml.safe_load((PACK / "pack.yaml").read_text(encoding="utf-8"))["stage"]
+    default = Registry.load(PACK, ROOT / "contracts")
+    assert default.stage == pack_stage
+    assert {a.id for a in default.all()} == {a["id"] for a in agents if a["stage"] <= pack_stage}
+    one = Registry.load(PACK, ROOT / "contracts", stage=1)
+    assert {a.id for a in one.all()} == {a["id"] for a in agents if a["stage"] <= 1}
+    assert {a["id"] for a in agents if a["stage"] > 1} and not ({a["id"] for a in agents if a["stage"] > 1}
+                                                              & {a.id for a in one.all()})
+
+
+def test_later_stage_agent_is_hidden_and_gets_no_token(settings, fake_erp, issuer):
+    import dataclasses
+
+    import httpx
+    import pytest as _pytest
+    import yaml
+    from fastapi.testclient import TestClient
+
+    from gateway.main import create_app
+    from gateway.problems import ProblemError
+
+    from .conftest import PACK, PASSWORD, _employees
+
+    later = [a["id"] for a in yaml.safe_load((PACK / "agents.yaml").read_text(encoding="utf-8"))["agents"]
+             if a["stage"] > 1]
+    app = create_app(dataclasses.replace(settings, pack_stage=1), erp_transport=httpx.ASGITransport(app=fake_erp),
+                     issuer=issuer)
+    no = next(e["employee_no"] for e in _employees() if e["grade"] == "staff")
+    with TestClient(app) as c:
+        tok = c.post("/api/auth/login", json={"employeeNo": no, "password": PASSWORD}).json()["accessToken"]
+        ids = {a["id"] for a in c.get("/api/agents", headers={"Authorization": f"Bearer {tok}"}).json()["items"]}
+        assert ids and not ids & set(later)
+        assert c.post("/api/conversations", headers={"Authorization": f"Bearer {tok}"},
+                      json={"agentId": later[0]}).status_code == 403
+        import asyncio
+        with _pytest.raises(ProblemError) as e:
+            asyncio.run(app.state.delegation.issue(tok, later[0], "c"))
+        assert e.value.status == 404

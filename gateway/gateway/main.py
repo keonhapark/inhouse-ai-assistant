@@ -52,7 +52,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                agent_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     redact.install()
-    registry = Registry.load(settings.pack_dir, settings.contracts_dir)
+    registry = Registry.load(settings.pack_dir, settings.contracts_dir, settings.pack_stage)
     issuer = issuer or _issuer(settings)
     erp = ErpClient(settings.erp_base_url, transport=erp_transport)
     audit = AuditLog(settings.audit_dir)
