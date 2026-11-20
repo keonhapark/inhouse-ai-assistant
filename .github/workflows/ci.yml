@@ -26,6 +26,7 @@ jobs:
       agent: ${{ steps.f.outputs.agent }}
       rag: ${{ steps.f.outputs.rag }}
       eval: ${{ steps.f.outputs.eval }}
+      incident: ${{ steps.f.outputs.incident }}
       web: ${{ steps.f.outputs.web }}
       slack: ${{ steps.f.outputs.slack }}
     steps:
@@ -63,6 +64,9 @@ jobs:
               - 'eval/**'
               - 'contracts/**'
               - 'packs/**'
+            incident:
+              - 'incident/**'
+              - 'contracts/**'
             web:
               - 'web/**'
             slack:
@@ -149,7 +153,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [gateway, agent, rag, eval]
+        module: [gateway, agent, rag, eval, incident]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
