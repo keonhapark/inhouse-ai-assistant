@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse, Response
 
 from gateway import redact
 from gateway.alerts import Alerter
+from gateway import audit_query
 from gateway.audit import AuditLog
 from gateway.config import Settings
 from gateway.delegation import DelegationService
@@ -101,6 +102,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
 
     app.include_router(api)
     app.include_router(build_router(erp), prefix="/api")
+    app.include_router(audit_query.build_router(erp, audit, settings.audit_event_files), prefix="/api")
 
     # LLM 출구는 OpenAI 호환 경로라 /api 밖에 둡니다(agent·rag의 GATEWAY_LLM_URL=http://gateway:8000/v1).
     @app.post("/v1/chat/completions")
