@@ -88,3 +88,18 @@
 .card p {
   margin: 0 0 var(--sp-4);
 }
+
+.topbar__nav {
+  display: flex;
+  gap: var(--sp-12);
+}
+
+.topbar__nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.topbar__nav a[aria-current='page'] {
+  color: var(--text);
+  font-weight: 600;
+}
