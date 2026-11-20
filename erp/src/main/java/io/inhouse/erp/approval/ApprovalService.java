@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -206,21 +207,18 @@ public class ApprovalService {
 
     @Transactional(readOnly = true)
     public List<DocumentView> list(String employeeId, String box, String status, int limit) {
+        Limit max = Limit.of(Math.max(1, Math.min(limit, 100)));
         List<ApprovalDocument> found = switch (box) {
-            case "outbox" -> docs.findByRequesterIdOrderByCreatedAtDesc(employeeId);
-            case "inbox" -> docs.findInvolvingApprover(employeeId).stream()
-                    .filter(d -> d.current() != null && d.current().getApproverId().equals(employeeId)).toList();
-            case "delegated" -> delegates.delegatedInbox(employeeId);
-            case "done" -> docs.findInvolvingApprover(employeeId).stream()
-                    .filter(d -> d.getSteps().stream().anyMatch(s -> employeeId.equals(s.getActedBy()))).toList();
+            case "outbox" -> docs.outbox(employeeId, status, max);
+            case "inbox" -> docs.inbox(employeeId, status, max);
+            case "done" -> docs.done(employeeId, status, max);
+            case "delegated" -> delegates.delegatedInbox(employeeId).stream()
+                    .filter(d -> status == null || status.equals(d.getStatus()))
+                    .sorted(Comparator.comparing(ApprovalDocument::getCreatedAt).reversed())
+                    .limit(max.max()).toList();
             default -> throw ApiException.validation("box", "outbox, inbox, delegated, done 중 하나");
         };
-        return found.stream()
-                .filter(d -> status == null || status.equals(d.getStatus()))
-                .sorted(Comparator.comparing(ApprovalDocument::getCreatedAt).reversed())
-                .limit(Math.max(1, Math.min(limit, 100)))
-                .map(ApprovalViews::of)
-                .toList();
+        return found.stream().map(ApprovalViews::of).toList();
     }
 
     private static boolean deductsLeave(Pack.FormDef form) {

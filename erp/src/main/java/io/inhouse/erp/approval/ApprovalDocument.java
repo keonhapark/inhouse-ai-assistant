@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -56,6 +57,7 @@ public class ApprovalDocument {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "approval_step", joinColumns = @JoinColumn(name = "document_id"))
     @OrderBy("stepOrder")
+    @BatchSize(size = 100)
     private List<ApprovalStep> steps = new ArrayList<>();
 
     protected ApprovalDocument() {}

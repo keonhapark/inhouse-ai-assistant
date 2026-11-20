@@ -13,7 +13,7 @@ create table approval_document (
     created_at    timestamptz  not null,
     updated_at    timestamptz  not null
 );
-create index approval_document_requester on approval_document (requester_id);
+create index approval_document_requester on approval_document (requester_id, created_at desc);
 
 create table approval_step (
     document_id   varchar(32) not null references approval_document (id),

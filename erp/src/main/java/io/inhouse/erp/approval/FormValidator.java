@@ -3,6 +3,7 @@ package io.inhouse.erp.approval;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SchemaValidatorsConfig;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import io.inhouse.erp.common.ApiException;
@@ -17,6 +18,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class FormValidator {
 
+    /** format(date 등)도 검사합니다. 2020-12 기본값은 format을 주석으로만 봅니다. */
+    private static final SchemaValidatorsConfig CONFIG = SchemaValidatorsConfig.builder()
+            .formatAssertionsEnabled(true).build();
+
     private final JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
     private final Map<String, JsonSchema> cache = new ConcurrentHashMap<>();
 
@@ -25,7 +30,7 @@ public class FormValidator {
             throw new ApiException(422, "form-validation-failed", "fields는 객체여야 합니다",
                     List.of(new ApiException.FieldError("fields", "object required")));
         }
-        JsonSchema schema = cache.computeIfAbsent(form.id(), id -> factory.getSchema(form.fields()));
+        JsonSchema schema = cache.computeIfAbsent(form.id(), id -> factory.getSchema(form.fields(), CONFIG));
         List<ApiException.FieldError> errors = schema.validate(fields).stream()
                 .sorted(Comparator.comparing(ValidationMessage::getMessage))
                 .map(m -> new ApiException.FieldError(field(m), m.getMessage()))
@@ -40,7 +45,8 @@ public class FormValidator {
             return m.getProperty();
         }
         String loc = m.getInstanceLocation().toString();
-        String f = loc.startsWith("$.") ? loc.substring(2) : loc.equals("$") ? "" : loc;
+        String f = loc.startsWith("$.") ? loc.substring(2) : loc.startsWith("/") ? loc.substring(1)
+                : loc.equals("$") ? "" : loc;
         if (f.isEmpty() && m.getProperty() != null) {
             return m.getProperty();
         }

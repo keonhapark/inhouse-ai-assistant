@@ -93,6 +93,10 @@ class ApprovalApiTest extends ApiTestBase {
         json(r).path("errors").forEach(e -> fields.add(e.path("field").asText()));
         assertThat(fields).contains("leave_type", "end_date", "reason", "extra");
 
+        r = post("/approval-documents", emp, Map.of("formId", "expense", "fields", Map.of("amount", 1000,
+                "spent_on", "yesterday", "merchant", "가상상회", "purpose", "x")));
+        assertThat(problem(r)).isEqualTo("form-validation-failed");
+        assertThat(json(r).path("errors").get(0).path("field").asText()).isEqualTo("spent_on");
         r = post("/approval-documents", emp, Map.of("formId", "nope", "fields", Map.of()));
         assertThat(problem(r)).isEqualTo("validation");
         r = post("/approval-documents", emp, Map.of("formId", "leave"));
@@ -237,6 +241,10 @@ class ApprovalApiTest extends ApiTestBase {
                 .findValuesAsText("id")).contains(id);
         assertThat(json(get("/approval-documents", emp, "box", "outbox", "status", "approved")).path("items")
                 .findValuesAsText("id")).doesNotContain(id);
+        assertThat(json(get("/approval-documents", emp, "box", "outbox", "limit", "1")).path("items").size())
+                .isEqualTo(1);
+        assertThat(json(get("/approval-documents", leader("production-control"), "box", "inbox", "status",
+                "in_progress")).path("items").findValuesAsText("id")).contains(id);
     }
 
     @Test
