@@ -109,6 +109,7 @@ class Conversation:
     seq: int = 0
     pending: str | None = None
     condition: str | None = None   # 평가 조건(X-Eval-Condition). 운영에서는 None
+    unit_id: str | None = None     # 요청자 소속 부서(비용 상한의 부서 기준)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     def event(self, type_: str, **fields: Any) -> dict[str, Any]:
@@ -153,6 +154,10 @@ class ChatService:
         c = self.conversations.get(conversation_id or "")
         return c.condition if c else None
 
+    def unit_of(self, conversation_id: str | None) -> str | None:
+        c = self.conversations.get(conversation_id or "")
+        return c.unit_id if c else None
+
     def owned(self, conversation_id: str, who: Requester) -> Conversation:
         c = self.conversations.get(conversation_id)
         if c is None or c.owner != who.id:
@@ -161,6 +166,7 @@ class ChatService:
 
     # ---------- 이벤트 만들기 ----------
     def _token(self, who: Requester, c: Conversation) -> str:
+        c.unit_id = who.unit_id
         issued = self.delegation.issue_for(who, c.agent_id, c.id, wide=c.condition in WIDE_TOKEN_CONDITIONS)
         self.audit.event("auth.delegation_token_issued", employee_id=who.id, agent_id=c.agent_id, via_token=False,
                          result="ok", conversation_id=c.id, detail=f"jti={issued.claims['jti']}")

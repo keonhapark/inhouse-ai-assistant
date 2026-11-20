@@ -31,6 +31,9 @@ model_list:
       # Claude Haiku 5.5는 기본값이 아닌 샘플링 값을 400으로 거절합니다. LiteLLM 1.108.1도 빼지만(실측),
       # 판이 바뀌어도 400이 나지 않게 gateway가 먼저 뺍니다. 추론 조절은 reasoning_effort로 합니다.
       drop_params: [temperature, top_p]
+      # 단가(USD/토큰, 프롬프트 100K 이하). LiteLLM 가격표와 같고, 비용 머리글이 없는 스트림의 비용 계산에 gateway가 씁니다.
+      input_cost_per_token: 0.0000001
+      output_cost_per_token: 0.0000005
 
 litellm_settings:
   request_timeout: 60

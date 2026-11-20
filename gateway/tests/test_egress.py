@@ -583,3 +583,59 @@ def test_no_fallback_cases(client, app, token_for, litellm, case):
     r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)}, json=body)
     assert len(litellm.requests) == 1                       # 다시 보내지 않음
     assert r.status_code == {"response_format": 502, "unsupported": 400, "local_failure": 502, "ok": 200}[case]
+
+
+# ---------- 비용 상한(#143) ----------
+@pytest.fixture
+def ledger(app):
+    from gateway.budgets import BudgetLedger
+
+    led = BudgetLedger({"period": "month", "agents": {}, "units": {}}, {"team": "div", "div": None},
+                       "Asia/Seoul")
+    app.state.egress.budget = led
+    app.state.egress.unit_of = lambda cid: "team" if cid == "conv-9" else None
+    return led
+
+
+def test_cost_is_added_to_agent_and_units(client, app, token_for, litellm, ledger):
+    _, external_ok = _agent_ids(app)
+    ledger.agent_limits = {external_ok: 1.0}
+    litellm.cost = "0.25"
+    _send(client, token_for(external_ok), "external", "안녕")
+    assert ledger.spent() == {"agents": {external_ok: 0.25}, "units": {"team": 0.25, "div": 0.25}}
+
+
+def test_over_budget_goes_local_from_next_request(client, app, token_for, litellm, ledger):
+    _, external_ok = _agent_ids(app)
+    ledger.unit_limits = {"div": 0.3}
+    litellm.cost = "0.25"
+    t = token_for(external_ok)
+    _send(client, t, "external", "첫째")                    # 0.25 < 0.3: 외부
+    _send(client, t, "external", "둘째")                    # 아직 0.25: 외부, 끝나면 0.5
+    assert [json.loads(q.content)["model"] for q in litellm.requests] == ["external", "external"]
+    r = _send(client, t, "external", PII_TEXT)               # 0.5 ≥ 0.3: 로컬로 내림
+    assert r.status_code == 200 and litellm.last_body()["model"] == "local"
+    assert litellm.last_body()["messages"][0]["content"] == PII_TEXT
+    ev = _llm_events(app)[-1]
+    assert ev["model"]["location"] == "local" and "비용 상한 초과(unit div" in ev["detail"]
+
+
+def test_stream_cost_estimated_from_usage(client, app, token_for, litellm, ledger):
+    from gateway.egress import Caller
+
+    _, external_ok = _agent_ids(app)
+    ledger.agent_limits = {external_ok: 1.0}
+    app.state.egress.prices = {"external": (1e-07, 5e-07)}
+    app.state.egress._egress(
+        Caller("E1", app.state.registry.get(external_ok), "conv-9"),
+        {"name": "external", "location": "external", "externalSent": True, "redactions": 0}, {}, {}, 200,
+        'data: {"choices":[],"usage":{"prompt_tokens":1000,"completion_tokens":200}}\n\ndata: [DONE]\n\n')
+    assert abs(ledger.spent()["agents"][external_ok] - (1000 * 1e-07 + 200 * 5e-07)) < 1e-12
+
+
+def test_budget_off_in_no_guard(client, app, token_for, litellm, ledger):
+    _, external_ok = _agent_ids(app)
+    ledger.agent_limits = {external_ok: 0}
+    _cond(app, "no_guard")
+    _send(client, token_for(external_ok), "external", "x")
+    assert litellm.last_body()["model"] == "external"

@@ -388,3 +388,12 @@ def test_token_scope_by_condition(chat, h, agent, condition, wide):
         assert set(claims["scopes"]) == set(reg.get("hr").scopes)
         assert set(claims["doc_scopes"]) <= set(reg.get("hr").doc_scopes)
     assert claims["tools"] == list(reg.get("hr").tools)
+
+
+def test_conversation_remembers_requester_unit_for_budgets(chat, h, staff_no):
+    cid = _new(chat, h)
+    events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "규정"}))
+    unit = next(e["unit_id"] for e in _employees() if e["employee_no"] == staff_no)
+    assert chat.app_ref.state.chat.unit_of(cid) == unit
+    assert chat.app_ref.state.egress.unit_of(cid) == unit
+    assert chat.app_ref.state.chat.unit_of("nope") is None
