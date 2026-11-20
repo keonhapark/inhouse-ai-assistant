@@ -73,7 +73,10 @@ def load_documents(pack: Pack, *, stage: int | None = None, law_dir: Path = LAW_
         kind = source["type"]
         if kind == "law_open_api":
             copy = load_law_copy(entry["id"], law_dir)
-            source.update(copy["source"])
+            if copy["id"] != entry["id"]:
+                raise MissingBody(f"{entry['id']}: 고정본의 문서 ID가 {copy['id']}입니다")
+            # 출처 유형·라이선스는 docs.yaml이 기준이고, 고정본은 주소·시행일·조회일만 더합니다.
+            source = {**copy["source"], **source}
             title = copy["title"]
             sections = _sections(copy["sections"])
         elif kind == "generated":

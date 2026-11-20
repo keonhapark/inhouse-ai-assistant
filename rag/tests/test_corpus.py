@@ -58,7 +58,30 @@ def test_생성_문서에는_채우지_않은_자리표시자가_없다(docs):
     for doc in docs.values():
         if doc.source["type"] == "generated":
             for s in doc.sections:
-                assert "{{" not in s.text and "}}" not in s.text, (doc.id, s.label)
+                for part in (s.text, s.heading or "", s.label or ""):
+                    assert "{{" not in part and "}}" not in part, (doc.id, s.label)
+
+
+def test_출처_유형과_라이선스는_고정본이_아니라_docs_yaml을_따른다(pack, docs):
+    for entry in pack.documents:
+        src = docs[entry["id"]].source
+        assert src["type"] == entry["source"]["type"]
+        assert src["license"] == entry["source"]["license"]
+
+
+def test_예규_절_번호는_1부터_빠짐없이_이어진다(docs):
+    tops = []
+    for s in docs["admrul-duty-discipline"].sections:
+        n = int(s.label.split(".", 1)[0])
+        if not tops or tops[-1] != n:
+            tops.append(n)
+    assert tops == list(range(1, len(tops) + 1))
+
+
+def test_고정본에_화면_버튼_글자가_없다(docs):
+    for doc in docs.values():
+        for s in doc.sections:
+            assert "위임행정규칙" not in s.text, (doc.id, s.label)
 
 
 def test_제한_문서는_제한_태그만_가진다(pack, docs):
@@ -72,6 +95,22 @@ def test_본문에_전화번호가_없다(docs):
     for doc in docs.values():
         for s in doc.sections:
             assert not PHONE.search(s.text), (doc.id, s.label)
+
+
+def test_고정본_ID가_다르면_알린다(pack, tmp_path):
+    import json
+    import shutil
+
+    from rag.corpus import LAW_DIR
+
+    for f in LAW_DIR.glob("*.json"):
+        shutil.copy(f, tmp_path / f.name)
+    path = tmp_path / "law-travel-expense.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["id"] = "other"
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    with pytest.raises(MissingBody):
+        load_documents(pack, law_dir=tmp_path)
 
 
 def test_고정본이_없으면_알린다(pack, tmp_path):

@@ -29,7 +29,9 @@ def test_직원은_이름과_소속으로_쓴다(pack):
     assert render_text(f"{{{{ employee:{emp['id']} }}}}", pack) == f"{emp['name']}({unit['name']})"
 
 
-@pytest.mark.parametrize("bad", ["{{ nope }}", "{{ role:no_such_role }}", "{{ delegation:no.key }}"])
+@pytest.mark.parametrize(
+    "bad", ["{{ nope }}", "{{ role:no_such_role }}", "{{ delegation:no.key }}", "{{ amount }}", "{{ amount:abc }}"]
+)
 def test_모르는_자리표시자나_없는_값은_실패한다(pack, bad):
     with pytest.raises(TemplateError):
         render_text(bad, pack)

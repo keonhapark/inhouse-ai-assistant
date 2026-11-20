@@ -31,7 +31,8 @@ USER_AGENT = "Mozilla/5.0 (compatible; rag-lawfetch/0.1)"
 
 # ---------------------------------------------------------------- 법령(HTML)
 
-_LAWCON = re.compile(r'<div class="lawcon">(.*?)</div>', re.S)
+_LAWCON_OPEN = '<div class="lawcon">'
+_DIV = re.compile(r"<div\b[^>]*>|</div>")
 _LABEL = re.compile(r"<label[^>]*>\s*(.*?)\s*</label>", re.S)
 _ARTICLE = re.compile(r"^(제\d+조(?:의\d+)?)(?:\((.*)\))?$")
 _ANNOTATION = re.compile(r'<span class="sfon">.*?</span>', re.S)
@@ -45,6 +46,32 @@ def _clean(fragment: str) -> str:
     """태그를 지우고 공백을 하나로 줄입니다. 태그 자리에 공백을 넣으면 "제55조 에"처럼 끊기므로 그냥 지웁니다."""
     text = htmlmod.unescape(_TAG.sub("", fragment))
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _lawcon_blocks(page: str) -> list[str]:
+    """조문 상자(`div.lawcon`)의 본문을 돌려줍니다. 안쪽 div(위임행정규칙 버튼·목록)는 통째로 뺍니다."""
+    blocks = []
+    start = page.find(_LAWCON_OPEN)
+    while start != -1:
+        pos, depth, kept, cut = start + len(_LAWCON_OPEN), 1, [], start + len(_LAWCON_OPEN)
+        for m in _DIV.finditer(page, pos):
+            if m.group(0) == "</div>":
+                depth -= 1
+                if depth == 0:
+                    kept.append(page[cut : m.start()])
+                    pos = m.end()
+                    break
+                if depth == 1:
+                    cut = m.end()
+            else:
+                if depth == 1:
+                    kept.append(page[cut : m.start()])
+                depth += 1
+        else:
+            raise ValueError("조문 상자가 닫히지 않았습니다")
+        blocks.append("".join(kept))
+        start = page.find(_LAWCON_OPEN, pos)
+    return blocks
 
 
 def _date(dotted: str) -> str:
@@ -62,7 +89,7 @@ def parse_law_html(page: str) -> dict[str, Any]:
     if not enforce:
         raise ValueError("시행 정보 형식이 다릅니다")
     sections = []
-    for block in _LAWCON.findall(page):
+    for block in _lawcon_blocks(page):
         m = _LABEL.search(block)
         if not m:
             continue
@@ -115,14 +142,15 @@ def chapter_pages(pages: list[str], chapter: int) -> tuple[str, list[str]]:
         raise ValueError(f"목차에서 제{chapter}장을 찾지 못했습니다")
     name, start = toc[chapter]
     end = toc[chapter + 1][1]
-    picked = []
-    for page in pages:
+    # 쪽 번호가 범위 안인 첫 쪽과 마지막 쪽 사이를 모두 고릅니다. 쪽 번호를 못 읽은 쪽이 중간에서 빠지지 않게 합니다.
+    inside = []
+    for i, page in enumerate(pages):
         first = page.strip().split("\n", 1)[0].strip()
         if first.isdigit() and start <= int(first) < end:
-            picked.append(page)
-    if not picked:
+            inside.append(i)
+    if not inside:
         raise ValueError(f"제{chapter}장 쪽({start}~{end - 1})을 찾지 못했습니다")
-    return name, picked
+    return name, pages[inside[0] : inside[-1] + 1]
 
 
 def parse_admrul_chapter(pages: list[str], chapter: int, rule_title: str) -> tuple[str, list[dict[str, Any]]]:

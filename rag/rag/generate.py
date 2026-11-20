@@ -74,7 +74,9 @@ def _resolve(name: str, arg: str | None, pack: Pack) -> str:
             value = value[part]
         return f"{value:,}" if isinstance(value, int) and not isinstance(value, bool) else str(value)
     if name == "amount":
-        return f"{int(arg or 0):,}원"
+        if not arg or not arg.isdigit():
+            raise TemplateError("amount에는 원 단위 숫자가 있어야 합니다")
+        return f"{int(arg):,}원"
     raise TemplateError(f"모르는 자리표시자 '{name}'")
 
 

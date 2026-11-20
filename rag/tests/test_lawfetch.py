@@ -37,6 +37,23 @@ def test_그림으로_든_표는_대체_글자를_행마다_남긴다(law):
     assert "\n6년 이상 21\n" in text
 
 
+def test_조문_상자_안쪽_div의_버튼_글자는_본문에_넣지_않는다(law):
+    for section in law["sections"]:
+        assert "위임행정규칙" not in section["text"]
+
+
+def test_안쪽_div_뒤에_이어지는_항도_남긴다():
+    page = (FIXTURES / "law_sample.html").read_text(encoding="utf-8")
+    head = page[: page.find('<div class="lawcon">')]
+    block = (
+        '<div class="lawcon"><p><label for="Y1">제9조(시험)</label> ① 첫 항 </p>'
+        '<div class="rule_area"><div class="btn_rule"><img alt="위임행정규칙" /></div></div>'
+        "<p>② 둘째 항</p></div>"
+    )
+    parsed = parse_law_html(head + block)
+    assert parsed["sections"][0]["text"] == "① 첫 항\n② 둘째 항"
+
+
 def test_머리가_없으면_실패한다():
     with pytest.raises(ValueError):
         parse_law_html("<html></html>")
@@ -81,6 +98,12 @@ def test_예규_장을_번호_순서대로_두_단계_절로_나눈다():
     joined = "\n".join(s["text"] for s in sections)
     for noise in ["145", "규정 이름", "휴  가"]:
         assert noise not in joined.splitlines()
+
+
+def test_쪽_번호를_못_읽은_쪽도_장_안에_있으면_고른다():
+    pages = PAGES[:4] + ["표만 있는 쪽"] + PAGES[4:]
+    _, picked = chapter_pages(pages, 8)
+    assert picked == pages[3:6]
 
 
 def test_목차에_장이_없으면_실패한다():
