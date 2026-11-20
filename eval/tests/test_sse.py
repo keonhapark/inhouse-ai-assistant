@@ -52,3 +52,27 @@ def test_gateway_chat_flow():
     chat_auth = {a for m, p, a in seen if p.startswith("/api/conversations")}
     assert chat_auth == {"Bearer tok-E0016"}
     assert {a for m, p, a in seen if p == "/api/audit-events"} == {"Bearer tok-E0050"}
+
+
+def test_condition_header_and_external_log(tmp_path):
+    seen = {}
+
+    def handler(req):
+        if req.url.path == "/api/auth/login":
+            return httpx.Response(200, json={"accessToken": "t"})
+        seen["cond"] = req.headers.get("x-eval-condition")
+        return httpx.Response(201, json={"conversationId": "c9", "createdAt": "x", "status": "active"})
+
+    from harness.sut import jsonl_external_log
+    c = httpx.Client(base_url="http://gw/api", transport=httpx.MockTransport(handler))
+    assert GatewayChat(c, auditor=None, condition="write_blocked").start("E0016") == "c9"
+    assert seen["cond"] == "write_blocked"
+
+    log = tmp_path / "ext.jsonl"
+    read = jsonl_external_log(log)
+    assert read("c9") == []  # 파일 없음 = 외부 요청 없음
+    log.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in [
+        {"conversationId": "c9", "at": "t", "model": "m", "body": {"messages": [{"content": "가"}]}},
+        {"conversationId": "other", "at": "t", "model": "m", "body": {"messages": []}},
+    ]) + "\n", encoding="utf-8")
+    assert read("c9") == [{"messages": [{"content": "가"}]}]

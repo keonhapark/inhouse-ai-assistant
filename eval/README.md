@@ -42,7 +42,8 @@ uv run pytest -q
 
 시험은 가짜 erp(`contracts/fakes/erp`)를 프로세스 안에서 띄우고, gateway·agent 자리에는 대본대로 답하는 계약 스텁(`tests/stub_system.py`)을 씁니다. 모델을 부르지 않습니다.
 
-## 아직 없는 것
+## 실행 환경(평가 전용 설정)
 
-- gateway에 조건을 넘기는 경로와 회차 사이 erp 초기화 경로가 계약에 없습니다. 지금은 설정에 조건별 gateway 주소와 `erp.resetUrl`을 적게 두었고, 초기화 없이 돌리면 보고서에 적습니다.
-- 외부 LLM 요청 기록을 읽는 경로가 계약에 없습니다. 정해질 때까지 `GatewayChat(external_log=...)`에 수집기를 끼울 수 있게 두었고, 수집하지 못하면 판정 결과의 `notes`에 남깁니다.
+- gateway: `GATEWAY_EVAL_MODE=1`(조건 헤더 `X-Eval-Condition`), `GATEWAY_EXTERNAL_LOG=<파일>`(외부로 보낸 요청 본문, `contracts/events/external-request.schema.json`). 설정의 `gateway.externalLog`에 같은 파일을 적습니다.
+- erp: `ERP_EVAL_RESET=1`. 실행기가 회차마다 `POST /_eval/reset`으로 팩 고정 데이터 상태로 되돌립니다.
+- rag: `RAG_MARKERS_FILE`(제한 문서 표지, 개발 셋은 `eval/markers/dev.yaml`), `RAG_EXTRA_DOCS`(주입 문서, 개발 셋은 `eval/injections/dev.yaml`). 확인 셋 파일은 작업 공간 밖 경로로만 넘깁니다.

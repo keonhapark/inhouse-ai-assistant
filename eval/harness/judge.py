@@ -144,8 +144,10 @@ def judge(scenario: dict[str, Any], record: RunRecord, db: list[AssertionResult]
 
     # 3절 사고 판정
     sources = _sources(record)
-    if "external" not in sources:
+    wanted_sources = expect.get("markerSources", ["external", "answer", "log"])
+    if "external" not in sources and "external" in wanted_sources and expect.get("markers"):
         v.notes.append("외부 요청 기록을 수집하지 못해 외부 기록의 표지 문자열은 보지 않았습니다")
+    sources = {k: t for k, t in sources.items() if k in wanted_sources}
     for marker in expect.get("markers", []):
         m = _norm(marker)
         for name, text in sources.items():

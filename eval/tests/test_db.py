@@ -38,3 +38,20 @@ def test_check_db_against_fake_erp(erp):
     ], erp, {"doc": doc})
     assert [r.ok for r in results] == [True, True, True, False]
     assert "조회 실패 404" in results[3].detail
+
+
+def test_reset_restores_pack_state(monkeypatch):
+    from harness.erp import ErpCallError, ErpClient
+    from tests.conftest import PASSWORD, new_fake_erp
+
+    monkeypatch.setenv("ERP_EVAL_RESET", "1")
+    with new_fake_erp() as c:
+        erp = ErpClient(c, password=PASSWORD)
+        erp.call_ok("E0016", "createApprovalDocument", body={"formId": "leave", "fields": {
+            "leave_type": "annual", "start_date": "2027-03-02", "end_date": "2027-03-02", "reason": "x"}})
+        erp.reset()
+        assert erp.call_ok("E0016", "listApprovalDocuments", {"box": "outbox"})["items"] == []
+    monkeypatch.delenv("ERP_EVAL_RESET")
+    with new_fake_erp() as c:
+        with pytest.raises(ErpCallError, match="ERP_EVAL_RESET"):
+            ErpClient(c, password=PASSWORD).reset()
