@@ -73,7 +73,7 @@ PACK_DIR=../packs/manufacturing DELEGATION_TOKEN_PUBLIC_KEY=../infra/dev-keys/de
 | `AGENT_LLM_BACKEND` | `gateway` | `gateway` 또는 `ollama`(gateway가 없을 때 쓰는 개발용) |
 | `GATEWAY_LLM_URL` | `http://localhost:$PORT_GATEWAY/v1` | gateway의 OpenAI 호환 엔드포인트 |
 | `AGENT_OLLAMA_BASE_URL` | `http://localhost:11434` | 개발용 Ollama 주소 |
-| `AGENT_LLM_MODEL` | `LOCAL_MODEL` 또는 `qwen3.5:9b` | 모델 이름 |
+| `AGENT_LLM_MODEL` | gateway: `local`, ollama: `LOCAL_MODEL` 또는 `qwen3.5:9b` | 모델 이름. gateway에는 LiteLLM 별칭(`gateway/litellm/config.yaml`)만 씁니다 |
 | `AGENT_MCP_URL` | `http://localhost:$MCP_PORT/mcp` | 업무 실행이 부르는 MCP 서버 |
 | `CONTRACTS_DIR` | `../contracts` | `mcp/tools.json`과 `openapi/`를 읽는 곳 |
 | `ERP_BASE_URL` | `http://localhost:8040/api/v1` | erp(호스트까지만 씀. 경로는 계약의 `/api/v1`) |
