@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
@@ -41,7 +40,8 @@ def recorded_chat(router_cassette: Cassette) -> ChatClient:
     if router_cassette.record:
         settings = LLMSettings.from_env()
     else:
-        settings = LLMSettings(base_url="http://recorded.invalid/v1", model=os.environ.get("AGENT_LLM_MODEL", RECORDED_MODEL))
+        # 재생 때는 녹화한 모델 이름으로 고정합니다(개발자 셸의 AGENT_LLM_MODEL에 좌우되지 않게).
+        settings = LLMSettings(base_url="http://recorded.invalid/v1", model=RECORDED_MODEL)
     return ChatClient(settings, transport=router_cassette)
 
 

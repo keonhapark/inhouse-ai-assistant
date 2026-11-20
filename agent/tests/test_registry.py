@@ -73,3 +73,18 @@ def test_missing_registry_file_is_an_error(tmp_path: Path) -> None:
 )
 def test_grant_matches(grant, requester: Requester, expected: bool) -> None:
     assert grant_matches(grant, requester) is expected
+
+
+@pytest.mark.parametrize(
+    ("edit", "match"),
+    [
+        (lambda doc: doc["agents"][0]["model_policy"].update(mode="local"), "형식"),
+        (lambda doc: doc["agents"][0].pop("callable_by"), "형식"),
+        (lambda doc: doc["agents"].append(dict(doc["agents"][1])), "겹칩니다"),
+    ],
+)
+def test_malformed_registry_is_a_registry_error(tmp_path: Path, edit, match: str) -> None:
+    pack = _copy_pack(tmp_path)
+    _edit_agents(pack, edit)
+    with pytest.raises(RegistryError, match=match):
+        Registry.load(pack)

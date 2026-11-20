@@ -48,6 +48,12 @@ def test_keyword_choice_not_callable_only_suggests(registry: Registry) -> None:
     assert (d.agent_id, d.method, d.suggested_agent_id) == ("assistant", "fallback", "hr")
 
 
+def test_fallback_agent_not_callable_still_receives_without_self_suggestion(registry: Registry) -> None:
+    d = Router(registry, None).route("회의실 잡아 줘", NO_ROLE, "keyword")
+    assert (d.agent_id, d.method, d.suggested_agent_id) == ("assistant", "fallback", None)
+    assert d.audit_reason == "keyword:hits=1;not_callable"
+
+
 def test_unknown_method_is_rejected(registry: Registry, employee: Requester) -> None:
     with pytest.raises(ValueError):
         Router(registry, None).route("x", employee, "magic")
@@ -88,6 +94,17 @@ def test_llm_no_or_unknown_choice_falls_back(registry: Registry, employee: Reque
 def test_llm_low_confidence_falls_back_and_suggests(registry: Registry, employee: Requester, stub_chat) -> None:
     d = _router(registry, stub_chat, '{"agentId": "hr", "confidence": 0.3}').route("x", employee)
     assert (d.agent_id, d.method, d.suggested_agent_id, d.confidence) == ("assistant", "fallback", "hr", 0.3)
+
+
+@pytest.mark.parametrize("content", ['{"agentId": "hr"}', '{"agentId": "hr", "confidence": "high"}'])
+def test_llm_without_confidence_is_accepted(registry: Registry, employee: Requester, stub_chat, content: str) -> None:
+    d = _router(registry, stub_chat, content).route("x", employee)
+    assert (d.agent_id, d.method, d.confidence) == ("hr", "llm", None)
+
+
+def test_llm_confidence_equal_to_threshold_is_accepted(registry: Registry, employee: Requester, stub_chat) -> None:
+    d = _router(registry, stub_chat, '{"agentId": "hr", "confidence": 0.5}').route("x", employee)
+    assert (d.agent_id, d.method) == ("hr", "llm")
 
 
 def test_llm_not_callable_only_suggests(registry: Registry, stub_chat) -> None:

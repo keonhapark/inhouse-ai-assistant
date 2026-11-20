@@ -81,14 +81,22 @@ class Registry:
     def load(cls, pack_dir: Path) -> Registry:
         pack = _read_yaml(pack_dir / "pack.yaml")
         doc = _read_yaml(pack_dir / "agents.yaml")
-        pack_stage = int(pack["stage"])
-        enabled = tuple(_to_agent(a) for a in doc["agents"] if int(a["stage"]) <= pack_stage)
+        try:
+            pack_stage = int(pack["stage"])
+            enabled = tuple(_to_agent(a) for a in doc["agents"] if int(a["stage"]) <= pack_stage)
+            fallback_id = doc["fallback_agent"]
+        except (KeyError, TypeError, ValueError) as e:
+            raise RegistryError(f"{pack_dir}: 등록부 형식이 맞지 않습니다({type(e).__name__}: {e})") from e
+        ids = [a.id for a in enabled]
+        dup = sorted({i for i in ids if ids.count(i) > 1})
+        if dup:
+            raise RegistryError(f"{pack_dir}: 에이전트 id가 겹칩니다: {', '.join(dup)}")
         if not enabled:
             raise RegistryError(f"{pack_dir}: 단계 {pack_stage}에서 켜진 에이전트가 없습니다")
         reg = cls(
             pack_id=pack["id"],
             pack_stage=pack_stage,
-            fallback_agent_id=doc["fallback_agent"],
+            fallback_agent_id=fallback_id,
             agents=enabled,
         )
         if not reg.has(reg.fallback_agent_id):
@@ -103,8 +111,13 @@ def _read_yaml(path: Path) -> dict[str, Any]:
         return yaml.safe_load(f)
 
 
+MODEL_POLICIES = ("external_allowed", "local_only")
+
+
 def _to_agent(a: dict[str, Any]) -> Agent:
     routing = a.get("routing", {})
+    if a["model_policy"]["mode"] not in MODEL_POLICIES:
+        raise ValueError(f"{a['id']}: model_policy.mode '{a['model_policy']['mode']}'")
     return Agent(
         id=a["id"],
         name=a["name"],

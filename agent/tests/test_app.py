@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import httpx
 import jsonschema
 import pytest
 from fastapi.testclient import TestClient
@@ -115,3 +116,30 @@ def test_services_from_env_requires_pack_dir(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.delenv("PACK_DIR", raising=False)
     with pytest.raises(RuntimeError, match="PACK_DIR"):
         app_module.services_from_env()
+
+
+SECRET = "비밀표지문장"
+
+
+@pytest.mark.parametrize(
+    ("handler", "requester"),
+    [
+        (lambda req: content_response(f'{{"agentId": "hr", "confidence": 0.9, "reason": "{SECRET}"}}'), EMPLOYEE),
+        (lambda req: content_response(f'{{"agentId": "hr", "confidence": 0.1, "reason": "{SECRET}"}}'), EMPLOYEE),
+        (lambda req: content_response(f'{{"agentId": "hr", "confidence": 0.9, "reason": "{SECRET}"}}'),
+         dict(EMPLOYEE, roles=[])),
+        (lambda req: content_response(f"{SECRET} 모르겠음"), EMPLOYEE),
+        (lambda req: httpx.Response(500, text=SECRET), EMPLOYEE),
+    ],
+    ids=["chosen", "low_confidence", "not_callable", "unparsable", "llm_error"],
+)
+def test_audit_never_holds_request_text_or_model_sentence(registry: Registry, stub_chat, tmp_path: Path,
+                                                         handler, requester: dict) -> None:
+    path = tmp_path / "audit.jsonl"
+    svc = Services(registry, Router(registry, stub_chat(handler)), AuditLog(path))
+    message = f"요청원문표지 {SECRET}"
+    TestClient(create_app(svc)).post("/route", json={"message": message, "requester": requester})
+    raw = path.read_text("utf-8")
+    jsonschema.validate(json.loads(raw), AUDIT_SCHEMA)
+    assert "요청원문표지" not in raw
+    assert SECRET not in raw

@@ -4,7 +4,7 @@
 - keyword: 등록부 routing.keywords가 몇 개 들었는지 세는 기준선입니다(LLM 없음).
 
 어느 방법이든 고르지 못하거나, 고른 에이전트를 요청자가 부를 수 없으면 fallback 에이전트가 받습니다.
-이때 고른 부서 에이전트는 suggestedAgentId로 안내만 합니다.
+이때 고른 부서 에이전트는 suggestedAgentId로 안내만 합니다. fallback 에이전트는 callable 검사 없이 받습니다.
 """
 
 from __future__ import annotations
@@ -85,6 +85,7 @@ class Router:
         if agent_id == NONE_CHOICE or not self.registry.has(agent_id):
             return self._fallback("LLM이 맞는 에이전트를 고르지 못했습니다", "llm:no_choice", confidence)
         agent = self.registry.get(agent_id)
+        # 확신도를 주지 않은 답은 기준 확인 없이 받아들입니다(고른 에이전트는 여전히 callable 검사를 거침).
         if confidence is not None and confidence < self.min_confidence:
             suggested = None if agent.id == self.registry.fallback_agent_id else agent.id
             return self._fallback(
@@ -99,9 +100,11 @@ class Router:
     def _decide(self, agent: Agent, requester: Requester, method: Method, confidence: float | None,
                 reason: str, audit_reason: str) -> RouteDecision:
         if not agent.callable_for(requester):
+            # fallback 에이전트는 callable 검사 없이 받습니다(업무 실행 없이 안내만 하는 자리).
+            suggested = None if agent.id == self.registry.fallback_agent_id else agent.id
             return self._fallback(
                 f"요청자가 부를 수 없는 에이전트({agent.id})라 안내만 합니다",
-                f"{audit_reason};not_callable", confidence, agent.id,
+                f"{audit_reason};not_callable", confidence, suggested,
             )
         return RouteDecision(agent.id, method, reason, confidence, None, audit_reason)
 
