@@ -38,3 +38,16 @@ describe('render', () => {
     expect(flat(actionCard({ actionId: 'a', tool: 't', summary: '회수함', undoable: false }))).not.toContain('action_undo')
   })
 })
+
+describe('render 한도', () => {
+  it('긴 답은 3000자 안쪽 section으로 나누고, 블록이 50개를 넘으면 줄였다고 밝힙니다', () => {
+    const long = Array.from({ length: 400 }, (_, i) => `${i}번째 줄입니다. 이 줄은 길이를 채우는 시험용 글입니다.`).join('\n')
+    const t = collect(ev([{ type: 'message', text: long }, { type: 'done' }]))
+    const blocks = t.reply!.blocks as { text?: { text: string } }[]
+    expect(blocks.length).toBeGreaterThan(1)
+    expect(blocks.every((b) => !b.text || b.text.text.length <= 3000)).toBe(true)
+    const huge = collect(ev([...Array.from({ length: 60 }, () => ({ type: 'message' as const, text: '짧은 답' })), { type: 'done' }]))
+    expect(huge.reply!.blocks).toHaveLength(50)
+    expect(flat(huge.reply!)).toContain('뒷부분을 줄였습니다')
+  })
+})

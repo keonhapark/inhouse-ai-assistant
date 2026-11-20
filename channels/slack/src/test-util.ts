@@ -10,7 +10,7 @@ export function fakeGateway(over: Partial<Gateway> = {}) {
   const gw: Gateway = {
     async login(u) {
       calls.push(`login ${u}`)
-      return u === 'U_UNMAPPED' ? null : `tok-${u}`
+      return u === 'U_UNMAPPED' ? null : { token: `tok-${u}`, expiresIn: 600 }
     },
     async createConversation(t) {
       calls.push(`create ${t}`)
@@ -38,10 +38,10 @@ export function fakeGateway(over: Partial<Gateway> = {}) {
 }
 
 export function fakeSlack() {
-  const posts: { channel: string; threadTs: string; msg: SlackMessage; ts: string }[] = []
+  const posts: { channel: string; threadTs: string | undefined; msg: SlackMessage; ts: string }[] = []
   const updates: { channel: string; ts: string; msg: SlackMessage }[] = []
   const ephemerals: { channel: string; user: string; text: string }[] = []
-  const dms: { user: string; msg: SlackMessage }[] = []
+  const opened: string[] = []
   const slack: Slack = {
     async post(channel, threadTs, msg) {
       const ts = `ts-${posts.length + 1}`
@@ -54,11 +54,14 @@ export function fakeSlack() {
     async ephemeral(channel, user, _threadTs, text) {
       ephemerals.push({ channel, user, text })
     },
-    async dm(user, msg) {
-      dms.push({ user, msg })
+    async openDm(user) {
+      opened.push(user)
+      return `D-${user}`
     },
   }
-  return { slack, posts, updates, ephemerals, dms }
+  /** DM 채널(D-<user>)에 올린 것 */
+  const dms = () => posts.filter((p) => p.channel.startsWith('D-'))
+  return { slack, posts, updates, ephemerals, dms, opened }
 }
 
 /** 블록 안의 글을 모두 이어 붙입니다(시험에서 내용 확인용). */

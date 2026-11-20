@@ -24,7 +24,33 @@ export function toMrkdwn(text: string): string {
   return escape(text).replace(/\*\*(.+?)\*\*/g, '*$1*')
 }
 
-const section = (text: string): Block => ({ type: 'section', text: { type: 'mrkdwn', text } })
+/** 슬랙 section 글 한도(3000자)보다 조금 작게 나눕니다. */
+const SECTION_MAX = 2900
+/** 슬랙 메시지 블록 한도(50개) */
+const BLOCKS_MAX = 50
+
+// verbatim: 모델·사용자 글 속 맨 URL이나 채널 이름이 저절로 링크가 되지 않게 합니다.
+const section = (text: string): Block => ({ type: 'section', text: { type: 'mrkdwn', text, verbatim: true } })
+
+/** 긴 글을 여러 section으로 나눕니다. 가능하면 줄바꿈에서 자릅니다. */
+function sections(text: string): Block[] {
+  const out: Block[] = []
+  let rest = text
+  while (rest.length > SECTION_MAX) {
+    const cut = rest.lastIndexOf('\n', SECTION_MAX)
+    const at = cut > SECTION_MAX / 2 ? cut : SECTION_MAX
+    out.push(section(rest.slice(0, at)))
+    rest = rest.slice(at).replace(/^\n/, '')
+  }
+  if (rest) out.push(section(rest))
+  return out
+}
+
+/** 블록이 한도를 넘으면 뒤를 자르고 잘렸다고 밝힙니다. */
+function limit(blocks: Block[]): Block[] {
+  if (blocks.length <= BLOCKS_MAX) return blocks
+  return [...blocks.slice(0, BLOCKS_MAX - 1), context('답이 길어 뒷부분을 줄였습니다. 웹 화면에서 전체를 볼 수 있습니다.')]
+}
 const context = (...texts: string[]): Block => ({ type: 'context', elements: texts.map((t) => ({ type: 'mrkdwn', text: t })) })
 const button = (text: string, action_id: string, value: string, style?: 'primary' | 'danger'): Block => ({
   type: 'button',
@@ -62,13 +88,14 @@ export function collect(events: ChatEvent[]): Turn {
     if ((e.type === 'message' || e.type === 'done') && e.model?.location === 'local') local = true
   }
   const blocks: Block[] = []
-  for (const t of texts) blocks.push(section(toMrkdwn(t)))
-  for (const n of notes) blocks.push(section(n))
-  if (citations.length) blocks.push(section(citations.map(citationLine).join('\n')))
+  for (const t of texts) blocks.push(...sections(toMrkdwn(t)))
+  for (const n of notes) blocks.push(...sections(n))
+  if (citations.length) blocks.push(...sections(citations.map(citationLine).join('\n')))
   const meta = [agentName && escape(agentName), local && '로컬에서 처리'].filter(Boolean) as string[]
   if (blocks.length && meta.length) blocks.push(context(meta.join(' · ')))
-  const plain = [...texts, ...notes.map((n) => n.replace(/\*/g, ''))].join('\n')
-  return { agentName, reply: blocks.length ? { text: plain || '답을 받았습니다.', blocks } : null, approvals, actions }
+  // 대체 text도 슬랙이 멘션·링크로 읽으므로 escape한 글만 둡니다.
+  const plain = [...texts.map(escape), ...notes.map((n) => n.replace(/\*/g, ''))].join('\n')
+  return { agentName, reply: blocks.length ? { text: plain.slice(0, 3000) || '답을 받았습니다.', blocks: limit(blocks) } : null, approvals, actions }
 }
 
 function citationLine(c: Citation): string {
@@ -83,7 +110,7 @@ function value(v: unknown): string {
 }
 
 /** 실행 미리보기 카드. state가 있으면 버튼 대신 결정 결과를 보여 줍니다. */
-export function approvalCard(a: Approval, agentName: string | undefined, state?: 'approved' | 'rejected' | 'failed'): SlackMessage {
+export function approvalCard(a: Approval, agentName: string | undefined, state?: 'pending' | 'approved' | 'rejected' | 'failed'): SlackMessage {
   const p = a.preview ?? ({} as NonNullable<Approval['preview']>)
   const title = `실행 미리보기: ${escape(a.toolLabel ?? a.tool)}`
   const blocks: Block[] = [section(`*${title}*  \`${RISK[a.risk]}\`${agentName ? `  ${escape(agentName)}` : ''}`)]
@@ -98,10 +125,11 @@ export function approvalCard(a: Approval, agentName: string | undefined, state?:
       lines.push(b !== null && n !== null && b !== n ? `\`${escape(k)}\` ~${escape(b)}~ → ${escape(n)}` : `\`${escape(k)}\` ${escape(n ?? b ?? '–')}`)
     }
   }
-  if (lines.length) blocks.push(section(lines.join('\n')))
+  if (lines.length) blocks.push(...sections(lines.join('\n')))
   if (p.undoable === false) blocks.push(context('실행하면 되돌릴 수 없습니다.'))
   if (state) {
-    blocks.push(context(state === 'approved' ? '실행함' : state === 'rejected' ? '취소함' : '더 결정할 수 없음'))
+    const label = { pending: '처리하는 중', approved: '실행함', rejected: '취소함', failed: '더 결정할 수 없음' }[state]
+    blocks.push(context(label))
   } else {
     blocks.push({
       type: 'actions',
@@ -112,7 +140,7 @@ export function approvalCard(a: Approval, agentName: string | undefined, state?:
     })
     blocks.push(context(`요청한 사람만 누를 수 있습니다. 만료 ${time(a.expiresAt)}`))
   }
-  return { text: `${title}: ${p.summary ?? ''}`, blocks }
+  return { text: `${title}: ${escape(p.summary ?? '')}`, blocks: limit(blocks) }
 }
 
 /** 실행한 일 카드. undoable이면 되돌리기 버튼을 둡니다. */
@@ -121,7 +149,7 @@ export function actionCard(a: Action, state?: 'undone' | { failed: string }): Sl
   if (state === 'undone') blocks.push(context('되돌림'))
   else if (state) blocks.push(context(`되돌리지 못했습니다: ${escape(state.failed)}`))
   else if (a.undoable) blocks.push({ type: 'actions', elements: [button('되돌리기', ACTION.undo, a.actionId)] })
-  return { text: `실행한 일: ${a.summary}`, blocks }
+  return { text: `실행한 일: ${escape(a.summary)}`, blocks }
 }
 
 const KST = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })
@@ -132,14 +160,14 @@ function time(iso: string | undefined): string {
 }
 
 export function text(t: string): SlackMessage {
-  return { text: t, blocks: [section(escape(t))] }
+  return { text: escape(t), blocks: [section(escape(t))] }
 }
 
 /** 팀장 결재 알림. 승인·반려는 사람 전용 기능이라 web 승인함 링크만 둡니다. */
 export function notificationMessage(n: Schemas['Notification'], webUrl: string): SlackMessage {
   const link = `${webUrl.replace(/\/$/, '')}/inbox`
   return {
-    text: n.message,
+    text: escape(n.message),
     blocks: [section(escape(n.message)), context(`승인·반려는 <${link}|웹 승인함>에서 합니다.`)],
   }
 }

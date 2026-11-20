@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GatewayError, httpGateway } from './gateway.js'
+import { GatewayError, httpGateway, UNAVAILABLE } from './gateway.js'
 
 type Seen = { url: string; init: RequestInit }
 function fakeFetch(respond: (url: string, init: RequestInit) => Response) {
@@ -18,7 +18,7 @@ describe('httpGateway', () => {
   it('슬랙 로그인은 브리지 비밀값 헤더와 사용자 ID를 보내고, 403이면 null', async () => {
     const { f, seen } = fakeFetch(() => Response.json({ accessToken: 'jwt', tokenType: 'Bearer', expiresIn: 600, employee: {} }))
     const gw = httpGateway({ baseUrl: 'http://gw/api/', bridgeSecret: 's3cret', fetch: f })
-    expect(await gw.login('U1')).toBe('jwt')
+    expect(await gw.login('U1')).toEqual({ token: 'jwt', expiresIn: 600 })
     expect(seen[0].url).toBe('http://gw/api/auth/slack')
     expect((seen[0].init.headers as Record<string, string>)['X-Slack-Bridge-Secret']).toBe('s3cret')
     expect(JSON.parse(String(seen[0].init.body))).toEqual({ slackUserId: 'U1' })
@@ -48,6 +48,15 @@ describe('httpGateway', () => {
   it('오류는 problem title과 상태로, 연결 실패는 상태 0으로', async () => {
     const gw = httpGateway({ baseUrl: 'http://gw/api', bridgeSecret: 's', fetch: fakeFetch(() => problem(409, '이미 결정한 실행 승인입니다.')).f })
     await expect(gw.undo('t', 'a', 'k')).rejects.toMatchObject({ message: '이미 결정한 실행 승인입니다.', status: 409 })
+    // 5xx는 detail을 슬랙에 올리지 않도록 고정 문구로 바꾸고 원문은 internal에만 둡니다.
+    const five = httpGateway({
+      baseUrl: 'http://gw/api',
+      bridgeSecret: 's',
+      fetch: fakeFetch(() => new Response(JSON.stringify({ title: 'Bad Gateway', detail: 'http://litellm:4000 timeout' }), { status: 502 })).f,
+    })
+    const err = (await five.createConversation('t').catch((e: unknown) => e)) as GatewayError
+    expect(err).toMatchObject({ message: UNAVAILABLE, status: 502 })
+    expect(err.internal).toContain('litellm')
     const down = httpGateway({
       baseUrl: 'http://gw/api',
       bridgeSecret: 's',

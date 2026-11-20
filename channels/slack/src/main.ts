@@ -5,7 +5,9 @@ import { createApp, slackPort, wire } from './slack-app.js'
 
 const config = loadConfig()
 const app = createApp(config.appToken, config.botToken)
+const me = await app.client.auth.test()
 const bridge = new Bridge({
+  botUserId: me.user_id,
   gateway: httpGateway({ baseUrl: config.gatewayUrl, bridgeSecret: config.bridgeSecret }),
   slack: slackPort(app),
   webUrl: config.webUrl,

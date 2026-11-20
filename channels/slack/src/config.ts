@@ -17,6 +17,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     bridgeSecret: env.SLACK_BRIDGE_SECRET!,
     gatewayUrl: env.GATEWAY_URL ?? `http://localhost:${env.PORT_GATEWAY ?? '8010'}/api`,
     webUrl: env.WEB_URL ?? `http://localhost:${env.PORT_WEB ?? '8000'}`,
-    notifyIntervalMs: Number(env.SLACK_NOTIFY_INTERVAL_MS ?? 60_000),
+    notifyIntervalMs: interval(env.SLACK_NOTIFY_INTERVAL_MS),
   }
+}
+
+/** 알림 확인 주기. 숫자가 아니면 60초, 10초보다 짧으면 10초로 둡니다. */
+function interval(raw: string | undefined): number {
+  const n = Number(raw ?? 60_000)
+  return Number.isFinite(n) ? Math.max(n, 10_000) : 60_000
 }
