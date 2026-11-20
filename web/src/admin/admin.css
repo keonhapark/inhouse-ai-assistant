@@ -1,0 +1,231 @@
+.admin {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-16);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--sp-24) var(--sp-16);
+}
+
+.admin h1 {
+  margin: 0;
+}
+
+.admin h2 {
+  margin: var(--sp-8) 0;
+  font-size: var(--fs-16);
+}
+
+.admin__filters,
+.admin__row,
+.admin__custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--sp-8);
+}
+
+.admin__custom {
+  margin-left: var(--sp-8);
+}
+
+.admin__custom label,
+.admin__field {
+  display: grid;
+  justify-self: start;
+  width: fit-content;
+  gap: var(--sp-4);
+  font-size: var(--fs-12);
+}
+
+.admin input,
+.admin select {
+  height: 32px;
+  padding: 0 var(--sp-8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-14);
+}
+
+.admin__panel {
+  display: grid;
+  gap: var(--sp-16);
+}
+
+.admin__panel > div > p.muted {
+  margin: 0 0 var(--sp-8);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--sp-12);
+  margin: 0 0 var(--sp-16);
+}
+
+.tile {
+  padding: var(--sp-12) var(--sp-16);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.tile dt {
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+}
+
+.tile dd {
+  margin: var(--sp-4) 0 0;
+  font-size: var(--fs-24);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile__sub {
+  font-size: var(--fs-12);
+  font-weight: 400;
+}
+
+.metrics {
+  display: grid;
+  gap: var(--sp-16);
+}
+
+.metrics__pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--sp-16);
+}
+
+.table th[scope='row'] {
+  color: var(--text);
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+.bar-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  display: inline-block;
+  width: 96px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg);
+  overflow: hidden;
+  flex: none;
+}
+
+.bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+}
+
+.egress__list {
+  display: grid;
+  gap: var(--sp-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.egress__item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.egress__item summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: var(--sp-12) var(--sp-16);
+  cursor: pointer;
+}
+
+.egress__when {
+  font-variant-numeric: tabular-nums;
+}
+
+.egress__cost {
+  margin-left: auto;
+}
+
+.egress__messages {
+  display: grid;
+  gap: var(--sp-8);
+  margin: 0;
+  padding: 0 var(--sp-16) var(--sp-16);
+  list-style: none;
+}
+
+.egress__messages p {
+  margin: var(--sp-4) 0 0;
+  white-space: pre-wrap;
+}
+
+.egress__role {
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-12);
+}
+
+.redacted {
+  padding: 0 2px;
+  border-bottom: 2px solid var(--warning);
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.audit {
+  display: grid;
+  gap: var(--sp-12);
+  justify-items: start;
+}
+
+.audit__table {
+  width: 100%;
+}
+
+.audit__table caption {
+  padding: var(--sp-8) var(--sp-12);
+  text-align: left;
+  font-size: var(--fs-12);
+}
+
+.audit__table td .badge {
+  margin-left: var(--sp-4);
+}
+
+.audit__when {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.audit__detail {
+  font-size: var(--fs-12);
+}
+
+@media (max-width: 720px) {
+  .admin__custom {
+    margin-left: 0;
+  }
+
+  .audit__table,
+  .metrics table {
+    display: block;
+    overflow-x: auto;
+  }
+}

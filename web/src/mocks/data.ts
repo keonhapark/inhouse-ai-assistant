@@ -26,6 +26,17 @@ export const employees: Employee[] = [
     roles: ['employee'],
     hiredOn: '2016-07-01',
   },
+  {
+    id: 'emp-2008',
+    employeeNo: 'E2008',
+    name: '권나래',
+    unitId: 'it-ops',
+    unitName: 'IT운영팀',
+    grade: 'staff',
+    email: 'e2008@example.test',
+    roles: ['employee', 'auditor'],
+    hiredOn: '2021-01-04',
+  },
 ]
 
 /** 결재선·대리인·조직도용 직원 목록. 이름은 지어낸 것이고, 부서는 제조 팩 org.yaml과 같습니다. */
@@ -40,6 +51,7 @@ export const directory: Record<string, Person> = {
   'emp-2005': { name: '강태오', unitId: 'procurement', unitName: '구매자재팀', grade: 'team_leader' },
   'emp-2006': { name: '조유나', unitId: 'procurement', unitName: '구매자재팀', grade: 'staff' },
   'emp-2007': { name: '배준호', unitId: 'it-ops', unitName: 'IT운영팀', grade: 'team_leader' },
+  'emp-2008': { name: '권나래', unitId: 'it-ops', unitName: 'IT운영팀', grade: 'staff' },
   'emp-3001': { name: '임채원', unitId: 'mgmt', unitName: '경영지원본부', grade: 'division_head' },
   'emp-3002': { name: '노승현', unitId: 'production-div', unitName: '생산본부', grade: 'division_head' },
   'emp-9001': { name: '문성호', unitId: 'ceo-office', unitName: '대표이사실', grade: 'ceo' },

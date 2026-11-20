@@ -18,6 +18,7 @@ export function AppShell() {
           <NavLink to="/inbox">승인함</NavLink>
           <NavLink to="/org">조직도</NavLink>
           <NavLink to="/agents">에이전트</NavLink>
+          {me.roles.includes('auditor') && <NavLink to="/admin">관리</NavLink>}
         </nav>
         <span className="topbar__me">
           {me.name} <span className="muted">{me.unitName}</span>
