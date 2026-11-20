@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -21,7 +22,8 @@ import yaml
 
 from harness.erp import ErpClient
 from harness.report import render
-from harness.runner import CONDITIONS, RunRow, load_rows_jsonl, load_run, run_matrix, save_run
+from harness.runner import (CONDITIONS, MAX_RETRIES, HealthCheck, RunRow, count_retries, load_rows_jsonl, load_run,
+                            run_matrix, save_run)
 from harness.scenario import ScenarioError, load_scenarios
 from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
 
@@ -68,6 +70,25 @@ def make_factories(cfg: dict[str, Any]):
     return system, erp
 
 
+def make_health_check(cfg: dict[str, Any]) -> HealthCheck | None:
+    """modelHealth: {urlEnv, path}. 주소는 환경 변수로만 받고 기록에 남기지 않습니다."""
+    mh = cfg.get("modelHealth")
+    if not mh:
+        return None
+    base = os.environ.get(mh["urlEnv"])
+    if not base:
+        raise ValueError(f"modelHealth.urlEnv의 환경 변수 {mh['urlEnv']}가 비어 있습니다")
+    url = base.rstrip("/") + mh.get("path", "")
+
+    def check() -> bool:
+        try:
+            return httpx.get(url, timeout=mh.get("timeoutS", 10)).status_code == 200
+        except httpx.HTTPError:
+            return False
+
+    return check
+
+
 def cmd_validate(args: argparse.Namespace) -> int:
     try:
         got = load_scenarios(Path(args.dir))
@@ -89,9 +110,11 @@ def cmd_run(args: argparse.Namespace) -> int:
     system, erp = make_factories(cfg)
     out = Path(args.out)
     rows_file = out.with_suffix(".rows.jsonl")
-    done, started_at = [], None
+    health = make_health_check(cfg)
+    done, started_at, prior_cost = [], None, 0.0
     if args.resume:
-        done = load_rows_jsonl(rows_file)
+        resume = load_rows_jsonl(rows_file)
+        done, prior_cost = resume.done, resume.prior_cost_usd
         if out.with_suffix(".json").exists():
             started_at = load_run(out.with_suffix(".json"))[1].started_at
         print(f"이어 돌리기: 끝난 회차 {len(done)}개를 건너뜁니다", flush=True)
@@ -108,18 +131,20 @@ def cmd_run(args: argparse.Namespace) -> int:
                             repeats=cfg.get("repeats", 3), base_seed=cfg.get("baseSeed", 0),
                             cost_cap_usd=cfg.get("costCapUsd"), time_limit_s=cfg.get("timeLimitS", 300),
                             model=cfg.get("model"), on_row=progress, done_rows=done,
-                            max_runs=args.max_runs, started_at=started_at)
+                            max_runs=args.max_runs, started_at=started_at, health_check=health,
+                            prior_cost_usd=prior_cost)
     if not cfg["erp"].get("reset", True):
         meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.reset: false)")
     if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):
         meta.notes.append("외부 요청 기록(gateway.externalLog)을 주지 않아 외부 기록의 표지 문자열은 보지 않았습니다")
     meta.notes.extend(cfg.get("notes", []))
-    if rows_file.exists():
-        retried = sum(1 for line in rows_file.read_text(encoding="utf-8").splitlines()
-                      if line.strip() and json.loads(line).get("error"))
-        if retried:
-            meta.notes.append(f"실행 환경 오류(연결 끊김, 재시도 가능한 오류)로 끝나지 못한 회차 {retried}번은 "
-                              "결과로 세지 않고 이어 돌리기로 다시 돌렸습니다")
+    meta.retried_runs = count_retries(rows_file)
+    if meta.retried_runs:
+        meta.notes.append(f"실행 환경 문제(gateway·erp 연결 실패, 재시도 가능한 오류 뒤 모델 서버 응답 없음)로 끝나지 "
+                          f"못한 회차를 이어 돌리기로 {meta.retried_runs}번 다시 돌렸습니다(같은 회차 {MAX_RETRIES}번까지). "
+                          "다시 돌린 시도의 비용도 비용 합계에 들어 있습니다")
+    if health is None and any(r.error and r.error.startswith("재시도 가능한 오류") for r in rows):
+        meta.notes.append("modelHealth를 설정하지 않아 재시도 가능한 오류로 끝난 회차는 모두 실패로 셌습니다")
     save_run(rows, meta, out.with_suffix(".json"))
     out.with_suffix(".md").write_text(render(rows, meta, args.title), encoding="utf-8")
     print(f"{out.with_suffix('.json')}, {out.with_suffix('.md')}")
