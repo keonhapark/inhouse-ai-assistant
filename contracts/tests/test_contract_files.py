@@ -79,6 +79,28 @@ def test_example_events_follow_schema() -> None:
                 "costUsd": 0, "cached": False}})
 
 
+def test_ops_examples_follow_schema() -> None:
+    counts = {"calls": 12, "blocked": {"total": 2, "byCode": {"trust_violation": 1, "policy_denied": 1}},
+              "llmRequests": {"local": 9, "external": 3}, "externalCostUsd": 0.0042, "unpricedRequests": 0}
+    metrics = {
+        "since": "2026-11-20T00:00:00+09:00", "until": "2026-11-21T00:00:00+09:00", "totals": counts,
+        "agents": [{"agentId": "assistant", "agentName": "전사 비서", **counts}],
+        "routing": {"total": 12, "byMethod": {"llm": 7, "keyword": 3, "fallback": 1, "explicit": 1}},
+        "budgets": {"period": "month", "periodStart": "2026-11-01T00:00:00+09:00",
+                    "agents": [{"id": "assistant", "limitUsd": 20, "usedUsd": 0.0042, "exceeded": False}],
+                    "units": [{"id": "mgmt", "name": "경영지원본부", "limitUsd": 15, "usedUsd": 0.0042}]},
+    }
+    validate("openapi/gateway.yaml", "OpsMetrics", metrics)
+    validate("openapi/gateway.yaml", "OpsMetrics", {**metrics, "budgets": None})
+    with pytest.raises(AssertionError):
+        validate("openapi/gateway.yaml", "OpsCounts", {**counts, "blocked": {"total": 1, "byCode": {"unknown": 1}}})
+
+    validate("openapi/gateway.yaml", "EgressRecord", {
+        "recordId": "egr_1", "at": "2026-11-20T10:00:00+09:00", "agentId": "assistant", "agentName": "전사 비서",
+        "conversationId": "cnv_1", "actorId": "E0007", "model": "anthropic/claude-haiku-5-5",
+        "usage": {"promptTokens": 120, "completionTokens": 30}, "costUsd": 0.000027,
+        "messages": [{"role": "user", "content": "[전화번호]로 회의 안내 보내 줘"}],
+        "redactions": [{"entity": "KR_PHONE", "placeholder": "[전화번호]", "messageIndex": 0, "start": 0, "end": 6}]})
 def test_agent_registry_matches_pack() -> None:
     """팩 agents.yaml의 항목을 등록부 스키마로 옮길 수 있어야 합니다(gateway 구현과 같은 변환)."""
     tools = {t["name"]: t for t in load(CONTRACTS / "mcp/tools.json")["tools"]}

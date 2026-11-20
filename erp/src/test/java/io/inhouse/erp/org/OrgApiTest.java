@@ -84,9 +84,12 @@ class OrgApiTest extends PostgresTestBase {
         mvc.perform(get("/me/access-tags").with(as(first("rnd", "staff"))))
                 .andExpect(jsonPath("$.tags").value(hasItem("rnd-confidential")))
                 .andExpect(jsonPath("$.tags").value(not(hasItem("hr-restricted"))));
+        // 팩이 전 직원 태그를 더해도 깨지지 않게, 전 직원 태그가 있는지와 제한 태그가 없는지만 봅니다.
         mvc.perform(get("/me/access-tags").with(as(first("sales", "staff"))))
-                .andExpect(jsonPath("$.tags").value(org.hamcrest.Matchers.contains("public", "hr-policy",
-                        "finance-policy")));
+                .andExpect(jsonPath("$.tags").value(org.hamcrest.Matchers.hasItems("public", "hr-policy",
+                        "finance-policy")))
+                .andExpect(jsonPath("$.tags").value(not(hasItem("hr-restricted"))))
+                .andExpect(jsonPath("$.tags").value(not(hasItem("rnd-confidential"))));
     }
 
     @Test
