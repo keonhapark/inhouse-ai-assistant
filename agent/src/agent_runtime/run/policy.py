@@ -78,6 +78,16 @@ def _dt(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
+def model_policy_for(agent: Agent, condition: str) -> str:
+    """출구 별칭을 고를 때 쓸 모델 정책(contracts/eval/conditions.md "출구 별칭 선택").
+
+    에이전트 정책의 로컬 강제는 이 프로젝트의 장치라 no_guard·baseline_tools에서는 모두 외부를 씁니다.
+    """
+    if condition in ("no_guard", "baseline_tools"):
+        return "external_allowed"
+    return agent.model_policy
+
+
 def visible_to_model(tool: ToolMeta, condition: str) -> bool:
     return not (condition == "write_blocked" and tool.risk != "read")
 
