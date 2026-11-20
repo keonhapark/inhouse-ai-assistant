@@ -78,6 +78,9 @@ class FakeLiteLLM:
             raise httpx.ConnectError("down", request=request)
         if self.mode == "500":
             return httpx.Response(500, json={"error": {"message": "provider failed"}})
+        if request.url.path.endswith("/embeddings"):
+            return httpx.Response(200, json={"object": "list", "model": body["model"],
+                                             "data": [{"object": "embedding", "index": 0, "embedding": [0.1, 0.2]}]})
         if body.get("stream"):
             sse = (
                 'data: {"choices":[{"delta":{"content":"안녕"}}]}\n\n'

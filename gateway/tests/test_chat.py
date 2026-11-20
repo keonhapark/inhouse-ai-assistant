@@ -306,3 +306,19 @@ def test_processing_continues_when_screen_disconnects():
         return [e["type"] for e in c.events]
 
     assert asyncio.run(go()) == ["message", "done"]
+
+
+# ---------- 평가 조건(#63) ----------
+def test_eval_condition_header(chat, h, agent):
+    r = chat.post("/api/conversations", headers={**h, "X-Eval-Condition": "no_guard"}, json={})
+    assert r.status_code == 400                                   # 평가 모드가 아님
+    chat.app_ref.state.chat.eval_mode = True
+    assert chat.post("/api/conversations", headers={**h, "X-Eval-Condition": "maybe"}, json={}).status_code == 422
+    cid = chat.post("/api/conversations", headers={**h, "X-Eval-Condition": "write_blocked"}, json={}
+                    ).json()["conversationId"]
+    events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "규정"}))
+    run = [c for c in agent.calls if c[0] == "/run"][-1][1]
+    assert run["condition"] == "write_blocked"
+    cid2 = _new(chat, h)
+    events(chat.post(f"/api/conversations/{cid2}/messages", headers=h, json={"content": "규정"}))
+    assert "condition" not in [c for c in agent.calls if c[0] == "/run"][-1][1]
