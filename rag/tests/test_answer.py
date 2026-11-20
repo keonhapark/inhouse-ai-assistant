@@ -388,3 +388,70 @@ def test_근거_번호가_틀려도_문장이_다른_후보에_있으면_실제_
     prompt = chat.calls[0][0][1]["content"]
     first_head = prompt.split("[1] ", 1)[1].split("\n", 1)[0]
     assert f"조문: {body['citations'][0]['article']} /" in first_head
+
+
+# ---------------------------------------------------------------- 판(개정 전후)
+
+
+def quote_article(label):
+    """프롬프트에서 조문 표시가 label로 시작하는 근거의 첫 줄을 인용하는 답."""
+
+    def reply(messages):
+        user = messages[1]["content"]
+        for n in range(1, 21):
+            if f"[{n}] " not in user:
+                break
+            head, body = user.split(f"[{n}] ", 1)[1].split("\n", 1)
+            if f"조문: {label}" in head:
+                quote = body.split("\n", 1)[0][2:40]
+                return json.dumps({"found": True, "answer": "근거에 따른 답입니다.",
+                                   "citations": [{"ref": n, "quote": quote}]}, ensure_ascii=False)
+        return json.dumps({"found": False, "answer": "", "citations": []})
+
+    return reply
+
+
+def ask_on(client, question, tok, as_of):
+    return client.post("/answer", json={"question": question, "asOf": as_of}, headers={"X-Delegation-Token": tok})
+
+
+Q18 = "여비 규정 제18조 근무지 내 국내 출장의 뜻"
+
+
+def test_현행판을_인용하고_글이_다른_옛_판_조문을_함께_돌려준다(make_client):
+    client, _, _ = make_client(quote_article("제18조"))
+    body = ask(client, Q18, token(STAFF)).json()
+    assert body["found"] is True
+    cit = body["citations"][0]
+    assert cit["edition"]["effectiveFrom"] == "2026-10-02" and cit["edition"]["current"] is True
+    # 2026-10-02 판은 제18조 글이 2026-07-01 판과 같아, 글이 다른 가장 가까운 앞 판은 2026-01-02 판입니다.
+    [rev] = body["revisions"]
+    assert rev["relation"] == "earlier" and rev["docId"] == "law-travel-expense"
+    assert rev["edition"] == {"effectiveFrom": "2026-01-02", "effectiveTo": "2026-06-30", "current": False,
+                              "promulgation": "대통령령 제36013호, 2026. 1. 2., 타법개정"}
+    assert "12킬로미터 미만인 출장을 말한다" in rev["text"]
+
+
+def test_기준일을_주면_그날의_판을_인용하고_뒤_판의_바뀐_조문을_돌려준다(make_client):
+    client, _, _ = make_client(quote_article("제18조"))
+    body = ask_on(client, Q18, token(STAFF), "2026-03-01").json()
+    assert body["found"] is True
+    assert {c["edition"]["effectiveFrom"] for c in body["citations"]} == {"2026-01-02"}
+    assert body["citations"][0]["edition"]["current"] is False
+    [rev] = body["revisions"]
+    assert rev["relation"] == "later" and rev["edition"]["effectiveFrom"] == "2026-07-01"
+    assert "다음 각 호의 어느 하나에 해당하는 출장" in rev["text"]
+
+
+def test_판이_달라도_글이_같은_조문은_revisions가_없다(make_client):
+    client, _, _ = make_client(quote_article("제10조"))
+    body = ask(client, "여비 규정 제10조 철도운임", token(STAFF)).json()
+    assert body["found"] is True and body["citations"][0]["edition"]["current"] is True
+    assert "revisions" not in body
+
+
+def test_판이_없는_문서의_인용에는_edition이_없다(make_client):
+    client, _, _ = make_client(quote_first)
+    body = ask(client, "회의실 예약 규칙", token(HR)).json()
+    [cit] = body["citations"]
+    assert cit["docId"].startswith("gen-") and "edition" not in cit

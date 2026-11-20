@@ -109,3 +109,84 @@ def test_쪽_번호를_못_읽은_쪽도_장_안에_있으면_고른다():
 def test_목차에_장이_없으면_실패한다():
     with pytest.raises(ValueError):
         chapter_pages(PAGES, 12)
+
+
+# ---------------------------------------------------------------- 옛 판 받기
+
+
+def _serve(monkeypatch, seen):
+    import rag.lawfetch as lf
+
+    page = (FIXTURES / "law_sample.html").read_bytes()
+
+    def fake_get(url):
+        seen.append(url)
+        return page
+
+    monkeypatch.setattr(lf, "_get", fake_get)
+
+
+def test_옛_판은_연혁의_일련번호와_시행일로_받고_주소에_시행일을_남긴다(monkeypatch):
+    from rag.lawfetch import fetch_law_edition
+
+    seen = []
+    _serve(monkeypatch, seen)
+    got = fetch_law_edition("d", {"name": "국가공무원 복무규정"}, {"lsiSeq": "123", "efYd": "20261002"})
+    assert "lsiSeq=123" in seen[0] and "efYd=20261002" in seen[0]
+    assert got["effectiveDate"] == "2026-10-02"
+    assert got["url"].endswith("lsiSeq=123&efYd=20261002")
+
+
+def test_받은_판의_시행일이_요청과_다르면_실패한다(monkeypatch):
+    from rag.lawfetch import fetch_law_edition
+
+    _serve(monkeypatch, [])
+    with pytest.raises(ValueError, match="시행일"):
+        fetch_law_edition("d", {"name": "국가공무원 복무규정"}, {"lsiSeq": "123", "efYd": "20260101"})
+
+
+def test_옛_판의_법령_이름이_다르면_실패한다(monkeypatch):
+    from rag.lawfetch import fetch_law_edition
+
+    _serve(monkeypatch, [])
+    with pytest.raises(ValueError, match="이름"):
+        fetch_law_edition("d", {"name": "공무원 여비 규정"}, {"lsiSeq": "123", "efYd": "20261002"})
+
+
+# ---------------------------------------------------------------- 별표(HWP)
+
+APPENDIX_HTML = (
+    '<a class="blu" onclick="bylInfoDiv(\'1\');" href="#AJAX"> [별표 2] 국내 여비 지급표(제10조 관련) </a> '
+    '<a href="flDownload.do?gubun=&amp;flSeq=169708641&amp;bylClsCd=110201"> '
+    '<img alt="HWP파일 다운로드" src="x.svg" /> </a> '
+    '<a href="flDownload.do?gubun=&amp;flSeq=169708643&amp;bylClsCd=110201"> <img alt="PDF파일 다운로드" /> </a>'
+)
+
+
+def test_본문에서_별표의_HWP_파일_번호를_고른다():
+    from rag.lawfetch import appendix_links
+
+    assert appendix_links(APPENDIX_HTML) == {"2": ("국내 여비 지급표(제10조 관련)", "169708641")}
+
+
+def test_별표를_받아_표를_절로_넣고_파일_해시를_남긴다(monkeypatch):
+    import hashlib
+
+    import rag.lawfetch as lf
+
+    blob = (FIXTURES / "travel_appendix2.hwp").read_bytes()
+    seen = []
+    monkeypatch.setattr(lf, "_get", lambda url: seen.append(url) or blob)
+    sections, hashes = lf.fetch_appendices("d", APPENDIX_HTML, [2])
+    assert seen == [f"{lf.BASE}/flDownload.do?flSeq=169708641"]
+    [s] = sections
+    assert s["label"] == "별표 2" and s["heading"] == "국내 여비 지급표(제10조 관련)"
+    assert "일비 (1일당): 25,000" in s["text"]
+    assert hashes == {"별표 2": hashlib.sha256(blob).hexdigest()}
+
+
+def test_없는_별표를_요청하면_실패한다():
+    from rag.lawfetch import fetch_appendices
+
+    with pytest.raises(ValueError, match="별표 3"):
+        fetch_appendices("d", APPENDIX_HTML, [3])

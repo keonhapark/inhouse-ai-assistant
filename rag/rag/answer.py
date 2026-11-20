@@ -16,11 +16,13 @@ import json
 import re
 import unicodedata
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any, Protocol
 
 import httpx
 
 from rag.chunk import Chunk
+from rag.editions import EditionBook, edition_body, section_key
 from rag.search import Hit, SearchIndex
 
 NOT_FOUND = "규정에서 찾지 못했습니다."
@@ -162,22 +164,28 @@ class AnswerResult:
     model: dict[str, str] | None
     detail: str
     withheld: list[str] = field(default_factory=list)
+    revisions: list[dict[str, Any]] = field(default_factory=list)
 
     def body(self) -> dict[str, Any]:
         out: dict[str, Any] = {"found": self.found, "answer": self.answer, "citations": self.citations}
+        if self.revisions:
+            out["revisions"] = self.revisions
         if self.model:
             out["model"] = self.model
         return out
 
 
-def _citation(chunk: Chunk, quote: str) -> dict[str, Any]:
-    return {
+def _citation(chunk: Chunk, quote: str, today: date) -> dict[str, Any]:
+    out = {
         "docId": chunk.doc_id,
         "title": chunk.title,
         "article": chunk.article,
         "quote": quote,
         "verified": quote_in(quote, chunk.text),
     }
+    if chunk.edition is not None:
+        out["edition"] = edition_body(chunk.edition, today)
+    return out
 
 
 def withheld_docs(index: SearchIndex, question: str, doc_scopes: set[str]) -> list[str]:
@@ -185,8 +193,7 @@ def withheld_docs(index: SearchIndex, question: str, doc_scopes: set[str]) -> li
 
     상위 몇 개로 넓히면 말 하나만 겹쳐도 무관한 질문이 "제한 문서 접근"으로 쌓여, 1위일 때만 남깁니다.
     """
-    top = index.bm25(question, list(range(len(index.chunks))))[:1]
-    return [index.chunks[i].doc_id for i, _ in top if not (index.chunks[i].acl_tags & doc_scopes)]
+    return [c.doc_id for c in index.top_ignoring_acl(question, 1) if not (c.acl_tags & doc_scopes)]
 
 
 class Answerer:
@@ -195,10 +202,25 @@ class Answerer:
         self.llm = llm
         self.top_k = top_k
         self.method = method
+        self._book = EditionBook(list(index.chunks))
+        self._book_version = index.version
 
-    def answer(self, question: str, doc_scopes: set[str], delegation_token: str) -> AnswerResult:
+    @property
+    def book(self) -> EditionBook:
+        """판 대조표. 파기로 색인이 바뀌면 다시 만들어, 지운 문서의 옛 판 글이 revisions로 새지 않게 합니다."""
+        version = self.index.version
+        book = self._book
+        if version != self._book_version:
+            book = EditionBook(list(self.index.chunks))
+            self._book, self._book_version = book, version
+        return book
+
+    def answer(
+        self, question: str, doc_scopes: set[str], delegation_token: str, as_of: date | None = None
+    ) -> AnswerResult:
         withheld = withheld_docs(self.index, question, doc_scopes)
-        hits = self.index.search(question, doc_scopes, self.method, self.top_k)  # type: ignore[arg-type]
+        today = self.index.today()
+        hits = self.index.search(question, doc_scopes, self.method, self.top_k, as_of)  # type: ignore[arg-type]
         if not hits:
             return AnswerResult(False, NOT_FOUND, [], None, "근거 후보 0건", withheld)
         model = {"name": self.llm.model, "location": self.llm.location}
@@ -217,9 +239,14 @@ class Answerer:
                 order = [hits[ref - 1].chunk] + [h.chunk for i, h in enumerate(hits) if i != ref - 1]
                 source = next((ch for ch in order if quote_in(quote, ch.text)), None)
                 if source is not None:
-                    citations.append(_citation(source, quote))
+                    citations.append(_citation(source, quote, today))
                     sources.append(source)
         tried = len(raw) if isinstance(raw, list) else 0
+        # 모델을 기다리는 동안 파기된 문서의 인용은 뺍니다. 근거는 파기 전 색인에서 잡은 것이라, 그대로 두면
+        # 파기가 끝난 뒤 도착한 응답에 지운 본문이 나갑니다(이미 모델에 보낸 근거는 되돌릴 수 없습니다).
+        live = self.index.doc_ids()
+        kept = [(c, ch) for c, ch in zip(citations, sources, strict=True) if ch.doc_id in live]
+        citations, sources = [c for c, _ in kept], [ch for _, ch in kept]
         verified = len(citations)
         answer = reply.get("answer")
         found = reply.get("found") is True or reply.get("found") == "true"
@@ -234,4 +261,17 @@ class Answerer:
         if not numbers_supported(answer, [c.text for c in sources]):
             return AnswerResult(False, NOT_FOUND, [], model, "답의 숫자가 인용한 근거에 없음", withheld)
         detail = f"근거 후보 {len(hits)}건, 인용 {tried}개 중 대조 통과 {verified}개"
-        return AnswerResult(True, answer.strip(), citations, model, detail, withheld)
+        revisions = self._revisions(sources, today, doc_scopes)
+        return AnswerResult(True, answer.strip(), citations, model, detail, withheld, revisions)
+
+    def _revisions(self, sources: list[Chunk], today: date, doc_scopes: set[str]) -> list[dict[str, Any]]:
+        """인용한 조문마다 글이 다른 앞뒤 판. 같은 조문을 여러 번 인용해도 한 번만 넣습니다."""
+        out: list[dict[str, Any]] = []
+        seen: set[tuple[str, str | None, str]] = set()
+        for chunk in sources:
+            for r in self.book.revisions(chunk, doc_scopes):
+                key = (r.doc_id, section_key(r.article), r.edition.effective_from.isoformat())
+                if key not in seen:
+                    seen.add(key)
+                    out.append(r.body(today))
+        return out

@@ -1,21 +1,35 @@
-"""BM25·벡터·하이브리드 검색. 문서 ACL은 검색 전에 적용합니다.
+"""BM25·벡터·하이브리드 검색. 문서 ACL과 판 선택은 검색 전에 적용합니다.
 
 권한 밖 청크는 점수 계산에도 넣지 않습니다. BM25의 문서 빈도도 허용된 청크만으로 셉니다.
 전체 말뭉치로 세면 같은 질의의 점수가 제한 문서의 유무에 따라 달라져, 점수만 보고도
 제한 문서에 어떤 말이 있는지 짐작할 수 있기 때문입니다.
+
+판이 여럿인 법령은 기준일(`as_of`, 없으면 오늘 KST)에 시행 중인 판만 후보로 둡니다(`editions="as_of"`).
+옛 판과 현행판의 같은 조문은 글이 거의 같아 점수로는 가려지지 않고, 옛 판을 인용한 답이 나오기 때문입니다.
+`editions="all"`은 판을 가리지 않는 기준선 비교용입니다.
 """
 
 from __future__ import annotations
 
 import math
 import re
+import threading
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from typing import Literal, Protocol
 
 from rag.chunk import Chunk
 
 Method = Literal["hybrid", "bm25", "vector"]
+EditionPolicy = Literal["as_of", "all"]
+KST = ZoneInfo("Asia/Seoul")
+
+
+def today_kst() -> date:
+    return datetime.now(KST).date()
 
 _HANGUL = re.compile(r"[가-힣]+")
 _ARTICLE_REF = re.compile(r"제\s*(\d+)\s*조(?:\s*의\s*(\d+))?")
@@ -60,7 +74,7 @@ class Hit:
     score: float
 
 
-def _index_text(chunk: Chunk) -> str:
+def index_text(chunk: Chunk) -> str:
     """색인할 글. 문서 제목과 조문 표시를 앞에 붙여 "여비 규정 제16조" 같은 질의도 맞게 합니다."""
     return " ".join(x for x in (chunk.title, chunk.article or "", chunk.text) if x)
 
@@ -72,32 +86,96 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return dot / (na * nb) if na and nb else 0.0
 
 
+@dataclass(frozen=True)
+class _State:
+    """색인 한 벌. 파기는 새 벌을 만들어 통째로 바꿉니다. 검색은 시작할 때 잡은 한 벌만 써서,
+    검색 도중 파기가 끼어도 청크 번호가 어긋나지 않습니다."""
+
+    chunks: tuple[Chunk, ...]
+    tf: tuple[Counter[str], ...]
+    lens: tuple[int, ...]
+    vectors: tuple[list[float], ...] | None
+
+
 class SearchIndex:
     K1 = 1.2
     B = 0.75
     RRF_K = 60  # Reciprocal Rank Fusion 상수(Cormack 외 2009)
 
-    def __init__(self, chunks: list[Chunk], embedder: Embedder | None = None):
-        self.chunks = chunks
+    def __init__(
+        self,
+        chunks: list[Chunk],
+        embedder: Embedder | None = None,
+        *,
+        editions: EditionPolicy = "as_of",
+        today: Callable[[], date] = today_kst,
+    ):
         self.embedder = embedder
-        self._tf = [Counter(tokenize(_index_text(c))) for c in chunks]
-        self._len = [sum(tf.values()) for tf in self._tf]
-        self._vectors = embedder.embed([_index_text(c) for c in chunks]) if embedder else None
+        self.editions = editions
+        self.today = today
+        tf = tuple(Counter(tokenize(index_text(c))) for c in chunks)
+        vectors = tuple(embedder.embed([index_text(c) for c in chunks])) if embedder else None
+        self._state = _State(tuple(chunks), tf, tuple(sum(t.values()) for t in tf), vectors)
+        self._lock = threading.Lock()
+        self.version = 0  # 파기할 때마다 1씩 늘어, 색인에서 따로 만든 것(판 대조표)을 다시 만들 때를 알립니다.
 
-    def allowed(self, doc_scopes: set[str]) -> list[int]:
-        """토큰의 doc_scopes와 문서 ACL 태그가 하나라도 겹치는 청크 번호."""
-        return [i for i, c in enumerate(self.chunks) if c.acl_tags & doc_scopes]
+    @property
+    def chunks(self) -> tuple[Chunk, ...]:
+        return self._state.chunks
+
+    def remove_document(self, doc_id: str) -> list[Chunk]:
+        """문서의 모든 판의 청크와 벡터를 색인에서 지우고, 지운 청크를 돌려줍니다."""
+        with self._lock:
+            st = self._state
+            keep = [i for i, c in enumerate(st.chunks) if c.doc_id != doc_id]
+            removed = [c for c in st.chunks if c.doc_id == doc_id]
+            if removed:
+                self._state = _State(
+                    tuple(st.chunks[i] for i in keep),
+                    tuple(st.tf[i] for i in keep),
+                    tuple(st.lens[i] for i in keep),
+                    tuple(st.vectors[i] for i in keep) if st.vectors is not None else None,
+                )
+                self.version += 1
+            return removed
+
+    def doc_ids(self) -> set[str]:
+        """색인에 남은 문서 ID."""
+        return {c.doc_id for c in self._state.chunks}
+
+    def indexed_texts(self) -> set[str]:
+        """색인에 남은 청크의 임베딩 입력 글."""
+        return {index_text(c) for c in self._state.chunks}
+
+    def allowed(self, doc_scopes: set[str], as_of: date | None = None) -> list[int]:
+        """토큰의 doc_scopes와 문서 ACL 태그가 하나라도 겹치고, 기준일에 시행 중인 판의 청크 번호."""
+        return self._allowed(self._state, doc_scopes, as_of)
+
+    def _allowed(self, st: _State, doc_scopes: set[str], as_of: date | None) -> list[int]:
+        on = as_of or self.today()
+        return [i for i, c in enumerate(st.chunks) if c.acl_tags & doc_scopes and self._in_force(c, on)]
+
+    def _in_force(self, chunk: Chunk, on: date) -> bool:
+        return self.editions == "all" or chunk.edition is None or chunk.edition.in_force(on)
+
+    def top_ignoring_acl(self, query: str, n: int = 1) -> list[Chunk]:
+        """ACL과 판을 보지 않은 BM25 상위 청크. 감사 기록(권한 밖 1위)에만 씁니다."""
+        st = self._state
+        return [st.chunks[i] for i, _ in self._bm25(st, query, list(range(len(st.chunks))))[:n]]
 
     def bm25(self, query: str, ids: list[int]) -> list[tuple[int, float]]:
+        return self._bm25(self._state, query, ids)
+
+    def _bm25(self, st: _State, query: str, ids: list[int]) -> list[tuple[int, float]]:
         terms = set(tokenize(query))
         if not ids or not terms:
             return []
         n = len(ids)
-        avg = sum(self._len[i] for i in ids) / n
-        df = {t: sum(1 for i in ids if t in self._tf[i]) for t in terms}
+        avg = sum(st.lens[i] for i in ids) / n
+        df = {t: sum(1 for i in ids if t in st.tf[i]) for t in terms}
         scored = []
         for i in ids:
-            tf, dl, s = self._tf[i], self._len[i], 0.0
+            tf, dl, s = st.tf[i], st.lens[i], 0.0
             for t in terms:
                 f = tf.get(t, 0)
                 if not f:
@@ -109,31 +187,46 @@ class SearchIndex:
         return sorted(scored, key=lambda x: (-x[1], x[0]))
 
     def vector(self, query: str, ids: list[int]) -> list[tuple[int, float]]:
-        if self.embedder is None or self._vectors is None:
+        return self._vector(self._state, query, ids)
+
+    def _vector(self, st: _State, query: str, ids: list[int]) -> list[tuple[int, float]]:
+        if self.embedder is None or st.vectors is None:
             raise RuntimeError("임베딩 모델이 설정되지 않았습니다")
         if not ids:
             return []
         q = embed_query(self.embedder, query)
-        scored = [(i, _cosine(q, self._vectors[i])) for i in ids]
+        vectors = st.vectors
+        scored = [(i, _cosine(q, vectors[i])) for i in ids]
         return sorted(scored, key=lambda x: (-x[1], x[0]))
 
     def hybrid(self, query: str, ids: list[int], depth: int = 50) -> list[tuple[int, float]]:
+        return self._hybrid(self._state, query, ids, depth)
+
+    def _hybrid(self, st: _State, query: str, ids: list[int], depth: int = 50) -> list[tuple[int, float]]:
         """BM25와 벡터 순위를 Reciprocal Rank Fusion으로 합칩니다. 점수 크기가 달라 순위만 씁니다."""
         fused: dict[int, float] = {}
-        for ranking in (self.bm25(query, ids)[:depth], self.vector(query, ids)[:depth]):
+        for ranking in (self._bm25(st, query, ids)[:depth], self._vector(st, query, ids)[:depth]):
             for rank, (i, _) in enumerate(ranking, start=1):
                 fused[i] = fused.get(i, 0.0) + 1 / (self.RRF_K + rank)
         return sorted(fused.items(), key=lambda x: (-x[1], x[0]))
 
-    def search(self, query: str, doc_scopes: set[str], method: Method = "hybrid", top_k: int = 5) -> list[Hit]:
+    def search(
+        self,
+        query: str,
+        doc_scopes: set[str],
+        method: Method = "hybrid",
+        top_k: int = 5,
+        as_of: date | None = None,
+    ) -> list[Hit]:
         if not tokenize(query):
             return []  # 빈 질의나 기호뿐인 질의에 벡터 유사도만으로 아무 조문이나 내지 않습니다.
-        ids = self.allowed(doc_scopes)
-        ranked = {"bm25": self.bm25, "vector": self.vector, "hybrid": self.hybrid}[method](query, ids)
-        ranked = self._articles_first(query, ranked)
-        return [Hit(self.chunks[i], round(s, 6)) for i, s in ranked[:top_k]]
+        st = self._state
+        ids = self._allowed(st, doc_scopes, as_of)
+        rank = {"bm25": self._bm25, "vector": self._vector, "hybrid": self._hybrid}[method]
+        ranked = self._articles_first(st, query, rank(st, query, ids))
+        return [Hit(st.chunks[i], round(s, 6)) for i, s in ranked[:top_k]]
 
-    def _articles_first(self, query: str, ranked: list[tuple[int, float]]) -> list[tuple[int, float]]:
+    def _articles_first(self, st: _State, query: str, ranked: list[tuple[int, float]]) -> list[tuple[int, float]]:
         """질의에 "제16조"처럼 조문 번호가 있으면, 그 번호가 자기 조문 표시인 청크를 순서를 지킨 채 앞에 둡니다.
 
         본문 속 참조("제16조에 따라")와 그 조문 자체를 BM25 점수로는 가려낼 수 없기 때문입니다.
@@ -141,7 +234,8 @@ class SearchIndex:
         refs = {t for t in tokenize(query) if t.startswith("제") and t[-1] in "조0123456789"}
         if not refs:
             return ranked
+
         def own(i: int) -> bool:
-            return (self.chunks[i].article or "").split("(")[0].split(" ")[0] in refs
+            return (st.chunks[i].article or "").split("(")[0].split(" ")[0] in refs
 
         return [x for x in ranked if own(x[0])] + [x for x in ranked if not own(x[0])]

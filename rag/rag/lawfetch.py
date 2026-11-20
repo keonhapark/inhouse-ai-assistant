@@ -2,6 +2,7 @@
 
 1단계는 Open API 인증값(OC) 없이 국가법령정보센터 웹 화면이 쓰는 본문 주소에서 받습니다.
 받은 본문을 조문(법령) 또는 절(행정규칙 첨부 PDF) 단위로 나눠 `corpus/law/<문서 ID>.json`에 둡니다.
+`sources.yaml`에 `editions`(옛 판)가 있으면 그 판도 받아 `corpus/law/<문서 ID>@<시행일>.json`에 둡니다.
 검색과 인용 대조는 이 고정본만 봅니다. 시행일·조회일·원문 SHA-256을 함께 적어 언제 받은 판인지 남깁니다.
 
 실행(rag/에서): uv run --group fetch python -m rag.lawfetch [문서 ID ...]
@@ -217,26 +218,79 @@ def _q(text: str) -> str:
     return urllib.parse.quote(text)
 
 
-def fetch_law(doc_id: str, spec: dict[str, Any]) -> dict[str, Any]:
-    link = _get(f"{BASE}/lsLinkProc.do?lsNm={_q(spec['name'])}&chrClsCd=010202&mode=20").decode("utf-8")
-    seq = re.search(r"lsiSeq\s*:\s*'(\d+)'", link)
-    ef = re.search(r"efYd\s*[:=]\s*'(\d{8})'", link)
-    if not seq:
-        raise ValueError(f"{doc_id}: 법령 일련번호를 찾지 못했습니다")
-    query = f"lsiSeq={seq.group(1)}&chrClsCd=010202&urlMode=lsInfoP" + (f"&efYd={ef.group(1)}" if ef else "")
+_APPENDIX = re.compile(
+    r"\[별표\s*(\d+(?:의\d+)?)\]\s*([^<]+?)\s*</a>\s*"
+    r'<a href="flDownload\.do\?gubun=&amp;flSeq=(\d+)&amp;bylClsCd=\d+">\s*<img alt="HWP파일 다운로드"'
+)
+
+
+def appendix_links(page: str) -> dict[str, tuple[str, str]]:
+    """본문 HTML의 별표 목록. {"2": ("국내 여비 지급표(…)", HWP 파일 일련번호)}"""
+    return {m.group(1): (_clean(m.group(2)), m.group(3)) for m in _APPENDIX.finditer(page)}
+
+
+def fetch_appendices(doc_id: str, page: str, wanted: list[Any]) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """별표 HWP를 받아 표를 글 줄로 옮긴 절 목록과 파일별 SHA-256을 돌려줍니다."""
+    from rag.hwp import blocks_text, read_hwp  # 받을 때만 씁니다(의존 그룹 fetch)
+
+    links = appendix_links(page)
+    sections, hashes = [], {}
+    for n in (str(x) for x in wanted):
+        if n not in links:
+            raise ValueError(f"{doc_id}: 별표 {n}을 본문에서 찾지 못했습니다")
+        title, fl_seq = links[n]
+        blob = _get(f"{BASE}/flDownload.do?flSeq={fl_seq}")
+        sections.append({"label": f"별표 {n}", "heading": title, "text": blocks_text(read_hwp(blob))})
+        hashes[f"별표 {n}"] = hashlib.sha256(blob).hexdigest()
+    return sections, hashes
+
+
+def _law_page(doc_id: str, spec: dict[str, Any], lsi_seq: str, ef_yd: str | None) -> dict[str, Any]:
+    query = f"lsiSeq={lsi_seq}&chrClsCd=010202&urlMode=lsInfoP" + (f"&efYd={ef_yd}" if ef_yd else "")
     raw = _get(f"{BASE}/lsInfoR.do?{query}")
     parsed = parse_law_html(raw.decode("utf-8"))
     if parsed["title"] != spec["name"]:
         raise ValueError(f"{doc_id}: 받은 법령 이름 {parsed['title']}이 {spec['name']}과 다릅니다")
     return {
         "title": parsed["title"],
-        "url": f"{BASE}/lsInfoP.do?lsiSeq={seq.group(1)}",
+        "url": f"{BASE}/lsInfoP.do?lsiSeq={lsi_seq}" + (f"&efYd={ef_yd}" if ef_yd else ""),
         "effectiveDate": parsed["effectiveDate"],
         "promulgation": parsed["promulgation"],
         "rawSha256": hashlib.sha256(raw).hexdigest(),
         "extent": "본칙 전체(부칙·별표 제외)",
         "sections": parsed["sections"],
+        "page": raw.decode("utf-8"),
     }
+
+
+def fetch_law(doc_id: str, spec: dict[str, Any]) -> dict[str, Any]:
+    """현행 판."""
+    link = _get(f"{BASE}/lsLinkProc.do?lsNm={_q(spec['name'])}&chrClsCd=010202&mode=20").decode("utf-8")
+    seq = re.search(r"lsiSeq\s*:\s*'(\d+)'", link)
+    ef = re.search(r"efYd\s*[:=]\s*'(\d{8})'", link)
+    if not seq:
+        raise ValueError(f"{doc_id}: 법령 일련번호를 찾지 못했습니다")
+    got = _law_page(doc_id, spec, seq.group(1), ef.group(1) if ef else None)
+    got["url"] = f"{BASE}/lsInfoP.do?lsiSeq={seq.group(1)}"
+    if spec.get("appendices"):
+        sections, hashes = fetch_appendices(doc_id, got.pop("page"), spec["appendices"])
+        got["sections"] += sections
+        got["appendixSha256"] = hashes
+        names = "·".join(str(x) for x in spec["appendices"])
+        got["extent"] = f"본칙 전체(부칙 제외)와 별표 {names}(HWP 표를 행마다 \"머리: 값\" 줄로 옮김)"
+    got.pop("page", None)
+    return got
+
+
+def fetch_law_edition(doc_id: str, spec: dict[str, Any], edition: dict[str, Any]) -> dict[str, Any]:
+    """옛 판. `sources.yaml`의 `editions` 항목(연혁 화면의 lsiSeq와 시행일 efYd)으로 받습니다."""
+    got = _law_page(doc_id, spec, str(edition["lsiSeq"]), str(edition["efYd"]))
+    got.pop("page")
+    ef = str(edition["efYd"])
+    want = f"{ef[:4]}-{ef[4:6]}-{ef[6:]}"
+    if got["effectiveDate"] != want:
+        raise ValueError(f"{doc_id}: 받은 판의 시행일 {got['effectiveDate']}이 {want}과 다릅니다")
+    return got
 
 
 def fetch_admrul(doc_id: str, spec: dict[str, Any]) -> dict[str, Any]:
@@ -267,23 +321,34 @@ def fetch_admrul(doc_id: str, spec: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_copy(doc_id: str, spec: dict[str, Any], now: datetime | None = None) -> dict[str, Any]:
-    got = fetch_law(doc_id, spec) if spec["kind"] == "law" else fetch_admrul(doc_id, spec)
+def build_copy(
+    doc_id: str, spec: dict[str, Any], now: datetime | None = None, edition: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    if edition is not None:
+        got = fetch_law_edition(doc_id, spec, edition)
+    else:
+        got = fetch_law(doc_id, spec) if spec["kind"] == "law" else fetch_admrul(doc_id, spec)
     sections = got.pop("sections")
     title = got.pop("title")
     got["retrievedAt"] = (now or datetime.now(timezone.utc)).astimezone().isoformat(timespec="seconds")
     return {"id": doc_id, "title": title, "source": got, "sections": sections}
 
 
+def _write(copy: dict[str, Any], out: Path) -> None:
+    out.write_text(json.dumps(copy, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    src = copy["source"]
+    print(f"{copy['id']}: {copy['title']} 시행 {src['effectiveDate']}, 절 {len(copy['sections'])}개 → {out.name}")
+
+
 def main(argv: list[str]) -> int:
     specs = yaml.safe_load((LAW_DIR / "sources.yaml").read_text(encoding="utf-8"))
     targets = argv or list(specs)
     for doc_id in targets:
-        copy = build_copy(doc_id, specs[doc_id])
-        out = LAW_DIR / f"{doc_id}.json"
-        out.write_text(json.dumps(copy, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-        src = copy["source"]
-        print(f"{doc_id}: {copy['title']} 시행 {src['effectiveDate']}, 절 {len(copy['sections'])}개 → {out.name}")
+        spec = specs[doc_id]
+        _write(build_copy(doc_id, spec), LAW_DIR / f"{doc_id}.json")
+        for edition in spec.get("editions", []):
+            copy = build_copy(doc_id, spec, edition=edition)
+            _write(copy, LAW_DIR / f"{doc_id}@{copy['source']['effectiveDate']}.json")
     return 0
 
 

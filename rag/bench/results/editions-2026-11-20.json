@@ -1,0 +1,879 @@
+{
+ "measuredAt": "2026-11-20T23:12:52+0900",
+ "today": "2026-11-20",
+ "llm": {
+  "model": "qwen3.5:9b",
+  "via": "http://localhost:11434/v1",
+  "reasoning_effort": "none",
+  "temperature": 0
+ },
+ "embedding": "bge-m3",
+ "method": "hybrid",
+ "topK": 5,
+ "repeat": 3,
+ "questions": 8,
+ "machine": "Darwin arm64",
+ "conditions": [
+  {
+   "condition": "all",
+   "summary": {
+    "answers": 24,
+    "found": 10,
+    "citations": 16,
+    "staleCitations": 7,
+    "answersWithStale": 7,
+    "sameTextOtherEdition": 3,
+    "answersWithRevisions": 10
+   },
+   "rows": [
+    {
+     "id": "q12-donate",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 11.71,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q12-convert",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 12.46,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q18-define",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": false
+      }
+     ],
+     "staleCitations": 1,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 8.54,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q18-integrated",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-07-01",
+       "inForce": false
+      },
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      },
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": false
+      }
+     ],
+     "staleCitations": 1,
+     "sameTextOtherEdition": 1,
+     "revisions": [
+      "2026-01-02",
+      "2026-07-01"
+     ],
+     "seconds": 13.01,
+     "detail": "근거 후보 5건, 인용 3개 중 대조 통과 3개"
+    },
+    {
+     "id": "q19-elsewhere",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 15.12,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q19-abroad",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 12.84,
+     "detail": "답의 숫자가 인용한 근거에 없음"
+    },
+    {
+     "id": "q18-define-past",
+     "rep": 0,
+     "asOf": "2026-03-01",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 5.12,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert-past",
+     "rep": 0,
+     "asOf": "2026-03-01",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 6.89,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q12-donate",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": false
+      }
+     ],
+     "staleCitations": 1,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 4.12,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 6.36,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q18-define",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": false
+      }
+     ],
+     "staleCitations": 1,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 4.27,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q18-integrated",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-07-01",
+       "inForce": false
+      },
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      },
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": false
+      }
+     ],
+     "staleCitations": 1,
+     "sameTextOtherEdition": 1,
+     "revisions": [
+      "2026-01-02",
+      "2026-07-01"
+     ],
+     "seconds": 6.08,
+     "detail": "근거 후보 5건, 인용 3개 중 대조 통과 3개"
+    },
+    {
+     "id": "q19-elsewhere",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 6.99,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q19-abroad",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 5.32,
+     "detail": "답의 숫자가 인용한 근거에 없음"
+    },
+    {
+     "id": "q18-define-past",
+     "rep": 1,
+     "asOf": "2026-03-01",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 4.02,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert-past",
+     "rep": 1,
+     "asOf": "2026-03-01",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 6.25,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q12-donate",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 3.24,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q12-convert",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 6.45,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q18-define",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": false
+      }
+     ],
+     "staleCitations": 1,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 4.34,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q18-integrated",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-07-01",
+       "inForce": false
+      },
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      },
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": false
+      }
+     ],
+     "staleCitations": 1,
+     "sameTextOtherEdition": 1,
+     "revisions": [
+      "2026-01-02",
+      "2026-07-01"
+     ],
+     "seconds": 6.22,
+     "detail": "근거 후보 5건, 인용 3개 중 대조 통과 3개"
+    },
+    {
+     "id": "q19-elsewhere",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 6.96,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q19-abroad",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 5.14,
+     "detail": "답의 숫자가 인용한 근거에 없음"
+    },
+    {
+     "id": "q18-define-past",
+     "rep": 2,
+     "asOf": "2026-03-01",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 4.25,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert-past",
+     "rep": 2,
+     "asOf": "2026-03-01",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 6.26,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    }
+   ]
+  },
+  {
+   "condition": "as_of",
+   "summary": {
+    "answers": 24,
+    "found": 18,
+    "citations": 18,
+    "staleCitations": 0,
+    "answersWithStale": 0,
+    "sameTextOtherEdition": 0,
+    "answersWithRevisions": 18
+   },
+   "rows": [
+    {
+     "id": "q12-donate",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 2.95,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 3.45,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q18-define",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 5.43,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q18-integrated",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 4.04,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q19-elsewhere",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제19조(이전비의 지급 대상)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 6.31,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q19-abroad",
+     "rep": 0,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 4.04,
+     "detail": "답의 숫자가 인용한 근거에 없음"
+    },
+    {
+     "id": "q18-define-past",
+     "rep": 0,
+     "asOf": "2026-03-01",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 4.27,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert-past",
+     "rep": 0,
+     "asOf": "2026-03-01",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 3.49,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-donate",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 2.94,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 3.24,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q18-define",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 5.21,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q18-integrated",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 3.91,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q19-elsewhere",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제19조(이전비의 지급 대상)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 6.16,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q19-abroad",
+     "rep": 1,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 3.94,
+     "detail": "답의 숫자가 인용한 근거에 없음"
+    },
+    {
+     "id": "q18-define-past",
+     "rep": 1,
+     "asOf": "2026-03-01",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 4.01,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert-past",
+     "rep": 1,
+     "asOf": "2026-03-01",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 3.42,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-donate",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 2.92,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 3.04,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q18-define",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 5.42,
+     "detail": "모델 출력을 JSON으로 읽지 못함"
+    },
+    {
+     "id": "q18-integrated",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 3.95,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q19-elsewhere",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": true,
+     "cited": [
+      {
+       "article": "제19조(이전비의 지급 대상)",
+       "effectiveFrom": "2026-10-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-01-02"
+     ],
+     "seconds": 6.11,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q19-abroad",
+     "rep": 2,
+     "asOf": "2026-11-20",
+     "found": false,
+     "cited": [],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [],
+     "seconds": 3.89,
+     "detail": "답의 숫자가 인용한 근거에 없음"
+    },
+    {
+     "id": "q18-define-past",
+     "rep": 2,
+     "asOf": "2026-03-01",
+     "found": true,
+     "cited": [
+      {
+       "article": "제18조(근무지 내 국내 출장 시의 여비)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 4.08,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    },
+    {
+     "id": "q12-convert-past",
+     "rep": 2,
+     "asOf": "2026-03-01",
+     "found": true,
+     "cited": [
+      {
+       "article": "제12조(항공운임의 지급)",
+       "effectiveFrom": "2026-01-02",
+       "inForce": true
+      }
+     ],
+     "staleCitations": 0,
+     "sameTextOtherEdition": 0,
+     "revisions": [
+      "2026-07-01"
+     ],
+     "seconds": 3.6,
+     "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개"
+    }
+   ]
+  }
+ ]
+}
