@@ -677,3 +677,37 @@ def test_delegated_requests_carry_token_jti(client, app, login, issue, staff_no,
     assert all(e["actor"]["delegationTokenId"] == jti for e in evs)
     issued_ev = [e for e in _audit(app) if e["kind"] == "auth.delegation_token_issued"]
     assert all(e["actor"]["delegationTokenId"] is None for e in issued_ev)  # 발급은 토큰으로 한 일이 아님
+
+
+# ---------- 실제로 간 모델 헤더(#188) ----------
+@pytest.mark.parametrize("case,expect", [
+    ("external", ("external", "external")),
+    ("local", ("local", "local")),
+    ("glossary", ("local", "local")),
+    ("fallback", ("local", "local")),
+    ("budget", ("local", "local")),
+])
+def test_egress_headers_show_actual_route(client, app, token_for, litellm, case, expect):
+    from gateway.budgets import BudgetLedger
+    from gateway.confidential import Glossary
+
+    _, external_ok = _agent_ids(app)
+    model, content = ("local" if case == "local" else "external"), "안녕"
+    if case == "glossary":
+        app.state.egress.glossary = Glossary.from_doc({"terms": [{"term": "원가표", "action": "local_only"}]})
+        content = "원가표 요약"
+    elif case == "fallback":
+        litellm.external_mode = "500"
+    elif case == "budget":
+        app.state.egress.budget = BudgetLedger({"period": "month", "agents": {external_ok: 0}}, {}, "Asia/Seoul")
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": model, "messages": [{"role": "user", "content": content}]})
+    assert r.status_code == 200
+    assert (r.headers["x-egress-model"], r.headers["x-egress-location"]) == expect
+
+
+def test_egress_headers_on_stream(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": MSG, "stream": True})
+    assert r.headers["x-egress-location"] == "external"

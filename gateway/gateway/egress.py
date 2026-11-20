@@ -127,6 +127,11 @@ class ModelUsage:
         return {"name": name, "location": location}
 
 
+def egress_headers(model: dict) -> dict[str, str]:
+    """실제로 보낸 별칭과 위치(contracts/openapi/gateway.yaml). 기밀·비용 상한·폴백으로 로컬로 바뀌면 요청과 다릅니다."""
+    return {"X-Egress-Model": model["name"], "X-Egress-Location": model["location"]}
+
+
 def response_cost(headers: httpx.Headers) -> float | None:
     """LiteLLM 프록시가 응답 머리글로 주는 이 요청의 비용(달러)."""
     try:
@@ -415,7 +420,7 @@ class Egress:
         self._audit(caller, model, "ok" if r.status_code < 400 else "error",
                     None if r.status_code < 400 else f"urn:problem:llm-status-{r.status_code}", note)
         return Response(r.content, status_code=r.status_code,
-                        media_type=r.headers.get("content-type", "application/json"))
+                        media_type=r.headers.get("content-type", "application/json"), headers=egress_headers(model))
 
     async def _stream(self, caller: Caller, model: dict, before: dict, sent: dict,
                       note: str | None = None) -> Response:
@@ -456,7 +461,8 @@ class Egress:
                 await r.aclose()
 
         return StreamingResponse(relay(), status_code=r.status_code,
-                                 media_type=r.headers.get("content-type", "text/event-stream"))
+                                 media_type=r.headers.get("content-type", "text/event-stream"),
+                                 headers=egress_headers(model))
 
     # ---------- 실패·기록 ----------
     async def _fail(self, caller: Caller, model: dict, before: dict, sent: dict, e: httpx.HTTPError) -> NoReturn:
