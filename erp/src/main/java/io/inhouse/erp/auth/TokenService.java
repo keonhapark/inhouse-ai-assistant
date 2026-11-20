@@ -112,7 +112,7 @@ public class TokenService {
                         || c.getIssueTime() == null || c.getJWTID() == null) {
                     throw unauthorized("위임 토큰의 필수 클레임(agt, cid, scopes, iat, jti)이 없습니다");
                 }
-                return new ErpPrincipal(knownEmployee(c.getSubject()), true, agent, conversation,
+                return new ErpPrincipal(knownEmployee(c.getSubject()), true, c.getJWTID(), agent, conversation,
                         Set.copyOf(new HashSet<>(scopes)));
             }
         } catch (JOSEException | ParseException e) {
