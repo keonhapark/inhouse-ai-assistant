@@ -13,8 +13,8 @@
 | S4 | rag | `rag/` | Python | 1 |
 | S5 | eval | `eval/` | Python, pytest | 1 |
 | S6 | web | `web/` | React, TypeScript, Vite | 1 |
-| S7 | incident | `incident/` | Python | 2 |
-| S8 | slack | `channels/slack/` | Python, Slack Bolt(Socket Mode) | 2 |
+| S7 | incident | `incident/` | Python(erp 세션이 맡음) | 2 |
+| S8 | slack | `channels/slack/` | TypeScript, Slack Bolt(Socket Mode)(web 세션이 맡음) | 2 |
 
 - 모듈 세션은 자기 경로만 고칩니다. 예외로 `docs/contract-requests.md`에 한 줄 더하는 것은 누구나 합니다.
 - CI `paths` job이 브랜치 이름(`feat/<모듈>-…`)의 모듈과 바뀐 파일을 대조해 경로 밖 변경이 있으면 실패합니다.
