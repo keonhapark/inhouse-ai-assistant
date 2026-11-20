@@ -276,11 +276,11 @@ def test_filter_tools_ties_follow_registry_order() -> None:
 def test_few_shot_adds_examples_but_not_the_same_message(client: TestClient, gw: Gateway) -> None:
     gw.script = [ok(text_reply("네.")), ok(text_reply("네."))]
     examples = load_examples(DEV_SET)
-    same = next(e for e in examples if e["expect"]["tool"] == "leave_request")
-    post(client, message=same["message"], variant={"fewShot": True})
+    same = next(e for e in examples if e["expected"]["tool"] == "leave_request")
+    post(client, message=same["utterance"], variant={"fewShot": True})
     prompt = gw.bodies[0]["messages"][0]["content"]
     assert "예시" in prompt and "leave_request" in prompt
-    assert f"\"{same['message']}\"" not in prompt
+    assert f"\"{same['utterance']}\"" not in prompt
     post(client, message="다른 요청입니다", variant={"fewShot": False})
     assert "예시" not in gw.bodies[1]["messages"][0]["content"]
 
