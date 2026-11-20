@@ -4,8 +4,8 @@
 
 | 날짜 | 요청 모듈 | 이슈 | 바꿀 것 | 이유 | 결과 |
 |---|---|---|---|---|---|
-| 2026-11-20 | rag | #37 | `packs/manufacturing/docs.yaml` 공개 규정 3건의 정식 제목·출처 주소·status ready, 생성 문서 5건 status ready | #16에서 법제처 원문을 확인하고 고정본을 만듦  반영 |
-| 2026-11-20 | gateway | #43 | 팩 선택 파일 `glossary.yaml`(사내 용어 사전: term, aliases, level, action local_only·block, reason) 형식과 제조 팩 용어 | #10 기밀 판정. 코어에 업종 용어를 둘 수 없어 팩에서 읽음  반영 |
+| 2026-11-20 | rag | #37 | `packs/manufacturing/docs.yaml` 공개 규정 3건의 정식 제목·출처 주소·status ready, 생성 문서 5건 status ready | #16에서 법제처 원문을 확인하고 고정본을 만듦 | 반영 |
+| 2026-11-20 | gateway | #43 | 팩 선택 파일 `glossary.yaml`(사내 용어 사전: term, aliases, level, action local_only·block, reason) 형식과 제조 팩 용어 | #10 기밀 판정. 코어에 업종 용어를 둘 수 없어 팩에서 읽음 | 반영 |
 | 2026-11-20 | rag | - | rag.yaml `/answer` 502·503 | gateway 출구 실패를 구분 | 반영 |
 | 2026-11-20 | eval | - | `events/external-request.schema.json`(GATEWAY_EXTERNAL_LOG) | 외부 요청 본문에서 표지 판정 | 반영, gateway 구현 이슈 |
 | 2026-11-20 | eval | - | scenario `expect.markerSources`, `eval/markers.schema.json`(RAG_MARKERS_FILE), `eval/injected-docs.schema.json`(RAG_EXTRA_DOCS) | 표지 대상 지정, 표지·주입 문서 심기 | 반영, rag 구현 이슈 |
