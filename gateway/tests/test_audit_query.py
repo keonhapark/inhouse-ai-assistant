@@ -95,3 +95,25 @@ def test_bad_inputs_are_422(aclient, auditor_no):
     assert aclient.get("/api/audit-events?cursor=@@", headers=h).status_code == 422
     assert aclient.get("/api/audit-events?since=2026-11-20T10:00:00", headers=h).status_code == 422
     assert aclient.get("/api/audit-events?limit=0", headers=h).status_code == 422
+
+
+def test_order_desc_returns_newest_first_and_pages_backwards(aclient, auditor_no):
+    h = _login(aclient, auditor_no)
+    asc = [e["eventId"] for e in aclient.get("/api/audit-events?limit=500", headers=h).json()["items"]]
+    desc = [e["eventId"] for e in aclient.get("/api/audit-events?limit=500&order=desc", headers=h).json()["items"]]
+    assert desc == asc[::-1]
+    seen, cursor = [], None
+    for _ in range(10):
+        params = {"limit": 2, "order": "desc", **({"cursor": cursor} if cursor else {})}
+        body = aclient.get("/api/audit-events", headers=h, params=params).json()
+        seen += [e["eventId"] for e in body["items"]]
+        cursor = body["nextCursor"]
+        if not cursor:
+            break
+    assert seen == desc
+    got = aclient.get("/api/audit-events?order=desc&kind=tool.called", headers=h).json()["items"]
+    assert [e["eventId"] for e in got] == ["a3", "a1"]
+
+
+def test_bad_order_is_422(aclient, auditor_no):
+    assert aclient.get("/api/audit-events?order=newest", headers=_login(aclient, auditor_no)).status_code == 422
