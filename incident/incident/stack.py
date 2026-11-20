@@ -100,8 +100,10 @@ class Stack:
                   "log_connections = on", "log_disconnections = on")
 
     def prepare(self) -> None:
-        sql = "".join(f"alter system set {s};" for s in self.PG_LOGGING) + "select pg_reload_conf();"
-        self.docker("exec", self.container("postgres"), "psql", "-U", "iaa", "-d", "erp", "-c", sql)
+        # alter system은 트랜잭션 블록 안에서 못 돌려 문장마다 -c로 나눕니다.
+        args = [a for s in self.PG_LOGGING for a in ("-c", f"alter system set {s}")]
+        self.docker("exec", self.container("postgres"), "psql", "-U", "iaa", "-d", "erp", *args,
+                    "-c", "select pg_reload_conf()")
 
     def logs(self, service: str, since: str, until: str) -> str:
         """since·until은 RFC 3339. 줄마다 docker가 붙인 시각이 앞에 옵니다."""
