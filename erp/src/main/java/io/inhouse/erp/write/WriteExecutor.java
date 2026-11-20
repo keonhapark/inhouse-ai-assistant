@@ -33,7 +33,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  *   <li>dryRun: 같은 명령을 트랜잭션 안에서 돌리고 되돌립니다. 그래서 검사 규칙이 실행과 같고 상태는 바뀌지 않습니다.</li>
  *   <li>실행: Idempotency-Key가 필요합니다. 같은 사람·같은 키면 24시간 동안 처음 응답을 그대로 돌려주고,
  *       본문이 다르면 422입니다. 명령, 행동 기록, 감사 이벤트, 멱등 기록을 한 트랜잭션에 씁니다.</li>
- *   <li>거절·충돌은 업무 트랜잭션이 되돌려지므로 감사 이벤트(erp.denied)만 따로 남깁니다.</li>
+ *   <li>거절·충돌은 업무 트랜잭션이 되돌려지므로 감사 이벤트(erp.denied)만 따로 남깁니다. 이보다 앞에서 난 거절
+ *       (scope, 본문 검사, Idempotency-Key 없음)은 {@link io.inhouse.erp.audit.DeniedRequestAuditor}가 남깁니다.</li>
  * </ul>
  */
 @Service
@@ -158,6 +159,7 @@ public class WriteExecutor {
     }
 
     private void auditDenied(WriteRequest req, ApiException e) {
+        e.markAudited();
         audit.recordSeparately(req.principal(), "erp.denied", req.operation(),
                 e.status() == 409 ? "conflict" : "denied", new AuditService.Extra(null, null, null, req.undoOf()),
                 e.code(), e.detail());

@@ -2,6 +2,7 @@ package io.inhouse.erp.notification;
 
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.auth.RequiredScope;
+import io.inhouse.erp.common.OperationId;
 import io.inhouse.erp.org.OrgViews.Items;
 import java.time.OffsetDateTime;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +24,7 @@ public class NotificationController {
     }
 
     @GetMapping("/notifications")
+    @OperationId("listNotifications")
     @RequiredScope("notification:read")
     @Transactional(readOnly = true)
     public Items<NotificationView> list(@AuthenticationPrincipal ErpPrincipal p,

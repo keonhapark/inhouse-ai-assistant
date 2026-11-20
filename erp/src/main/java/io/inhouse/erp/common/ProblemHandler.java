@@ -1,5 +1,7 @@
 package io.inhouse.erp.common;
 
+import io.inhouse.erp.audit.DeniedRequestAuditor;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,29 +14,36 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+/** 오류를 problem+json으로 바꿉니다. 업무 명령 앞에서 끝난 거절은 {@link DeniedRequestAuditor}가 감사에 남깁니다. */
 @RestControllerAdvice
 public class ProblemHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ProblemHandler.class);
 
+    private final DeniedRequestAuditor denied;
+
+    public ProblemHandler(DeniedRequestAuditor denied) {
+        this.denied = denied;
+    }
+
     @ExceptionHandler(ApiException.class)
-    public ResponseEntity<Object> api(ApiException e) {
-        return Problems.response(e);
+    public ResponseEntity<Object> api(ApiException e, HttpServletRequest req) {
+        return respond(req, e);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<Object> missingParam(MissingServletRequestParameterException e) {
-        return Problems.response(ApiException.validation(e.getParameterName(), "required"));
+    public ResponseEntity<Object> missingParam(MissingServletRequestParameterException e, HttpServletRequest req) {
+        return respond(req, ApiException.validation(e.getParameterName(), "required"));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<Object> typeMismatch(MethodArgumentTypeMismatchException e) {
-        return Problems.response(ApiException.validation(e.getName(), "invalid value"));
+    public ResponseEntity<Object> typeMismatch(MethodArgumentTypeMismatchException e, HttpServletRequest req) {
+        return respond(req, ApiException.validation(e.getName(), "invalid value"));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Object> unreadable(HttpMessageNotReadableException e) {
-        return Problems.response(new ApiException(422, "validation", "JSON 본문이 아닙니다"));
+    public ResponseEntity<Object> unreadable(HttpMessageNotReadableException e, HttpServletRequest req) {
+        return respond(req, new ApiException(422, "validation", "JSON 본문이 아닙니다"));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
@@ -52,5 +61,10 @@ public class ProblemHandler {
         log.error("처리하지 못한 오류", e);
         return ResponseEntity.status(500).contentType(Problems.PROBLEM_JSON)
                 .body(Problems.body(500, "internal", "서버 오류", List.of()));
+    }
+
+    private ResponseEntity<Object> respond(HttpServletRequest req, ApiException e) {
+        denied.recordIfNeeded(req, e);
+        return Problems.response(e);
     }
 }

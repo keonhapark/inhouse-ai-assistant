@@ -11,6 +11,8 @@ public class ApiException extends RuntimeException {
     private final String code;
     private final String detail;
     private final List<FieldError> errors;
+    private boolean alwaysAudited;
+    private boolean audited;
 
     public ApiException(int status, String code) {
         this(status, code, null, List.of());
@@ -40,6 +42,19 @@ public class ApiException extends RuntimeException {
         return new ApiException(422, "validation", field + ": " + message, List.of(new FieldError(field, message)));
     }
 
+    /** 읽기 경로에서 나도 감사 이벤트로 남길 거절(위임 토큰의 scope·사람 전용 거절)로 표시합니다. */
+    public ApiException auditedOnReads() {
+        this.alwaysAudited = true;
+        return this;
+    }
+
+    /** 이미 erp.denied로 남겼다고 표시합니다. 응답 처리에서 다시 남기지 않습니다. */
+    public void markAudited() {
+        this.audited = true;
+    }
+
+    public boolean isAuditedOnReads() { return alwaysAudited; }
+    public boolean isAudited() { return audited; }
     public int status() { return status; }
     public String code() { return code; }
     public String detail() { return detail; }

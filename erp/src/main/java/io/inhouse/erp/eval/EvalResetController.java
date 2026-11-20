@@ -1,6 +1,7 @@
 package io.inhouse.erp.eval;
 
 import io.inhouse.erp.auth.PublicEndpoint;
+import io.inhouse.erp.common.OperationId;
 import io.inhouse.erp.pack.PackSeeder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ public class EvalResetController {
     }
 
     @PostMapping("/_eval/reset")
+    @OperationId("evalReset")
     @PublicEndpoint
     @Transactional
     public ResponseEntity<Void> reset() {

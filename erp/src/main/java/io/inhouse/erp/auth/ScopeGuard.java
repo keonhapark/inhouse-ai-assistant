@@ -9,7 +9,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-/** 위임 토큰 요청의 scope와 사람 화면 전용 여부를 확인합니다. 최종 권한 판단(토큰 주인의 권한)은 각 업무 규칙이 합니다. */
+/**
+ * 위임 토큰 요청의 scope와 사람 화면 전용 여부를 확인합니다. 최종 권한 판단(토큰 주인의 권한)은 각 업무 규칙이 합니다.
+ * 여기서 난 거절은 읽기 경로라도 {@link io.inhouse.erp.audit.DeniedRequestAuditor}가 erp.denied로 남깁니다.
+ */
 @Component
 public class ScopeGuard implements HandlerInterceptor {
 
@@ -25,10 +28,11 @@ public class ScopeGuard implements HandlerInterceptor {
         RequiredScope rs = hm.getMethodAnnotation(RequiredScope.class);
         if (rs == null) {
             // scope 표시가 빠진 경로는 위임 토큰으로 열지 않습니다(실패 시 닫힘).
-            throw new ApiException(403, "forbidden", "scope가 정해지지 않은 경로입니다");
+            throw new ApiException(403, "forbidden", "scope가 정해지지 않은 경로입니다").auditedOnReads();
         }
         if (rs.humanOnly()) {
-            throw new ApiException(403, "delegation-token-not-allowed", "위임 토큰으로 부를 수 없는 기능입니다");
+            throw new ApiException(403, "delegation-token-not-allowed", "위임 토큰으로 부를 수 없는 기능입니다")
+                    .auditedOnReads();
         }
         if (!rs.perForm()) {
             require(p, rs.value());
@@ -50,7 +54,7 @@ public class ScopeGuard implements HandlerInterceptor {
     }
 
     private static ApiException scopeMissing(String scope) {
-        return new ApiException(403, "scope-missing", "필요한 scope: " + scope);
+        return new ApiException(403, "scope-missing", "필요한 scope: " + scope).auditedOnReads();
     }
 
     private static ErpPrincipal current() {
