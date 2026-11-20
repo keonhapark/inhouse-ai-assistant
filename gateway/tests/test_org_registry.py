@@ -88,3 +88,36 @@ def test_registry_load_reads_unit_names():
     reg = Registry.load(PACK, ROOT / "contracts")
     org = yaml.safe_load((PACK / "org.yaml").read_text(encoding="utf-8"))
     assert reg.unit_names == {u["id"]: u["name"] for u in org["units"]}
+
+
+def test_callable_by_all_and_optional_fields():
+    minimal = {"id": "m", "name": "엠", "version": "1.0.0", "owner_unit": "u1", "description": "",
+               "callable_by": "all", "tools": ["t_read"], "allowed_risk": ["read"],
+               "model_policy": {"mode": "external_allowed"},
+               "risk_policy": {"read": "auto", "reversible_write": "deny", "irreversible": "deny"}}
+    roles = {**AGENT, "id": "r", "callable_by": {"roles": ["auditor"], "grades": ["ceo"]}}
+    reg = Registry({"agents": [minimal, roles]}, TOOLS, SCOPES)
+    m = reg.registry_entry(reg.get("m"), _who())
+    schema_check.validate("openapi/gateway.yaml", "AgentRegistryEntry", m)
+    assert m["callableBy"] == "all" and m["callable"] is True and m["stage"] == 1
+    assert "overrides" not in m["riskPolicy"] and "routingKeywords" not in m
+    assert m["modelPolicy"] == {"mode": "external_allowed"} and m["docScopes"] == []
+    r = reg.registry_entry(reg.get("r"), _who())
+    assert r["callableBy"] == {"roles": ["auditor"], "grades": ["ceo"]} and r["callable"] is False
+    assert reg.registry_entry(reg.get("r"), _who(grade="ceo"))["callable"] is True
+
+
+def test_endpoint_keeps_uncallable_agents_and_omits_missing_fallback(app, client, login, staff_no):
+    """/agents와 달리 부를 수 없는 에이전트도 callable=false로 남고, fallback_agent가 없으면 키를 뺍니다."""
+    agents_doc = yaml.safe_load((PACK / "agents.yaml").read_text(encoding="utf-8"))
+    agents = [dict(a) for a in agents_doc["agents"]]
+    agents[0]["callable_by"] = {"units": ["no-such-unit"]}
+    full = Registry.load(PACK, ROOT / "contracts")
+    reg = Registry({"agents": agents}, {"tools": list(full.tool_meta.values())},
+                   {"scopes": [{"id": s} for s in full.wide_scopes]}, stage=full.stage, unit_names=full.unit_names)
+    app.state.chat.registry = reg
+    body = client.get("/api/agent-registry", headers={"Authorization": f"Bearer {login(staff_no)}"}).json()
+    assert "fallbackAgentId" not in body
+    by_id = {e["id"]: e for e in body["items"]}
+    assert by_id[agents[0]["id"]]["callable"] is False
+    assert all(e["callable"] for i, e in by_id.items() if i != agents[0]["id"])
