@@ -91,6 +91,8 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   gateway 자기 `audit.jsonl`, `AUDIT_EVENT_FILES`(쉼표로 구분한 경로나 glob, agent·MCP·rag가 쓰는 JSON Lines)를 시각 순으로
   합칩니다. `eventId`가 같으면 한 번만 넣습니다. 필터는 `conversationId`, `actorId`, `agentId`, `kind`, `since`·`until`
   (시간대 오프셋 필요)이고, `cursor`는 마지막 이벤트의 (시각, eventId)입니다. erp는 한 번에 최근 500건까지만 줍니다.
+- 팩 단계(#170): `pack.yaml`의 `stage`가 기준이고 `GATEWAY_PACK_STAGE`는 덮어쓰기만 합니다. 그 단계 이하 에이전트만
+  등록부에 실어, `/api/agents`에 보이지 않는 에이전트는 대화를 만들 수 없고(403) 위임 토큰도 발급하지 않습니다(404).
 - 사람용 경로(`/api/*`의 로그인 뒤 경로)는 직원 JWT만 받습니다. Bearer 값이 위임 토큰(`iss: gateway` 또는 `agt` 클레임)이면
   403 `delegation-token-not-allowed`입니다(#159). 위임 토큰은 agent → MCP → erp와 LLM 출구(`X-Delegation-Token`)에만 씁니다.
 - 토큰 위생: 모든 로그 레코드에서 JWT 모양과 `Bearer <값>`을 가립니다(`gateway/redact.py`). 발급 기록은 `jti`만 남깁니다.
@@ -114,7 +116,7 @@ DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
 환경 변수: `ERP_BASE_URL`, `PACK_DIR`(기본 `packs/manufacturing`), `CONTRACTS_DIR`(기본 `contracts`),
 `DELEGATION_TOKEN_PRIVATE_KEY`(없으면 임시 키를 만들고 경고를 남깁니다), `LITELLM_BASE_URL`(기본 `http://localhost:4000`),
 `LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
-`AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`.
+`AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_PACK_STAGE`.
 상대 경로는 저장소 루트 기준입니다. LiteLLM은 1.108.1로 고정합니다(배포 뒤 2주가 지난 판).
 
 ## 시험

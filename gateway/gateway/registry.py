@@ -52,7 +52,9 @@ def grant_matches(grant: Any, who: Requester) -> bool:
 
 class Registry:
     def __init__(self, agents_doc: dict[str, Any], tools_doc: dict[str, Any], scopes_doc: dict[str, Any],
-                 access_tags: tuple[str, ...] = ()):
+                 access_tags: tuple[str, ...] = (), stage: int | None = None):
+        """stage를 주면 그 단계 이하 에이전트만 싣습니다(#170). None이면 모두 싣습니다."""
+        self.stage = stage
         human_only = {s["id"] for s in scopes_doc["scopes"] if s.get("human_only")}
         # 평가 조건 no_guard·baseline_tools의 공용 계정 범위: 사람 전용을 뺀 모든 scope, 팩의 모든 문서 태그
         self.wide_scopes = tuple(s["id"] for s in scopes_doc["scopes"] if not s.get("human_only"))
@@ -61,6 +63,8 @@ class Registry:
         self.fallback_agent: str | None = agents_doc.get("fallback_agent")
         self._agents: dict[str, AgentEntry] = {}
         for a in agents_doc["agents"]:
+            if stage is not None and a.get("stage", 1) > stage:
+                continue  # 이 단계에서 켜지지 않은 에이전트: /agents에 보이지 않고 위임 토큰도 발급하지 않습니다
             missing = [t for t in a["tools"] if t not in tool_scope]
             if missing:
                 raise ValueError(f"에이전트 {a['id']}의 도구가 tools.json에 없습니다: {missing}")
@@ -78,17 +82,21 @@ class Registry:
             )
 
     @classmethod
-    def load(cls, pack_dir: Path, contracts_dir: Path) -> Registry:
+    def load(cls, pack_dir: Path, contracts_dir: Path, stage: int | None = None) -> Registry:
+        """팩 단계는 pack.yaml의 stage 하나가 기준이고, stage 인자(GATEWAY_PACK_STAGE)는 덮어쓰기만 합니다."""
         def read(p: Path) -> Any:
             text = p.read_text(encoding="utf-8")
             return yaml.safe_load(text) if p.suffix in (".yaml", ".yml") else json.loads(text)
 
         org = read(pack_dir / "org.yaml")
+        pack = read(pack_dir / "pack.yaml")
+        stage = stage if stage is not None else pack.get("stage")
         return cls(
             read(pack_dir / "agents.yaml"),
             read(contracts_dir / "mcp/tools.json"),
             read(contracts_dir / "auth/scopes.json"),
             tuple(t["id"] for t in org.get("access_tags", [])),
+            stage,
         )
 
     def get(self, agent_id: str) -> AgentEntry | None:
