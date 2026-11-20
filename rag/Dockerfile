@@ -11,5 +11,6 @@ COPY packs/ /repo/packs/
 COPY contracts/eval /repo/contracts/eval
 ENV PACK_DIR=/repo/packs/manufacturing RAG_CACHE_DIR=/data/rag-cache
 EXPOSE 8000
-HEALTHCHECK --interval=5s --timeout=3s CMD python -c "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"
+# 시작 때 gateway를 기다리고(최대 120초) 문서를 임베딩하므로 시작 유예를 둡니다(#127).
+HEALTHCHECK --interval=5s --timeout=3s --start-period=180s --retries=3 CMD python -c "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"
 CMD ["uv", "run", "--no-dev", "uvicorn", "--factory", "rag.app:from_env", "--host", "0.0.0.0", "--port", "8000"]

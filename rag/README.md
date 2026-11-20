@@ -85,6 +85,7 @@ RAG_EMBEDDER=hash DELEGATION_TOKEN_PUBLIC_KEY=infra/dev-keys/delegation-es256.pu
 | `RAG_EMBEDDER` | `gateway`(기본) 또는 `hash`(음절 2-gram 해시. 의미를 담지 않는 시험·개발용) |
 | `RAG_EMBED_BASE_URL`, `GATEWAY_LLM_URL` | 임베딩을 부를 OpenAI 호환 주소(앞의 것이 우선) |
 | `RAG_EMBED_MODEL` | 임베딩 모델 이름(기본 `local-embed`) |
+| `RAG_EMBED_STARTUP_WAIT` | 시작 때 gateway를 기다리는 최대 초(기본 120). 첫 임베딩이 성공한 뒤에는 다시 시도하지 않음 |
 | `RAG_CACHE_DIR` | 임베딩 캐시 폴더(기본 `rag/.cache`) |
 | `RAG_STAGE` | 이 단계까지의 문서만 씁니다 |
 | `GATEWAY_LLM_URL` | 답 생성용 gateway 주소(예: http://gateway:8000/v1). 없으면 `/answer`는 503 |

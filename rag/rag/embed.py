@@ -12,13 +12,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import math
 import os
+import time
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
 
 from rag.search import Embedder, tokenize
+
+log = logging.getLogger(__name__)
 
 
 class HashEmbedder:
@@ -39,29 +44,65 @@ class HashEmbedder:
 
 
 class GatewayEmbedder:
+    """gateway `/v1/embeddings` 호출.
+
+    첫 호출이 성공하기 전(시작 때 색인)에는 gateway에 닿지 못하거나 502·503·504를 받으면 `startup_wait`초까지
+    다시 시도합니다. compose에서 rag가 gateway보다 먼저 뜨면 연결 거부로 종료하던 문제 때문입니다(#127).
+    한 번 성공한 뒤의 질의 임베딩은 다시 시도하지 않고 바로 실패합니다(요청을 오래 붙잡지 않게).
+    """
+
     BATCH = 32
+    RETRY_STATUS = {502, 503, 504}
 
     def __init__(
         self, base_url: str, model: str, api_key: str | None = None, timeout: float = 60.0,
-        transport: httpx.BaseTransport | None = None,
+        transport: httpx.BaseTransport | None = None, startup_wait: float = 120.0,
+        sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
     ):
         self.name = model
         self._transport = transport
         self._url = base_url.rstrip("/") + "/embeddings"
         self._headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._timeout = timeout
+        self._startup_wait = startup_wait
+        self._sleep = sleep
+        self._clock = clock
+        self._ready = False
+
+    def _post(self, client: httpx.Client, batch: list[str]) -> httpx.Response:
+        deadline = self._clock() + (0 if self._ready else self._startup_wait)
+        delay = 1.0
+        while True:
+            error: httpx.TransportError | None = None
+            r: httpx.Response | None = None
+            try:
+                r = client.post(self._url, json={"model": self.name, "input": batch}, headers=self._headers)
+            except httpx.TransportError as e:
+                error = e
+            if r is not None and r.status_code not in self.RETRY_STATUS:
+                return r
+            if self._clock() + delay > deadline:
+                if error is not None:
+                    raise error
+                assert r is not None
+                return r
+            failure = type(error).__name__ if error is not None else f"gateway 응답 {r.status_code if r else '-'}"
+            log.warning("임베딩 gateway를 기다립니다(%s), %.0f초 뒤 다시 시도", failure, delay)
+            self._sleep(delay)
+            delay = min(delay * 2, 10.0)
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         vectors: list[list[float]] = []
         with httpx.Client(timeout=self._timeout, transport=self._transport) as client:
             for i in range(0, len(texts), self.BATCH):
                 batch = texts[i : i + self.BATCH]
-                r = client.post(self._url, json={"model": self.name, "input": batch}, headers=self._headers)
+                r = self._post(client, batch)
                 r.raise_for_status()
                 data = sorted(r.json()["data"], key=lambda d: d["index"])
                 if len(data) != len(batch):
                     raise ValueError(f"임베딩 {len(batch)}개를 보냈는데 {len(data)}개가 왔습니다")
                 vectors.extend(d["embedding"] for d in data)
+                self._ready = True
         return vectors
 
 
@@ -102,4 +143,6 @@ def embedder_from_env(cache_dir: Path) -> Embedder:
     model = os.environ.get("RAG_EMBED_MODEL", "local-embed")
     if not base:
         raise ValueError("RAG_EMBED_BASE_URL이나 GATEWAY_LLM_URL이 필요합니다(또는 RAG_EMBEDDER=hash)")
-    return CachedEmbedder(GatewayEmbedder(base, model, os.environ.get("RAG_EMBED_API_KEY")), cache_dir)
+    wait = float(os.environ.get("RAG_EMBED_STARTUP_WAIT") or 120)
+    inner = GatewayEmbedder(base, model, os.environ.get("RAG_EMBED_API_KEY"), startup_wait=wait)
+    return CachedEmbedder(inner, cache_dir)
