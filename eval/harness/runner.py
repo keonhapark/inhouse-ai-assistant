@@ -66,6 +66,12 @@ class RunRow:
     retry: bool = False
     # 실제로 쓴 모델: "이름(위치)". 이벤트의 model과 외부 요청 기록의 model에서 모읍니다
     models: list[str] = field(default_factory=list)
+    # 이 회차를 돌린 하네스 커밋(git HEAD)·미커밋 여부, 대상 시스템 스택을 빌드한 커밋(설정 stackCommit), 팩 단계.
+    # 나눠·이어 돌린 회차가 같은 시스템에서 돌았는지 보려고 회차마다 남깁니다. 이 필드가 생기기 전 기록은 None
+    commit: str | None = None
+    dirty: bool | None = None
+    stack_commit: str | None = None
+    pack_stage: int | None = None
 
 
 @dataclass
@@ -121,6 +127,18 @@ def used_models(events: list[dict[str, Any]], external_models: list[str]) -> lis
     return sorted(got)
 
 
+def run_signature(row: RunRow) -> tuple[str | None, str | None, int | None]:
+    """같은 시스템에서 돌았는지 비교하는 값: (하네스 커밋, 스택 커밋, 팩 단계)."""
+    return row.commit, row.stack_commit, row.pack_stage
+
+
+def signature_counts(rows: list[RunRow]) -> dict[tuple[str | None, str | None, int | None], int]:
+    out: dict[tuple[str | None, str | None, int | None], int] = {}
+    for r in rows:
+        out[run_signature(r)] = out.get(run_signature(r), 0) + 1
+    return out
+
+
 def pack_versions(pack_ids: list[str]) -> str:
     out = []
     for pid in pack_ids:
@@ -168,7 +186,8 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                on_row: Callable[[RunRow], None] | None = None,
                done_rows: list[RunRow] | None = None, max_runs: int | None = None,
                started_at: str | None = None, health_check: HealthCheck | None = None,
-               prior_cost_usd: float = 0.0, pack_stage: int | None = None) -> tuple[list[RunRow], RunMeta]:
+               prior_cost_usd: float = 0.0, pack_stage: int | None = None,
+               stack_commit: str | None = None) -> tuple[list[RunRow], RunMeta]:
     """done_rows는 앞서 끝낸 회차입니다(이어 돌리기). 같은 (시나리오, 조건, 회차)는 다시 돌리지 않습니다.
     max_runs는 이번에 새로 돌릴 회차 수 상한입니다(나눠 돌리기). prior_cost_usd는 done_rows에 없는 앞선 시도
     (다시 돌린 회차)의 비용으로, 비용 상한에 같이 셉니다. health_check는 재시도 가능한 오류가 났을 때 모델 서버가
@@ -207,6 +226,8 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                 new_runs += 1
                 row = run_one(scenario, condition, repeat, seed, system_factory, erp_factory, time_limit_s,
                               health_check)
+                row.commit, row.dirty, row.stack_commit, row.pack_stage = (meta.commit, meta.dirty, stack_commit,
+                                                                           pack_stage)
                 rows.append(row)
                 if row.cost_usd is None:
                     meta.cost_unknown_runs += 1

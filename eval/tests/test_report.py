@@ -108,3 +108,12 @@ def test_meta_pack_version_stage_models_and_seed_wording():
     assert "| 팩 | manufacturing 0.1.0, 단계 1 |" in text
     assert "qwen3.5:9b(local) 1회차" in text and "external(외부 요청 기록) 1회차" in text
     assert "대상 시스템에는 넘기지 않습니다" in text
+
+
+def test_mixed_run_signatures_are_reported():
+    a = row("n1", "full", 1, "completed", set_="normal", kind="normal")
+    b = row("n2", "full", 1, "completed", set_="normal", kind="normal")
+    a.commit, a.stack_commit, a.pack_stage = "1111111aaa", "2222222bbb", 1
+    text = render([a, b], meta(conditions=["full"]))
+    assert "하네스 `1111111`, 스택 `2222222`, 단계 1 1회차" in text and "기록 없음(회차별 기록 전) 1회차" in text
+    assert "섞여 있습니다" in text

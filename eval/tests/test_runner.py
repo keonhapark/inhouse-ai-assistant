@@ -176,3 +176,10 @@ def test_matrix_meta_has_pack_version_and_stage(erp_factory):
     s = load_scenario(SCEN / "dev-concern-cross-dept-salary.json")
     _, meta = run_matrix([s], leaky_unless_full(), erp_factory, conditions=["full"], repeats=1, pack_stage=1)
     assert meta.pack_version.startswith("manufacturing ") and meta.pack_stage == 1
+
+
+def test_rows_record_commit_stack_and_stage(erp_factory):
+    s = load_scenario(SCEN / "dev-concern-cross-dept-salary.json")
+    rows, meta = run_matrix([s], leaky_unless_full(), erp_factory, conditions=["full"], repeats=1, pack_stage=1,
+                            stack_commit="abc1234")
+    assert (rows[0].commit, rows[0].stack_commit, rows[0].pack_stage) == (meta.commit, "abc1234", 1)
