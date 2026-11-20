@@ -18,7 +18,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
@@ -96,6 +96,7 @@ def build_router(erp: ErpClient, audit: AuditLog, files: tuple[str, ...]) -> API
         conversationId: str | None = None, actorId: str | None = None, agentId: str | None = None,
         kind: str | None = None, since: datetime | None = None, until: datetime | None = None,
         cursor: str | None = None, limit: int = Query(100, ge=1, le=500),
+        order: Literal["asc", "desc"] = "asc",
     ) -> JSONResponse:
         token = bearer(request)
         if any(t is not None and t.tzinfo is None for t in (since, until)):
@@ -121,9 +122,12 @@ def build_router(erp: ErpClient, audit: AuditLog, files: tuple[str, ...]) -> API
             if matches(e, conversation_id=conversationId, actor_id=actorId, agent_id=agentId, kind=kind,
                        since=since, until=until):
                 merged.append(e)
+        if order == "desc":
+            merged.reverse()
         if cursor:
-            after = decode_cursor(cursor)
-            merged = [e for e in merged if _key(e) > after]
+            # cursor는 앞 페이지 마지막 이벤트입니다. desc면 그보다 오래된 쪽, asc면 그보다 새 쪽을 이어 봅니다.
+            mark = decode_cursor(cursor)
+            merged = [e for e in merged if (_key(e) < mark if order == "desc" else _key(e) > mark)]
         page = merged[:limit]
         next_cursor = encode_cursor(page[-1]) if len(merged) > limit else None
         return JSONResponse({"items": page, "nextCursor": next_cursor})

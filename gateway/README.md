@@ -21,8 +21,13 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     토큰 없는 호출은 `external`을 쓰면 403 `model-policy`이고, 밖으로 아무것도 나가지 않습니다.
   - 토큰 헤더는 LiteLLM으로 넘기지 않고, 본문의 토큰 모양 문자열도 가린 뒤 보냅니다.
   - 기록(`GATEWAY_AUDIT_DIR`, 기본 `gateway/var/`, 커밋하지 않음): `audit.jsonl`에 감사 이벤트 `llm.request`
-    (모델, 외부 전송 여부, 결과), `egress.jsonl`에 외부로 나간 요청의 가림 뒤 본문, 가린 자리(종류·위치), 응답, 사용량·비용.
+    (모델, 외부 전송 여부, 결과. 위임 토큰이 있으면 `actor.employeeId`·`agentId`는 토큰의 `sub`·`agt`),
+    `egress.jsonl`에 외부로 나간 요청의 가림 뒤 본문, 가린 자리(종류·위치), 응답, 사용량·비용.
     가림 전 원문은 저장하지 않습니다(#211, `/ops/egress` 계약). 응답 본문이 들어 있어 접근을 제한해야 하는 파일입니다.
+  - 토큰 없는 호출의 `llm.request`는 `actor.employeeId`·`agentId`가 null입니다(#276). 출구는 위임 토큰으로만 요청자를
+    알기 때문입니다. 지금 이런 호출은 agent 입구 라우터의 분류 호출(에이전트를 고르기 전이라 토큰이 없음), rag 질의 임베딩,
+    평가 모드의 도구 호출 측정(`purpose=eval-toolcall`)입니다. 2026-11-21 실제 스택 기록에서 토큰이 있는 호출 537건은 모두
+    채워져 있었고, null 272건은 모두 토큰 없는 호출이었습니다.
   - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
   - 비용 상한(`gateway/budgets.py`, 팩 선택 파일 `budgets.yaml`, #155): 외부 응답 비용(LiteLLM `x-litellm-response-cost`,
@@ -98,7 +103,8 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
 - 감사 조회 `GET /api/audit-events`(`gateway/audit_query.py`, erp `auditor` 역할만): erp `GET /audit-events`,
   gateway 자기 `audit.jsonl`, `AUDIT_EVENT_FILES`(쉼표로 구분한 경로나 glob, agent·MCP·rag가 쓰는 JSON Lines)를 시각 순으로
   합칩니다. `eventId`가 같으면 한 번만 넣습니다. 필터는 `conversationId`, `actorId`, `agentId`, `kind`, `since`·`until`
-  (시간대 오프셋 필요)이고, `cursor`는 마지막 이벤트의 (시각, eventId)입니다. erp는 한 번에 최근 500건까지만 줍니다.
+  (시간대 오프셋 필요)이고, `cursor`는 마지막 이벤트의 (시각, eventId)입니다. `order=desc`면 최근 것부터 주고 `cursor`는
+  더 오래된 쪽으로 이어집니다(#276, 기본 asc). erp는 한 번에 최근 500건까지만 줍니다.
 - 팩 단계(#170): `pack.yaml`의 `stage`가 기준이고 `GATEWAY_PACK_STAGE`는 덮어쓰기만 합니다. 그 단계 이하 에이전트만
   등록부에 실어, `/api/agents`에 보이지 않는 에이전트는 대화를 만들 수 없고(403) 위임 토큰도 발급하지 않습니다(404).
 - 사람용 경로(`/api/*`의 로그인 뒤 경로)는 직원 JWT만 받습니다. Bearer 값이 위임 토큰(`iss: gateway` 또는 `agt` 클레임)이면
