@@ -35,6 +35,7 @@ tags:
   - name: inbox
   - name: delegations
   - name: audit
+  - name: ops
   - name: system
 
 paths:
@@ -502,6 +503,59 @@ paths:
                   nextCursor: {type: [string, "null"]}
         "403": {$ref: "#/components/responses/Problem"}
 
+  /ops/metrics:
+    get:
+      tags: [ops]
+      operationId: getOpsMetrics
+      description: |
+        auditor 역할만(관리자 콘솔). 기간 안의 감사 이벤트·외부 요청 기록에서 에이전트별 운영 지표를 셉니다.
+        - 호출 수: `route.decided` 이벤트 수(직접 고른 대화의 `explicit` 포함)
+        - 정책 차단: `tool.blocked`·`rag.access_denied`와 gateway가 막은 요청을 ChatEvent `blocked.code`로 나눈 수
+        - 외부·로컬: `llm.request`의 `model.location`
+        - 외부 비용: 외부 요청 기록(`events/external-request.schema.json`)의 `costUsd` 합. `null`인 요청은 `unpricedRequests`로 셉니다
+        - 비용 상한: 팩 `budgets.yaml` 대비 사용량. 기간 필터와 관계없이 지금 누적 기간(`period`)의 값입니다
+      parameters:
+        - {name: since, in: query, description: 없으면 until의 24시간 전, schema: {type: string, format: date-time}}
+        - {name: until, in: query, description: 없으면 지금, schema: {type: string, format: date-time}}
+      responses:
+        "200":
+          description: 운영 지표
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OpsMetrics"}
+        "400": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+
+  /ops/egress:
+    get:
+      tags: [ops]
+      operationId: listEgressRecords
+      description: |
+        auditor 역할만(관리자 콘솔). 외부 모델로 실제 보낸 요청을 최근 것부터 돌려줍니다.
+        가림 뒤 본문과 가린 자리(종류·위치)만 돌려주고, 가림 전 원문은 저장하지도 돌려주지도 않습니다.
+        화면은 `redactions`의 위치로 가린 자리를 표시합니다.
+      parameters:
+        - {name: since, in: query, schema: {type: string, format: date-time}}
+        - {name: until, in: query, schema: {type: string, format: date-time}}
+        - {name: agentId, in: query, schema: {type: string}}
+        - {name: cursor, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+      responses:
+        "200":
+          description: 외부 전송 기록
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "#/components/schemas/EgressRecord"}
+                  nextCursor: {type: [string, "null"]}
+        "400": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+
 components:
   securitySchemes:
     bearer:
@@ -678,3 +732,123 @@ components:
           properties:
             delegatorName: {type: string}
             delegateName: {type: string}
+
+    OpsMetrics:
+      type: object
+      required: [since, until, totals, agents, routing]
+      properties:
+        since: {type: string, format: date-time}
+        until: {type: string, format: date-time}
+        totals: {$ref: "#/components/schemas/OpsCounts"}
+        agents:
+          type: array
+          description: 팩에 있는 에이전트마다 한 줄(기간 안에 호출이 없어도 0으로)
+          items:
+            allOf:
+              - type: object
+                required: [agentId, agentName]
+                properties:
+                  agentId: {type: string}
+                  agentName: {type: string}
+              - $ref: "#/components/schemas/OpsCounts"
+        routing:
+          type: object
+          description: 입구 라우팅 결과(`route.decided`의 `routing.method`)별 수
+          required: [total, byMethod]
+          properties:
+            total: {type: integer, minimum: 0}
+            byMethod:
+              type: object
+              properties:
+                llm: {type: integer, minimum: 0}
+                keyword: {type: integer, minimum: 0}
+                fallback: {type: integer, minimum: 0}
+                explicit: {type: integer, minimum: 0}
+        budgets:
+          type: [object, "null"]
+          description: 팩 `budgets.yaml`이 없으면 null
+          required: [period, periodStart, agents, units]
+          properties:
+            period: {type: string, enum: [day, month]}
+            periodStart: {type: string, format: date-time, description: 지금 누적 기간의 시작(팩 시간대 기준)}
+            agents:
+              type: array
+              items: {$ref: "#/components/schemas/BudgetUsage"}
+            units:
+              type: array
+              items: {$ref: "#/components/schemas/BudgetUsage"}
+
+    OpsCounts:
+      type: object
+      required: [calls, blocked, llmRequests, externalCostUsd]
+      properties:
+        calls: {type: integer, minimum: 0, description: 에이전트 실행 수(`route.decided`)}
+        blocked:
+          type: object
+          required: [total, byCode]
+          properties:
+            total: {type: integer, minimum: 0}
+            byCode:
+              type: object
+              description: ChatEvent `blocked.code` 값 → 수. 0인 코드는 빼도 됩니다
+              propertyNames:
+                enum: [agent_not_callable, tool_not_allowed, trust_violation, policy_denied, scope_missing, model_policy]
+              additionalProperties: {type: integer, minimum: 0}
+        llmRequests:
+          type: object
+          required: [local, external]
+          properties:
+            local: {type: integer, minimum: 0}
+            external: {type: integer, minimum: 0}
+        externalCostUsd: {type: number, minimum: 0}
+        unpricedRequests: {type: integer, minimum: 0, description: "외부 요청 중 비용을 모르는(`costUsd: null`) 수"}
+
+    BudgetUsage:
+      type: object
+      required: [id, limitUsd, usedUsd]
+      properties:
+        id: {type: string, description: 에이전트 ID 또는 부서 ID}
+        name: {type: string}
+        limitUsd: {type: number, minimum: 0}
+        usedUsd: {type: number, minimum: 0}
+        exceeded: {type: boolean, description: 상한을 넘어 외부 요청을 로컬로 내리는 중}
+
+    EgressRecord:
+      type: object
+      description: 외부 요청 기록 한 건. 가림 전 원문은 없습니다
+      required: [recordId, at, agentId, conversationId, model, messages, redactions]
+      properties:
+        recordId: {type: string}
+        at: {type: string, format: date-time}
+        agentId: {type: [string, "null"]}
+        agentName: {type: [string, "null"]}
+        conversationId: {type: [string, "null"]}
+        actorId: {type: [string, "null"], description: 요청한 직원(위임 토큰 sub)}
+        model: {type: string, description: LiteLLM에 넘긴 실제 모델 이름}
+        usage:
+          type: [object, "null"]
+          properties:
+            promptTokens: {type: integer, minimum: 0}
+            completionTokens: {type: integer, minimum: 0}
+        costUsd: {type: [number, "null"]}
+        messages:
+          type: array
+          description: 외부로 보낸 요청 본문의 messages(가림 뒤). 문자열이 아닌 content는 텍스트 부분만 이어 붙입니다
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role: {type: string}
+              content: {type: string}
+        redactions:
+          type: array
+          description: 가린 자리. 위치는 가림 뒤 `messages[messageIndex].content`에서 바꿔 넣은 표시(`placeholder`)의 UTF-16 범위입니다(JavaScript 문자열 위치와 같음)
+          items:
+            type: object
+            required: [entity, placeholder, messageIndex, start, end]
+            properties:
+              entity: {type: string, description: "가린 종류(예: KR_RRN, KR_PHONE, EMAIL_ADDRESS)"}
+              placeholder: {type: string, description: "바꿔 넣은 표시(예: [주민등록번호])"}
+              messageIndex: {type: integer, minimum: 0}
+              start: {type: integer, minimum: 0}
+              end: {type: integer, minimum: 0}

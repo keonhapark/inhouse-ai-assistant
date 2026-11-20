@@ -12,7 +12,7 @@ from jsonschema import Draft202012Validator
 from openapi_spec_validator import validate as validate_openapi
 from openapi_spec_validator.readers import read_from_filename
 
-from tests.schema_check import validate_file
+from tests.schema_check import validate, validate_file
 from tools.check_packs import main as check_packs_main
 from tools.common import CONTRACTS, PACKS, ROOT, load, openapi_operations
 
@@ -77,6 +77,30 @@ def test_example_events_follow_schema() -> None:
         "startedAt": "2026-11-20T10:00:00+09:00", "durationMs": 120.5, "status": "ok",
         "llm": {"model": "qwen3.5:9b", "location": "local", "inputTokens": 512, "outputTokens": 20,
                 "costUsd": 0, "cached": False}})
+
+
+def test_ops_examples_follow_schema() -> None:
+    counts = {"calls": 12, "blocked": {"total": 2, "byCode": {"trust_violation": 1, "policy_denied": 1}},
+              "llmRequests": {"local": 9, "external": 3}, "externalCostUsd": 0.0042, "unpricedRequests": 0}
+    metrics = {
+        "since": "2026-11-20T00:00:00+09:00", "until": "2026-11-21T00:00:00+09:00", "totals": counts,
+        "agents": [{"agentId": "assistant", "agentName": "전사 비서", **counts}],
+        "routing": {"total": 12, "byMethod": {"llm": 7, "keyword": 3, "fallback": 1, "explicit": 1}},
+        "budgets": {"period": "month", "periodStart": "2026-11-01T00:00:00+09:00",
+                    "agents": [{"id": "assistant", "limitUsd": 20, "usedUsd": 0.0042, "exceeded": False}],
+                    "units": [{"id": "mgmt", "name": "경영지원본부", "limitUsd": 15, "usedUsd": 0.0042}]},
+    }
+    validate("openapi/gateway.yaml", "OpsMetrics", metrics)
+    validate("openapi/gateway.yaml", "OpsMetrics", {**metrics, "budgets": None})
+    with pytest.raises(AssertionError):
+        validate("openapi/gateway.yaml", "OpsCounts", {**counts, "blocked": {"total": 1, "byCode": {"unknown": 1}}})
+
+    validate("openapi/gateway.yaml", "EgressRecord", {
+        "recordId": "egr_1", "at": "2026-11-20T10:00:00+09:00", "agentId": "assistant", "agentName": "전사 비서",
+        "conversationId": "cnv_1", "actorId": "E0007", "model": "anthropic/claude-haiku-5-5",
+        "usage": {"promptTokens": 120, "completionTokens": 30}, "costUsd": 0.000027,
+        "messages": [{"role": "user", "content": "[전화번호]로 회의 안내 보내 줘"}],
+        "redactions": [{"entity": "KR_PHONE", "placeholder": "[전화번호]", "messageIndex": 0, "start": 0, "end": 6}]})
 
 
 def test_no_human_only_operation_is_a_tool() -> None:
