@@ -1,0 +1,25 @@
+[project]
+name = "contracts"
+version = "0.1.0"
+description = "계약, 상태 있는 가짜 erp, 행동 계약 시험, 팩 검사"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.165.0",
+  "uvicorn==0.54.0",
+  "pyjwt[crypto]==2.15.1",
+  "pyyaml==6.0.3",
+  "jsonschema==4.26.0",
+  "httpx==0.28.1",
+  "faker==40.54.0",
+  "openapi-spec-validator==0.9.0",
+]
+
+[dependency-groups]
+dev = ["pytest==9.2.0"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
