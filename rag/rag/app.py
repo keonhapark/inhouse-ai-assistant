@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import hmac
 import logging
 import os
@@ -156,6 +157,9 @@ def create_app(
 
     if admin_token and purge_list is not None:
         # 운영자 키가 없으면 경로를 두지 않아 404입니다(계약).
+        # 감사에는 운영자 키의 지문(SHA-256 앞 12자)을 남깁니다. 키 하나를 운영자들이 같이 쓰면 사람까지는
+        # 가리지 못하지만, 운영자마다 키를 따로 주면 어느 키로 파기했는지가 사건 재구성의 근거가 됩니다.
+        operator = "operatorKey=" + hashlib.sha256(admin_token.encode()).hexdigest()[:12]
         @api.delete("/documents/{doc_id}", status_code=204, response_model=None)
         def purge(doc_id: str, authorization: Annotated[str | None, Header()] = None) -> JSONResponse | None:
             scheme, _, given = (authorization or "").partition(" ")
@@ -165,7 +169,7 @@ def create_app(
             result = purge_document(index, doc_id, purge_list)
             if result is None:
                 return problem(404, "not-found", "문서가 없습니다", doc_id)
-            record("rag.document_purged", "ok", None, "purge", detail=result.detail())
+            record("rag.document_purged", "ok", None, "purge", detail=f"{operator}; {result.detail()}")
             log.info("purge %s", result.detail())
             return None
 
