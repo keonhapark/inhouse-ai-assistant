@@ -44,6 +44,21 @@
 
 임베딩은 gateway의 OpenAI 호환 `/v1/embeddings`로 부릅니다. 같은 본문은 `RAG_CACHE_DIR`에 저장해 다시 보내지 않습니다.
 
+## 답(`POST /answer`)
+
+1. `/search`와 같은 범위(토큰 `doc_scopes`)에서 하이브리드 상위 5개를 근거 후보로 고릅니다. 질문에 말이 없거나 후보가 없으면 LLM을 부르지 않습니다.
+2. gateway의 OpenAI 호환 `/v1/chat/completions`를 위임 토큰과 함께 부릅니다. gateway가 에이전트 모델 정책을 적용합니다. 모델은 LiteLLM 별칭(`RAG_LLM_MODEL`, 기본 `local`)이고, `reasoning_effort: none`으로 생각 과정을 끕니다.
+3. 모델은 `{"found", "answer", "citations": [{"ref", "quote"}]}`를 냅니다. 인용(quote)이 그 근거 본문에 글자 그대로 있는지 대조합니다(공백 차이만 무시, 4자 미만은 통과시키지 않음).
+4. 대조를 통과한 인용이 하나도 없으면 답을 버리고 `found: false`와 "규정에서 찾지 못했습니다."를 돌려줍니다. 통과하지 못한 인용은 `verified: false`로 남깁니다.
+5. 신뢰 불가 근거는 프롬프트에 표시하고 그 안의 지시를 따르지 않게 합니다.
+
+감사 이벤트는 `RAG_AUDIT_LOG`(기본 `rag/.data/audit.jsonl`)에 JSON Lines로 씁니다. 질문 원문과 토큰은 넣지 않습니다.
+
+| 이벤트 | 남기는 때 |
+|---|---|
+| `rag.answered` | 답을 냈을 때(`result: ok`, found·인용 대조 수), LLM 호출이 실패했을 때(`result: error`, 응답 502) |
+| `rag.access_denied` | 토큰이 없거나 틀렸을 때(401). 권한 없이 검색했다면 상위에 들었을 문서를 근거에서 뺐을 때(문서 ID만 적음) |
+
 ## 실행
 
 ```
@@ -61,6 +76,9 @@ RAG_EMBEDDER=hash DELEGATION_TOKEN_PUBLIC_KEY=infra/dev-keys/delegation-es256.pu
 | `RAG_EMBED_MODEL` | 임베딩 모델 이름(기본 `local-embed`) |
 | `RAG_CACHE_DIR` | 임베딩 캐시 폴더(기본 `rag/.cache`) |
 | `RAG_STAGE` | 이 단계까지의 문서만 씁니다 |
+| `GATEWAY_LLM_URL` | 답 생성용 gateway 주소(예: http://gateway:8000/v1). 없으면 `/answer`는 503 |
+| `RAG_LLM_MODEL`, `RAG_LLM_REASONING` | 답 생성 모델 별칭(기본 `local`), reasoning_effort(기본 `none`, 빈 값이면 보내지 않음) |
+| `RAG_AUDIT_LOG` | 감사 이벤트 파일 |
 
 ## 시험
 
