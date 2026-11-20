@@ -1,3 +1,4 @@
+import pytest
 import json
 
 import httpx
@@ -42,13 +43,15 @@ def test_gateway_chat_flow():
         return httpx.Response(404)
 
     c = httpx.Client(base_url="http://gw/api", transport=httpx.MockTransport(handler))
-    g = GatewayChat(c, auditor="E0050", password="pw", external_log=lambda cid: [f"body-{cid}"])
+    g = GatewayChat(c, auditor="E0050", password="pw",
+                    external_log=lambda cid: [{"conversationId": cid, "body": f"body-{cid}", "costUsd": 0.002}])
     cid = g.start("E0016")
     assert [e["type"] for e in g.send(cid, "안녕")] == ["message", "done"]
     assert [e["type"] for e in g.decide(cid, "p1", "approve")] == ["done"]
     got = g.collect(cid)
     assert [a["kind"] for a in got.audit_events] == ["tool.called", "erp.write"]
     assert got.external_requests == ["body-c1"]
+    assert got.cost_usd == 0.002
     chat_auth = {a for m, p, a in seen if p.startswith("/api/conversations")}
     assert chat_auth == {"Bearer tok-E0016"}
     assert {a for m, p, a in seen if p == "/api/audit-events"} == {"Bearer tok-E0050"}
@@ -75,7 +78,7 @@ def test_condition_header_and_external_log(tmp_path):
         {"conversationId": "c9", "at": "t", "model": "m", "body": {"messages": [{"content": "가"}]}},
         {"conversationId": "other", "at": "t", "model": "m", "body": {"messages": []}},
     ]) + "\n", encoding="utf-8")
-    assert read("c9") == [{"messages": [{"content": "가"}]}]
+    assert [r["body"] for r in read("c9")] == [{"messages": [{"content": "가"}]}]
 
 
 def test_docker_external_log(monkeypatch):
@@ -86,9 +89,16 @@ def test_docker_external_log(monkeypatch):
     lines = "\n".join(json.dumps(r) for r in [{"conversationId": "c1", "at": "t", "model": "m", "body": {"a": 1}},
                                               {"conversationId": "c2", "at": "t", "model": "m", "body": {"a": 2}}])
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, stdout=lines + "\n"))
-    assert docker_external_log("gw", "/audit/x.jsonl")("c1") == [{"a": 1}]
+    assert [r["body"] for r in docker_external_log("gw", "/audit/x.jsonl")("c1")] == [{"a": 1}]
 
     def boom(*a, **k):
         raise OSError("no docker")
     monkeypatch.setattr(subprocess, "run", boom)
     assert docker_external_log("gw", "/audit/x.jsonl")("c1") is None
+
+
+def test_external_cost():
+    from harness.sut import external_cost
+    assert external_cost([]) == 0.0
+    assert external_cost([{"costUsd": 0.001}, {"costUsd": 0.002}]) == pytest.approx(0.003)
+    assert external_cost([{"costUsd": 0.001}, {"costUsd": None}]) is None
