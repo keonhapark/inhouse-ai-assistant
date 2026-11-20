@@ -65,6 +65,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                     transport=llm_transport, redactor=korean, glossary=Glossary.load(settings.pack_dir),
                     external_log=JsonlWriter(settings.external_log) if settings.external_log else None,
                     # 평가 모드가 아니면 조건이 없어 쓰이지 않으므로 기성 인식기를 싣지 않습니다.
+                    drop_params={a: frozenset(i.get("drop_params", [])) for a, i in model_info.items()},
                     baseline_redactor=BaselineRedactor() if settings.eval_mode else korean,
                     no_response_format=frozenset(a for a, i in model_info.items()
                                                  if i.get("supports_response_format") is False))

@@ -176,6 +176,7 @@ class Egress:
                  redactor: Redactor = no_redaction, glossary: Glossary | None = None,
                  external_log: JsonlWriter | None = None, no_response_format: frozenset[str] = frozenset(),
                  baseline_redactor: Redactor = no_redaction,
+                 drop_params: dict[str, frozenset[str]] | None = None,
                  condition_of: Callable[[str | None], str | None] = lambda _cid: None):
         self.locations = locations
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
@@ -184,6 +185,7 @@ class Egress:
         self.external_log = external_log  # contracts/events/external-request.schema.json, 평가 때만
         self.usage = ModelUsage()
         self.baseline_redactor = baseline_redactor
+        self.drop_params = drop_params or {}  # 별칭별로 보내기 전에 뺄 필드(model_info.drop_params)
         # 위임 토큰 cid로 대화의 평가 조건을 찾습니다(채팅 흐름이 기억). 운영에서는 늘 None → full.
         self.condition_of = condition_of
         self.no_response_format = no_response_format  # model_info.supports_response_format: false인 별칭
@@ -290,6 +292,9 @@ class Egress:
                 detail = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
                 self._audit(caller, model, "ok", detail=detail, kind="llm.redacted")
 
+        drop = self.drop_params.get(model["name"], frozenset())
+        if drop & set(sent):
+            sent = {k: v for k, v in sent.items() if k not in drop}
         if "response_format" in sent and model["name"] in self.no_response_format:
             raise ProblemError(400, "unsupported-parameter", "이 모델은 response_format(구조화 출력)을 지원하지 않습니다",
                                f"{model['name']}. 형식은 도구 호출이나 프롬프트 지시로 맞출 수 있습니다")

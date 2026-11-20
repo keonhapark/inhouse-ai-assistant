@@ -24,10 +24,13 @@ model_list:
 
   - model_name: external
     litellm_params:
-      model: anthropic/claude-haiku-4-5
+      model: anthropic/claude-haiku-5-5              # $0.10 / $0.50 per MTok(프롬프트 100K 이하), 문맥 1M
       api_key: os.environ/ANTHROPIC_API_KEY
     model_info:
       location: external
+      # Claude Haiku 5.5는 기본값이 아닌 샘플링 값을 400으로 거절합니다. LiteLLM 1.108.1도 빼지만(실측),
+      # 판이 바뀌어도 400이 나지 않게 gateway가 먼저 뺍니다. 추론 조절은 reasoning_effort로 합니다.
+      drop_params: [temperature, top_p]
 
 litellm_settings:
   request_timeout: 60
