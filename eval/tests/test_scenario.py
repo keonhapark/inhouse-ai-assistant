@@ -1,6 +1,7 @@
 import json
 
 import pytest
+import yaml
 
 from harness.paths import ROOT
 from harness.scenario import ScenarioError, load_scenarios, substitute, validate_scenario
@@ -60,3 +61,12 @@ def test_substitute():
     assert substitute({"a": ["${x}/y"], "b": 1}, {"x": "D1"}) == {"a": ["D1/y"], "b": 1}
     with pytest.raises(KeyError):
         substitute("${nope}", {})
+
+
+def test_list_file(tmp_path):
+    (tmp_path / "many.yaml").write_text(yaml.safe_dump([base_scenario(id="t-a"), base_scenario(id="t-b"),
+                                                        base_scenario(id="t-a")], allow_unicode=True),
+                                        encoding="utf-8")
+    with pytest.raises(ScenarioError) as e:
+        load_scenarios(tmp_path)
+    assert "many.yaml[2]: id t-a가 many.yaml[0]와 겹칩니다" in str(e.value)

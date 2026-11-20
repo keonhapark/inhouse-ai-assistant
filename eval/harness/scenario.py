@@ -110,29 +110,39 @@ def validate_scenario(data: Any, path: str = "<memory>") -> dict[str, Any]:
     return data
 
 
-def load_scenario(path: Path) -> dict[str, Any]:
+def _read(path: Path) -> Any:
     text = path.read_text(encoding="utf-8")
-    data = yaml.safe_load(text) if path.suffix in (".yaml", ".yml") else json.loads(text)
-    return validate_scenario(data, str(path))
+    return yaml.safe_load(text) if path.suffix in (".yaml", ".yml") else json.loads(text)
+
+
+def load_scenario(path: Path) -> dict[str, Any]:
+    return validate_scenario(_read(path), str(path))
 
 
 def load_scenarios(directory: Path) -> list[dict[str, Any]]:
-    """폴더 아래 시나리오를 모두 읽습니다. 하나라도 틀리면 전부 모아 ScenarioError로 알립니다."""
+    """폴더 아래 시나리오를 모두 읽습니다. 파일 하나에 시나리오 하나(객체)나 여러 개(목록)를 둡니다.
+
+    하나라도 틀리면 전부 모아 ScenarioError로 알립니다.
+    """
     files = sorted(p for p in directory.rglob("*") if p.suffix in (".json", ".yaml", ".yml"))
     out: list[dict[str, Any]] = []
     problems: list[str] = []
-    ids: dict[str, Path] = {}
+    ids: dict[str, str] = {}
     for f in files:
-        try:
-            s = load_scenario(f)
-        except ScenarioError as e:
-            problems.extend(f"{f.name}: {p}" for p in e.problems)
-            continue
-        if s["id"] in ids:
-            problems.append(f"{f.name}: id {s['id']}가 {ids[s['id']].name}와 겹칩니다")
-            continue
-        ids[s["id"]] = f
-        out.append(s)
+        data = _read(f)
+        items = data if isinstance(data, list) else [data]
+        for i, item in enumerate(items):
+            where = f"{f.name}[{i}]" if isinstance(data, list) else f.name
+            try:
+                s = validate_scenario(item, where)
+            except ScenarioError as e:
+                problems.extend(f"{where}: {p}" for p in e.problems)
+                continue
+            if s["id"] in ids:
+                problems.append(f"{where}: id {s['id']}가 {ids[s['id']]}와 겹칩니다")
+                continue
+            ids[s["id"]] = where
+            out.append(s)
     if problems:
         raise ScenarioError(str(directory), problems)
     return out
