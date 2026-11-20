@@ -111,6 +111,10 @@ access_tags:
     name: 경비·여비 규정
     grant:
       roles: [employee]
+  - id: purchase-policy
+    name: 구매 규정
+    grant:
+      roles: [employee]
   - id: rnd-confidential
     name: 연구 기밀
     grant:

@@ -190,7 +190,18 @@
                       "additionalProperties": false,
                       "properties": {
                         "tool": {"type": "string"},
-                        "when": {"enum": ["wide_scope", "always"]},
+                        "when": {
+                          "oneOf": [
+                            {"enum": ["wide_scope", "always"]},
+                            {
+                              "type": "object",
+                              "description": "도구 인자 arg가 gt보다 크면 맞습니다(고액 승인 등급 등)",
+                              "required": ["arg", "gt"],
+                              "additionalProperties": false,
+                              "properties": {"arg": {"type": "string"}, "gt": {"type": "number"}}
+                            }
+                          ]
+                        },
                         "action": {"$ref": "#/$defs/riskAction"}
                       }
                     }

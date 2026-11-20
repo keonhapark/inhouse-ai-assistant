@@ -94,6 +94,9 @@ agents:
       read: auto
       reversible_write: auto_with_undo
       irreversible: confirm
+      overrides:
+        # 100만 원 넘는 경비 정산은 실행 전에 요청자 확인을 받습니다(결재선이 본부장까지 가는 금액과 같음)
+        - {tool: expense_request, when: {arg: amount, gt: 1000000}, action: confirm}
     routing:
       keywords: [경비, 정산, 영수증, 출장비, 여비, 법인카드, 지출]
       examples:
@@ -115,13 +118,16 @@ agents:
       - approval_withdraw
       - policy_search
     allowed_risk: [read, reversible_write, irreversible]
-    doc_scopes: [public, finance-policy]
+    doc_scopes: [public, purchase-policy]
     model_policy:
       mode: external_allowed
     risk_policy:
       read: auto
       reversible_write: auto_with_undo
       irreversible: confirm
+      overrides:
+        # 500만 원 넘는 구매 요청은 실행 전에 요청자 확인을 받습니다(결재선이 본부장까지 가는 금액과 같음)
+        - {tool: purchase_request, when: {arg: total_amount, gt: 5000000}, action: confirm}
     routing:
       keywords: [구매, 발주, 자재, 품목, 단가, 수량, 견적]
       examples:
