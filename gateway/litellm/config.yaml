@@ -1,0 +1,24 @@
+# LiteLLM 프록시 설정. gateway가 정책을 확인한 뒤 이 프록시로 넘깁니다.
+# 실행: uvx --from 'litellm[proxy]==1.108.1' litellm --config gateway/litellm/config.yaml --port $PORT_LITELLM
+# 호출하는 쪽(agent·rag)은 model에 아래 model_name(별칭)만 씁니다. gateway는 model_info.location으로
+# 로컬·외부를 가르고, 에이전트 정책(local_only)이면 외부 별칭을 막습니다.
+model_list:
+  - model_name: local
+    litellm_params:
+      model: ollama_chat/qwen3.5:9b
+      api_base: os.environ/OLLAMA_BASE_URL
+      num_ctx: 8192                                  # docs/measurements/0-memory.md: 세션 동시 실행 메모리 여유
+    model_info:
+      location: local
+
+  - model_name: external
+    litellm_params:
+      model: anthropic/claude-haiku-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+    model_info:
+      location: external
+
+litellm_settings:
+  request_timeout: 60
+  num_retries: 0          # 재시도는 gateway가 정하지 않고 호출하는 쪽이 정합니다
+  drop_params: true
