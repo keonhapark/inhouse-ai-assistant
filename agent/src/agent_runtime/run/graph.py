@@ -23,7 +23,7 @@ from langgraph.types import Command, interrupt
 from agent_runtime.audit import AuditLog, tool_blocked
 from agent_runtime.llm import ChatClient, LLMError
 from agent_runtime.registry import Agent
-from agent_runtime.run.policy import WideScope, decide, visible_to_model
+from agent_runtime.run.policy import WideScope, decide, model_policy_for, visible_to_model
 from agent_runtime.run.tools import ToolCaller, ToolOutcome, ToolSpec, openai_tool
 from agent_runtime.run.trust import output_trusted
 
@@ -137,7 +137,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
                     *state.get("messages", [])]
         try:
             msg = await asyncio.to_thread(deps.llm.chat, messages, [openai_tool(t) for t in visible] or None,
-                                          {"X-Delegation-Token": ctx.token}, ctx.agent.model_policy)
+                                          {"X-Delegation-Token": ctx.token}, model_policy_for(ctx.agent, condition))
         except LLMError as e:
             return Command(update={"final": f"모델을 부르지 못했습니다({e}).", "status": "failed", "steps": steps},
                            goto="finish")

@@ -418,7 +418,12 @@ async def test_model_policy_is_passed_to_llm(r: RunHarness, agent: str, policy: 
 
 
 @pytest.mark.anyio
-async def test_no_guard_keeps_model_policy(r: RunHarness) -> None:
+@pytest.mark.parametrize(("condition", "policy"), [("no_guard", "external_allowed"),
+                                                   ("baseline_tools", "external_allowed"),
+                                                   ("write_blocked", "local_only"), ("approve_all", "local_only"),
+                                                   ("full", "local_only")])
+async def test_condition_alias_policy(r: RunHarness, condition: str, policy: str) -> None:
+    """contracts/eval/conditions.md: no_guard·baseline_tools는 모든 에이전트가 external(#135)."""
     r.llm.script = [say("네")]
-    await run(r, "안녕", agent="hr", condition="no_guard")
-    assert r.llm.requests[0]["model_policy"] == "local_only"
+    await run(r, "안녕", agent="hr", condition=condition)
+    assert r.llm.requests[0]["model_policy"] == policy

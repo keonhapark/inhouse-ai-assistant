@@ -73,7 +73,7 @@ PACK_DIR=../packs/manufacturing DELEGATION_TOKEN_PUBLIC_KEY=../infra/dev-keys/de
 | `AGENT_LLM_BACKEND` | `gateway` | `gateway` 또는 `ollama`(gateway가 없을 때 쓰는 개발용) |
 | `GATEWAY_LLM_URL` | `http://localhost:$PORT_GATEWAY/v1` | gateway의 OpenAI 호환 엔드포인트 |
 | `AGENT_OLLAMA_BASE_URL` | `http://localhost:11434` | 개발용 Ollama 주소 |
-| `AGENT_LLM_MODEL` | gateway: `local`, ollama: `LOCAL_MODEL` 또는 `qwen3.5:9b` | 라우터·슬롯 기준선의 모델. 업무 실행은 gateway 경로에서 에이전트 `model_policy`대로 별칭을 고릅니다(`external_allowed` → `external`, `local_only` → `local`). 기밀 판정에 따른 로컬 전환은 gateway가 합니다 |
+| `AGENT_LLM_MODEL` | gateway: `local`, ollama: `LOCAL_MODEL` 또는 `qwen3.5:9b` | 라우터·슬롯 기준선의 모델. 업무 실행은 gateway 경로에서 에이전트 `model_policy`대로 별칭을 고릅니다(`external_allowed` → `external`, `local_only` → `local`). 평가 조건 `no_guard`·`baseline_tools`는 모두 `external`입니다(`contracts/eval/conditions.md`). 기밀 판정에 따른 로컬 전환은 gateway가 합니다 |
 | `AGENT_MCP_URL` | `http://localhost:$MCP_PORT/mcp` | 업무 실행이 부르는 MCP 서버 |
 | `CONTRACTS_DIR` | `../contracts` | `mcp/tools.json`과 `openapi/`를 읽는 곳 |
 | `ERP_BASE_URL` | `http://localhost:8040/api/v1` | erp(호스트까지만 씀. 경로는 계약의 `/api/v1`) |
