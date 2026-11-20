@@ -1,6 +1,6 @@
 # agent
 
-에이전트 등록부 런타임, 입구 라우터, 업무 실행(LangGraph), MCP 서버입니다. API는 `contracts/openapi/agent.yaml`, 도구는 `contracts/mcp/tools.json`을 따릅니다.
+에이전트 등록부 런타임, 입구 라우터, 업무 실행(LangGraph), MCP 서버, 슬롯 파서 기준선입니다. API는 `contracts/openapi/agent.yaml`, 도구는 `contracts/mcp/tools.json`을 따릅니다.
 
 - `GET /agents`: `PACK_DIR`의 `agents.yaml`에서 팩 단계(`pack.yaml`의 `stage`) 이하로 켜진 에이전트를 돌려줍니다.
 - `POST /route`: 요청을 에이전트 하나에 한 번만 넘깁니다.
@@ -27,6 +27,16 @@ LangGraph로 계획 → 판정 → 미리보기 → 승인 interrupt → 실행 
 - 도구 호출이 MCP 서버에 닿지 못하면 도구 오류로 모델에 돌려주고, 그래프 오류는 `failed`로 돌려줍니다(승인 대기 상태가 남지 않음).
 - 상태: 막힌 도구 호출이 있으면 `blocked`, 답이 되묻기 모양("?", "~까요", "~주세요" 등)이면 `awaiting_user`, 모델·도구 목록 오류나 단계 초과(6번)는 `failed`
 - 정책으로 막은 호출은 감사 이벤트 `tool.blocked`(source agent)로 남깁니다.
+
+## 슬롯 파서 기준선(`POST /baseline/slots`)
+
+기능 품질 비교용입니다. 휴가·회의실 요청에서 도구(`leave_request`, `room_list_availability`, `room_reserve`)와 인자를 채워 돌려주고, 실행하지 않습니다. `method: rule`은 LLM 없는 규칙 파서(`baseline/slots.py`), `method: llm`은 gateway를 거친 도구 호출 한 번(`baseline/llm_filler.py`)이고 둘 다 같은 형식(`intent`, `tool`, `arguments`, `missing`)을 돌려줍니다.
+
+- 규칙 파서가 읽는 것: 날짜(YYYY-MM-DD, M월 D일, M/D, 오늘·내일·모레·글피, (이번·다음·다다음 주) X요일, 다음 달 N일·N째 X요일, N일), 기간(~부터 ~까지, N일간: 휴가는 주말 제외), 시각(오전·오후 N시 (반·M분), HH:MM, 앞뒤 문맥 없는 1~7시는 오후), 길이(N시간, N분간, 기본 1시간), 인원(N명·N인, 고유어 수), 휴가 종류(오전·오후 반차, 병가, 경조·공가·특별휴가, 그 밖은 연차), 사유("사유는 …", "…해서"), 회의실 이름(팩 `fixtures/rooms.json`)
+- 사유가 없으면 "개인 사정", 회의 제목이 없으면 "회의"로 채웁니다. 오전·오후가 없는 "반차", 날짜·시각·회의실을 못 찾으면 `missing`에 적습니다.
+- 규칙은 도구 입력 스키마만 보고 만들었고, 평가 시나리오를 보고 다듬지 않았습니다.
+
+명령줄 비교: `uv run python -m agent_runtime.baseline --method both --today 2027-03-02 "다음 주 월요일 오후 반차"`
 
 ## MCP 서버
 
