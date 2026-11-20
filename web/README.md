@@ -70,6 +70,41 @@ docker run -p 8600:80 -e GATEWAY_URL=http://host.docker.internal:8610 iaa-web
 - 대결 등록은 `dryRun=true` 미리보기를 먼저 받고, 등록에는 미리보기를 만든 요청 본문을 그대로 보냅니다. 미리보기 뒤 입력을 바꾸면 미리보기를 지웁니다.
 - 결재선 이름은 gateway가 붙인 `steps[].approverName`·`actedByName`을 쓰고, 없으면 직원 ID를 보여 줍니다.
 
+## 실제 gateway와 붙여 확인한 결과
+
+`infra/compose.yaml`의 `full` 프로필(erp, gateway, agent, rag, LiteLLM, 로컬 모델 `qwen3.5:9b`)로 띄워 2026-11-20에 확인했습니다. 직원(E0007)이 인사 에이전트에게 오후 반차를 신청하고 되돌린 뒤, 다시 신청한 것을 팀장(E0006)이 승인함에서 승인했습니다.
+
+![실제 실행: 반차 신청 → 되돌리기 → 다시 신청 → 팀장 승인](docs/images/demo-leave-real.gif)
+
+GIF는 화면이 바뀌지 않는 구간(로컬 모델 응답을 기다리는 20~40초)을 빼고 빠르게 돌린 것입니다.
+
+| 실제 채팅(되돌린 뒤) | 실제 승인함 |
+|---|---|
+| ![실제 채팅](docs/images/real-chat-undo.png) | ![실제 승인함](docs/images/real-inbox.png) |
+
+모의 서버와 다른 점:
+
+| 항목 | 모의 서버 | 실제 | 화면 영향 |
+|---|---|---|---|
+| 답 조각(`delta`), 도구 기록(`tool_call`) | 보냄 | 보내지 않음(답이 `message` 한 번에 옴) | 답이 한 번에 나타남. 스트리밍 커서와 "도구 실행" 줄이 없음 |
+| 쓴 모델(`model`) | `message`·`done`에 붙임 | 붙이지 않음 | "로컬에서 처리" 배지가 나오지 않음 |
+| 실행 승인 카드 | 회의실 예약에서 나옴 | 인사 에이전트의 휴가 신청은 `reversible_write`·`auto_with_undo` 정책이라 카드 없이 실행되고 되돌리기가 붙음 | 정책대로 동작 |
+| `toolLabel` | 있음 | 없음 | 카드 머리에 도구 ID를 보여 줌 |
+| `blocked.code` | 이유별 | `policy_denied` 하나 | 문구만 보여 주므로 영향 없음 |
+| 결재 문서 `fields` | 한국어 키 | 팩 `forms.yaml`의 키(`leave_type`, `start_date`)와 값(`half_pm`) | 값은 양식 스키마의 `x-labels`로 바꿔 보여 줌("오후 반차"). 필드 이름은 스키마에 `title`이 없어 키 그대로 |
+| 라우팅 시간 | 즉시 | 로컬 모델이 바쁘면 시간 제한(504)으로 `fallback` | 에이전트를 직접 고르면 라우팅을 건너뜀 |
+
+다시 확인하는 방법:
+
+```bash
+source scripts/env.sh 6
+docker compose -f infra/compose.yaml --env-file .env --profile full up -d --build --wait
+# http://localhost:8600 에서 E0007로 로그인 → 부서 에이전트 "인사" → 반차 신청 → 되돌리기
+# E0006으로 로그인 → 승인함 → 승인
+```
+
+2026-11-20 확인 때는 compose에 맞지 않는 곳이 두 군데 있어 로컬 덮어쓰기 파일로 우회했습니다. rag가 빈 `RAG_EXTRA_DOCS`·`RAG_MARKERS_FILE`을 거절해 두 변수를 뺐고, agent가 모델 별칭 대신 `qwen3.5:9b`를 보내 gateway가 422로 거절해 `AGENT_LLM_MODEL=local`을 넣었습니다. 두 가지는 해당 모듈에서 고칠 일입니다.
+
 ## 화면
 
 모의 서버(`npm run dev:mock`)로 실행해 찍은 화면입니다.
