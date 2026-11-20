@@ -82,6 +82,8 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   gateway 자기 `audit.jsonl`, `AUDIT_EVENT_FILES`(쉼표로 구분한 경로나 glob, agent·MCP·rag가 쓰는 JSON Lines)를 시각 순으로
   합칩니다. `eventId`가 같으면 한 번만 넣습니다. 필터는 `conversationId`, `actorId`, `agentId`, `kind`, `since`·`until`
   (시간대 오프셋 필요)이고, `cursor`는 마지막 이벤트의 (시각, eventId)입니다. erp는 한 번에 최근 500건까지만 줍니다.
+- 사람용 경로(`/api/*`의 로그인 뒤 경로)는 직원 JWT만 받습니다. Bearer 값이 위임 토큰(`iss: gateway` 또는 `agt` 클레임)이면
+  403 `delegation-token-not-allowed`입니다(#159). 위임 토큰은 agent → MCP → erp와 LLM 출구(`X-Delegation-Token`)에만 씁니다.
 - 토큰 위생: 모든 로그 레코드에서 JWT 모양과 `Bearer <값>`을 가립니다(`gateway/redact.py`). 발급 기록은 `jti`만 남깁니다.
 
 ## 실행

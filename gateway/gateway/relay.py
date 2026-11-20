@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any
 
 import httpx
+import jwt
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
@@ -22,10 +23,28 @@ FORWARD_HEADERS = ("idempotency-key",)
 
 
 def bearer(request: Request) -> str:
+    """사람용 경로의 직원 JWT를 꺼냅니다. 위임 토큰이면 403입니다.
+
+    위임 토큰은 agent → MCP → erp 경로에만 씁니다(기획서 5-4). 사람용 경로(실행 승인, 대화, 결재함 등)가
+    위임 토큰을 받으면 agent·MCP·rag가 같은 직원 이름으로 실행 승인을 할 수 있어 사람 확인이 무의미해집니다.
+    서명은 보지 않고 모양만 봅니다. 직원 JWT가 진짜인지는 erp가 확인합니다.
+    """
     auth = request.headers.get("authorization", "")
     if not auth.lower().startswith("bearer ") or not auth[7:].strip():
         raise ProblemError(401, "unauthorized", "로그인이 필요합니다")
-    return auth[7:].strip()
+    token = auth[7:].strip()
+    if is_delegation_token(token):
+        raise ProblemError(403, "delegation-token-not-allowed", "사람용 경로는 위임 토큰으로 부를 수 없습니다")
+    return token
+
+
+def is_delegation_token(token: str) -> bool:
+    """gateway가 발급한 위임 토큰 모양인지(iss=gateway 또는 agt 클레임). 서명은 확인하지 않습니다."""
+    try:
+        claims = jwt.decode(token, options={"verify_signature": False})
+    except jwt.PyJWTError:
+        return False
+    return isinstance(claims, dict) and (claims.get("iss") == "gateway" or "agt" in claims)
 
 
 def relay_response(r: httpx.Response) -> Response:
