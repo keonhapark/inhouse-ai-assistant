@@ -52,6 +52,8 @@ class LlmSlotFiller:
             args = json.loads(args) if isinstance(args, str) else dict(args or {})
         except (ValueError, TypeError):
             return SlotResult(INTENT[name], name, {}, ("arguments",))
+        if not isinstance(args, dict):
+            return SlotResult(INTENT[name], name, {}, ("arguments",))
         schema = next(t["inputSchema"] for t in self.tools if t["name"] == name)
         missing = tuple(k for k in schema.get("required", []) if k not in args)
         return SlotResult(INTENT[name], name, args, missing)

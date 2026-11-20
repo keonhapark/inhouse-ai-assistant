@@ -21,6 +21,12 @@ ORDINALS = {"첫": 1, "첫째": 1, "첫 번째": 1, "첫번째": 1, "둘째": 2,
             "세 번째": 3, "세번째": 3, "넷째": 4, "네 번째": 4, "네번째": 4, "마지막": -1}
 DEFAULT_REASON = "개인 사정"
 DEFAULT_TITLE = "회의"
+# contracts/mcp/tools.json의 required(시험이 계약과 대조합니다)
+REQUIRED = {
+    "leave_request": ("leave_type", "start_date", "end_date", "reason"),
+    "room_list_availability": ("startsAt", "endsAt"),
+    "room_reserve": ("roomId", "startsAt", "endsAt", "title"),
+}
 
 
 @dataclass(frozen=True)
@@ -58,6 +64,7 @@ def normalize(text: str) -> str:
 @dataclass(frozen=True)
 class Found:
     start: int
+    end: int
     value: date
 
 
@@ -98,11 +105,10 @@ def _safe_date(y: int, m: int, d: int) -> date | None:
 
 def find_dates(text: str, today: date) -> list[Found]:
     """문장 안의 날짜를 나온 순서대로 찾습니다. 겹치는 표현은 먼저 맞은(더 구체적인) 규칙을 씁니다."""
-    found: list[tuple[int, int, date]] = []
+    found: list[tuple[int, int, date | None]] = []
 
     def add(m: re.Match[str], d: date | None) -> None:
-        if d is None:
-            return
+        # 없는 날짜(2월 30일)도 구간은 차지해, 뒤 규칙이 그 일부("30일")를 다른 날짜로 읽지 않게 합니다.
         if any(s <= m.start() < e or m.start() <= s < m.end() for s, e, _ in found):
             return
         found.append((m.start(), m.end(), d))
@@ -124,13 +130,19 @@ def find_dates(text: str, today: date) -> list[Found]:
         (r"내일", lambda m: today + timedelta(days=1)),
         (r"모레", lambda m: today + timedelta(days=2)),
         (r"글피", lambda m: today + timedelta(days=3)),
-        (r"(?<![\d월])(\d{1,2})\s*일(?!\s*(?:간|동안|치))", lambda m: _this_or_next_month(today, int(m[1]))),
+        (r"(?<![\d월])(\d{1,2})\s*일(?!\s*(?:간|동안|치))",
+         lambda m: None if _is_duration_after_from(text, m) else _this_or_next_month(today, int(m[1]))),
     ]
     for pattern, make in rules:
         for m in re.finditer(pattern, text):
             add(m, make(m))
-    found.sort()
-    return [Found(s, d) for s, _, d in found]
+    found.sort(key=lambda x: x[0])
+    return [Found(s, e, d) for s, e, d in found if d is not None]
+
+
+def _is_duration_after_from(text: str, m: re.Match[str]) -> bool:
+    """'25일부터 3일 연차'의 '3일'처럼 '부터' 바로 뒤에 오고 '까지'가 붙지 않은 N일은 기간입니다."""
+    return bool(re.search(r"부터\s*$", text[:m.start()])) and not re.match(r"\s*까지", text[m.end():])
 
 
 def _week_offset(word: str) -> int:
@@ -154,8 +166,8 @@ def _this_or_next_month(today: date, d: int) -> date | None:
 
 
 def _duration_days(text: str) -> int | None:
-    m = re.search(r"(\d{1,2})\s*일\s*(?:간|동안)", text)
-    return int(m[1]) if m else None
+    m = re.search(r"(\d{1,2})\s*일\s*(?:간|동안)|부터\s*(\d{1,2})\s*일(?!\s*까지)", text)
+    return int(m[1] or m[2]) if m else None
 
 
 def _add_business_days(start: date, days: int) -> date:
@@ -184,25 +196,31 @@ def find_times(text: str) -> list[FoundTime]:
     for m in re.finditer(pattern, text):
         if re.match(r"\s*간", text[m.end():]) and m[5] is None:
             continue  # "2시간"은 시각이 아님
-        period = m[1] or last_period
+        # 오후·저녁·밤만 뒤 시각에 이어 줍니다("오전 11시부터 1시까지"의 1시는 오전이 아님).
+        period = m[1] or (last_period if last_period in ("오후", "저녁", "밤") else None)
         if m[1]:
             last_period = m[1]
         h = int(m[2])
         minute = 30 if m[3] == "반" else int(m[4] or m[5] or 0)
-        if period in ("오후", "저녁", "밤") and h < 12:
+        if period == "밤" and h == 12:
+            h = 0
+        elif period in ("오후", "저녁", "밤") and h < 12:
             h += 12
         elif period is None and 1 <= h <= 7:
             h += 12  # 업무 시간 기준: "3시"는 15시
+        if out and h < 12 and m[1] is None and (h, minute) < (out[-1].value.hour, out[-1].value.minute):
+            h += 12  # 앞 시각보다 이르면 오후로 봅니다
         if 0 <= h <= 23 and 0 <= minute <= 59:
             out.append(FoundTime(m.start(), m.end(), time(h, minute)))
     return out
 
 
 def _duration_minutes(text: str) -> int | None:
-    m = re.search(r"(\d{1,2})\s*시간\s*(반)?", text)
+    m = re.search(r"(\d{1,2})\s*시간\s*(?:(반)|(\d{1,2})\s*분)?", text)
     if m:
-        return int(m[1]) * 60 + (30 if m[2] else 0)
-    m = re.search(r"(\d{1,3})\s*분\s*(?:간|동안)", text)
+        return int(m[1]) * 60 + (30 if m[2] else int(m[3] or 0))
+    # "2시 30분"의 30분은 시각이므로 '시' 바로 뒤의 분은 길이로 보지 않습니다.
+    m = re.search(r"(?<!시)(?<!시 )(?<!\d)(\d{1,3})\s*분(?!\s*에)", text)
     if m:
         return int(m[1])
     if re.search(r"반\s*시간", text):
@@ -218,10 +236,9 @@ ROOM_WORDS = ("회의실", "미팅룸", "회의 장소", "방 ", "방을", "방 
 
 def _leave_type(text: str) -> str | None:
     if "반차" in text or "반가" in text:
-        if "오전" in text:
-            return "half_am"
-        if "오후" in text:
-            return "half_pm"
+        m = re.search(r"(오전|오후)\s*반(?:차|가)", text)
+        if m:
+            return "half_am" if m[1] == "오전" else "half_pm"
         return None
     if "병가" in text:
         return "sick"
@@ -242,30 +259,23 @@ def _reason(text: str) -> str | None:
 
 def parse_leave(text: str, today: date) -> SlotResult:
     t = normalize(text)
-    missing: list[str] = []
     leave_type = _leave_type(t)
-    if leave_type is None:
-        missing.append("leave_type")
     dates = find_dates(t, today)
     args: dict[str, Any] = {}
     if leave_type:
         args["leave_type"] = leave_type
-    if not dates:
-        missing += ["start_date", "end_date"]
-    else:
+    if dates:
         start = dates[0].value
-        if len(dates) >= 2 and re.search(r"부터|~|-|에서", t[dates[0].start:dates[1].start + 1]):
+        if len(dates) >= 2 and re.search(r"부터|~|-|에서", t[dates[0].end:dates[1].start]):
             end = dates[1].value
         elif (n := _duration_days(t)) and leave_type in (None, "annual", "sick", "special"):
             end = _add_business_days(start, n)
         else:
             end = start
-        if end < start:
-            missing.append("end_date")
-        else:
+        if end >= start:
             args["start_date"], args["end_date"] = start.isoformat(), end.isoformat()
     args["reason"] = _reason(t) or DEFAULT_REASON
-    return SlotResult("leave", "leave_request", args, tuple(missing))
+    return _result("leave", "leave_request", args)
 
 
 # ---------- 회의실 ----------
@@ -290,8 +300,8 @@ def _room_id(text: str, rooms: list[dict[str, Any]] | None) -> str | None:
     if not rooms:
         return None
     for r in sorted(rooms, key=lambda r: len(str(r.get("name", ""))), reverse=True):
-        name = str(r.get("name", ""))
-        if name and name in text:
+        name = str(r.get("name", "")).replace(" ", "")
+        if name and name in text.replace(" ", ""):
             return r["id"]
         if r.get("id") and str(r["id"]) in text:
             return r["id"]
@@ -300,27 +310,20 @@ def _room_id(text: str, rooms: list[dict[str, Any]] | None) -> str | None:
 
 def parse_room(text: str, today: date, rooms: list[dict[str, Any]] | None = None) -> SlotResult:
     t = normalize(text)
-    missing: list[str] = []
     dates = find_dates(t, today)
     times = find_times(t)
     args: dict[str, Any] = {}
     asks_free = bool(re.search(r"비어|빈\s|빈 |가능한|남는|있어\?|있나|있을까|있는지", t))
     wants_reserve = bool(re.search(r"잡아|예약|빌려|잡고|잡을|잡자", t))
     tool = "room_reserve" if wants_reserve else "room_list_availability" if asks_free else "room_reserve"
-    if not dates:
-        missing.append("date")
-    if not times:
-        missing.append("startsAt")
     if dates and times:
         day = dates[0].value
         start = datetime.combine(day, times[0].value, KST)
-        if len(times) >= 2 and re.search(r"부터|~|-|에서", t[times[0].start:times[1].start + 1]):
+        if len(times) >= 2 and re.search(r"부터|~|-|에서", t[times[0].end_pos:times[1].start]):
             end = datetime.combine(day, times[1].value, KST)
         else:
             end = start + timedelta(minutes=_duration_minutes(t) or 60)
-        if end <= start:
-            missing.append("endsAt")
-        else:
+        if end > start:
             args["startsAt"], args["endsAt"] = start.isoformat(), end.isoformat()
     n = _attendees(t)
     if tool == "room_list_availability":
@@ -330,12 +333,15 @@ def parse_room(text: str, today: date, rooms: list[dict[str, Any]] | None = None
         room = _room_id(t, rooms)
         if room:
             args["roomId"] = room
-        else:
-            missing.append("roomId")
         args["title"] = _title(t)
         if n:
             args["attendees"] = n
-    return SlotResult("room", tool, args, tuple(missing))
+    return _result("room", tool, args)
+
+
+def _result(intent: str, tool: str, args: dict[str, Any]) -> SlotResult:
+    """missing은 계약 정의대로 '채우지 못한 필수 슬롯 이름'입니다."""
+    return SlotResult(intent, tool, args, tuple(k for k in REQUIRED[tool] if k not in args))
 
 
 # ---------- 입구 ----------

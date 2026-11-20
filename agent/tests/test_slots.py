@@ -135,7 +135,7 @@ def test_room_availability() -> None:
 
 
 def test_room_missing_time_and_date() -> None:
-    assert fill("회의실 예약해 줘").missing == ("date", "startsAt", "roomId")
+    assert fill("회의실 예약해 줘").missing == ("roomId", "startsAt", "endsAt")
 
 
 def test_unknown_intent() -> None:
@@ -147,3 +147,65 @@ def test_unknown_intent() -> None:
 def test_result_dict() -> None:
     d = fill("금요일 연차").to_dict()
     assert set(d) == {"intent", "tool", "arguments", "missing"} and isinstance(d["missing"], list)
+
+
+# ---- 리뷰에서 나온 회귀(기준일 2027-03-02) ----
+
+
+def test_required_slots_match_contract() -> None:
+    import json
+
+    from agent_runtime.baseline.slots import REQUIRED
+    from tests.conftest import CONTRACTS
+
+    tools = {t["name"]: t for t in json.loads((CONTRACTS / "mcp" / "tools.json").read_text("utf-8"))["tools"]}
+    for name, required in REQUIRED.items():
+        assert tuple(tools[name]["inputSchema"]["required"]) == required
+
+
+def test_n_days_after_from_is_duration() -> None:
+    r = fill("25일부터 3일 연차")
+    assert (r.arguments["start_date"], r.arguments["end_date"]) == ("2027-03-25", "2027-03-29")  # 주말 건너뜀
+    assert fill("25일부터 26일까지 연차").arguments["end_date"] == "2027-03-26"
+
+
+def test_invalid_date_is_not_reread() -> None:
+    r = fill("2월 30일 연차")
+    assert "start_date" not in r.arguments and r.missing == ("start_date", "end_date")
+
+
+def test_range_check_ignores_hyphens_inside_dates() -> None:
+    r = fill("2027-04-01 연차, 2027-04-05 복귀")
+    assert r.arguments["end_date"] == "2027-04-01"
+
+
+def test_morning_does_not_carry_to_later_hour() -> None:
+    r = fill("내일 오전 11시부터 1시까지 회의실 A 예약")
+    assert (r.arguments["startsAt"], r.arguments["endsAt"]) == ("2027-03-03T11:00:00+09:00",
+                                                               "2027-03-03T13:00:00+09:00")
+
+
+@pytest.mark.parametrize(("text", "end"), [("내일 오후 3시 회의실 A 1시간 30분 예약", "16:30"),
+                                           ("내일 2시부터 30분 회의실 A 예약", "14:30"),
+                                           ("내일 2시 30분 회의실 A 예약", "15:30")])
+def test_meeting_length(text: str, end: str) -> None:
+    assert fill(text).arguments["endsAt"] == f"2027-03-03T{end}:00+09:00"
+
+
+def test_half_day_uses_word_before_bancha() -> None:
+    assert fill("오전 10시 회의 끝나고 오후 반차 쓸게요 내일").arguments["leave_type"] == "half_pm"
+
+
+@pytest.mark.parametrize(("text", "missing"), [("3월 20일부터 3월 10일까지 연차", ("start_date", "end_date")),
+                                               ("회의실 A 예약 오후 3시", ("startsAt", "endsAt")),
+                                               ("내일 회의실 A 예약", ("startsAt", "endsAt"))])
+def test_missing_lists_required_slots(text: str, missing: tuple) -> None:
+    assert fill(text).missing == missing
+
+
+def test_room_name_ignores_spaces() -> None:
+    assert fill("내일 회의실A 2시 예약").arguments["roomId"] == "room-a"
+
+
+def test_midnight() -> None:
+    assert find_times(normalize("밤 12시"))[0].value.strftime("%H:%M") == "00:00"

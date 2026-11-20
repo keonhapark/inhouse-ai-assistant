@@ -124,3 +124,11 @@ def test_endpoint_validation_and_unconfigured(tmp_path) -> None:
     assert c.post("/baseline/slots", json={"message": "x", "method": "llm"}).status_code == 503
     assert c.post("/baseline/slots", json={"message": "점심 뭐 먹지", "method": "rule"}).json() == \
         {"intent": None, "tool": None, "arguments": {}, "missing": []}
+
+
+@pytest.mark.parametrize("raw", ["null", "[1]", '"x"'])
+def test_llm_non_object_arguments(raw: str) -> None:
+    bad = call("leave_request", {})
+    bad["tool_calls"][0]["function"]["arguments"] = raw
+    r = LlmSlotFiller(ScriptedLLM([bad]), TOOLS).fill("x", TODAY)
+    assert (r.arguments, r.missing) == ({}, ("arguments",))
