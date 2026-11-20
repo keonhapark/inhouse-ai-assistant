@@ -15,6 +15,9 @@
     {"id": "action:read", "description": "내 행동 조회"},
     {"id": "action:undo", "description": "내 행동 되돌리기"},
     {"id": "notification:read", "description": "알림 조회"},
+    {"id": "ticket:read", "description": "IT 티켓 조회(내가 올린 것, 티켓 담당은 전체)"},
+    {"id": "ticket:write", "description": "IT 티켓 작성·댓글"},
+    {"id": "ticket:manage", "description": "IT 티켓 상태 변경(티켓 담당 역할만)"},
     {"id": "audit:read", "description": "감사 이벤트 조회", "human_only": true}
   ]
 }

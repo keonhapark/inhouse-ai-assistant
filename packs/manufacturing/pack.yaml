@@ -15,4 +15,5 @@ requires_erp_features:
   - leave
   - rooms
   - doc_access
+  - tickets
 stage: 2
