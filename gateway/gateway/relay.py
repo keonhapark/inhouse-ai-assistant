@@ -68,7 +68,10 @@ async def _active_delegations_to_me(erp: ErpClient, token: str) -> list[dict[str
 async def inbox_item(doc: dict[str, Any], me: str, names: Names,
                      delegations: list[dict[str, Any]] | None) -> dict[str, Any]:
     requester = await names.employee(doc["requesterId"])
-    item = {**doc, "formName": await names.form_name(doc["formId"]),
+    steps = [{**st, "approverName": await names.name(st["approverId"]),
+              "actedByName": await names.name(st["actedBy"]) if st.get("actedBy") else None}
+             for st in doc.get("steps", [])]
+    item = {**doc, "steps": steps, "formName": await names.form_name(doc["formId"]),
             "requesterName": requester["name"] if requester else doc["requesterId"],
             "viaDelegation": None}
     if requester and requester.get("unitName"):
@@ -111,6 +114,15 @@ def build_router(erp: ErpClient) -> APIRouter:
 
     async def me_id(token: str) -> str:
         return (await erp.get_json("/me", token))["id"]
+
+    # ---------- 조회(대결 설정 화면) ----------
+    @api.get("/employees")
+    async def search_employees(request: Request) -> Response:
+        return await forward(request, "GET", "/employees", with_body=False)
+
+    @api.get("/approval-forms")
+    async def approval_forms(request: Request) -> Response:
+        return await forward(request, "GET", "/approval-forms", with_body=False)
 
     # ---------- 되돌리기 ----------
     @api.post("/actions/{action_id}/undo")

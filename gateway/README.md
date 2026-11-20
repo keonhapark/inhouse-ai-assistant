@@ -58,8 +58,8 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - 대화와 승인은 프로세스 메모리에 둡니다(1단계). gateway를 다시 띄우면 사라집니다.
 - 사람 화면 경로(`gateway/relay.py`): `/api/inbox`, `/api/inbox/{id}`, `/api/inbox/{id}/approve|reject`,
   `/api/delegations`(조회·등록, `?dryRun=true` 미리보기), `/api/delegations/{id}/revoke`, `/api/actions/{id}/undo`,
-  `/api/notifications`. 직원 JWT와 `Idempotency-Key`를 그대로 erp에 넘기고 erp 응답(오류 포함)을 그대로 돌려줍니다.
-  읽기에는 요청자·원 결재자·양식·위임자·대리인 이름을 붙이고, 대결로 들어온 결재 건에는 `viaDelegation`을 채웁니다.
+  `/api/notifications`, `/api/employees`, `/api/approval-forms`. 직원 JWT와 `Idempotency-Key`를 그대로 erp에 넘기고 erp 응답(오류 포함)을 그대로 돌려줍니다.
+  읽기에는 요청자·원 결재자·양식·위임자·대리인 이름과 결재선 단계의 `approverName`·`actedByName`을 붙이고, 대결로 들어온 결재 건에는 `viaDelegation`을 채웁니다.
 - 감사 조회 `GET /api/audit-events`(`gateway/audit_query.py`, erp `auditor` 역할만): erp `GET /audit-events`,
   gateway 자기 `audit.jsonl`, `AUDIT_EVENT_FILES`(쉼표로 구분한 경로나 glob, agent·MCP·rag가 쓰는 JSON Lines)를 시각 순으로
   합칩니다. `eventId`가 같으면 한 번만 넣습니다. 필터는 `conversationId`, `actorId`, `agentId`, `kind`, `since`·`until`
