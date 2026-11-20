@@ -639,3 +639,24 @@ def test_budget_off_in_no_guard(client, app, token_for, litellm, ledger):
     _cond(app, "no_guard")
     _send(client, token_for(external_ok), "external", "x")
     assert litellm.last_body()["model"] == "external"
+
+
+# ---------- 시간 초과도 운영 외부 전송 기록에(#165) ----------
+def test_timeout_after_send_is_in_egress_log(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    litellm.mode = "timeout"   # 외부·로컬 모두 시간 초과(폴백도 실패)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": PII_MSG})
+    assert r.status_code == 504
+    (rec,) = app.state.audit.egress.read_all()                 # 외부 한 건만(로컬 폴백 시도는 외부 기록 아님)
+    assert rec["status"] == 504 and rec["model"] == "external" and rec["response"] == ""
+    assert rec["requestBeforeRedaction"]["messages"] == PII_MSG
+    assert "[전화번호]" in rec["requestSent"]["messages"][0]["content"]
+
+
+def test_connect_failure_is_not_in_egress_log(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    litellm.mode = "down"
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                json={"model": "external", "messages": MSG})
+    assert app.state.audit.egress.read_all() == []             # 나가지 않은 요청
