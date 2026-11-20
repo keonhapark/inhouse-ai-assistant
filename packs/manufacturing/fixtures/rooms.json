@@ -1,0 +1,34 @@
+{
+  "rooms": [
+    {
+      "id": "room-a",
+      "name": "회의실 A",
+      "floor": 3,
+      "capacity": 4
+    },
+    {
+      "id": "room-b",
+      "name": "회의실 B",
+      "floor": 3,
+      "capacity": 6
+    },
+    {
+      "id": "room-c",
+      "name": "회의실 C",
+      "floor": 4,
+      "capacity": 8
+    },
+    {
+      "id": "room-d",
+      "name": "대회의실",
+      "floor": 5,
+      "capacity": 20
+    },
+    {
+      "id": "room-e",
+      "name": "연구소 회의실",
+      "floor": 2,
+      "capacity": 6
+    }
+  ]
+}

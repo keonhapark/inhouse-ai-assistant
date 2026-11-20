@@ -1,0 +1,18 @@
+# 업종 팩: 제조. 회사와 사람은 모두 지어낸 것입니다.
+id: manufacturing
+name: 제조(가상 중견 부품 제조사)
+version: 0.1.0
+company:
+  name: 가상정밀(주)
+  description: B2B 기계 부품을 만드는 가상의 중견 제조사입니다. 실제 회사와 관계없습니다.
+  headcount: 60
+  timezone: Asia/Seoul
+locale: ko-KR
+requires_erp_features:
+  - org
+  - approval_documents
+  - delegations
+  - leave
+  - rooms
+  - doc_access
+stage: 1

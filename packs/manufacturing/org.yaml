@@ -1,0 +1,136 @@
+# 조직도, 직급, 역할, 문서 접근 태그
+grades:
+  - id: staff
+    name: 팀원
+    rank: 1
+  - id: team_leader
+    name: 팀장
+    rank: 2
+  - id: division_head
+    name: 본부장
+    rank: 3
+  - id: ceo
+    name: 대표이사
+    rank: 4
+
+units:
+  - id: ceo-office
+    name: 대표이사실
+    kind: division
+  - id: mgmt
+    name: 경영지원본부
+    kind: division
+    parent: ceo-office
+  - id: hr
+    name: 인사팀
+    kind: team
+    parent: mgmt
+  - id: finance
+    name: 재무팀
+    kind: team
+    parent: mgmt
+  - id: general-affairs
+    name: 총무팀
+    kind: team
+    parent: mgmt
+  - id: sales-div
+    name: 영업본부
+    kind: division
+    parent: ceo-office
+  - id: sales
+    name: 영업팀
+    kind: team
+    parent: sales-div
+  - id: production-div
+    name: 생산본부
+    kind: division
+    parent: ceo-office
+  - id: production-control
+    name: 생산관리팀
+    kind: team
+    parent: production-div
+  - id: quality
+    name: 품질팀
+    kind: team
+    parent: production-div
+  - id: procurement
+    name: 구매자재팀
+    kind: team
+    parent: production-div
+  - id: rnd-center
+    name: 기술연구소
+    kind: division
+    parent: ceo-office
+  - id: rnd
+    name: 연구개발팀
+    kind: team
+    parent: rnd-center
+  - id: it-ops
+    name: IT운영팀
+    kind: team
+    parent: ceo-office
+
+# 역할은 직급과 별개로 붙는 권한 묶음입니다.
+roles:
+  - id: employee
+    name: 직원
+    grant: all
+  - id: hr_staff
+    name: 인사 담당
+    grant:
+      units: [hr]
+  - id: finance_staff
+    name: 재무 담당
+    grant:
+      units: [finance]
+  - id: it_admin
+    name: IT 관리자
+    grant:
+      units: [it-ops]
+  - id: auditor
+    name: 감사 조회
+    grant:
+      units: [it-ops]
+      grades: [ceo]
+
+# 문서 접근 태그. rag와 erp가 같은 태그를 씁니다(docs.yaml의 acl_tags).
+access_tags:
+  - id: public
+    name: 전사 공개
+    grant:
+      roles: [employee]
+  - id: hr-policy
+    name: 인사 규정
+    grant:
+      roles: [employee]
+  - id: hr-restricted
+    name: 인사 제한
+    grant:
+      roles: [hr_staff]
+  - id: finance-policy
+    name: 경비·여비 규정
+    grant:
+      roles: [employee]
+  - id: rnd-confidential
+    name: 연구 기밀
+    grant:
+      units: [rnd-center, rnd]
+
+# 결재선에서 쓰는 결재자 해석 규칙
+approver_resolution:
+  team_leader: 요청자 팀의 팀장. 요청자가 팀장이면 상위 본부장
+  division_head: 요청자 본부의 본부장. 요청자가 본부장이거나 본부가 없으면 대표이사
+  ceo: 대표이사
+
+# 결재 대결 규칙(초안. 기준은 사용자 결정 지점, docs/decisions)
+delegation_policy:
+  max_period_days: 30
+  registrable_by: [self, hr_staff]
+  allow_redelegation: false
+  allow_self_approval: false
+  scope_units: [form_type, max_amount]
+  wide_scope:
+    # 이 조건 중 하나면 에이전트를 통한 대결 등록이 승인 등급입니다.
+    period_days_over: 7
+    max_amount_over: 1000000
+    all_form_types: true
