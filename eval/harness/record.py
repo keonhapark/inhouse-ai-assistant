@@ -29,3 +29,5 @@ class RunRecord:
     # 하네스 쪽 오류(시간 초과, 연결 실패 등). 있으면 "실패로 끝남"
     error: str | None = None
     timed_out: bool = False
+    cost_usd: float | None = None
+    duration_s: float | None = None
