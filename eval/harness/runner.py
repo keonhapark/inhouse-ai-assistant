@@ -15,6 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from harness.conversation import CONNECTION_ERRORS
 from harness.erp import ErpClient
 from harness.paths import ROOT
@@ -62,6 +64,8 @@ class RunRow:
     error: str | None = None
     # 실행 환경 문제로 끝나지 못함. 이어 돌릴 때 MAX_RETRIES번까지 다시 돌립니다
     retry: bool = False
+    # 실제로 쓴 모델: "이름(위치)". 이벤트의 model과 외부 요청 기록의 model에서 모읍니다
+    models: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -73,6 +77,10 @@ class RunMeta:
     finished_at: str = ""
     model: str | None = None
     pack: str | None = None
+    # packs/<id>/pack.yaml의 version("id 버전", 여럿이면 쉼표)
+    pack_version: str | None = None
+    # 대상 시스템을 띄운 팩 단계(AGENT_PACK_STAGE 등). 설정 packStage로 받습니다
+    pack_stage: int | None = None
     conditions: list[str] = field(default_factory=list)
     repeats: int = 3
     base_seed: int = 0
@@ -106,6 +114,22 @@ def _row(scenario: dict[str, Any], condition: str, repeat: int, seed: int) -> Ru
                   condition=condition, repeat=repeat, seed=seed, outcome="failed", passed=False)
 
 
+def used_models(events: list[dict[str, Any]], external_models: list[str]) -> list[str]:
+    got = {f"{e['model']['name']}({e['model'].get('location', '?')})" for e in events
+           if isinstance(e.get("model"), dict) and e["model"].get("name")}
+    got |= {f"{m}(외부 요청 기록)" for m in external_models}
+    return sorted(got)
+
+
+def pack_versions(pack_ids: list[str]) -> str:
+    out = []
+    for pid in pack_ids:
+        f = ROOT / "packs" / pid / "pack.yaml"
+        version = yaml.safe_load(f.read_text(encoding="utf-8")).get("version") if f.exists() else None
+        out.append(f"{pid} {version or '버전 모름'}")
+    return ", ".join(out)
+
+
 def run_one(scenario: dict[str, Any], condition: str, repeat: int, seed: int, system_factory: SystemFactory,
             erp_factory: ErpFactory, time_limit_s: float, health_check: HealthCheck | None = None) -> RunRow:
     row = _row(scenario, condition, repeat, seed)
@@ -128,6 +152,7 @@ def run_one(scenario: dict[str, Any], condition: str, repeat: int, seed: int, sy
     row.routed_agent = next((e.get("route", {}).get("agentId") for e in record.events if e.get("type") == "route"),
                             None)
     row.duration_s, row.cost_usd, row.error = record.duration_s, record.cost_usd, record.error
+    row.models = used_models(record.events, record.external_models)
     if record.env_failure:
         row.retry = True
         row.notes.append(f"실행 환경 문제: {record.env_failure}")
@@ -143,7 +168,7 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                on_row: Callable[[RunRow], None] | None = None,
                done_rows: list[RunRow] | None = None, max_runs: int | None = None,
                started_at: str | None = None, health_check: HealthCheck | None = None,
-               prior_cost_usd: float = 0.0) -> tuple[list[RunRow], RunMeta]:
+               prior_cost_usd: float = 0.0, pack_stage: int | None = None) -> tuple[list[RunRow], RunMeta]:
     """done_rows는 앞서 끝낸 회차입니다(이어 돌리기). 같은 (시나리오, 조건, 회차)는 다시 돌리지 않습니다.
     max_runs는 이번에 새로 돌릴 회차 수 상한입니다(나눠 돌리기). prior_cost_usd는 done_rows에 없는 앞선 시도
     (다시 돌린 회차)의 비용으로, 비용 상한에 같이 셉니다. health_check는 재시도 가능한 오류가 났을 때 모델 서버가
@@ -154,7 +179,8 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
     packs = sorted({s["pack"] for s in scenarios})
     meta = RunMeta(commit=_git("rev-parse", "HEAD"), dirty=bool(_git("status", "--porcelain")),
                    machine=f"{platform.platform()} {platform.machine()}", started_at=started_at or _now(), model=model,
-                   pack=",".join(packs), conditions=list(conditions), repeats=repeats, base_seed=base_seed,
+                   pack=",".join(packs), pack_version=pack_versions(packs), pack_stage=pack_stage,
+                   conditions=list(conditions), repeats=repeats, base_seed=base_seed,
                    cost_cap_usd=cost_cap_usd, planned_runs=len(scenarios) * len(conditions) * repeats)
     meta.cost_spent_usd = prior_cost_usd
     rows: list[RunRow] = list(done_rows or [])

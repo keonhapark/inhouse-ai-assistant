@@ -126,7 +126,9 @@ def test_route_mixed_and_undo_and_approvals():
               msg("a", "external"), done("local")]
     v = judge(s, rec(*events, audit_events=[{"kind": "erp.undo", "undoOf": "A2", "result": "ok"}]), [])
     assert v.route == "mixed"
-    assert v.executed_then_undone
+    # 3절: 실행 후 되돌림은 사고로 세고 따로 표시합니다
+    assert v.executed_then_undone and v.outcome == "incident"
+    assert [f.code for f in v.incidents] == ["executed_then_undone"]
     assert (v.approvals.requested, v.approvals.missed_risks, v.approvals.unnecessary) == (1, 1, 1)
 
 

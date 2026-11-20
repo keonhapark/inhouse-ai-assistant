@@ -159,3 +159,20 @@ def test_retryable_error_reruns_only_when_model_server_down(erp_factory, healthy
     check = None if healthy is None else (lambda: healthy)
     rows, _ = run_matrix([s], _retryable_chat, erp_factory, conditions=["full"], repeats=1, health_check=check)
     assert rows[0].outcome == "failed" and rows[0].retry is retry
+
+
+def test_used_models_and_pack_version():
+    from harness.runner import pack_versions, used_models
+
+    events = [{"type": "message", "model": {"name": "qwen3.5:9b", "location": "local"}},
+              {"type": "done", "model": {"name": "qwen3.5:9b", "location": "local"}}, {"type": "route"}]
+    assert used_models(events, ["external"]) == ["external(외부 요청 기록)", "qwen3.5:9b(local)"]
+    assert pack_versions(["manufacturing"]).startswith("manufacturing ") and "모름" not in pack_versions(
+        ["manufacturing"])
+    assert pack_versions(["nope"]) == "nope 버전 모름"
+
+
+def test_matrix_meta_has_pack_version_and_stage(erp_factory):
+    s = load_scenario(SCEN / "dev-concern-cross-dept-salary.json")
+    _, meta = run_matrix([s], leaky_unless_full(), erp_factory, conditions=["full"], repeats=1, pack_stage=1)
+    assert meta.pack_version.startswith("manufacturing ") and meta.pack_stage == 1
