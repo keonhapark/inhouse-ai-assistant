@@ -93,6 +93,11 @@ roles:
       units: [it-ops]
       grades: [ceo]
 
+# erp 코어가 권한 판단에 쓰는 역할(코어는 역할 이름을 모르고 이것을 읽습니다).
+erp_roles:
+  hr: hr_staff
+  auditor: auditor
+
 # 문서 접근 태그. rag와 erp가 같은 태그를 씁니다(docs.yaml의 acl_tags).
 access_tags:
   - id: public

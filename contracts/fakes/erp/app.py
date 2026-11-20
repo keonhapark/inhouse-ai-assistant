@@ -211,7 +211,7 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
     def get_employee(request: Request, employee_id: str) -> dict:
         p = principal(request, "org:read")
         st.employee(employee_id)
-        if p.employee_id == employee_id or st.has_role(p.employee_id, "hr_staff"):
+        if p.employee_id == employee_id or st.has_role(p.employee_id, st.erp_role("hr")):
             return st.employee_full(employee_id)
         return st.employee_summary(employee_id)
 
@@ -271,7 +271,7 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
     @app.get("/api/v1/delegations")
     def list_delegations(request: Request, role: str, activeAt: str | None = None) -> dict:
         p = principal(request, "delegation:read")
-        if role == "all" and not st.has_role(p.employee_id, "hr_staff"):
+        if role == "all" and not st.can_register_for_others(p.employee_id):
             raise ProblemError(403, "forbidden", "인사 담당만 전체를 봅니다")
         with lock:
             items = [st.delegation_view(d) for d in st.delegations.values()
@@ -322,7 +322,7 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
     def leave_balance(request: Request, employeeId: str | None = None) -> dict:
         p = principal(request, "leave:read")
         target = employeeId or p.employee_id
-        if target != p.employee_id and not st.has_role(p.employee_id, "hr_staff"):
+        if target != p.employee_id and not st.has_role(p.employee_id, st.erp_role("hr")):
             raise ProblemError(403, "forbidden", "본인 잔여만 봅니다")
         st.employee(target)
         with lock:
@@ -436,7 +436,7 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
     def audit_events(request: Request, actorId: str | None = None, actionId: str | None = None,
                      since: str | None = None, limit: int = 100) -> dict:
         p = principal(request, "audit:read", human_only=True)
-        if not st.has_role(p.employee_id, "auditor"):
+        if not st.has_role(p.employee_id, st.erp_role("auditor")):
             raise ProblemError(403, "forbidden", "감사 조회 역할만 봅니다")
         with lock:
             items = [e for e in st.audit if (not actorId or e["actor"]["employeeId"] == actorId)
