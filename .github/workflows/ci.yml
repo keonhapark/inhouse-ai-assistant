@@ -123,10 +123,12 @@ jobs:
           ERP_JWT_SECRET="$(openssl rand -hex 32)"
           export ERP_JWT_SECRET
           bash erp/ci/start.sh
+          read -ra targets <<< "$(python3 scripts/ci/erp_behavior_targets.py)"
+          if [ ${#targets[@]} -eq 0 ]; then echo "erp/ci/behavior-tests.txt가 비어 있어 건너뜁니다"; exit 0; fi
+          export ERP_BASE_URL=http://localhost:8040/api/v1
+          export ERP_TEST_DELEGATION_PRIVATE_KEY="$GITHUB_WORKSPACE/infra/dev-keys/delegation-es256.pem"
           cd contracts && uv sync --frozen
-          ERP_BASE_URL=http://localhost:8040/api/v1 \
-          ERP_TEST_DELEGATION_PRIVATE_KEY="$GITHUB_WORKSPACE/infra/dev-keys/delegation-es256.pem" \
-            uv run pytest -q $(python3 "$GITHUB_WORKSPACE/scripts/ci/erp_behavior_targets.py")
+          uv run pytest -q "${targets[@]}"
 
   python:
     needs: changes
