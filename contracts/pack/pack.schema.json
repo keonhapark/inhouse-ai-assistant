@@ -117,6 +117,15 @@
           "additionalProperties": {"type": "string"},
           "propertyNames": {"enum": ["team_leader", "division_head", "ceo"]}
         },
+        "erp_roles": {
+          "type": "object",
+          "description": "erp 코어가 권한 판단에 쓰는 역할 ID. 없으면 hr: hr_staff, auditor: auditor입니다",
+          "additionalProperties": false,
+          "properties": {
+            "hr": {"$ref": "#/$defs/id", "description": "인사 담당. 직원 상세 전체 필드, 다른 사람의 연차 잔여"},
+            "auditor": {"$ref": "#/$defs/id", "description": "감사 조회(GET /audit-events)"}
+          }
+        },
         "delegation_policy": {
           "type": "object",
           "required": ["max_period_days", "registrable_by", "allow_redelegation", "allow_self_approval", "scope_units", "wide_scope"],

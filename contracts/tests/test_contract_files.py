@@ -176,3 +176,20 @@ def test_pack_budgets_are_checked(tmp_path) -> None:
     assert any("nobody" in e for e in errs) and any("nowhere" in e for e in errs)
     (pack / "budgets.yaml").unlink()
     assert check_pack(pack) == []          # 파일이 없어도 됩니다
+
+
+def test_pack_erp_roles_are_checked(tmp_path) -> None:
+    """선택 항목 org.yaml erp_roles: 없는 역할을 가리키면 잡고, 항목이 없어도 됩니다."""
+    import re
+    import shutil
+
+    from tools.check_packs import check_pack
+
+    pack = tmp_path / "manufacturing"
+    shutil.copytree(PACKS / "manufacturing", pack)
+    org = pack / "org.yaml"
+    text = org.read_text(encoding="utf-8")
+    org.write_text(text.replace("  auditor: auditor\n", "  auditor: nobody\n", 1), encoding="utf-8")
+    assert any("erp_roles.auditor" in e for e in check_pack(pack))
+    org.write_text(re.sub(r"(?m)^erp_roles:\n(  .*\n)+", "", text), encoding="utf-8")
+    assert check_pack(pack) == []          # 항목이 없으면 기본값(hr_staff, auditor)
