@@ -76,6 +76,7 @@ jobs:
         run: uv run python -m tools.check_packs
       - name: 코어 업종 용어 검사
         run: uv run python -m tools.check_core_terms
+      # .github/oasdiff-levels.txt: 감사 이벤트 kind처럼 늘어나는 enum은 응답에 값이 더해져도 경고로만 봅니다(받는 쪽은 모르는 값을 무시)
       - name: OpenAPI 하위 호환 검사(oasdiff)
         if: github.event_name == 'pull_request'
         working-directory: .
@@ -87,7 +88,8 @@ jobs:
             if [ -f "/tmp/base/$spec" ]; then
               echo "== $spec"
               docker run --rm -v /tmp/base:/base:ro -v "$PWD":/head:ro tufin/oasdiff:v1.35.0 \
-                breaking "/base/$spec" "/head/$spec" --fail-on ERR || status=1
+                breaking "/base/$spec" "/head/$spec" --fail-on ERR \
+                --severity-levels /head/.github/oasdiff-levels.txt || status=1
             fi
           done
           exit $status

@@ -25,6 +25,7 @@ from fakes.erp.app import create_app as create_fake_erp
 from tests.conftest import CONTRACTS, PACK_DIR
 
 KST = ZoneInfo("Asia/Seoul")
+STAGE_MAX = 9  # 시험용 토큰 발급 때 모든 단계의 에이전트 도구를 찾으려고 씁니다
 ALL_SCOPES = [s["id"] for s in json.loads((CONTRACTS / "auth" / "scopes.json").read_text("utf-8"))["scopes"]
               if not s.get("human_only")] + ["approval:request:leave"]
 
@@ -45,7 +46,7 @@ OTHER_PRIVATE_KEY, _ = _keypair()
 def mint(employee: str = "E0016", agent: str = "hr", tools: list[str] | None = None,
          scopes: list[str] | None = None, aud: list[str] | None = None, ttl: int = 600,
          key: str = PRIVATE_KEY, cid: str | None = None) -> str:
-    registry = Registry.load(PACK_DIR)
+    registry = Registry.load(PACK_DIR, stage=STAGE_MAX)
     t = int(time.time())
     return jwt.encode({
         "iss": "gateway", "aud": aud or ["erp", "rag", "mcp"], "sub": employee, "agt": agent,
@@ -77,8 +78,8 @@ class Harness:
         return [json.loads(x) for x in self.audit_path.read_text("utf-8").splitlines()]
 
 
-def make_harness(tmp_path: Path) -> Harness:
-    registry = Registry.load(PACK_DIR)
+def make_harness(tmp_path: Path, stage: int | None = None) -> Harness:
+    registry = Registry.load(PACK_DIR, stage=stage)
     catalog = Catalog.load(CONTRACTS / "mcp" / "tools.json", CONTRACTS / "openapi", registry)
     erp_app = create_fake_erp(PACK_DIR, delegation_public_key=PUBLIC_KEY)
     rag = RagStub()
