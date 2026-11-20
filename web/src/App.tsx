@@ -6,6 +6,8 @@ import { AppShell } from './pages/AppShell'
 import { ChatPage } from './chat/ChatPage'
 import { InboxPage } from './inbox/InboxPage'
 import { LoginPage } from './pages/LoginPage'
+import { AgentRegistryPage } from './org/AgentRegistryPage'
+import { OrgPage } from './org/OrgPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { state } = useAuth()
@@ -29,6 +31,8 @@ export function App() {
       >
         <Route path="/" element={<ChatPage />} />
         <Route path="/inbox" element={<InboxPage />} />
+        <Route path="/org" element={<OrgPage />} />
+        <Route path="/agents" element={<AgentRegistryPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

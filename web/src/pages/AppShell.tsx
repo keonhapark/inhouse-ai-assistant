@@ -16,6 +16,8 @@ export function AppShell() {
             채팅
           </NavLink>
           <NavLink to="/inbox">승인함</NavLink>
+          <NavLink to="/org">조직도</NavLink>
+          <NavLink to="/agents">에이전트</NavLink>
         </nav>
         <span className="topbar__me">
           {me.name} <span className="muted">{me.unitName}</span>

@@ -87,6 +87,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/org/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 조직도의 본부·팀. erp `GET /org/units`를 그대로 넘깁니다. 로그인한 직원 누구나 봅니다. */
+        get: operations["listUnits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 에이전트 등록부. 팩 `agents.yaml`의 모든 에이전트(요청자가 부를 수 없는 것 포함)를 담당 부서·도구·정책과 함께 돌려줍니다.
+         *     로그인한 직원 누구나 봅니다. 라우팅 예문과 비밀값은 넣지 않습니다.
+         */
+        get: operations["listAgentRegistry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/approval-forms": {
         parameters: {
             query?: never;
@@ -336,6 +373,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ops/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description auditor 역할만(관리자 콘솔). 기간 안의 감사 이벤트·외부 요청 기록에서 에이전트별 운영 지표를 셉니다.
+         *     - 호출 수: `route.decided` 이벤트 수(직접 고른 대화의 `explicit` 포함)
+         *     - 정책 차단: `tool.blocked`·`rag.access_denied`와 gateway가 막은 요청을 ChatEvent `blocked.code`로 나눈 수
+         *     - 외부·로컬: `llm.request`의 `model.location`
+         *     - 외부 비용: 외부 요청 기록(`events/external-request.schema.json`)의 `costUsd` 합. `null`인 요청은 `unpricedRequests`로 셉니다
+         *     - 비용 상한: 팩 `budgets.yaml` 대비 사용량. 기간 필터와 관계없이 지금 누적 기간(`period`)의 값입니다
+         */
+        get: operations["getOpsMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ops/egress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description auditor 역할만(관리자 콘솔). 외부 모델로 실제 보낸 요청을 최근 것부터 돌려줍니다.
+         *     가림 뒤 본문과 가린 자리(종류·위치)만 돌려주고, 가림 전 원문은 저장하지도 돌려주지도 않습니다.
+         *     화면은 `redactions`의 위치로 가린 자리를 표시합니다.
+         */
+        get: operations["listEgressRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -457,6 +539,157 @@ export interface components {
             delegatorName: string;
             delegateName: string;
         };
+        OpsMetrics: {
+            /** Format: date-time */
+            since: string;
+            /** Format: date-time */
+            until: string;
+            totals: components["schemas"]["OpsCounts"];
+            /** @description 팩에 있는 에이전트마다 한 줄(기간 안에 호출이 없어도 0으로) */
+            agents: ({
+                agentId: string;
+                agentName: string;
+            } & components["schemas"]["OpsCounts"])[];
+            /** @description 입구 라우팅 결과(`route.decided`의 `routing.method`)별 수 */
+            routing: {
+                total: number;
+                byMethod: {
+                    llm?: number;
+                    keyword?: number;
+                    fallback?: number;
+                    explicit?: number;
+                };
+            };
+            /** @description 팩 `budgets.yaml`이 없으면 null */
+            budgets?: {
+                /** @enum {string} */
+                period: "day" | "month";
+                /**
+                 * Format: date-time
+                 * @description 지금 누적 기간의 시작(팩 시간대 기준)
+                 */
+                periodStart: string;
+                agents: components["schemas"]["BudgetUsage"][];
+                units: components["schemas"]["BudgetUsage"][];
+            } | null;
+        };
+        OpsCounts: {
+            /** @description 에이전트 실행 수(`route.decided`) */
+            calls: number;
+            blocked: {
+                total: number;
+                /** @description ChatEvent `blocked.code` 값 → 수. 0인 코드는 빼도 됩니다 */
+                byCode: {
+                    [key: string]: number;
+                };
+            };
+            llmRequests: {
+                local: number;
+                external: number;
+            };
+            externalCostUsd: number;
+            /** @description 외부 요청 중 비용을 모르는(`costUsd: null`) 수 */
+            unpricedRequests?: number;
+        };
+        BudgetUsage: {
+            /** @description 에이전트 ID 또는 부서 ID */
+            id: string;
+            name?: string;
+            limitUsd: number;
+            usedUsd: number;
+            /** @description 상한을 넘어 외부 요청을 로컬로 내리는 중 */
+            exceeded?: boolean;
+        };
+        /** @description 외부 요청 기록 한 건. 가림 전 원문은 없습니다 */
+        EgressRecord: {
+            recordId: string;
+            /** Format: date-time */
+            at: string;
+            agentId: string | null;
+            agentName?: string | null;
+            conversationId: string | null;
+            /** @description 요청한 직원(위임 토큰 sub) */
+            actorId?: string | null;
+            /** @description LiteLLM에 넘긴 실제 모델 이름 */
+            model: string;
+            usage?: {
+                promptTokens?: number;
+                completionTokens?: number;
+            } | null;
+            costUsd?: number | null;
+            /** @description 외부로 보낸 요청 본문의 messages(가림 뒤). 문자열이 아닌 content는 텍스트 부분만 이어 붙입니다 */
+            messages: {
+                role: string;
+                content: string;
+            }[];
+            /** @description 가린 자리. 위치는 가림 뒤 `messages[messageIndex].content`에서 바꿔 넣은 표시(`placeholder`)의 UTF-16 범위입니다(JavaScript 문자열 위치와 같음) */
+            redactions: {
+                /** @description 가린 종류(예: KR_RRN, KR_PHONE, EMAIL_ADDRESS) */
+                entity: string;
+                /** @description 바꿔 넣은 표시(예: [주민등록번호]) */
+                placeholder: string;
+                messageIndex: number;
+                start: number;
+                end: number;
+            }[];
+        };
+        /** @description 팩 agents.yaml 항목을 화면용으로 옮긴 것(이름은 camelCase) */
+        AgentRegistryEntry: {
+            id: string;
+            name: string;
+            version: string;
+            stage: number;
+            ownerUnitId: string;
+            ownerUnitName?: string | null;
+            description: string;
+            /** @description 요청자가 부를 수 있는지 */
+            callable?: boolean;
+            /** @description 팩 `callable_by`. all 또는 units·roles·grades */
+            callableBy?: "all" | {
+                units?: string[];
+                roles?: string[];
+                grades?: string[];
+            };
+            tools: {
+                /** @description contracts/mcp/tools.json 도구 이름 */
+                name: string;
+                /** @description 도구 설명 첫 문장 */
+                title?: string;
+                /** @enum {string} */
+                risk: "read" | "reversible_write" | "irreversible";
+            }[];
+            allowedRisk: ("read" | "reversible_write" | "irreversible")[];
+            docScopes?: string[];
+            modelPolicy: {
+                /** @enum {string} */
+                mode: "external_allowed" | "local_only";
+                reason?: string;
+            };
+            riskPolicy: {
+                read: components["schemas"]["RiskAction"];
+                reversibleWrite: components["schemas"]["RiskAction"];
+                irreversible: components["schemas"]["RiskAction"];
+                overrides?: {
+                    tool: string;
+                    /**
+                     * @description 팩 `risk_policy.overrides[].when`. 팩의 인자 조건 `{arg, gt}`는 `arg_gt`로 쓰고 `arg`·`gt`에 값을 둡니다
+                     * @enum {string}
+                     */
+                    when: "wide_scope" | "always" | "arg_gt";
+                    /** @description when=arg_gt일 때 견줄 도구 인자 이름 */
+                    arg?: string;
+                    /** @description when=arg_gt일 때 이 값보다 크면 맞음 */
+                    gt?: number;
+                    action: components["schemas"]["RiskAction"];
+                }[];
+            };
+            routingKeywords?: string[];
+        };
+        /**
+         * @description auto: 바로 실행. auto_with_undo: 실행하고 되돌리기 안내. confirm: 미리보기 카드로 실행 승인. deny: 이 에이전트에서 금지
+         * @enum {string}
+         */
+        RiskAction: "auto" | "auto_with_undo" | "confirm" | "deny";
         EmployeeSummary: {
             id: string;
             name: string;
@@ -492,6 +725,15 @@ export interface components {
                 field: string;
                 message: string;
             }[];
+        };
+        Unit: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            kind: "division" | "team";
+            parentId?: string | null;
+            /** @description 팀장·본부장·대표이사 직원 ID */
+            headId?: string | null;
         };
         ApprovalForm: {
             id: string;
@@ -530,6 +772,20 @@ export interface components {
             undoable: boolean;
             warnings?: string[];
         };
+        /** @description 법령 한 판의 시행 기간. 판 정보가 없는 문서(생성 문서, 주입 문서)에는 넣지 않습니다. */
+        Edition: {
+            /** Format: date */
+            effectiveFrom: string;
+            /**
+             * Format: date
+             * @description 다음 판 시행 전날. 마지막 판이면 null
+             */
+            effectiveTo: string | null;
+            /** @description 오늘(KST) 시행 중인 판인지 */
+            current: boolean;
+            /** @description 공포 정보(예: 대통령령 제36728호, 2026. 9. 29., 타법개정) */
+            promulgation?: string | null;
+        };
         Citation: {
             docId: string;
             title: string;
@@ -538,6 +794,7 @@ export interface components {
             quote: string;
             /** @description 인용 대조로 quote가 원문에 있는지 확인했는지 */
             verified: boolean;
+            edition?: components["schemas"]["Edition"];
         };
         ActionResult: {
             actionId: string;
@@ -651,11 +908,13 @@ export interface components {
             /** @enum {unknown} */
             source: "erp" | "gateway" | "agent" | "mcp" | "rag" | "web";
             /** @enum {unknown} */
-            kind: "erp.write" | "erp.undo" | "erp.denied" | "auth.login" | "auth.delegation_token_issued" | "route.decided" | "tool.called" | "tool.blocked" | "execution_approval.requested" | "execution_approval.decided" | "llm.request" | "llm.redacted" | "rag.answered" | "rag.access_denied";
+            kind: "erp.write" | "erp.undo" | "erp.denied" | "auth.login" | "auth.delegation_token_issued" | "route.decided" | "tool.called" | "tool.blocked" | "execution_approval.requested" | "execution_approval.decided" | "llm.request" | "llm.redacted" | "rag.answered" | "rag.access_denied" | "rag.document_purged";
             actor: {
                 /** @description 요청한 직원. 시스템 동작이면 null */
                 employeeId: string | null;
                 viaDelegationToken?: boolean;
+                /** @description 위임 토큰으로 한 일이면 그 토큰의 jti(gateway 발급 이벤트의 토큰과 잇는 값) */
+                delegationTokenId?: string | null;
                 agentId?: string | null;
             };
             /** @description 결재 대결이면 원 결재자 ID */
@@ -846,6 +1105,51 @@ export interface operations {
             };
         };
     };
+    listUnits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 본부·팀 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Unit"][];
+                    };
+                };
+            };
+        };
+    };
+    listAgentRegistry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 등록부 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        fallbackAgentId?: string;
+                        items: components["schemas"]["AgentRegistryEntry"][];
+                    };
+                };
+            };
+        };
+    };
     listApprovalForms: {
         parameters: {
             query?: never;
@@ -916,7 +1220,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description 평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의 agent /run에 condition으로 넘깁니다(이어지는 /resume은 agent 실행 상태가 조건을 기억합니다). 값은 agent.yaml의 Condition과 같습니다. */
+                /** @description 평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의 agent /run에 condition으로 넘기고(이어지는 /resume은 agent 실행 상태가 조건을 기억합니다), 같은 대화의 출구 호출과 위임 토큰 발급에도 조건을 적용합니다. 조건별 장치 구성은 contracts/eval/conditions.md입니다. */
                 "X-Eval-Condition"?: "no_guard" | "write_blocked" | "approve_all" | "baseline_tools" | "full";
             };
             path?: never;
@@ -942,6 +1246,7 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     getConversation: {
@@ -1003,6 +1308,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["Problem"];
         };
     };
     decideExecutionApproval: {
@@ -1318,6 +1624,64 @@ export interface operations {
                     };
                 };
             };
+            403: components["responses"]["Problem"];
+        };
+    };
+    getOpsMetrics: {
+        parameters: {
+            query?: {
+                /** @description 없으면 until의 24시간 전 */
+                since?: string;
+                /** @description 없으면 지금 */
+                until?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 운영 지표 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpsMetrics"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+        };
+    };
+    listEgressRecords: {
+        parameters: {
+            query?: {
+                since?: string;
+                until?: string;
+                agentId?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 외부 전송 기록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["EgressRecord"][];
+                        nextCursor?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
         };
     };

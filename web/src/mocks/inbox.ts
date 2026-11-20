@@ -242,11 +242,12 @@ export const inboxHandlers = [
     if (!employeeForToken(request.headers.get('Authorization'))) return unauthorized()
     const url = new URL(request.url)
     const q = url.searchParams.get('q') ?? ''
+    const unitId = url.searchParams.get('unitId')
     const limit = Number(url.searchParams.get('limit') ?? 20)
     const items: Schemas['EmployeeSummary'][] = Object.entries(directory)
-      .filter(([, e]) => e.name.includes(q))
+      .filter(([, e]) => e.name.includes(q) && (!unitId || e.unitId === unitId))
       .slice(0, limit)
-      .map(([id, e]) => ({ id, name: e.name, unitId: id, unitName: e.unitName, grade: 'staff' }))
+      .map(([id, e]) => ({ id, name: e.name, unitId: e.unitId, unitName: e.unitName, grade: e.grade }))
     return HttpResponse.json({ items })
   }),
 
