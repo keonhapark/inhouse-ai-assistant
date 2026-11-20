@@ -13,6 +13,9 @@ from typing import Any
 import httpx
 
 
+GATEWAY_DEFAULT_ALIAS = "local"
+
+
 class LLMError(RuntimeError):
     pass
 
@@ -28,15 +31,18 @@ class LLMSettings:
     def from_env(cls, env: dict[str, str] | None = None) -> LLMSettings:
         env = dict(os.environ if env is None else env)
         backend = env.get("AGENT_LLM_BACKEND", "gateway")
-        model = env.get("AGENT_LLM_MODEL") or env.get("LOCAL_MODEL") or "qwen3.5:9b"
         timeout = float(env.get("AGENT_LLM_TIMEOUT_S", "60"))
         if backend == "ollama":
+            # Ollama는 모델 이름 그대로 받습니다.
+            model = env.get("AGENT_LLM_MODEL") or env.get("LOCAL_MODEL") or "qwen3.5:9b"
             base = env.get("AGENT_OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/") + "/v1"
             # 로컬 개발에서 생각 단계를 끄면 라우팅 한 번이 몇 초 안에 끝납니다.
             return cls(base_url=base, model=model, timeout_s=timeout, extra_body={"reasoning_effort": "none"})
         if backend != "gateway":
             raise ValueError(f"AGENT_LLM_BACKEND는 gateway 또는 ollama입니다: {backend}")
         default_gw = f"http://localhost:{env.get('PORT_GATEWAY', '8010')}/v1"
+        # gateway는 LiteLLM 별칭(gateway/litellm/config.yaml의 model_name)만 받습니다. 로컬 모델 이름을 보내면 422입니다.
+        model = env.get("AGENT_LLM_MODEL") or GATEWAY_DEFAULT_ALIAS
         return cls(base_url=env.get("GATEWAY_LLM_URL", default_gw).rstrip("/"), model=model, timeout_s=timeout)
 
 
