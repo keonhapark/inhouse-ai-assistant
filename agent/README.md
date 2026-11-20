@@ -68,6 +68,7 @@ PACK_DIR=../packs/manufacturing DELEGATION_TOKEN_PUBLIC_KEY=../infra/dev-keys/de
 | 환경 변수 | 기본값 | 뜻 |
 |---|---|---|
 | `PACK_DIR` | (필수) | 업종 팩 폴더 |
+| `AGENT_PACK_STAGE` | `pack.yaml`의 `stage` | 켤 단계. 에이전트·MCP 도구 모두 이 단계 이하만 켭니다 |
 | `AGENT_AUDIT_LOG` | `var/audit.jsonl` | 감사 이벤트 파일 |
 | `AGENT_ROUTER_MIN_CONFIDENCE` | `0.5` | LLM 라우터 확신도가 이보다 낮으면 fallback |
 | `AGENT_LLM_BACKEND` | `gateway` | `gateway` 또는 `ollama`(gateway가 없을 때 쓰는 개발용) |
