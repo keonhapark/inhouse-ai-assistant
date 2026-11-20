@@ -105,9 +105,13 @@ def create_app(
             model = {"name": answerer.llm.model, "location": answerer.llm.location}
             record("rag.answered", "error", claims, "answer", model=model, problem="llm-unavailable", detail=e.detail)
             return problem(502, "llm-unavailable", "답을 만들지 못했습니다", e.detail)
+        except Exception as e:  # 예기치 않은 실패도 감사에서 빠지지 않게 합니다.
+            log.exception("answer 실패 jti=%s", claims["jti"])
+            record("rag.answered", "error", claims, "answer", problem="internal", detail=type(e).__name__)
+            return problem(502, "internal", "답을 만들지 못했습니다")
         if result.withheld:
             record("rag.access_denied", "denied", claims, "answer", problem="forbidden",
-                   detail="권한 밖이라 근거에서 뺀 문서: " + ", ".join(result.withheld))
+                   detail="권한 밖이라 근거에서 뺀 문서(전체 검색 1위): " + ", ".join(result.withheld))
         model = dict(result.model, externalSent=result.model["location"] == "external") if result.model else None
         record("rag.answered", "ok", claims, "answer", model=model, detail=f"found={result.found}; {result.detail}")
         log.info("answer jti=%s agt=%s found=%s", claims["jti"], claims["agt"], result.found)
