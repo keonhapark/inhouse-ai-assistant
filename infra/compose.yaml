@@ -80,6 +80,14 @@ services:
       - ../eval/injections:/eval/injections:ro
     ports:
       - "${PORT_RAG:-8030}:8000"
+    depends_on:
+      gateway: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 120s   # 시작 때 문서 임베딩(약 30초)
 
   agent:
     profiles: [full]
