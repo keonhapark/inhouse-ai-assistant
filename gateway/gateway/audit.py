@@ -44,7 +44,7 @@ class AuditLog:
     def event(self, kind: str, *, employee_id: str | None, agent_id: str | None, via_token: bool,
               result: str, conversation_id: str | None = None, model: dict[str, Any] | None = None,
               problem_type: str | None = None, detail: str | None = None,
-              delegation_token_id: str | None = None) -> str:
+              delegation_token_id: str | None = None, routing: dict[str, Any] | None = None) -> str:
         event_id = "evt_" + uuid.uuid4().hex
         self.events.write({
             "eventId": event_id,
@@ -58,5 +58,6 @@ class AuditLog:
             "result": result,
             "problemType": problem_type,
             "detail": detail,
+            **({"routing": routing} if routing is not None else {}),
         })
         return event_id

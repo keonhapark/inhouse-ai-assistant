@@ -261,11 +261,22 @@ class ChatService:
                     route = {"agentId": agent.id, "agentName": agent.name, "method": "explicit",
                              "reason": "직원이 골랐습니다", "suggestedAgentId": None}
                 if not grant_matches(agent.callable_by, who):
+                    # 운영 지표의 차단 수(agent_not_callable)에 들어가도록 거절한 라우팅도 감사 이벤트로 남깁니다.
+                    self.audit.event("route.decided", employee_id=who.id, agent_id=agent.id, via_token=False,
+                                     result="denied", conversation_id=c.id,
+                                     problem_type="urn:problem:agent-not-callable",
+                                     routing={"agentId": agent.id, "method": route["method"],
+                                              "reason": "요청자가 부를 수 없는 에이전트"})
                     yield c.event("blocked", blocked={"reason": f"{agent.name} 에이전트를 부를 수 없습니다",
                                                       "code": "agent_not_callable"})
                     yield c.event("done")
                     return
                 c.agent_id, c.routed = agent.id, True
+                if route["method"] == "explicit":
+                    # 직원이 고른 대화는 agent 라우터를 거치지 않아 gateway가 route.decided를 남깁니다(운영 지표 호출 수).
+                    self.audit.event("route.decided", employee_id=who.id, agent_id=agent.id, via_token=False,
+                                     result="ok", conversation_id=c.id,
+                                     routing={"agentId": agent.id, "method": "explicit", "reason": route["reason"]})
                 yield c.event("route", route=route)
 
             token = self._token(who, c)

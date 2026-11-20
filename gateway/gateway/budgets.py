@@ -31,7 +31,8 @@ class Over:
 
 class BudgetLedger:
     def __init__(self, budgets: dict[str, Any] | None, parents: dict[str, str | None], timezone: str,
-                 path: Path | None = None):
+                 path: Path | None = None, unit_names: dict[str, str] | None = None):
+        self.unit_names = unit_names or {}
         b = budgets or {}
         self.period = b.get("period", "month")
         self.agent_limits: dict[str, float] = {k: float(v) for k, v in (b.get("agents") or {}).items()}
@@ -51,7 +52,8 @@ class BudgetLedger:
         pack = read(pack_dir / "pack.yaml") or {}
         parents = {u["id"]: u.get("parent") for u in org.get("units", [])}
         tz = (pack.get("company") or {}).get("timezone", "UTC")
-        return cls(read(pack_dir / "budgets.yaml"), parents, tz, path)
+        names = {u["id"]: u.get("name", u["id"]) for u in org.get("units", [])}
+        return cls(read(pack_dir / "budgets.yaml"), parents, tz, path, names)
 
     @property
     def enabled(self) -> bool:
@@ -60,6 +62,11 @@ class BudgetLedger:
     def period_key(self, now: datetime | None = None) -> str:
         t = (now or datetime.now(self.tz)).astimezone(self.tz)
         return t.strftime("%Y-%m-%d" if self.period == "day" else "%Y-%m")
+
+    def period_start(self, now: datetime | None = None) -> datetime:
+        t = (now or datetime.now(self.tz)).astimezone(self.tz)
+        t = t.replace(hour=0, minute=0, second=0, microsecond=0)
+        return t if self.period == "day" else t.replace(day=1)
 
     def units_of(self, unit_id: str | None) -> list[str]:
         """소속 부서와 그 상위 부서(순환 방지)."""

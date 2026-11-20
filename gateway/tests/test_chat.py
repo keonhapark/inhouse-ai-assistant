@@ -397,3 +397,11 @@ def test_conversation_remembers_requester_unit_for_budgets(chat, h, staff_no):
     assert chat.app_ref.state.chat.unit_of(cid) == unit
     assert chat.app_ref.state.egress.unit_of(cid) == unit
     assert chat.app_ref.state.chat.unit_of("nope") is None
+
+
+def test_explicit_route_and_denied_route_are_audited(chat, h):
+    cid = _new(chat, h, agentId="hr")
+    events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "연차"}))
+    ev = [e for e in chat.app_ref.state.audit.events.read_all() if e["kind"] == "route.decided"]
+    assert ev[-1]["routing"]["method"] == "explicit" and ev[-1]["result"] == "ok"
+    schema_check.validate_file("events/audit.schema.json", ev[-1])
