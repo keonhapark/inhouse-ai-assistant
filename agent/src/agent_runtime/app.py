@@ -69,7 +69,8 @@ class AgentInfo(BaseModel):
 class AttachmentIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: Literal["image"]
-    dataUrl: str = Field(pattern=r"^data:image/(jpeg|png);base64,")
+    # 계약의 한 장 5MB(디코딩 크기)를 base64로 바꾼 길이에 접두사 여유를 더한 상한입니다.
+    dataUrl: str = Field(pattern=r"^data:image/(jpeg|png);base64,", max_length=7_000_100)
 
 
 class RunIn(BaseModel):

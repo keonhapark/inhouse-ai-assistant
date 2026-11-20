@@ -43,13 +43,15 @@ class Runner:
         prior = prepare_history((snapshot.values or {}).get("messages", []))
         state = {**TURN_RESET, "conversationId": conversation_id, "agentId": agent_id,
                  "requesterId": requester.employee_id, "condition": condition}
+        turn = [{"role": "user", "content": message}]
         if attachments:
             note, tainted = await self._read_attachments(attachments, token, ctx)
-            message = f"{message}\n\n{note}"
+            # 사용자 발화와 섞지 않고 따로 둡니다.
+            turn.append({"role": "user", "content": note})
             if tainted:
                 # 영수증 글자는 신뢰할 수 없는 내용입니다. 같은 턴이라도 막지 않고 user_direct 도구는 승인을 받습니다(결정 0004).
                 state["conversation_tainted"] = True
-        state["messages"] = [*prior, {"role": "user", "content": message}]
+        state["messages"] = [*prior, *turn]
         try:
             await self.graph.ainvoke(state, config, context=ctx)
         except Exception as e:  # noqa: BLE001 - 그래프 오류는 failed 상태로 돌려줍니다
@@ -84,7 +86,7 @@ class Runner:
         """(사용자 메시지에 붙일 글, 읽은 값이 있는지). 이미지 본문은 상태에 넣지 않습니다."""
         if self.receipts is None or ctx.spec(RECEIPT_TOOL) is None:
             return f"[첨부 이미지 {len(data_urls)}장은 이 에이전트에서 읽지 않았습니다]", False
-        results = [await self.receipts.read(u, token) for u in data_urls]
+        results = await self.receipts.read_all(data_urls, token)
         return attachment_note(results, UNTRUSTED_NOTE), any(r is not None for r in results)
 
     def _check(self, token: str, conversation_id: str, agent_id: str, requester: Requester,

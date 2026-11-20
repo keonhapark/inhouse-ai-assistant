@@ -174,7 +174,8 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         if d_action in ("blocked", "deny"):
             deps.audit.write(tool_blocked(state["requesterId"], ctx.agent.id, state["conversationId"], name, args,
                                           spec.meta.risk if spec else None,
-                                          "untrusted" if state.get("tainted") else "user_direct", reason,
+                                          "untrusted" if state.get("tainted") or state.get("conversation_tainted")
+                                          else "user_direct", reason,
                                           ctx.token_id))
             msg = tool_message(call, {"error": "blocked", "reason": reason})
             return after_tool(state, {"messages": [*state["messages"], msg],
