@@ -19,6 +19,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
+
+import numpy as np
 from typing import Literal, Protocol
 
 from rag.chunk import Chunk
@@ -83,11 +85,24 @@ def index_text(chunk: Chunk) -> str:
     return " ".join(x for x in (chunk.title, chunk.article or "", chunk.text) if x)
 
 
-def _cosine(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b, strict=True))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    return dot / (na * nb) if na and nb else 0.0
+def _unit_rows(vectors: list[list[float]]) -> np.ndarray:
+    """행마다 길이 1로 맞춘 float32 행렬. 길이 0인 행은 0으로 둡니다(코사인 0)."""
+    m = np.asarray(vectors, dtype=np.float32)
+    if m.ndim != 2:
+        m = m.reshape(len(vectors), -1)
+    norms = np.linalg.norm(m, axis=1, keepdims=True)
+    return np.divide(m, norms, out=np.zeros_like(m), where=norms > 0)
+
+
+def _postings(tf: tuple[Counter[str], ...]) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """토큰 → (그 토큰이 있는 청크 번호, 빈도). BM25가 질의 토큰이 든 청크만 보게 합니다."""
+    acc: dict[str, tuple[list[int], list[int]]] = {}
+    for i, counts in enumerate(tf):
+        for t, f in counts.items():
+            ids, freqs = acc.setdefault(t, ([], []))
+            ids.append(i)
+            freqs.append(f)
+    return {t: (np.asarray(ids, dtype=np.int64), np.asarray(fs, dtype=np.float64)) for t, (ids, fs) in acc.items()}
 
 
 @dataclass(frozen=True)
@@ -97,8 +112,14 @@ class _State:
 
     chunks: tuple[Chunk, ...]
     tf: tuple[Counter[str], ...]
-    lens: tuple[int, ...]
-    vectors: tuple[list[float], ...] | None
+    lens: np.ndarray  # 청크마다 토큰 수(int64)
+    postings: dict[str, tuple[np.ndarray, np.ndarray]]
+    vectors: np.ndarray | None  # 행마다 길이 1인 float32 (청크 수 × 차원)
+
+    @classmethod
+    def build(cls, chunks: tuple[Chunk, ...], tf: tuple[Counter[str], ...], vectors: np.ndarray | None) -> _State:
+        lens = np.asarray([sum(t.values()) for t in tf], dtype=np.int64)
+        return cls(chunks, tf, lens, _postings(tf), vectors)
 
 
 class SearchIndex:
@@ -118,8 +139,10 @@ class SearchIndex:
         self.editions = editions
         self.today = today
         tf = tuple(Counter(tokenize(index_text(c))) for c in chunks)
-        vectors = tuple(embedder.embed([index_text(c) for c in chunks])) if embedder else None
-        self._state = _State(tuple(chunks), tf, tuple(sum(t.values()) for t in tf), vectors)
+        vectors = _unit_rows(embedder.embed([index_text(c) for c in chunks])) if embedder and chunks else None
+        if embedder and not chunks:
+            vectors = np.zeros((0, 0), dtype=np.float32)
+        self._state = _State.build(tuple(chunks), tf, vectors)
         self._lock = threading.Lock()
         self.version = 0  # 파기할 때마다 1씩 늘어, 색인에서 따로 만든 것(판 대조표)을 다시 만들 때를 알립니다.
 
@@ -134,11 +157,10 @@ class SearchIndex:
             keep = [i for i, c in enumerate(st.chunks) if c.doc_id != doc_id]
             removed = [c for c in st.chunks if c.doc_id == doc_id]
             if removed:
-                self._state = _State(
+                self._state = _State.build(
                     tuple(st.chunks[i] for i in keep),
                     tuple(st.tf[i] for i in keep),
-                    tuple(st.lens[i] for i in keep),
-                    tuple(st.vectors[i] for i in keep) if st.vectors is not None else None,
+                    st.vectors[np.asarray(keep, dtype=np.int64)] if st.vectors is not None else None,
                 )
                 self.version += 1
             return removed
@@ -174,21 +196,28 @@ class SearchIndex:
         terms = set(tokenize(query))
         if not ids or not terms:
             return []
+        allowed = np.asarray(ids, dtype=np.int64)
+        mask = np.zeros(len(st.chunks), dtype=bool)
+        mask[allowed] = True
         n = len(ids)
-        avg = sum(st.lens[i] for i in ids) / n
-        df = {t: sum(1 for i in ids if t in st.tf[i]) for t in terms}
-        scored = []
-        for i in ids:
-            tf, dl, s = st.tf[i], st.lens[i], 0.0
-            for t in terms:
-                f = tf.get(t, 0)
-                if not f:
-                    continue
-                idf = math.log(1 + (n - df[t] + 0.5) / (df[t] + 0.5))
-                s += idf * f * (self.K1 + 1) / (f + self.K1 * (1 - self.B + self.B * dl / avg))
-            if s > 0:
-                scored.append((i, s))
-        return sorted(scored, key=lambda x: (-x[1], x[0]))
+        avg = int(st.lens[allowed].sum()) / n
+        scores = np.zeros(len(st.chunks), dtype=np.float64)
+        # 문서 빈도는 허용된 청크만으로 셉니다(권한 밖 문서가 점수에 영향을 주지 않게).
+        for t in terms:
+            if t not in st.postings:
+                continue
+            post, freq = st.postings[t]
+            keep = mask[post]
+            idx, f = post[keep], freq[keep]
+            df = len(idx)
+            if not df:
+                continue
+            idf = math.log(1 + (n - df + 0.5) / (df + 0.5))
+            dl = st.lens[idx]
+            scores[idx] += idf * f * (self.K1 + 1) / (f + self.K1 * (1 - self.B + self.B * dl / avg))
+        hit = np.flatnonzero(scores > 0)
+        order = np.lexsort((hit, -scores[hit]))
+        return [(int(i), float(scores[i])) for i in hit[order]]
 
     def vector(self, query: str, ids: list[int]) -> list[tuple[int, float]]:
         return self._vector(self._state, query, ids)
@@ -200,10 +229,13 @@ class SearchIndex:
             raise RuntimeError("임베딩 모델이 설정되지 않았습니다")
         if not ids:
             return []
-        q = embed_query(self.embedder, query, token)
-        vectors = st.vectors
-        scored = [(i, _cosine(q, vectors[i])) for i in ids]
-        return sorted(scored, key=lambda x: (-x[1], x[0]))
+        q = np.asarray(embed_query(self.embedder, query, token), dtype=np.float32)
+        norm = float(np.linalg.norm(q))
+        allowed = np.asarray(ids, dtype=np.int64)
+        # 권한 밖 청크의 행은 꺼내지도 않습니다(ACL은 점수 계산 전).
+        sims = st.vectors[allowed] @ (q / norm) if norm else np.zeros(len(allowed), dtype=np.float32)
+        order = np.lexsort((allowed, -sims))
+        return [(int(allowed[k]), float(sims[k])) for k in order]
 
     def hybrid(self, query: str, ids: list[int], depth: int = 50) -> list[tuple[int, float]]:
         return self._hybrid(self._state, query, ids, depth)
