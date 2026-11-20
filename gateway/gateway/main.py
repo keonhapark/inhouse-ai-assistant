@@ -16,6 +16,8 @@ from fastapi.responses import JSONResponse, Response
 from gateway import redact
 from gateway.alerts import Alerter
 from gateway import audit_query
+from gateway.chat import AgentClient, ChatService
+from gateway.chat import build_router as chat_router
 from gateway.audit import AuditLog
 from gateway.config import Settings
 from gateway.delegation import DelegationService
@@ -45,7 +47,8 @@ def _relay(r: httpx.Response) -> Response:
 
 def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBaseTransport | None = None,
                issuer: DelegationTokenIssuer | None = None, llm_transport: httpx.AsyncBaseTransport | None = None,
-               alert_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
+               alert_transport: httpx.AsyncBaseTransport | None = None,
+               agent_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     redact.install()
     registry = Registry.load(settings.pack_dir, settings.contracts_dir)
@@ -63,6 +66,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
         yield
         await erp.aclose()
         await egress.aclose()
+        await agent.aclose()
 
     app = FastAPI(title="gateway", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
@@ -70,6 +74,8 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     app.state.issuer = issuer
     app.state.erp = erp
     app.state.delegation = DelegationService(erp, registry, issuer)
+    agent = AgentClient(settings.agent_base_url, transport=agent_transport, timeout=settings.agent_timeout_seconds)
+    app.state.chat = ChatService(erp, registry, app.state.delegation, agent, audit)
     app.state.audit = audit
     app.state.alerter = alerter
     app.state.egress = egress
@@ -102,6 +108,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
 
     app.include_router(api)
     app.include_router(build_router(erp), prefix="/api")
+    app.include_router(chat_router(app.state.chat), prefix="/api")
     app.include_router(audit_query.build_router(erp, audit, settings.audit_event_files), prefix="/api")
 
     # LLM 출구는 OpenAI 호환 경로라 /api 밖에 둡니다(agent·rag의 GATEWAY_LLM_URL=http://gateway:8000/v1).
