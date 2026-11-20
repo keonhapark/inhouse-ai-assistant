@@ -98,6 +98,10 @@ class AuthApiTest extends PostgresTestBase {
         expect401(me(Tokens.delegation(EMP, s, b -> b.issuer("erp"))));
         expect401(me(Tokens.delegation(EMP, s, b -> b.audience(List.of("rag", "mcp")))));
         expect401(me(Tokens.delegation("E9999", s)));
+        for (String claim : List.of("agt", "cid", "scopes", "iat", "jti")) {
+            expect401(me(Tokens.delegation(EMP, s, b -> b.claim(claim, null))));
+        }
+        expect401(me(Tokens.delegation(EMP, java.util.Arrays.asList("profile:read", null))));
         String good = Tokens.delegation(EMP, s);
         expect401(me(good.substring(0, good.length() - 4) + (good.endsWith("AAAA") ? "BBBB" : "AAAA")));
         KeyPairGenerator g = KeyPairGenerator.getInstance("EC");
@@ -114,6 +118,25 @@ class AuthApiTest extends PostgresTestBase {
                 .andExpect(jsonPath("$.type").value("urn:problem:delegation-token-not-allowed"));
         String jwt = Tokens.hs256(employeeClaims(EMP, Instant.now().plusSeconds(60)).build(), JWT_SECRET);
         mvc.perform(get(path).header("Authorization", "Bearer " + jwt)).andExpect(status().isOk());
+    }
+
+    @Test
+    void pathWithoutScopeIsClosedToDelegationTokens() throws Exception {
+        String path = GuardProbeController.PREFIX + "/unmarked";
+        mvc.perform(get(path).header("Authorization", "Bearer " + Tokens.delegation(EMP, List.of("profile:read"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.type").value("urn:problem:forbidden"));
+        String jwt = Tokens.hs256(employeeClaims(EMP, Instant.now().plusSeconds(60)).build(), JWT_SECRET);
+        mvc.perform(get(path).header("Authorization", "Bearer " + jwt)).andExpect(status().isOk());
+        mvc.perform(get("/health").header("Authorization", "Bearer " + Tokens.delegation(EMP, List.of())))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void blankDemoPasswordStopsStartup() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> new LoginController(null, null, null,
+                        new AuthProperties(JWT_SECRET, 3600, " ", null)))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

@@ -36,6 +36,9 @@ class ContractScopeTest extends PostgresTestBase {
                     || hm.getBeanType().equals(GuardProbeController.class)) {
                 continue;
             }
+            if (info.getMethodsCondition().getMethods().isEmpty()) {
+                problems.add(hm + ": HTTP 메서드가 정해지지 않은 매핑");
+            }
             for (String path : info.getPathPatternsCondition().getPatternValues()) {
                 for (var method : info.getMethodsCondition().getMethods()) {
                     JsonNode op = paths.path(path).path(method.name().toLowerCase());
@@ -48,6 +51,11 @@ class ContractScopeTest extends PostgresTestBase {
                     RequiredScope rs = hm.getMethodAnnotation(RequiredScope.class);
                     String want = op.path("x-required-scope").asText(null);
                     boolean humanOnly = op.path("x-human-only").asBoolean(false);
+                    boolean isPublic = hm.hasMethodAnnotation(PublicEndpoint.class);
+                    boolean contractPublic = op.path("security").isArray() && op.path("security").isEmpty();
+                    if (isPublic != contractPublic) {
+                        problems.add(where + ": @PublicEndpoint와 계약 security: []가 다름");
+                    }
                     if (want == null) {
                         if (rs != null) {
                             problems.add(where + ": 계약에 scope가 없는데 @RequiredScope가 있음");

@@ -18,10 +18,14 @@ public class ScopeGuard implements HandlerInterceptor {
         if (!(handler instanceof HandlerMethod hm)) {
             return true;
         }
-        RequiredScope rs = hm.getMethodAnnotation(RequiredScope.class);
         ErpPrincipal p = current();
-        if (rs == null || p == null || !p.viaDelegationToken()) {
+        if (p == null || !p.viaDelegationToken() || hm.hasMethodAnnotation(PublicEndpoint.class)) {
             return true;
+        }
+        RequiredScope rs = hm.getMethodAnnotation(RequiredScope.class);
+        if (rs == null) {
+            // scope 표시가 빠진 경로는 위임 토큰으로 열지 않습니다(실패 시 닫힘).
+            throw new ApiException(403, "forbidden", "scope가 정해지지 않은 경로입니다");
         }
         if (rs.humanOnly()) {
             throw new ApiException(403, "delegation-token-not-allowed", "위임 토큰으로 부를 수 없는 기능입니다");

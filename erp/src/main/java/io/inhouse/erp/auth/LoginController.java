@@ -27,11 +27,15 @@ public class LoginController {
         this.employees = employees;
         this.org = org;
         this.tokens = tokens;
+        if (props.demoPassword() == null || props.demoPassword().isBlank()) {
+            throw new IllegalStateException("ERP_DEMO_PASSWORD가 비어 있습니다. 빈 비밀번호로 로그인되지 않게 시작을 멈춥니다");
+        }
         this.password = props.demoPassword().getBytes(StandardCharsets.UTF_8);
     }
 
     /** 데모 로그인: 사번과 공통 비밀번호(ERP_DEMO_PASSWORD). 틀리면 사번이 있는지 알려 주지 않고 401입니다. */
     @PostMapping("/auth/login")
+    @PublicEndpoint
     public LoginResponse login(@RequestBody LoginRequest req) {
         String given = req.password() == null ? "" : req.password();
         boolean passwordOk = MessageDigest.isEqual(password, given.getBytes(StandardCharsets.UTF_8));

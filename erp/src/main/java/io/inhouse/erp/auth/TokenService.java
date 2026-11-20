@@ -105,9 +105,15 @@ public class TokenService {
             }
             if (JWSAlgorithm.ES256.equals(alg) && delegationVerifier != null) {
                 JWTClaimsSet c = verified(jwt, delegationVerifier, GATEWAY);
+                String agent = c.getStringClaim("agt");
+                String conversation = c.getStringClaim("cid");
                 List<String> scopes = c.getStringListClaim("scopes");
-                return new ErpPrincipal(knownEmployee(c.getSubject()), true, c.getStringClaim("agt"),
-                        c.getStringClaim("cid"), scopes == null ? Set.of() : Set.copyOf(new HashSet<>(scopes)));
+                if (agent == null || conversation == null || scopes == null || scopes.contains(null)
+                        || c.getIssueTime() == null || c.getJWTID() == null) {
+                    throw unauthorized("위임 토큰의 필수 클레임(agt, cid, scopes, iat, jti)이 없습니다");
+                }
+                return new ErpPrincipal(knownEmployee(c.getSubject()), true, agent, conversation,
+                        Set.copyOf(new HashSet<>(scopes)));
             }
         } catch (JOSEException | ParseException e) {
             throw unauthorized("토큰을 확인하지 못했습니다");

@@ -24,6 +24,11 @@ class GuardProbeController {
         return Map.of("ok", "true");
     }
 
+    @GetMapping(PREFIX + "/unmarked")
+    Map<String, String> unmarked() {
+        return Map.of("ok", "true");
+    }
+
     @GetMapping(PREFIX + "/form/{formId}")
     @RequiredScope(value = "approval:request", perForm = true)
     Map<String, String> perForm(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String formId) {
