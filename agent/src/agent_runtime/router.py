@@ -100,7 +100,7 @@ class Router:
     def _decide(self, agent: Agent, requester: Requester, method: Method, confidence: float | None,
                 reason: str, audit_reason: str) -> RouteDecision:
         if not agent.callable_for(requester):
-            # fallback 에이전트는 callable 검사 없이 받습니다(업무 실행 없이 안내만 하는 자리).
+            # fallback 에이전트는 받을 곳이 없어지지 않도록 callable 검사 없이 받습니다.
             suggested = None if agent.id == self.registry.fallback_agent_id else agent.id
             return self._fallback(
                 f"요청자가 부를 수 없는 에이전트({agent.id})라 안내만 합니다",

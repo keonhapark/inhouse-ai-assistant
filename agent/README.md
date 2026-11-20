@@ -6,7 +6,7 @@
 - `POST /route`: 요청을 에이전트 하나에 한 번만 넘깁니다.
   - `method: llm`(기본): 등록부의 설명·예시를 프롬프트에 넣고 모델이 하나를 고릅니다. 모델 호출은 gateway의 OpenAI 호환 엔드포인트로 합니다.
   - `method: keyword`: `routing.keywords`가 가장 많이 든 에이전트를 고르는 기준선입니다. 비교 평가에 씁니다.
-  - 고르지 못하면(맞는 것 없음, 동점, 확신도 미달, 모델 오류) `fallback_agent`가 받습니다. 고른 에이전트를 요청자가 부를 수 없으면(`callable_by`) 역시 `fallback_agent`가 받고, 고른 에이전트는 `suggestedAgentId`로 안내만 합니다. `fallback_agent`는 업무 실행 없이 안내하는 자리라 `callable_by` 검사 없이 받습니다.
+  - 고르지 못하면(맞는 것 없음, 동점, 확신도 미달, 모델 오류) `fallback_agent`가 받습니다. 고른 에이전트를 요청자가 부를 수 없으면(`callable_by`) 역시 `fallback_agent`가 받고, 고른 에이전트는 `suggestedAgentId`로 안내만 합니다. `fallback_agent`는 받을 곳이 없어지지 않도록 `callable_by` 검사 없이 받습니다(이때 쓸 수 있는 도구는 실행 단계에서 따로 막아야 합니다).
   - 모델이 확신도를 주지 않으면 기준 확인 없이 받아들입니다(`callable_by` 검사는 그대로 거칩니다).
   - 결정마다 감사 이벤트 `route.decided`를 JSON Lines로 남깁니다. 요청 원문과 모델이 쓴 이유 문장은 감사 기록에 넣지 않습니다.
 
