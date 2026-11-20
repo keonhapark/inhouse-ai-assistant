@@ -6,7 +6,6 @@ import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Ids;
 import io.inhouse.erp.notification.Notifications;
-import io.inhouse.erp.org.Employee;
 import io.inhouse.erp.org.EmployeeRepository;
 import io.inhouse.erp.org.OrgService;
 import io.inhouse.erp.pack.Pack;
@@ -199,10 +198,9 @@ public class DelegationService {
 
     /** 팩 registrable_by의 역할(self 제외). 대신 등록, 해지, 전체 조회, 열람을 같은 역할로 판단합니다. */
     private boolean canRegisterForOthers(String employeeId) {
-        Employee e = org.employee(employeeId);
         return pack.delegationPolicy().registrableBy().stream()
                 .filter(r -> !"self".equals(r))
-                .anyMatch(e::hasRole);
+                .anyMatch(r -> org.hasRole(employeeId, r));
     }
 
     private String name(String employeeId) {

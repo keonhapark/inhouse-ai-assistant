@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -43,6 +44,12 @@ public class ProblemHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Object> unreadable(HttpMessageNotReadableException e, HttpServletRequest req) {
+        return respond(req, new ApiException(422, "validation", "JSON 본문이 아닙니다"));
+    }
+
+    /** JSON이 아닌 Content-Type도 본문을 못 읽은 것과 같이 422입니다(예전에는 500). */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Object> mediaType(HttpMediaTypeNotSupportedException e, HttpServletRequest req) {
         return respond(req, new ApiException(422, "validation", "JSON 본문이 아닙니다"));
     }
 

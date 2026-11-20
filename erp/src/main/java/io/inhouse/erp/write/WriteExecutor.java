@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -39,6 +41,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Service
 public class WriteExecutor {
+
+    private static final Logger log = LoggerFactory.getLogger(WriteExecutor.class);
 
     static final Duration KEY_TTL = Duration.ofHours(24);
 
@@ -158,11 +162,16 @@ public class WriteExecutor {
         return body;
     }
 
+    /** 감사 저장이 실패해도 원래 거절(403·409 등)을 그대로 돌려줍니다. 500으로 바꾸지 않습니다. */
     private void auditDenied(WriteRequest req, ApiException e) {
-        e.markAudited();
-        audit.recordSeparately(req.principal(), "erp.denied", req.operation(),
-                e.status() == 409 ? "conflict" : "denied", new AuditService.Extra(null, null, null, req.undoOf()),
-                e.code(), e.detail());
+        try {
+            audit.recordSeparately(req.principal(), "erp.denied", req.operation(),
+                    e.status() == 409 ? "conflict" : "denied", new AuditService.Extra(null, null, null, req.undoOf()),
+                    e.code(), e.detail());
+            e.markAudited();
+        } catch (RuntimeException ex) {
+            log.error("거절 감사 이벤트를 남기지 못했습니다: {} {}", req.operation(), e.code(), ex);
+        }
     }
 
     private Optional<ResponseEntity<Object>> replay(IdempotencyRecord.Key recordKey, String hash) {

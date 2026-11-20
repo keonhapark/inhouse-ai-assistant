@@ -103,6 +103,17 @@ class DeniedAuditTest extends ApiTestBase {
                 Map.of("formId", "leave"), false);
         assertThat(problem(r)).isEqualTo("validation");
         assertThat(denied("createApprovalDocument", "validation")).isEqualTo(validation + 1);
+        // 컨트롤러 바인딩처럼 1도 dryRun입니다.
+        send(MockMvcRequestBuilders.post("/approval-documents").param("dryRun", "1"), jwt, Map.of("formId", "leave"),
+                false);
+        assertThat(denied("createApprovalDocument", "validation")).isEqualTo(validation + 1);
+
+        // JSON이 아닌 본문도 사전 검사 거절(422)로 남습니다.
+        r = mvc.perform(MockMvcRequestBuilders.post("/approval-documents").header("Authorization", "Bearer " + jwt)
+                .header("Idempotency-Key", UUID.randomUUID().toString()).contentType(MediaType.TEXT_PLAIN)
+                .content("leave")).andReturn().getResponse();
+        assertThat(r.getStatus()).isEqualTo(422);
+        assertThat(denied("createApprovalDocument", "validation")).isEqualTo(validation + 2);
 
         int noKey = denied("withdrawApprovalDocument", "idempotency-key-required");
         r = send(MockMvcRequestBuilders.post("/approval-documents/apd_x/withdraw"), jwt, null, false);

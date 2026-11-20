@@ -6,6 +6,8 @@ import io.inhouse.erp.common.OperationId;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.convert.ConversionException;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -41,7 +43,7 @@ public class DeniedRequestAuditor {
             return;
         }
         boolean write = !"GET".equals(req.getMethod());
-        boolean dryRun = "true".equalsIgnoreCase(req.getParameter("dryRun"));
+        boolean dryRun = dryRun(req.getParameter("dryRun"));
         if (!e.isAuditedOnReads() && !(write && !dryRun)) {
             return;
         }
@@ -53,6 +55,18 @@ public class DeniedRequestAuditor {
         } catch (RuntimeException ex) {
             // 감사 저장이 실패해도 거절 응답은 그대로 돌려줍니다. 원래 응답을 500으로 바꾸지 않습니다.
             log.error("거절 감사 이벤트를 남기지 못했습니다: {} {}", op == null ? hm : op.value(), e.code(), ex);
+        }
+    }
+
+    /** 컨트롤러의 {@code boolean dryRun} 바인딩과 같은 규칙(true·on·yes·1)으로 읽습니다. */
+    static boolean dryRun(String value) {
+        if (value == null) {
+            return false;
+        }
+        try {
+            return Boolean.TRUE.equals(DefaultConversionService.getSharedInstance().convert(value, Boolean.class));
+        } catch (ConversionException e) {
+            return false;
         }
     }
 
