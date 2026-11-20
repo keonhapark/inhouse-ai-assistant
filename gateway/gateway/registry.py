@@ -51,8 +51,12 @@ def grant_matches(grant: Any, who: Requester) -> bool:
 
 
 class Registry:
-    def __init__(self, agents_doc: dict[str, Any], tools_doc: dict[str, Any], scopes_doc: dict[str, Any]):
+    def __init__(self, agents_doc: dict[str, Any], tools_doc: dict[str, Any], scopes_doc: dict[str, Any],
+                 access_tags: tuple[str, ...] = ()):
         human_only = {s["id"] for s in scopes_doc["scopes"] if s.get("human_only")}
+        # 평가 조건 no_guard·baseline_tools의 공용 계정 범위: 사람 전용을 뺀 모든 scope, 팩의 모든 문서 태그
+        self.wide_scopes = tuple(s["id"] for s in scopes_doc["scopes"] if not s.get("human_only"))
+        self.all_access_tags = tuple(access_tags)
         tool_scope = {t["name"]: t["required_scope"] for t in tools_doc["tools"]}
         self.fallback_agent: str | None = agents_doc.get("fallback_agent")
         self._agents: dict[str, AgentEntry] = {}
@@ -79,10 +83,12 @@ class Registry:
             text = p.read_text(encoding="utf-8")
             return yaml.safe_load(text) if p.suffix in (".yaml", ".yml") else json.loads(text)
 
+        org = read(pack_dir / "org.yaml")
         return cls(
             read(pack_dir / "agents.yaml"),
             read(contracts_dir / "mcp/tools.json"),
             read(contracts_dir / "auth/scopes.json"),
+            tuple(t["id"] for t in org.get("access_tags", [])),
         )
 
     def get(self, agent_id: str) -> AgentEntry | None:

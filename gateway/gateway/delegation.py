@@ -25,11 +25,14 @@ class DelegationService:
             raise ProblemError(404, "not-found", "없는 에이전트입니다", agent_id)
         return self.issue_for(await load_requester(self.erp, employee_jwt), agent_id, conversation_id)
 
-    def issue_for(self, who: Requester, agent_id: str, conversation_id: str) -> IssuedToken:
+    def issue_for(self, who: Requester, agent_id: str, conversation_id: str, wide: bool = False) -> IssuedToken:
         """요청자 정보를 이미 읽었을 때 씁니다(대화 흐름에서 erp를 두 번 부르지 않게)."""
         agent = self.registry.get(agent_id)
         if agent is None:
             raise ProblemError(404, "not-found", "없는 에이전트입니다", agent_id)
         if not grant_matches(agent.callable_by, who):
             raise ProblemError(403, "forbidden", "이 에이전트를 부를 수 없습니다", agent_id)
+        if wide:  # 평가 조건 no_guard·baseline_tools: 공용 계정 범위(contracts/eval/conditions.md)
+            return self.issuer.issue(who, agent, conversation_id, scopes=self.registry.wide_scopes,
+                                     doc_scopes=self.registry.all_access_tags)
         return self.issuer.issue(who, agent, conversation_id)

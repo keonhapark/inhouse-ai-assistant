@@ -37,6 +37,7 @@ from gateway.relay import bearer
 log = logging.getLogger(__name__)
 
 APPROVAL_TTL = timedelta(minutes=10)
+WIDE_TOKEN_CONDITIONS = ("no_guard", "baseline_tools")  # contracts/eval/conditions.md 위임 토큰 범위
 EVAL_CONDITIONS = ("no_guard", "write_blocked", "approve_all", "baseline_tools", "full")  # agent.yaml Condition
 MAX_CONTENT = 4000
 
@@ -148,6 +149,10 @@ class ChatService:
                 "title": c.title, "status": c.status, "createdAt": iso(c.created_at),
                 "updatedAt": iso(c.updated_at or c.created_at)}
 
+    def condition_of(self, conversation_id: str | None) -> str | None:
+        c = self.conversations.get(conversation_id or "")
+        return c.condition if c else None
+
     def owned(self, conversation_id: str, who: Requester) -> Conversation:
         c = self.conversations.get(conversation_id)
         if c is None or c.owner != who.id:
@@ -156,7 +161,7 @@ class ChatService:
 
     # ---------- 이벤트 만들기 ----------
     def _token(self, who: Requester, c: Conversation) -> str:
-        issued = self.delegation.issue_for(who, c.agent_id, c.id)
+        issued = self.delegation.issue_for(who, c.agent_id, c.id, wide=c.condition in WIDE_TOKEN_CONDITIONS)
         self.audit.event("auth.delegation_token_issued", employee_id=who.id, agent_id=c.agent_id, via_token=False,
                          result="ok", conversation_id=c.id, detail=f"jti={issued.claims['jti']}")
         return issued.token
