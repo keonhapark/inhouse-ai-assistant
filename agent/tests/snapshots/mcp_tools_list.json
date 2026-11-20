@@ -16,7 +16,8 @@
       "risk": "read",
       "trustRequired": "any",
       "requiredScope": "profile:read",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -44,7 +45,8 @@
       "risk": "read",
       "trustRequired": "any",
       "requiredScope": "org:read",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -64,7 +66,8 @@
       "risk": "read",
       "trustRequired": "any",
       "requiredScope": "leave:read",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -112,7 +115,8 @@
       "risk": "reversible_write",
       "trustRequired": "user_direct",
       "requiredScope": "approval:request:leave",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -141,7 +145,8 @@
       "risk": "read",
       "trustRequired": "any",
       "requiredScope": "approval:read",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -168,7 +173,8 @@
       "risk": "read",
       "trustRequired": "any",
       "requiredScope": "approval:read",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -199,7 +205,8 @@
       "risk": "irreversible",
       "trustRequired": "user_direct",
       "requiredScope": "approval:withdraw",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -229,7 +236,8 @@
       "risk": "read",
       "trustRequired": "any",
       "requiredScope": "delegation:read",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -286,7 +294,8 @@
       "risk": "reversible_write",
       "trustRequired": "user_direct",
       "requiredScope": "delegation:write",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -313,7 +322,8 @@
       "risk": "irreversible",
       "trustRequired": "user_direct",
       "requiredScope": "delegation:write",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -350,7 +360,8 @@
       "risk": "read",
       "trustRequired": "any",
       "requiredScope": "room:read",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -375,7 +386,8 @@
       "risk": "read",
       "trustRequired": "any",
       "requiredScope": "room:read",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -421,7 +433,8 @@
       "risk": "reversible_write",
       "trustRequired": "user_direct",
       "requiredScope": "room:write",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -448,7 +461,8 @@
       "risk": "reversible_write",
       "trustRequired": "user_direct",
       "requiredScope": "room:write",
-      "stage": 1
+      "stage": 1,
+      "service": "erp"
     }
   },
   {
@@ -476,7 +490,8 @@
       "risk": "read",
       "trustRequired": "any",
       "requiredScope": "profile:read",
-      "stage": 1
+      "stage": 1,
+      "service": "rag"
     }
   }
 ]

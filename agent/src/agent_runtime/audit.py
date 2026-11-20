@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import threading
 import uuid
@@ -48,4 +49,25 @@ def route_decided(decision: RouteDecision, requester: Requester, via_delegation_
             "confidence": decision.confidence,
         },
         "result": "ok",
+    }
+
+
+def tool_blocked(employee_id: str, agent_id: str, conversation_id: str, tool: str, arguments: dict[str, Any],
+                 risk: str | None, trust: str | None, reason: str) -> dict[str, Any]:
+    """agent가 정책(위험 등급·신뢰 등급·조건)으로 도구 호출을 막은 기록. 인자는 해시만 남깁니다."""
+    raw = json.dumps(arguments, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return {
+        "eventId": str(uuid.uuid4()),
+        "occurredAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "source": "agent",
+        "kind": "tool.blocked",
+        "actor": {"employeeId": employee_id, "viaDelegationToken": True, "agentId": agent_id},
+        "conversationId": conversation_id,
+        "operation": tool,
+        "argsHash": "sha256:" + hashlib.sha256(raw.encode("utf-8")).hexdigest(),
+        "riskLevel": risk,
+        "trustLevel": trust,
+        "result": "denied",
+        "problemType": "urn:problem:agent-policy",
+        "detail": reason,
     }
