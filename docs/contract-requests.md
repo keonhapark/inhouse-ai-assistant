@@ -14,3 +14,4 @@
 | 2026-11-20 | web | #67 | gateway `GET /employees`, `GET /approval-forms`, `InboxItem.steps[]` 이름 | 대결 설정·결재선 화면 | 반영 |
 | 2026-11-20 | gateway | - | `X-Eval-Condition`은 /run에만 넘김(설명 정정) | agent.yaml /resume에 condition 없음 | 반영 |
 | 2026-11-20 | agent | - | MCP 요청 `_meta`(dryRun, idempotencyKey, trustLevel)를 `contracts/mcp/README.md`에 적음 | LLM이 고를 수 없는 값 | 반영 |
+| 2026-11-20 | agent | #15 | agent `POST /baseline/slots`(rule·llm, 실행 없이 도구·인자 반환) | 기준선과 LLM 경로를 같은 입력으로 비교 | 반영 |

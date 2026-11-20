@@ -118,6 +118,41 @@ paths:
               schema: {$ref: "#/components/schemas/RunState"}
         "409":
           description: 이미 결정됐거나 기다리는 승인이 아님
+  /baseline/slots:
+    post:
+      operationId: baselineSlots
+      description: >-
+        기능 품질 비교용. 휴가·회의실 요청에서 도구와 인자를 채워 돌려주고 실행하지 않습니다. rule은 LLM 없는
+        규칙 파서, llm은 gateway를 거친 도구 호출 한 번입니다. eval이 같은 인자로 erp를 불러 결과를 비교합니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message, method]
+              additionalProperties: false
+              properties:
+                message: {type: string}
+                today: {type: string, format: date, description: 기준 날짜. 없으면 오늘(Asia/Seoul)}
+                method: {type: string, enum: [rule, llm]}
+      responses:
+        "200":
+          description: 채운 슬롯
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [intent, tool, arguments, missing]
+                additionalProperties: false
+                properties:
+                  intent: {type: [string, "null"], enum: [leave, room, null]}
+                  tool:
+                    type: [string, "null"]
+                    enum: [leave_request, room_reserve, room_list_availability, null]
+                  arguments: {type: object, description: contracts/mcp/tools.json의 그 도구 입력 스키마대로}
+                  missing: {type: array, items: {type: string}, description: 채우지 못한 필수 슬롯 이름}
+
 components:
   parameters:
     DelegationToken:
