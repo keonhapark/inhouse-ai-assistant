@@ -28,13 +28,21 @@ export const employees: Employee[] = [
   },
 ]
 
-/** 로그인하지 않는 직원(결재선·대리인용). 이름은 지어낸 것입니다. */
-export const directory: Record<string, { name: string; unitName: string }> = {
-  'emp-1001': { name: '한지우', unitName: '인사팀' },
-  'emp-1002': { name: '박하늘', unitName: '인사팀' },
-  'emp-2001': { name: '서도윤', unitName: '인사팀' },
-  'emp-2002': { name: '윤서진', unitName: '재무팀' },
-  'emp-3001': { name: '임채원', unitName: '경영지원본부' },
+/** 결재선·대리인·조직도용 직원 목록. 이름은 지어낸 것이고, 부서는 제조 팩 org.yaml과 같습니다. */
+type Person = { name: string; unitId: string; unitName: string; grade: string }
+export const directory: Record<string, Person> = {
+  'emp-1001': { name: '한지우', unitId: 'hr', unitName: '인사팀', grade: 'staff' },
+  'emp-1002': { name: '박하늘', unitId: 'hr', unitName: '인사팀', grade: 'staff' },
+  'emp-2001': { name: '서도윤', unitId: 'hr', unitName: '인사팀', grade: 'team_leader' },
+  'emp-2002': { name: '윤서진', unitId: 'finance', unitName: '재무팀', grade: 'team_leader' },
+  'emp-2003': { name: '오민재', unitId: 'finance', unitName: '재무팀', grade: 'staff' },
+  'emp-2004': { name: '정다은', unitId: 'general-affairs', unitName: '총무팀', grade: 'team_leader' },
+  'emp-2005': { name: '강태오', unitId: 'procurement', unitName: '구매자재팀', grade: 'team_leader' },
+  'emp-2006': { name: '조유나', unitId: 'procurement', unitName: '구매자재팀', grade: 'staff' },
+  'emp-2007': { name: '배준호', unitId: 'it-ops', unitName: 'IT운영팀', grade: 'team_leader' },
+  'emp-3001': { name: '임채원', unitId: 'mgmt', unitName: '경영지원본부', grade: 'division_head' },
+  'emp-3002': { name: '노승현', unitId: 'production-div', unitName: '생산본부', grade: 'division_head' },
+  'emp-9001': { name: '문성호', unitId: 'ceo-office', unitName: '대표이사실', grade: 'ceo' },
 }
 
 export const agents: Schemas['AgentInfo'][] = [

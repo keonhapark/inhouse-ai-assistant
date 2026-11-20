@@ -32,6 +32,7 @@ npm run gen:api  # 계약이 바뀌면 src/api/schema.d.ts를 다시 만듭니�
 | `src/components/` | 기본 부품(버튼, 배지, 카드) |
 | `src/pages/` | 로그인, 상단바, 디자인 부품(`/design`) |
 | `src/inbox/` | 팀장 승인함(탭 4개, 결재선, 승인·반려)과 대결 설정(대리인 찾기, 양식 범위, 미리보기 → 등록, 해지) |
+| `src/org/` | 조직도(부서 나무, 상위 경로, 구성원과 부서장, 담당 에이전트)와 에이전트 등록부(담당 부서, 위험 등급별 실행, 도구, 모델 정책). `/org`, `/agents` |
 | `src/chat/` | 직원 채팅. SSE 읽기(`sse.ts`), ChatEvent를 화면 상태로 바꾸는 리듀서(`thread.ts`), 미리보기·행동·근거 부품 |
 | `src/mocks/` | gateway 계약 모의 서버(MSW)와 지어낸 직원 데이터 |
 | `Dockerfile`, `nginx/` | 정적 파일과 `/api` 프록시, `GET /health` |
@@ -120,6 +121,16 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 | 승인함과 대결 설정 | 다크 모드 |
 |---|---|
 | ![승인함](docs/images/inbox-light.png) | ![승인함 다크](docs/images/inbox-dark.png) |
+
+| 조직도 | 에이전트 등록부 |
+|---|---|
+| ![조직도](docs/images/org-light.png) | ![등록부](docs/images/agents-light.png) |
+
+| 조직도 다크 | 등록부 다크 |
+|---|---|
+| ![조직도 다크](docs/images/org-dark.png) | ![등록부 다크](docs/images/agents-dark.png) |
+
+조직도·등록부 경로(`GET /org/units`, `GET /agent-registry`)는 계약(#220)만 있고 gateway 구현 전이라 모의 서버 화면입니다.
 
 | 로그인 오류 | 디자인 부품 |
 |---|---|

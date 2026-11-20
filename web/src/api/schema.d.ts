@@ -87,6 +87,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/org/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 조직도의 본부·팀. erp `GET /org/units`를 그대로 넘깁니다. 로그인한 직원 누구나 봅니다. */
+        get: operations["listUnits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agent-registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description 에이전트 등록부. 팩 `agents.yaml`의 모든 에이전트(요청자가 부를 수 없는 것 포함)를 담당 부서·도구·정책과 함께 돌려줍니다.
+         *     로그인한 직원 누구나 봅니다. 라우팅 예문과 비밀값은 넣지 않습니다.
+         */
+        get: operations["listAgentRegistry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/approval-forms": {
         parameters: {
             query?: never;
@@ -457,6 +494,56 @@ export interface components {
             delegatorName: string;
             delegateName: string;
         };
+        /** @description 팩 agents.yaml 항목을 화면용으로 옮긴 것(이름은 camelCase) */
+        AgentRegistryEntry: {
+            id: string;
+            name: string;
+            version: string;
+            stage: number;
+            ownerUnitId: string;
+            ownerUnitName?: string | null;
+            description: string;
+            /** @description 요청자가 부를 수 있는지 */
+            callable?: boolean;
+            /** @description 팩 `callable_by`. all 또는 units·roles·grades */
+            callableBy?: "all" | {
+                units?: string[];
+                roles?: string[];
+                grades?: string[];
+            };
+            tools: {
+                /** @description contracts/mcp/tools.json 도구 이름 */
+                name: string;
+                /** @description 도구 설명 첫 문장 */
+                title?: string;
+                /** @enum {string} */
+                risk: "read" | "reversible_write" | "irreversible";
+            }[];
+            allowedRisk: ("read" | "reversible_write" | "irreversible")[];
+            docScopes?: string[];
+            modelPolicy: {
+                /** @enum {string} */
+                mode: "external_allowed" | "local_only";
+                reason?: string;
+            };
+            riskPolicy: {
+                read: components["schemas"]["RiskAction"];
+                reversibleWrite: components["schemas"]["RiskAction"];
+                irreversible: components["schemas"]["RiskAction"];
+                overrides?: {
+                    tool: string;
+                    /** @enum {string} */
+                    when: "wide_scope" | "always";
+                    action: components["schemas"]["RiskAction"];
+                }[];
+            };
+            routingKeywords?: string[];
+        };
+        /**
+         * @description auto: 바로 실행. auto_with_undo: 실행하고 되돌리기 안내. confirm: 미리보기 카드로 실행 승인. deny: 이 에이전트에서 금지
+         * @enum {string}
+         */
+        RiskAction: "auto" | "auto_with_undo" | "confirm" | "deny";
         EmployeeSummary: {
             id: string;
             name: string;
@@ -492,6 +579,15 @@ export interface components {
                 field: string;
                 message: string;
             }[];
+        };
+        Unit: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            kind: "division" | "team";
+            parentId?: string | null;
+            /** @description 팀장·본부장·대표이사 직원 ID */
+            headId?: string | null;
         };
         ApprovalForm: {
             id: string;
@@ -530,6 +626,20 @@ export interface components {
             undoable: boolean;
             warnings?: string[];
         };
+        /** @description 법령 한 판의 시행 기간. 판 정보가 없는 문서(생성 문서, 주입 문서)에는 넣지 않습니다. */
+        Edition: {
+            /** Format: date */
+            effectiveFrom: string;
+            /**
+             * Format: date
+             * @description 다음 판 시행 전날. 마지막 판이면 null
+             */
+            effectiveTo: string | null;
+            /** @description 오늘(KST) 시행 중인 판인지 */
+            current: boolean;
+            /** @description 공포 정보(예: 대통령령 제36728호, 2026. 9. 29., 타법개정) */
+            promulgation?: string | null;
+        };
         Citation: {
             docId: string;
             title: string;
@@ -538,6 +648,7 @@ export interface components {
             quote: string;
             /** @description 인용 대조로 quote가 원문에 있는지 확인했는지 */
             verified: boolean;
+            edition?: components["schemas"]["Edition"];
         };
         ActionResult: {
             actionId: string;
@@ -651,11 +762,13 @@ export interface components {
             /** @enum {unknown} */
             source: "erp" | "gateway" | "agent" | "mcp" | "rag" | "web";
             /** @enum {unknown} */
-            kind: "erp.write" | "erp.undo" | "erp.denied" | "auth.login" | "auth.delegation_token_issued" | "route.decided" | "tool.called" | "tool.blocked" | "execution_approval.requested" | "execution_approval.decided" | "llm.request" | "llm.redacted" | "rag.answered" | "rag.access_denied";
+            kind: "erp.write" | "erp.undo" | "erp.denied" | "auth.login" | "auth.delegation_token_issued" | "route.decided" | "tool.called" | "tool.blocked" | "execution_approval.requested" | "execution_approval.decided" | "llm.request" | "llm.redacted" | "rag.answered" | "rag.access_denied" | "rag.document_purged";
             actor: {
                 /** @description 요청한 직원. 시스템 동작이면 null */
                 employeeId: string | null;
                 viaDelegationToken?: boolean;
+                /** @description 위임 토큰으로 한 일이면 그 토큰의 jti(gateway 발급 이벤트의 토큰과 잇는 값) */
+                delegationTokenId?: string | null;
                 agentId?: string | null;
             };
             /** @description 결재 대결이면 원 결재자 ID */
@@ -846,6 +959,51 @@ export interface operations {
             };
         };
     };
+    listUnits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 본부·팀 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["Unit"][];
+                    };
+                };
+            };
+        };
+    };
+    listAgentRegistry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 등록부 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        fallbackAgentId?: string;
+                        items: components["schemas"]["AgentRegistryEntry"][];
+                    };
+                };
+            };
+        };
+    };
     listApprovalForms: {
         parameters: {
             query?: never;
@@ -916,7 +1074,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description 평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의 agent /run에 condition으로 넘깁니다(이어지는 /resume은 agent 실행 상태가 조건을 기억합니다). 값은 agent.yaml의 Condition과 같습니다. */
+                /** @description 평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의 agent /run에 condition으로 넘기고(이어지는 /resume은 agent 실행 상태가 조건을 기억합니다), 같은 대화의 출구 호출과 위임 토큰 발급에도 조건을 적용합니다. 조건별 장치 구성은 contracts/eval/conditions.md입니다. */
                 "X-Eval-Condition"?: "no_guard" | "write_blocked" | "approve_all" | "baseline_tools" | "full";
             };
             path?: never;
@@ -942,6 +1100,7 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     getConversation: {
@@ -1003,6 +1162,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["Problem"];
         };
     };
     decideExecutionApproval: {
