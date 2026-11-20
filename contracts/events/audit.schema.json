@@ -25,7 +25,8 @@
         "llm.request",
         "llm.redacted",
         "rag.answered",
-        "rag.access_denied"
+        "rag.access_denied",
+        "rag.document_purged"
       ]
     },
     "actor": {
