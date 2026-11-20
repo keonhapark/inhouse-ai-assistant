@@ -31,6 +31,37 @@
 
 회의실 안내, 휴가 지침, 결재·대결 규정, 인사 공지(제한), 급여 기준(제한) 5건입니다. 템플릿에는 회사·부서 이름을 쓰지 않고 `{{ company }}`, `{{ role_unit:hr_staff }}` 같은 자리표시자를 써서 팩 값으로 채웁니다. 자리표시자 목록은 `rag/generate.py` 첫머리에 있습니다. 내용은 모두 지어낸 것입니다.
 
+## 검색(`POST /search`)
+
+1. 문서를 조문 단위 청크로 나눕니다(`rag/chunk.py`). 700자를 넘는 조문은 항(①) 경계, 예규 절은 항목((1)) 경계에서 나누고 `article`에 범위를 붙입니다(예: "제20조(특별휴가) 제4항~제9항").
+2. 위임 토큰(`X-Delegation-Token`, ES256)을 확인합니다. 서명, `iss: gateway`, `aud`에 rag, 만료를 봅니다. 틀리면 401 `application/problem+json`입니다.
+3. 토큰 `doc_scopes`와 문서 ACL 태그가 겹치는 청크만 남긴 뒤 순위를 매깁니다. 권한 밖 청크는 점수 계산에도 넣지 않고, BM25 문서 빈도도 허용된 청크만으로 셉니다.
+4. 방법
+   - `bm25`: 한글 음절 2-gram 토큰의 Okapi BM25(k1 1.2, b 0.75). 기준선 비교용입니다.
+   - `vector`: 임베딩 코사인 유사도
+   - `hybrid`(기본): 두 순위를 Reciprocal Rank Fusion(k=60)으로 합칩니다.
+5. 결과마다 문서 ID, 제목, 조문 표시, 본문, 점수, 신뢰 등급(`trusted`/`untrusted`)을 돌려줍니다.
+
+임베딩은 gateway의 OpenAI 호환 `/v1/embeddings`로 부릅니다. 같은 본문은 `RAG_CACHE_DIR`에 저장해 다시 보내지 않습니다.
+
+## 실행
+
+```
+uv sync
+RAG_EMBEDDER=hash DELEGATION_TOKEN_PUBLIC_KEY=infra/dev-keys/delegation-es256.pub.pem \
+  uv run uvicorn --factory rag.app:from_env --port $PORT_RAG
+```
+
+| 환경 변수 | 뜻 |
+|---|---|
+| `PACK_DIR` | 팩 폴더. 없으면 저장소 `packs/manufacturing` |
+| `DELEGATION_TOKEN_PUBLIC_KEY` / `DELEGATION_JWKS_URL` | 위임 토큰 공개 키 PEM 경로 / gateway JWKS 주소 |
+| `RAG_EMBEDDER` | `gateway`(기본) 또는 `hash`(음절 2-gram 해시. 의미를 담지 않는 시험·개발용) |
+| `RAG_EMBED_BASE_URL`, `GATEWAY_LLM_URL` | 임베딩을 부를 OpenAI 호환 주소(앞의 것이 우선) |
+| `RAG_EMBED_MODEL` | 임베딩 모델 이름(기본 `local-embed`) |
+| `RAG_CACHE_DIR` | 임베딩 캐시 폴더(기본 `rag/.cache`) |
+| `RAG_STAGE` | 이 단계까지의 문서만 씁니다 |
+
 ## 시험
 
 ```
@@ -38,4 +69,4 @@ uv sync
 uv run pytest -q
 ```
 
-시험은 네트워크를 쓰지 않습니다. 파서 시험은 국가법령정보센터 응답 일부(`tests/fixtures/law_sample.html`)와 만든 쪽 글로 봅니다.
+시험은 네트워크를 쓰지 않습니다. 검색 시험은 해시 임베딩과 시험용 ES256 키를 쓰고, 응답을 계약(`contracts/openapi/rag.yaml`) 스키마로 확인합니다. 파서 시험은 국가법령정보센터 응답 일부(`tests/fixtures/law_sample.html`)와 만든 쪽 글로 봅니다.

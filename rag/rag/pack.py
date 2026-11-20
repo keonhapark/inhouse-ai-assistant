@@ -15,8 +15,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def pack_dir(name: str | None = None) -> Path:
-    """`RAG_PACK_DIR`가 있으면 그 경로, 없으면 저장소의 `packs/<RAG_PACK>`(기본 manufacturing)."""
-    if explicit := os.environ.get("RAG_PACK_DIR"):
+    """`PACK_DIR`가 있으면 그 경로, 없으면 저장소의 `packs/<RAG_PACK>`(기본 manufacturing)."""
+    if explicit := os.environ.get("PACK_DIR"):
         return Path(explicit)
     return REPO_ROOT / "packs" / (name or os.environ.get("RAG_PACK", "manufacturing"))
 
