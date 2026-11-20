@@ -1,1 +1,5 @@
+test_health_and_login
 test_unauthenticated_is_401
+test_access_tags_follow_pack_roles
+test_other_employee_is_summary_unless_hr
+test_expired_or_forged_delegation_token_is_401
