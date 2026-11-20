@@ -74,3 +74,16 @@ class ErpClient:
         if r.status_code >= 300:
             raise ErpCallError(operation, r.status_code, r.text)
         return r.json()
+
+    def reset(self) -> None:
+        """평가 회차 사이 초기화(evalReset). erp를 ERP_EVAL_RESET=1로 띄워야 있습니다(아니면 404)."""
+        r = self.call_public("evalReset")
+        if r.status_code == 404:
+            raise ErpCallError("evalReset", 404, "erp를 ERP_EVAL_RESET=1로 띄웠는지 확인이 필요합니다")
+        if r.status_code != 204:
+            raise ErpCallError("evalReset", r.status_code, r.text)
+        self._tokens.clear()
+
+    def call_public(self, operation: str) -> httpx.Response:
+        op = operations()[operation]
+        return self.c.request(op["method"], op["path"])

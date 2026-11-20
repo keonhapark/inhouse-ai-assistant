@@ -11,12 +11,14 @@ from harness.runner import RunMeta, RunRow, save_run
 def test_example_config_is_valid():
     cfg = load_config(EVAL_DIR / "conditions.example.yaml")
     assert set(cfg["gateway"]["conditions"]) == {"no_guard", "write_blocked", "approve_all", "baseline_tools", "full"}
+    assert cfg["erp"]["reset"] is True
 
 
 @pytest.mark.parametrize("cfg, msg", [
-    ({"erp": {"baseUrl": "x"}, "gateway": {"conditions": {"none": "u"}}}, "계약에 없는 조건"),
-    ({"erp": {"baseUrl": "x"}, "gateway": {"conditions": {}}}, "비어 있습니다"),
-    ({"erp": {}, "gateway": {"conditions": {"full": "u"}}}, "baseUrl"),
+    ({"erp": {"baseUrl": "x"}, "gateway": {"baseUrl": "g", "conditions": ["none"]}}, "계약에 없는 조건"),
+    ({"erp": {"baseUrl": "x"}, "gateway": {"baseUrl": "g", "conditions": []}}, "비어 있습니다"),
+    ({"erp": {"baseUrl": "x"}, "gateway": {"conditions": ["full"]}}, "gateway.baseUrl"),
+    ({"erp": {}, "gateway": {"baseUrl": "g", "conditions": ["full"]}}, "erp.baseUrl"),
 ])
 def test_bad_config(tmp_path, cfg, msg):
     p = tmp_path / "c.yaml"

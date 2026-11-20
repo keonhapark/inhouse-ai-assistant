@@ -21,37 +21,42 @@ from harness.erp import ErpClient
 from harness.report import render
 from harness.runner import CONDITIONS, RunRow, load_run, run_matrix, save_run
 from harness.scenario import ScenarioError, load_scenarios
-from harness.sut import GatewayChat
+from harness.sut import GatewayChat, jsonl_external_log
 
 
 def load_config(path: Path) -> dict[str, Any]:
     cfg = yaml.safe_load(path.read_text(encoding="utf-8"))
-    conds = cfg.get("gateway", {}).get("conditions", {})
+    gw = cfg.get("gateway", {})
+    conds = gw.get("conditions") or []
     unknown = [c for c in conds if c not in CONDITIONS]
     if unknown:
         raise ValueError(f"계약에 없는 조건: {unknown}")
     if not conds:
         raise ValueError("gateway.conditions가 비어 있습니다")
+    if not gw.get("baseUrl"):
+        raise ValueError("gateway.baseUrl이 없습니다")
     if not cfg.get("erp", {}).get("baseUrl"):
         raise ValueError("erp.baseUrl이 없습니다")
     return cfg
 
 
 def make_factories(cfg: dict[str, Any]):
+    """조건은 X-Eval-Condition 헤더로 넘기고(gateway GATEWAY_EVAL_MODE=1), 회차마다 erp를 evalReset으로 되돌립니다."""
     timeout = cfg.get("httpTimeoutS", 120)
     gw = cfg["gateway"]
+    external = jsonl_external_log(Path(gw["externalLog"])) if gw.get("externalLog") else None
 
     def system(condition: str, seed: int) -> GatewayChat:
-        client = httpx.Client(base_url=gw["conditions"][condition], timeout=timeout)
-        return GatewayChat(client, auditor=gw.get("auditor"))
+        client = httpx.Client(base_url=gw["baseUrl"], timeout=timeout)
+        return GatewayChat(client, auditor=gw.get("auditor"), external_log=external, condition=condition)
 
     erp_cfg = cfg["erp"]
 
     def erp() -> ErpClient:
-        client = httpx.Client(base_url=erp_cfg["baseUrl"], timeout=timeout)
-        if erp_cfg.get("resetUrl"):
-            client.post(erp_cfg["resetUrl"]).raise_for_status()
-        return ErpClient(client)
+        client = ErpClient(httpx.Client(base_url=erp_cfg["baseUrl"], timeout=timeout))
+        if erp_cfg.get("reset", True):
+            client.reset()
+        return client
 
     return system, erp
 
@@ -78,8 +83,10 @@ def cmd_run(args: argparse.Namespace) -> int:
                             repeats=cfg.get("repeats", 3), base_seed=cfg.get("baseSeed", 0),
                             cost_cap_usd=cfg.get("costCapUsd"), time_limit_s=cfg.get("timeLimitS", 300),
                             model=cfg.get("model"), on_row=progress)
-    if not cfg["erp"].get("resetUrl"):
-        meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.resetUrl 없음)")
+    if not cfg["erp"].get("reset", True):
+        meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.reset: false)")
+    if not cfg["gateway"].get("externalLog"):
+        meta.notes.append("외부 요청 기록(gateway.externalLog)을 주지 않아 외부 기록의 표지 문자열은 보지 않았습니다")
     out = Path(args.out)
     save_run(rows, meta, out.with_suffix(".json"))
     out.with_suffix(".md").write_text(render(rows, meta, args.title), encoding="utf-8")

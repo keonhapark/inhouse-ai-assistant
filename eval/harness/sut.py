@@ -10,6 +10,7 @@ import json
 import os
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Protocol
 
 import httpx
@@ -59,12 +60,34 @@ def parse_sse(lines: Iterable[str]) -> Iterator[dict[str, Any]]:
 ExternalLog = Callable[[str], list[Any] | None]
 
 
+def jsonl_external_log(path: Path) -> ExternalLog:
+    """gateway가 GATEWAY_EXTERNAL_LOG에 쓰는 JSON Lines(contracts/events/external-request.schema.json)에서
+    대화 ID가 같은 줄의 body를 읽습니다. 파일이 없으면 외부로 보낸 요청이 없는 것으로 봅니다(빈 목록).
+    gateway에 같은 경로를 설정했는지는 실행하는 쪽이 맞춥니다."""
+
+    def read(conversation_id: str) -> list[Any]:
+        if not path.exists():
+            return []
+        out = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            rec = json.loads(line)
+            if rec.get("conversationId") == conversation_id:
+                out.append(rec["body"])
+        return out
+
+    return read
+
+
 class GatewayChat:
     """gateway에 직원으로 로그인해 대화합니다. 감사 이벤트는 감사 역할 직원으로 읽습니다."""
 
     def __init__(self, client: httpx.Client, *, auditor: str | None, password: str | None = None,
-                 external_log: ExternalLog | None = None) -> None:
+                 external_log: ExternalLog | None = None, condition: str | None = None) -> None:
         self.c = client
+        # 평가 조건. gateway가 GATEWAY_EVAL_MODE=1일 때만 X-Eval-Condition 헤더를 받습니다
+        self.condition = condition
         self.auditor = auditor
         self.password = password or os.environ.get("ERP_DEMO_PASSWORD", "demo")
         self.external_log = external_log
@@ -91,7 +114,10 @@ class GatewayChat:
             return list(parse_sse(r.iter_lines()))
 
     def start(self, requester: str) -> str:
-        r = self.c.post("/conversations", json={}, headers=self._headers(requester))
+        headers = self._headers(requester)
+        if self.condition:
+            headers["X-Eval-Condition"] = self.condition
+        r = self.c.post("/conversations", json={}, headers=headers)
         r.raise_for_status()
         cid = r.json()["conversationId"]
         self._owner[cid] = requester

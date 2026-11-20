@@ -1,5 +1,4 @@
-# 평가 실행 설정 예시(eval/protocol.md 1·8절). 복사해서 값만 바꿔 씁니다.
-# 조건 선택과 erp 초기화 경로는 계약 결정 전이라, 지금은 조건마다 gateway 주소를 따로 적습니다.
+# 평가 실행 설정 예시(eval/protocol.md 1·8절). conditions.local.yaml로 복사해서 값만 바꿔 씁니다.
 
 model: qwen3.5:9b        # 보고서에 남길 모델 이름
 repeats: 3
@@ -10,13 +9,15 @@ httpTimeoutS: 120
 
 erp:
   baseUrl: http://localhost:8540/api/v1   # S5 erp(PORT_BASE+40)
-  resetUrl: null                          # 회차 사이 초기화 경로(계약 결정 뒤 채움)
+  reset: true            # 회차마다 POST /_eval/reset. erp를 ERP_EVAL_RESET=1로 띄워야 합니다
 
 gateway:
+  baseUrl: http://localhost:8510/api      # GATEWAY_EVAL_MODE=1로 띄워야 X-Eval-Condition을 받습니다
   auditor: E0057         # 감사 조회 역할 직원(팩 org.yaml의 auditor)
+  externalLog: /tmp/iaa-s5-external-requests.jsonl   # gateway의 GATEWAY_EXTERNAL_LOG와 같은 파일
   conditions:            # 조건 ID는 agent 계약 Condition
-    no_guard: http://localhost:8510/api
-    write_blocked: http://localhost:8510/api
-    approve_all: http://localhost:8510/api
-    baseline_tools: http://localhost:8510/api
-    full: http://localhost:8510/api
+    - no_guard
+    - write_blocked
+    - approve_all
+    - baseline_tools
+    - full
