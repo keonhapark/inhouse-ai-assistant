@@ -17,6 +17,7 @@ from rag.auth import AuthError, TokenVerifier
 from rag.chunk import chunk_documents
 from rag.corpus import MODULE_ROOT, load_documents
 from rag.embed import embedder_from_env
+from rag.evaldocs import apply_eval_files
 from rag.pack import load_pack
 from rag.search import Embedder, Hit, SearchIndex
 
@@ -57,7 +58,7 @@ def passage(hit: Hit) -> dict:
 
 def build_index(embedder: Embedder | None, stage: int | None = None) -> SearchIndex:
     pack = load_pack()
-    chunks = chunk_documents(load_documents(pack, stage=stage))
+    chunks = chunk_documents(apply_eval_files(load_documents(pack, stage=stage), pack))
     return SearchIndex(chunks, embedder)
 
 
@@ -103,8 +104,10 @@ def create_app(
             result = answerer.answer(body.question, set(claims["doc_scopes"]), x_delegation_token)
         except LLMError as e:
             model = {"name": answerer.llm.model, "location": answerer.llm.location}
+            # 계약: gateway가 오류를 돌려주면 502, gateway에 닿지 못하면 503
+            status = 503 if e.unreachable else 502
             record("rag.answered", "error", claims, "answer", model=model, problem="llm-unavailable", detail=e.detail)
-            return problem(502, "llm-unavailable", "답을 만들지 못했습니다", e.detail)
+            return problem(status, "llm-unavailable", "답을 만들지 못했습니다", e.detail)
         except Exception as e:  # 예기치 않은 실패도 감사에서 빠지지 않게 합니다.
             log.exception("answer 실패 jti=%s", claims["jti"])
             record("rag.answered", "error", claims, "answer", problem="internal", detail=type(e).__name__)

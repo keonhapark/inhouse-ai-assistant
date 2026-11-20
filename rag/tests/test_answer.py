@@ -256,10 +256,11 @@ def test_토큰이_틀리면_401이고_access_denied를_남긴다(make_client, a
     assert not chat.calls
 
 
-def test_LLM_실패는_502이고_감사에_error로_남는다(make_client, audit_schema):
-    client, _, audit = make_client(LLMError("gateway 응답 503"))
+@pytest.mark.parametrize("unreachable,status", [(False, 502), (True, 503)])
+def test_LLM_실패는_502_닿지_못하면_503이고_감사에_error로_남는다(make_client, audit_schema, unreachable, status):
+    client, _, audit = make_client(LLMError("gateway", unreachable=unreachable))
     r = ask(client, "연가 일수", token(STAFF))
-    assert r.status_code == 502 and r.json()["type"] == "urn:problem:llm-unavailable"
+    assert r.status_code == status and r.json()["type"] == "urn:problem:llm-unavailable"
     e = [x for x in events(audit) if x["kind"] == "rag.answered"][0]
     audit_schema.validate(e)
     assert e["result"] == "error"
