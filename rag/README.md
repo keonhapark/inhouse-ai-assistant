@@ -66,7 +66,7 @@
    - `hybrid`(기본): 두 순위를 Reciprocal Rank Fusion(k=60)으로 합칩니다.
 5. 결과마다 문서 ID, 제목, 조문 표시, 본문, 점수, 신뢰 등급(`trusted`/`untrusted`)을 돌려줍니다.
 
-임베딩은 gateway의 OpenAI 호환 `/v1/embeddings`(별칭 `local-embed` → Ollama bge-m3)로 부릅니다. 같은 본문은 `RAG_CACHE_DIR`에 저장해 다시 보내지 않습니다.
+임베딩은 gateway의 OpenAI 호환 `/v1/embeddings`(별칭 `local-embed` → Ollama bge-m3)로 부릅니다. 같은 본문은 `RAG_CACHE_DIR`에 저장해 다시 보내지 않습니다. 질의 임베딩에는 요청의 위임 토큰을 붙여, gateway가 같은 대화의 조건과 감사를 적용하게 합니다. 질의 임베딩이 실패하면 gateway가 오류를 돌려준 경우 502, 닿지 못한 경우 503(`urn:problem:embedding-unavailable`)입니다.
 
 ## 답(`POST /answer`)
 
@@ -78,7 +78,8 @@
    - 답에 쓴 숫자가 인용한 근거 본문에 없음(흔한 구절을 인용하고 다른 금액을 쓰는 조작을 막음)
    - 모델이 found=false를 냈거나, 출력을 JSON으로 읽지 못함
    대조에 실패한 인용은 응답에서 뺍니다.
-5. 근거 본문은 줄마다 `| `를 붙여 넣어, 본문 속에 근거 머리(`[2] 문서: … / 신뢰`)를 위조하지 못하게 합니다. 신뢰 불가 근거는 표시하고 그 안의 지시를 따르지 않게 합니다.
+5. 응답의 `model`과 감사의 `externalSent`는 gateway 응답 헤더 `X-Egress-Model`·`X-Egress-Location`(실제로 보낸 별칭·위치)으로 정합니다. gateway가 기밀 용어로 로컬로 돌리거나 외부 장애로 폴백하면 요청한 별칭과 다르기 때문입니다. 헤더가 없으면 요청한 별칭을 씁니다.
+6. 근거 본문은 줄마다 `| `를 붙여 넣어, 본문 속에 근거 머리(`[2] 문서: … / 신뢰`)를 위조하지 못하게 합니다. 신뢰 불가 근거는 표시하고 그 안의 지시를 따르지 않게 합니다.
 
 감사 이벤트는 `RAG_AUDIT_LOG`(기본 `rag/.data/audit.jsonl`)에 JSON Lines로 씁니다. 질문 원문과 토큰은 넣지 않습니다.
 

@@ -18,7 +18,7 @@ from rag.audit import AuditLog
 from rag.auth import AuthError, TokenVerifier
 from rag.corpus import MODULE_ROOT, load_documents
 from rag.editions import edition_body
-from rag.embed import embedder_from_env
+from rag.embed import EmbedError, embedder_from_env
 from rag.evaldocs import apply_eval_files
 from rag.pack import load_pack
 from rag.purge import PurgeList, purge_document
@@ -104,13 +104,19 @@ def create_app(
     def health() -> dict:
         return {"status": "ok"}
 
-    @api.post("/search")
+    @api.post("/search", response_model=None)
     def search(
         body: SearchRequest,
         x_delegation_token: Annotated[str | None, Header()] = None,
-    ) -> dict:
+    ) -> dict | JSONResponse:
         claims = verifier.verify(x_delegation_token)
-        hits = index.search(body.query, set(claims["doc_scopes"]), body.method, body.topK, body.asOf)
+        try:
+            hits = index.search(body.query, set(claims["doc_scopes"]), body.method, body.topK, body.asOf,
+                                x_delegation_token)
+        except EmbedError as e:
+            # 계약: gateway가 오류를 돌려주면 502, gateway에 닿지 못하면 503
+            return problem(503 if e.unreachable else 502, "embedding-unavailable", "질의를 임베딩하지 못했습니다",
+                           e.detail)
         log.info("search jti=%s agt=%s method=%s hits=%d", claims["jti"], claims["agt"], body.method, len(hits))
         today = index.today()
         return {"hits": [passage(h, today) for h in hits]}
@@ -126,6 +132,10 @@ def create_app(
         assert x_delegation_token is not None  # verify가 통과했으면 있습니다.
         try:
             result = answerer.answer(body.question, set(claims["doc_scopes"]), x_delegation_token, body.asOf)
+        except EmbedError as e:
+            status = 503 if e.unreachable else 502
+            record("rag.answered", "error", claims, "answer", problem="embedding-unavailable", detail=e.detail)
+            return problem(status, "embedding-unavailable", "질의를 임베딩하지 못했습니다", e.detail)
         except LLMError as e:
             model = {"name": answerer.llm.model, "location": answerer.llm.location}
             # 계약: gateway가 오류를 돌려주면 502, gateway에 닿지 못하면 503

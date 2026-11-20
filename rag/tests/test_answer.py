@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
 
-from rag.answer import NOT_FOUND, Answerer, GatewayChat, LLMError, build_messages, parse_reply, quote_in
+from rag.answer import NOT_FOUND, Answerer, ChatReply, GatewayChat, LLMError, build_messages, parse_reply, quote_in
 from rag.app import build_index, create_app
 from rag.audit import AuditLog
 from rag.auth import TokenVerifier
@@ -345,7 +345,7 @@ def test_GatewayChat은_별칭과_토큰을_보내고_오류를_LLMError로_바�
         return httpx.Response(200, json={"choices": [{"message": {"content": "내용"}}]})
 
     chat = GatewayChat("http://gw/v1", transport=httpx.MockTransport(ok))
-    assert chat.complete([{"role": "user", "content": "q"}], "tok") == "내용"
+    assert chat.complete([{"role": "user", "content": "q"}], "tok") == ChatReply("내용", "local", "local")
     assert seen["token"] == "tok" and seen["body"]["model"] == "local" and seen["body"]["temperature"] == 0
     assert seen["body"]["reasoning_effort"] == "none"
 
@@ -455,3 +455,43 @@ def test_판이_없는_문서의_인용에는_edition이_없다(make_client):
     body = ask(client, "회의실 예약 규칙", token(HR)).json()
     [cit] = body["citations"]
     assert cit["docId"].startswith("gen-") and "edition" not in cit
+
+
+# ---------------------------------------------------------------- 실제 경로 기록(#167)
+
+
+def _gateway(headers):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, headers=headers, json={"choices": [{"message": {"content": "내용"}}]})
+
+    return httpx.MockTransport(handler)
+
+
+@pytest.mark.parametrize(
+    "headers,expected",
+    [
+        ({"X-Egress-Model": "local", "X-Egress-Location": "local"}, ChatReply("내용", "local", "local")),
+        ({}, ChatReply("내용", "external", "external")),
+        ({"X-Egress-Location": "moon"}, ChatReply("내용", "external", "external")),
+        ({"X-Egress-Location": "local"}, ChatReply("내용", "external", "local")),
+    ],
+    ids=["gateway가_로컬로_돌림", "헤더_없음", "모르는_위치", "별칭_없이_위치만"],
+)
+def test_gateway_응답_헤더로_실제_별칭과_위치를_읽는다(headers, expected):
+    chat = GatewayChat("http://gw/v1", model="external", transport=_gateway(headers))
+    assert chat.complete([], "t") == expected
+
+
+def test_외부를_요청했어도_gateway가_로컬로_보냈으면_로컬로_기록한다(index, tmp_path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        content = quote_first(json.loads(request.content)["messages"])
+        return httpx.Response(200, headers={"X-Egress-Model": "local", "X-Egress-Location": "local"},
+                              json={"choices": [{"message": {"content": content}}]})
+
+    chat = GatewayChat("http://gw/v1", model="external", transport=httpx.MockTransport(handler))
+    audit = AuditLog(tmp_path / "audit.jsonl")
+    client = TestClient(create_app(index, TokenVerifier(key=PUBLIC_PEM), Answerer(index, chat), audit))
+    body = ask(client, "연가 일수는 재직기간에 따라 어떻게 되나요", token(STAFF)).json()
+    assert body["found"] is True and body["model"] == {"name": "local", "location": "local"}
+    [event] = [e for e in events(audit) if e["kind"] == "rag.answered"]
+    assert event["model"]["externalSent"] is False and event["model"]["location"] == "local"
