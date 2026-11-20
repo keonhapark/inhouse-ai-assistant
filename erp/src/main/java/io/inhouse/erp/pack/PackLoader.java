@@ -77,7 +77,7 @@ public final class PackLoader {
 
     private static Pack.TicketDef ticket(JsonNode t) {
         return new Pack.TicketDef(t.path("id").asText(), t.path("requester_id").asText(), t.path("category").asText(),
-                t.path("priority").asText(), t.path("title").asText(), t.path("description").asText(),
+                t.path("priority").asText("normal"), t.path("title").asText(), t.path("description").asText(),
                 t.path("status").asText(), OffsetDateTime.parse(t.path("created_at").asText()),
                 list(t.path("comments"), c -> new Pack.CommentDef(c.path("author_id").asText(),
                         c.path("body").asText(), OffsetDateTime.parse(c.path("created_at").asText()))));

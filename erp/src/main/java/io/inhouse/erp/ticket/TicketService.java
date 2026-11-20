@@ -157,8 +157,14 @@ public class TicketService {
         return new WriteOutcome(out.summary(), out.changes(), true, out.resource(), log.getId(), null, null);
     }
 
-    /** 상태 변경 되돌리기: 그사이 상태가 다시 바뀌지 않았으면 이전 상태로 돌립니다. */
-    public WriteOutcome undoStatus(String changeId) {
+    /**
+     * 상태 변경 되돌리기: 그사이 상태가 다시 바뀌지 않았으면 이전 상태로 돌립니다. 되돌리는 사람(행동 주인)이
+     * 그사이 담당 역할을 잃었으면 403입니다.
+     */
+    public WriteOutcome undoStatus(String changeId, String actorId) {
+        if (!org.isTicketHandler(actorId)) {
+            throw ApiException.forbidden("티켓 담당만 상태 변경을 되돌립니다");
+        }
         TicketStatusChange c = changes.findById(changeId).orElseThrow();
         Ticket t = tickets.lockById(c.getTicketId()).orElseThrow();
         if (t.getVersion() != c.getVersionAfter()) {

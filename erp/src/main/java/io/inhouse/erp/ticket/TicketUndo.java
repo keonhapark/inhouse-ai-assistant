@@ -23,7 +23,7 @@ class TicketUndo {
 
     @Bean
     UndoHandler undoTicketStatus(TicketService tickets) {
-        return handler("changeTicketStatus", a -> tickets.undoStatus(a.getResourceId()));
+        return handler("changeTicketStatus", a -> tickets.undoStatus(a.getResourceId(), a.getActorId()));
     }
 
     private static UndoHandler handler(String operation, Function<Action, WriteOutcome> fn) {

@@ -26,9 +26,9 @@ create index ticket_comment_ticket on ticket_comment (ticket_id, created_at);
 create table ticket_status_change (
     id            varchar(32) primary key,
     ticket_id     varchar(32) not null references ticket (id),
-    from_status   varchar(16) not null,
-    to_status     varchar(16) not null,
-    version_after int         not null,
+    from_status   varchar(16) not null check (from_status in ('open', 'in_progress', 'resolved', 'closed', 'cancelled')),
+    to_status     varchar(16) not null check (to_status in ('open', 'in_progress', 'resolved', 'closed', 'cancelled')),
+    version_after int         not null check (version_after >= 1),
     changed_by    varchar(32) not null references employee (id),
     changed_at    timestamptz not null
 );
