@@ -44,7 +44,7 @@ def test_dev_set_follows_format_and_contracts() -> None:
             # 자유 문장 필수 인자는 적지 않으므로 채워서 스키마를 봅니다.
             filled = {**{k: "x" for k in schema.get("required", []) if k in FREE_TEXT}, **args}
             jsonschema.validate(filled, schema, format_checker=jsonschema.FormatChecker())
-            assert set(schema.get("required", [])) - FREE_TEXT <= set(args), it["id"]
+            assert set(args) == set(schema.get("required", [])) - FREE_TEXT, it["id"]  # 필수 인자만
         elif "ask" in exp:
             assert exp == {"ask": True, "why": exp["why"]} and exp["why"] in WHY, it["id"]
         else:

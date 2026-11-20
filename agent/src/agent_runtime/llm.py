@@ -20,9 +20,10 @@ POLICY_ALIASES = {"external_allowed": "external", "local_only": "local"}
 
 
 class LLMError(RuntimeError):
-    def __init__(self, message: str, status: int | None = None) -> None:
+    def __init__(self, message: str, status: int | None = None, problem_type: str | None = None) -> None:
         super().__init__(message)
         self.status = status  # 응답을 받았으면 HTTP 상태
+        self.problem_type = problem_type  # gateway 문제 응답의 type(예 urn:problem:unsupported-parameter)
 
 
 @dataclass(frozen=True)
@@ -100,7 +101,7 @@ class ChatClient:
             raise LLMError(f"LLM 호출 실패: {type(e).__name__}") from e
         latency_ms = int((time.perf_counter() - started) * 1000)
         if resp.status_code != 200:
-            raise LLMError(f"LLM 응답 {resp.status_code}", resp.status_code)
+            raise LLMError(f"LLM 응답 {resp.status_code}", resp.status_code, _problem_type(resp))
         try:
             data = resp.json()
             message = data["choices"][0]["message"]
@@ -122,3 +123,12 @@ def _usage(raw: Any) -> dict[str, int] | None:
     if not isinstance(p, int) or not isinstance(c, int):
         return None
     return {"promptTokens": p, "completionTokens": c}
+
+
+def _problem_type(resp: httpx.Response) -> str | None:
+    try:
+        body = resp.json()
+    except ValueError:
+        return None
+    value = body.get("type") if isinstance(body, dict) else None
+    return value if isinstance(value, str) else None

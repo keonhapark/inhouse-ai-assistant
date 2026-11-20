@@ -22,7 +22,10 @@ from agent_runtime.llm import POLICY_ALIASES, ChatClient, LLMSettings
 from agent_runtime.registry import Registry
 from agent_runtime.router import Router
 from agent_runtime.run.graph import system_prompt
+from agent_runtime.registry import Requester
 from tests.conftest import CONTRACTS, PACK_DIR
+from tests.mcp_support import mint
+from tests.run_support import FIXED_NOW, make_run_harness
 
 AGENT_DIR = Path(__file__).resolve().parents[1]
 DEV_SET = AGENT_DIR / "eval_dev" / "tool_calls.jsonl"
@@ -133,7 +136,7 @@ def test_s0_matches_run_prompt_and_tools(client: TestClient, gw: Gateway, reg2: 
     jsonschema.validate(out, RESULT_SCHEMA)
     hr = reg2.get("hr")
     assert out["tool"] == "leave_request" and out["arguments"] == LEAVE
-    assert out["candidates"] == [t for t in hr.tools if t in TOOLS]
+    assert out["candidates"] == [t for t in TOOLS if t in hr.tools]  # tools.json(MCP 카탈로그) 순서
     assert out["model"] == {"requested": "local", "egress": "local", "location": "local"}
     assert out["llmCalls"] == 1 and out["usage"] == {"promptTokens": 900, "completionTokens": 40}
     assert out["asked"] is False
@@ -215,10 +218,46 @@ def test_grammar_without_tool_call_is_one_call(client: TestClient, gw: Gateway) 
     assert out["llmCalls"] == 1 and out["asked"] is True
 
 
+UNSUPPORTED = {"type": "urn:problem:unsupported-parameter", "status": 400}
+
+
 def test_grammar_unsupported_alias_is_400(client: TestClient, gw: Gateway) -> None:
-    gw.script = [ok(tool_reply("leave_request", {})), httpx.Response(400, json={"type": "urn:problem:unsupported-parameter"})]
+    gw.script = [ok(tool_reply("leave_request", {})), httpx.Response(400, json=UNSUPPORTED)]
     r = post(client, variant={"grammar": True})
     assert r.status_code == 400 and "구조화 출력" in r.json()["detail"]
+
+
+def test_unsupported_thinking_is_400(client: TestClient, gw: Gateway) -> None:
+    gw.script = [httpx.Response(400, json=UNSUPPORTED)]
+    assert post(client, variant={"thinking": True}).status_code == 400
+
+
+def test_other_400_is_upstream_error(client: TestClient, gw: Gateway) -> None:
+    gw.script = [ok(tool_reply("leave_request", {})), httpx.Response(400, json={"type": "urn:problem:validation"})]
+    assert post(client, variant={"grammar": True}).status_code == 502
+
+
+def test_grammar_takes_egress_from_last_call_and_null_usage_if_missing(client: TestClient, gw: Gateway) -> None:
+    gw.script = [ok(tool_reply("leave_request", {}), {"prompt_tokens": 1, "completion_tokens": 1},
+                    model="external", location="external"),
+                 ok(text_reply(json.dumps(LEAVE)), None, model="local-structured", location="local")]
+    out = post(client, model="external", variant={"grammar": True}).json()
+    assert out["model"] == {"requested": "external", "egress": "local-structured", "location": "local"}
+    assert out["usage"] is None and out["llmCalls"] == 2
+
+
+def test_grammar_with_unknown_tool_is_one_call(client: TestClient, gw: Gateway) -> None:
+    gw.script = [ok(tool_reply("vacation_apply", {}))]
+    out = post(client, variant={"grammar": True}).json()
+    assert out["llmCalls"] == 1 and out["tool"] == "vacation_apply"
+
+
+def test_dict_arguments_are_serialized(client: TestClient, gw: Gateway) -> None:
+    msg = {"role": "assistant", "content": "", "tool_calls": [
+        {"id": "c1", "type": "function", "function": {"name": "leave_request", "arguments": LEAVE}}]}
+    gw.script = [ok(msg)]
+    out = post(client).json()
+    assert out["arguments"] == LEAVE and json.loads(out["rawArguments"]) == LEAVE
 
 
 def test_tool_filter_keeps_k_and_reports_candidates(client: TestClient, gw: Gateway) -> None:
@@ -249,3 +288,31 @@ def test_few_shot_adds_examples_but_not_the_same_message(client: TestClient, gw:
 def test_few_shot_without_examples_is_400(reg2: Registry, gw: Gateway, tmp_path: Path) -> None:
     c = make_client(reg2, gw, tmp_path, examples=[])
     assert post(c, variant={"fewShot": True}).status_code == 400
+
+
+# ---- S0와 업무 실행의 첫 계획 호출 ----
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("agent", ["hr", "assistant", "finance", "procurement"])
+async def test_s0_body_equals_run_first_plan_call(tmp_path: Path, agent: str) -> None:
+    """같은 요청을 업무 실행(/run)과 평가 경로(S0)로 보내 모델에 가는 프롬프트·도구가 같은지 봅니다."""
+    r = make_run_harness(tmp_path, stage=2)
+    r.llm.script = [{"role": "assistant", "content": "네."}]
+    conv = "cnv_s0"
+    me = Requester("E0016", "finance", "staff", ("employee",))
+    await r.runner.run(mint(employee="E0016", agent=agent, cid=conv), conv, agent, "연차 며칠 남았어?", me)
+    run_req = r.llm.requests[0]
+
+    gw = Gateway()
+    gw.script = [ok(text_reply("네."))]
+    c = make_client(Registry.load(PACK_DIR, stage=2), gw, tmp_path)
+    post(c, message="연차 며칠 남았어?", agent=agent, today=FIXED_NOW.date().isoformat())
+    body = gw.bodies[0]
+    assert body["messages"] == run_req["messages"][:1] + [run_req["messages"][-1]]
+    assert body["tools"] == run_req["tools"]

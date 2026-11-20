@@ -3,7 +3,7 @@
 업무 실행의 첫 계획 호출만 하고 도구를 실행하지 않습니다. 변형(ToolCallVariant)
 - 모두 끔(S0): 업무 실행과 같은 시스템 프롬프트(full 조건)와 그 에이전트의 도구 목록
 - grammar: 첫 호출로 도구를 고르고, 둘째 호출에서 그 도구의 입력 스키마를 response_format(json_schema)으로 걸어 인자를 받습니다
-- toolFilterK: 요청 문장과 도구 설명의 글자 두 개 묶음(bigram) 겹침으로 후보를 k개로 줄입니다
+- toolFilterK: 요청 문장과 도구 설명의 글자 두 개 묶음(bigram) 겹침으로 후보를 k개로 줄입니다(같으면 tools.json 순서)
 - fewShot: 개발 묶음(eval_dev/tool_calls.jsonl)에서 후보 도구마다 예시 하나를 시스템 프롬프트에 넣습니다.
   평가하는 요청과 문장이 같은 예시는 뺍니다
 - thinking: reasoning_effort를 low(켬)·none(끔)으로 보냅니다. null이면 보내지 않습니다
@@ -23,6 +23,7 @@ from agent_runtime.registry import Agent, Registry, Requester
 from agent_runtime.run.graph import asks_user, system_prompt
 
 KST_OFFSET = "+09:00"
+UNSUPPORTED = "urn:problem:unsupported-parameter"
 
 
 class EvalBadRequest(Exception):
@@ -65,7 +66,7 @@ def bigrams(text: str) -> set[str]:
 
 
 def filter_tools(message: str, tools: list[dict[str, Any]], k: int) -> list[dict[str, Any]]:
-    """요청과 도구 설명의 bigram 겹침이 큰 순서로 k개. 같으면 등록부 순서를 따릅니다."""
+    """요청과 도구 설명의 bigram 겹침이 큰 순서로 k개. 같으면 주어진 순서(tools.json)를 따릅니다."""
     words = bigrams(message)
     scored = [(len(words & bigrams(t["description"])), -i, t) for i, t in enumerate(tools)]
     scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
@@ -100,7 +101,8 @@ class EvalToolCaller:
         agent = self.registry.get(agent_id)
         model = model or self.llm.settings.model_for(agent.model_policy)
         # 업무 실행과 같이, 요청자가 부를 수 없는 에이전트는 도구 없이 안내만 합니다.
-        defs = [self.tools[n] for n in agent.tools if n in self.tools] if agent.callable_for(requester) else []
+        # 도구 순서는 업무 실행과 같게 tools.json(MCP 카탈로그) 순서입니다.
+        defs = [t for n, t in self.tools.items() if n in agent.tools] if agent.callable_for(requester) else []
         if variant.tool_filter_k is not None:
             defs = filter_tools(message, defs, variant.tool_filter_k)
         names = [t["name"] for t in defs]
@@ -157,8 +159,10 @@ class EvalToolCaller:
         try:
             return await asyncio.to_thread(self.llm.chat_detail, messages, tools, None, model, extra)
         except LLMError as e:
-            if e.status == 400 and "response_format" in extra:
-                raise EvalBadRequest(f"이 별칭은 구조화 출력(grammar)을 지원하지 않습니다: {model}") from None
+            # gateway는 모델이 지원하지 않는 요청 기능(response_format, reasoning_effort 등)을 400 unsupported-parameter로 줍니다.
+            if e.status == 400 and e.problem_type == UNSUPPORTED:
+                what = "구조화 출력(grammar)" if "response_format" in extra else "요청한 변형"
+                raise EvalBadRequest(f"이 별칭은 {what}을 지원하지 않습니다: {model}") from None
             raise EvalUpstreamError(str(e)) from None
 
 

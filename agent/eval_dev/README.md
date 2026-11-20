@@ -14,7 +14,7 @@
 ```
 
 - `expect`는 셋 중 하나입니다: `{"tool", "arguments"}`(첫 도구 호출), `{"ask": true, "why": "ambiguous_date|same_name|missing_field"}`(되물어야 함), `{"refuse": true}`(이 에이전트가 하면 안 되는 일)
-- `arguments`는 필수 인자만 적고, 날짜·시각은 ISO(`+09:00`)입니다. 자유 문장 인자(`reason`, `title`, `purpose`, `question`, `q`)는 적지 않습니다(채점에서 뺌)
+- `arguments`는 필수 인자만 적고(선택 인자는 적지 않음), 날짜·시각은 ISO(`+09:00`)입니다. 자유 문장 인자(`reason`, `title`, `purpose`, `question`, `q`)는 적지 않습니다(채점에서 뺌)
 - 대상을 먼저 찾아야 하는 요청(대결 위임처럼 사람 이름만 있는 것)은 첫 호출을 `org_search_employees`로 적습니다
 - 기준일은 2026-11-20(금)입니다. 직원 ID는 팩 `fixtures/employees.json`, 회의실 ID는 `fixtures/rooms.json`입니다. 결재 문서·위임·예약·품목 번호는 가상 값입니다
 - 구성: 에이전트 넷(assistant, hr, finance, procurement), 도구 호출 44, 되묻기 10, 거절 6
