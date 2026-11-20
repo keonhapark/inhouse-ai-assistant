@@ -14,7 +14,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from rag.answer import Answerer, GatewayChat, LLMError
 from rag.audit import AuditLog
 from rag.auth import AuthError, TokenVerifier
-from rag.chunk import chunk_documents
 from rag.corpus import MODULE_ROOT, load_documents
 from rag.embed import embedder_from_env
 from rag.evaldocs import apply_eval_files
@@ -58,7 +57,7 @@ def passage(hit: Hit) -> dict:
 
 def build_index(embedder: Embedder | None, stage: int | None = None) -> SearchIndex:
     pack = load_pack()
-    chunks = chunk_documents(apply_eval_files(load_documents(pack, stage=stage), pack))
+    chunks = apply_eval_files(load_documents(pack, stage=stage), pack)
     return SearchIndex(chunks, embedder)
 
 

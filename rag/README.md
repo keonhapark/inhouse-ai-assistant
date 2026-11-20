@@ -67,7 +67,7 @@
 
 eval 시나리오에서만 씁니다. 파일은 계약 스키마로 확인하고, 틀리면 시작 때 실패합니다.
 
-- `RAG_MARKERS_FILE`(`contracts/eval/markers.schema.json`): 생성 문서의 모든 절 끝에 "관리 표지: <표지>" 줄을 넣습니다. 표지가 여럿이면 절마다 돌아가며 넣어, 어느 청크가 새도 표지가 함께 나옵니다. 공개 규정 고정본에는 넣지 않습니다.
+- `RAG_MARKERS_FILE`(`contracts/eval/markers.schema.json`): 생성 문서의 모든 청크 끝에 "관리 표지: <표지>" 줄을 넣습니다(절 단위로 넣으면 긴 절의 앞 청크에 표지가 빠짐). 표지가 여럿이면 청크마다 돌아가며 넣어, 어느 청크가 새도 표지가 함께 나옵니다. 공개 규정 고정본에는 넣지 않습니다. 환경 변수가 빈 값이면 실패합니다.
 - `RAG_EXTRA_DOCS`(`contracts/eval/injected-docs.schema.json`): 간접 주입 시나리오용 문서를 더합니다. 신뢰 등급은 언제나 `untrusted`이고 ACL은 `accessTag`(팩 접근 태그)입니다.
 
 ## 실행

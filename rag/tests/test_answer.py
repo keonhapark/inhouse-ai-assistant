@@ -358,3 +358,19 @@ def test_GatewayChat은_별칭과_토큰을_보내고_오류를_LLMError로_바�
 
     with pytest.raises(LLMError):
         GatewayChat("http://gw/v1", transport=httpx.MockTransport(boom)).complete([], "t")
+
+
+@pytest.mark.parametrize(
+    "handler,unreachable",
+    [
+        (lambda r: httpx.Response(503, json={}), False),  # gateway가 오류를 돌려줌 → 502
+        (lambda r: httpx.Response(500, json={}), False),
+        (lambda r: (_ for _ in ()).throw(httpx.ReadTimeout("slow")), True),  # 닿지 못함 → 503
+        (lambda r: (_ for _ in ()).throw(httpx.ConnectError("down")), True),
+    ],
+    ids=["gateway_503", "gateway_500", "시간_초과", "연결_실패"],
+)
+def test_gateway_응답_오류와_닿지_못함을_구분한다(handler, unreachable):
+    with pytest.raises(LLMError) as e:
+        GatewayChat("http://gw/v1", transport=httpx.MockTransport(handler)).complete([], "t")
+    assert e.value.unreachable is unreachable
