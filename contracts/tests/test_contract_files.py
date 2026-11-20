@@ -108,3 +108,22 @@ def test_fake_erp_eval_reset(monkeypatch) -> None:
         st.employees.pop(next(iter(st.employees)))
         assert c.post("/_eval/reset").status_code == 204
         assert len(st.employees) == len(load(pack / "fixtures/employees.json")["employees"])
+
+
+def test_pack_budgets_are_checked(tmp_path) -> None:
+    """선택 파일 budgets.yaml: 스키마와 에이전트·부서 참조를 검사합니다."""
+    import shutil
+
+    from tools.check_packs import check_pack
+
+    pack = tmp_path / "manufacturing"
+    shutil.copytree(PACKS / "manufacturing", pack)
+    assert check_pack(pack) == []
+    (pack / "budgets.yaml").write_text("period: week\n", encoding="utf-8")
+    assert any("budgets.yaml" in e for e in check_pack(pack))
+    (pack / "budgets.yaml").write_text("period: month\nagents: {nobody: 1}\nunits: {nowhere: 1}\n",
+                                       encoding="utf-8")
+    errs = check_pack(pack)
+    assert any("nobody" in e for e in errs) and any("nowhere" in e for e in errs)
+    (pack / "budgets.yaml").unlink()
+    assert check_pack(pack) == []          # 파일이 없어도 됩니다

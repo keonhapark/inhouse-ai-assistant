@@ -333,6 +333,26 @@
       }
     },
 
+    "budgets": {
+      "description": "선택 파일 budgets.yaml. gateway가 외부 LLM 비용(LiteLLM이 계산한 달러)을 에이전트·부서별로 누적하고, 상한을 넘으면 다음 요청부터 외부 요청을 로컬 모델로 내립니다(진행 중 요청은 끝까지). 파일이 없으면 상한을 두지 않습니다.",
+      "type": "object",
+      "required": ["period"],
+      "additionalProperties": false,
+      "properties": {
+        "period": {"enum": ["day", "month"], "description": "누적을 다시 0으로 하는 단위(pack.company.timezone 기준)"},
+        "agents": {
+          "type": "object",
+          "description": "에이전트 ID → 기간당 외부 비용 상한(USD)",
+          "additionalProperties": {"type": "number", "minimum": 0}
+        },
+        "units": {
+          "type": "object",
+          "description": "부서(org.yaml units) ID → 기간당 외부 비용 상한(USD). 요청한 직원의 소속 부서와 그 상위 부서에 모두 더합니다",
+          "additionalProperties": {"type": "number", "minimum": 0}
+        }
+      }
+    },
+
     "fixtures_employees": {
       "type": "object",
       "required": ["seed", "employees"],
