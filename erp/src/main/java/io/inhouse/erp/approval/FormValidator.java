@@ -8,13 +8,17 @@ import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.pack.Pack;
+import java.math.BigInteger;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 
-/** 양식 입력(fields)을 팩 forms.yaml의 JSON Schema(2020-12)로 검사합니다. 어기면 422 form-validation-failed입니다. */
+/**
+ * 양식 입력(fields)을 팩 forms.yaml의 JSON Schema(2020-12)로 검사합니다. 양식에 amount_product_of가 있으면
+ * 금액 필드가 그 필드들의 곱과 같은지도 봅니다. 어기면 422 form-validation-failed입니다.
+ */
 @Component
 public class FormValidator {
 
@@ -37,6 +41,25 @@ public class FormValidator {
                 .toList();
         if (!errors.isEmpty()) {
             throw new ApiException(422, "form-validation-failed", "양식 입력이 올바르지 않습니다", errors);
+        }
+        checkProduct(form, fields);
+    }
+
+    /** 스키마 검사를 지난 뒤라 곱할 필드는 모두 있는 정수입니다(팩 검사가 필수 정수 필드인지 봅니다). */
+    private static void checkProduct(Pack.FormDef form, JsonNode fields) {
+        if (form.amountProductOf().isEmpty() || form.amountField() == null) {
+            return;
+        }
+        BigInteger want = BigInteger.ONE;
+        for (String name : form.amountProductOf()) {
+            want = want.multiply(fields.path(name).bigIntegerValue());
+        }
+        BigInteger amount = fields.path(form.amountField()).bigIntegerValue();
+        if (!amount.equals(want)) {
+            String detail = form.amountField() + "가 " + String.join(" × ", form.amountProductOf()) + "(" + want
+                    + ")와 다릅니다";
+            throw new ApiException(422, "form-validation-failed", detail,
+                    List.of(new ApiException.FieldError(form.amountField(), "mismatch")));
         }
     }
 

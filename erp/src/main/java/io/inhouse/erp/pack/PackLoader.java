@@ -93,7 +93,7 @@ public final class PackLoader {
         });
         return new Pack.FormDef(f.path("id").asText(), f.path("name").asText(), f.path("stage").asInt(1),
                 f.path("fields").deepCopy(),
-                textOrNull(f, "amount_field"), effects, line);
+                textOrNull(f, "amount_field"), strings(f.path("amount_product_of")), effects, line);
     }
 
     private static Grant grant(JsonNode g) {
