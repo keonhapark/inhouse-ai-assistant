@@ -44,6 +44,8 @@ def sort_log(text: str) -> str:
     entries: list[tuple[str, int, str]] = []
     last = ""
     for i, line in enumerate(text.splitlines()):
+        if not line.strip():
+            continue
         head = line.split(" ", 1)[0]
         if len(head) >= 20 and head[4] == "-" and "T" in head:
             last = head
@@ -53,6 +55,14 @@ def sort_log(text: str) -> str:
 
 
 def erp_audit(erp_url: str, auditor_no: str, password: str, start: datetime, end: datetime) -> str:
+    """erp 감사 이벤트(감사 조회 역할로 로그인). erp에 닿지 못하면 빈 묶음으로 둡니다."""
+    try:
+        return _erp_audit(erp_url, auditor_no, password, start, end)
+    except httpx.HTTPError:
+        return ""
+
+
+def _erp_audit(erp_url: str, auditor_no: str, password: str, start: datetime, end: datetime) -> str:
     with httpx.Client(base_url=erp_url, timeout=15) as c:
         r = c.post("/auth/login", json={"employeeNo": auditor_no, "password": password})
         if r.status_code != 200:
@@ -64,14 +74,21 @@ def erp_audit(erp_url: str, auditor_no: str, password: str, start: datetime, end
         return "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in r.json()["items"] if in_window(e, start, end))
 
 
-def collect(stack: Stack, out: Path, start: datetime, end: datetime, auditor_no: str, password: str) -> dict[str, int]:
-    """logs/<서비스>.log, audit/<파일>.jsonl을 쓰고 파일별 줄 수를 돌려줍니다."""
+def service_logs(stack: Stack, start: datetime, end: datetime) -> dict[str, str]:
+    """서비스별 컨테이너 로그. 복구가 컨테이너를 새로 만들면 옛 로그가 사라지므로 복구 직전에 한 번 더 부릅니다."""
+    return {svc: stack.logs(svc, start.isoformat(), end.isoformat()) for svc in SERVICES}
+
+
+def collect(stack: Stack, out: Path, start: datetime, end: datetime, auditor_no: str, password: str,
+            earlier: dict[str, str] | None = None, earlier_end: datetime | None = None) -> dict[str, int]:
+    """logs/<서비스>.log, audit/<파일>.jsonl을 쓰고 파일별 줄 수를 돌려줍니다. earlier는 start~earlier_end에 미리
+    받아 둔 로그이고, 그 뒤(earlier_end~end)만 새로 받아 잇습니다."""
     counts: dict[str, int] = {}
     (out / "logs").mkdir(parents=True, exist_ok=True)
     (out / "audit").mkdir(parents=True, exist_ok=True)
-    since, until = start.isoformat(), end.isoformat()
+    later = service_logs(stack, earlier_end or start, end)
     for svc in SERVICES:
-        text = sort_log(stack.logs(svc, since, until))
+        text = sort_log((earlier or {}).get(svc, "") + "\n" + later[svc])
         (out / "logs" / f"{svc}.log").write_text(text, encoding="utf-8")
         counts[f"logs/{svc}.log"] = text.count("\n")
     for name, text in stack.audit_lines().items():

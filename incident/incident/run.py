@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from incident import faults as F
-from incident.collect import collect
+from incident.collect import collect, service_logs
 from incident.stack import ROOT, Stack
 from incident.tickets import file_ticket, pick
 from incident.traffic import KST, Traffic, dumps
@@ -54,22 +54,27 @@ def run_one(stack: Stack, fault: F.Fault, run_dir: Path, n: int, rng: random.Ran
 
     traffic = Traffic(stack.erp_url, gateway, user["employee_no"], password)
     start = datetime.now(KST)
+    events = stack.watch_events()
     traffic.start()
     time.sleep(baseline_s)
     injected = datetime.now(KST)
     fault.inject(stack, fault.duration_s)
     time.sleep(fault.duration_s)
     recover_started = datetime.now(KST)
+    before_recovery = service_logs(stack, start, recover_started)
     fault.recover(stack)
     recovered = datetime.now(KST)
     time.sleep(post_s)
     records = traffic.stop()
     end = datetime.now(KST)
+    container_events = Stack.stop_events(events)
 
     title, description = pick(fault.id, rng)
     ticket = file_ticket(stack.erp_url, reporter["employee_no"], password, title, description)
-    counts = collect(stack, out, start, end, auditor["employee_no"], password)
+    counts = collect(stack, out, start, end, auditor["employee_no"], password, before_recovery, recover_started)
     (out / "traffic.jsonl").write_text(dumps(records), encoding="utf-8")
+    (out / "logs" / "docker-events.log").write_text(container_events, encoding="utf-8")
+    counts["logs/docker-events.log"] = container_events.count("\n")
     truth = {
         "incidentId": incident_id, "runId": run_dir.name, "fault": fault.id, "title": fault.title,
         "rootService": fault.root_service, "kind": fault.kind,

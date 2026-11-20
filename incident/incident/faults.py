@@ -15,7 +15,8 @@ from typing import Callable
 from incident.stack import Stack
 
 LOCKED_TABLES = "approval_document, room_reservation, leave_balance, ticket"
-RAG_CACHE = "/repo/rag/.cache"
+# rag 이미지는 RAG_CACHE_DIR로 캐시 위치를 정합니다. 없으면 rag 기본값입니다.
+RAG_CACHE = "${RAG_CACHE_DIR:-/repo/rag/.cache}"
 
 
 @dataclass(frozen=True)
@@ -111,7 +112,7 @@ _rag_files: dict[str, list[str]] = {}
 
 
 def _rag_cache_files(stack: Stack) -> list[str]:
-    out = stack.docker("exec", stack.container("rag"), "sh", "-c", f"ls {RAG_CACHE}/embeddings-*.json", check=False)
+    out = stack.docker("exec", stack.container("rag"), "sh", "-c", f'ls "{RAG_CACHE}"/embeddings-*.json', check=False)
     return [line.strip() for line in out.stdout.splitlines() if line.strip().endswith(".json")]
 
 

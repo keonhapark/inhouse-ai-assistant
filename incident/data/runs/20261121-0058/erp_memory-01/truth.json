@@ -1,0 +1,36 @@
+{
+  "incidentId": "erp_memory-01",
+  "runId": "20261121-0058",
+  "fault": "erp_memory",
+  "title": "erp 메모리 부족",
+  "rootService": "erp",
+  "kind": "resource_exhaustion",
+  "window": {
+    "start": "2026-11-21T01:01:48.453234+09:00",
+    "end": "2026-11-21T01:03:42.395448+09:00"
+  },
+  "injectedAt": "2026-11-21T01:02:08.453584+09:00",
+  "recoverStartedAt": "2026-11-21T01:03:08.519161+09:00",
+  "recoveredAt": "2026-11-21T01:03:14.806077+09:00",
+  "ticket": {
+    "id": "tkt_c5385b7bb89e",
+    "requesterId": "E0010",
+    "title": "ERP가 갑자기 끊깁니다",
+    "description": "쓰던 중에 연결이 끊겼다가 잠시 뒤 다시 로그인하라고 나옵니다.",
+    "createdAt": "2026-11-21T01:03:42.540621597+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 192,
+    "logs/erp.log": 332,
+    "logs/rag.log": 22,
+    "logs/agent.log": 35,
+    "logs/litellm.log": 79,
+    "logs/gateway.log": 34,
+    "audit/gateway_egress.jsonl": 1,
+    "audit/gateway_audit.jsonl": 7,
+    "audit/agent.jsonl": 3,
+    "audit/erp.jsonl": 2
+  },
+  "trafficErrors": 511,
+  "trafficTotal": 772
+}

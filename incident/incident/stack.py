@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import secrets
+from datetime import datetime, timezone
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -62,7 +63,10 @@ class Stack:
     runner: Runner = run
     env_file: Path = ROOT / ".env"
     # 장애 실험은 로컬 모델만 씁니다. 외부 모델 키는 비워 외부로 나가지 않게 합니다.
-    extra_env: dict[str, str] = field(default_factory=lambda: {"ANTHROPIC_API_KEY": ""})
+    # slack 프로필은 띄우지 않지만 compose가 모든 서비스의 필수 변수를 검사하므로 자리값을 줍니다.
+    extra_env: dict[str, str] = field(default_factory=lambda: {
+        "ANTHROPIC_API_KEY": "", "SLACK_APP_TOKEN": "unused", "SLACK_BOT_TOKEN": "unused",
+        "SLACK_BRIDGE_SECRET": "unused"})
 
     def __post_init__(self) -> None:
         if "LITELLM_MASTER_KEY=" not in (self.env_file.read_text(encoding="utf-8") if self.env_file.exists() else ""):
@@ -96,8 +100,9 @@ class Stack:
         self.compose("up", "-d", "--wait", "--build", timeout=1800)
 
     # 운영 DB에서 흔히 켜 두는 로그(잠금 대기, 느린 문장, 연결). 세션 스택 DB에만 겁니다.
+    # 연결 로그는 헬스 검사(3초마다)가 대부분이라 켜지 않습니다.
     PG_LOGGING = ("log_lock_waits = on", "deadlock_timeout = '1s'", "log_min_duration_statement = 1000",
-                  "log_connections = on", "log_disconnections = on")
+                  "log_connections = off", "log_disconnections = off")
 
     def prepare(self) -> None:
         # alter system은 트랜잭션 블록 안에서 못 돌려 문장마다 -c로 나눕니다.
@@ -110,6 +115,30 @@ class Stack:
         out = self.docker("logs", "--timestamps", "--since", since, "--until", until, self.container(service),
                           check=False)
         return out.stdout + out.stderr
+
+    def watch_events(self) -> subprocess.Popen[str]:
+        """컨테이너 수명 이벤트(die, oom, start, kill, health_status 등)를 구간 동안 받습니다. 도커는 지난 이벤트를
+        조금만 남기므로(헬스 검사 exec가 밀어냄) 구간 시작부터 실시간으로 받습니다."""
+        return subprocess.Popen(
+            ["docker", "events", "--filter", f"label=com.docker.compose.project={self.project}", "--filter",
+             "type=container", "--format",
+             "{{.TimeNano}} {{.Action}} {{index .Actor.Attributes \"com.docker.compose.service\"}} "
+             "exitCode={{index .Actor.Attributes \"exitCode\"}}"],
+            env=self.env(), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+
+    @staticmethod
+    def stop_events(proc: subprocess.Popen[str]) -> str:
+        """exec 이벤트(헬스 검사·우리 명령)는 뺍니다. 시각은 RFC 3339 UTC로 바꿉니다."""
+        proc.terminate()
+        out, _ = proc.communicate(timeout=10)
+        lines = []
+        for line in out.splitlines():
+            ts, _, rest = line.partition(" ")
+            if not ts.isdigit() or rest.startswith("exec_"):
+                continue
+            at = datetime.fromtimestamp(int(ts) / 1e9, tz=timezone.utc).isoformat(timespec="microseconds")
+            lines.append(f"{at.replace('+00:00', 'Z')} {rest.replace(' exitCode=<no value>', '')}")
+        return "".join(x + "\n" for x in lines)
 
     def audit_lines(self) -> dict[str, str]:
         """감사 볼륨의 JSON Lines 파일 전체(gateway 컨테이너에서 읽음)."""
