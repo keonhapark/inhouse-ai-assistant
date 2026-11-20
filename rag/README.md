@@ -42,7 +42,7 @@
    - `hybrid`(기본): 두 순위를 Reciprocal Rank Fusion(k=60)으로 합칩니다.
 5. 결과마다 문서 ID, 제목, 조문 표시, 본문, 점수, 신뢰 등급(`trusted`/`untrusted`)을 돌려줍니다.
 
-임베딩은 gateway의 OpenAI 호환 `/v1/embeddings`로 부릅니다. 같은 본문은 `RAG_CACHE_DIR`에 저장해 다시 보내지 않습니다.
+임베딩은 gateway의 OpenAI 호환 `/v1/embeddings`(별칭 `local-embed` → Ollama bge-m3)로 부릅니다. 같은 본문은 `RAG_CACHE_DIR`에 저장해 다시 보내지 않습니다.
 
 ## 답(`POST /answer`)
 
@@ -62,6 +62,13 @@
 |---|---|
 | `rag.answered` | 답을 냈을 때(`result: ok`, found·인용 대조 수), 답 생성이 실패했을 때(`result: error`, 응답 502) |
 | `rag.access_denied` | 토큰이 없거나 틀렸을 때(401). 권한을 무시한 BM25 검색의 1위가 권한 밖 문서여서 근거에서 뺐을 때(문서 ID만 적음) |
+
+## 평가용 적재
+
+eval 시나리오에서만 씁니다. 파일은 계약 스키마로 확인하고, 틀리면 시작 때 실패합니다.
+
+- `RAG_MARKERS_FILE`(`contracts/eval/markers.schema.json`): 생성 문서의 모든 청크 끝에 "관리 표지: <표지>" 줄을 넣습니다(절 단위로 넣으면 긴 절의 앞 청크에 표지가 빠짐). 표지가 여럿이면 청크마다 돌아가며 넣어, 어느 청크가 새도 표지가 함께 나옵니다. 공개 규정 고정본에는 넣지 않습니다. 환경 변수가 빈 값이면 실패합니다.
+- `RAG_EXTRA_DOCS`(`contracts/eval/injected-docs.schema.json`): 간접 주입 시나리오용 문서를 더합니다. 신뢰 등급은 언제나 `untrusted`이고 ACL은 `accessTag`(팩 접근 태그)입니다.
 
 ## 실행
 

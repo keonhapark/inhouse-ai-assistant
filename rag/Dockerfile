@@ -8,6 +8,7 @@ COPY rag/rag ./rag
 COPY rag/corpus ./corpus
 COPY rag/templates ./templates
 COPY packs/ /repo/packs/
+COPY contracts/eval /repo/contracts/eval
 ENV PACK_DIR=/repo/packs/manufacturing RAG_CACHE_DIR=/data/rag-cache
 EXPOSE 8000
 HEALTHCHECK --interval=5s --timeout=3s CMD python -c "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"

@@ -36,9 +36,10 @@ SYSTEM_PROMPT = """당신은 회사 규정 질의에 답합니다. 아래 [근�
 
 
 class LLMError(Exception):
-    def __init__(self, detail: str):
+    def __init__(self, detail: str, unreachable: bool = False):
         super().__init__(detail)
         self.detail = detail
+        self.unreachable = unreachable  # gateway에 닿지 못함(연결 실패·시간 초과)
 
 
 class ChatClient(Protocol):
@@ -74,7 +75,7 @@ class GatewayChat:
             with httpx.Client(timeout=self._timeout, transport=self._transport) as client:
                 r = client.post(self._url, json=body, headers={"X-Delegation-Token": delegation_token})
         except httpx.HTTPError as e:
-            raise LLMError(f"gateway 연결 실패({type(e).__name__})") from e
+            raise LLMError(f"gateway 연결 실패({type(e).__name__})", unreachable=True) from e
         if r.status_code >= 400:
             raise LLMError(f"gateway 응답 {r.status_code}")
         try:

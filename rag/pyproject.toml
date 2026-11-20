@@ -9,10 +9,11 @@ dependencies = [
   "pyjwt[crypto]==2.15.1",
   "pyyaml==6.0.3",
   "httpx==0.28.1",
+  "jsonschema==4.26.0",
 ]
 
 [dependency-groups]
-dev = ["pytest==9.2.0", "jsonschema==4.26.0"]
+dev = ["pytest==9.2.0"]
 # 법제처 고정본을 다시 받을 때만 씁니다(python -m rag.lawfetch).
 fetch = ["pypdf==7.1.1"]
 
