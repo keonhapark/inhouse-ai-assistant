@@ -165,7 +165,7 @@ components:
       type: string
       enum: [no_guard, write_blocked, approve_all, baseline_tools, full]
       default: full
-      description: 평가 다섯 조건. 운영에서는 full만 씁니다
+      description: 평가 다섯 조건. 운영에서는 full만 씁니다. 조건별 장치 구성은 contracts/eval/conditions.md입니다
     Requester:
       type: object
       required: [employeeId, unitId, grade, roles]

@@ -15,3 +15,4 @@
 | 2026-11-20 | gateway | - | `X-Eval-Condition`은 /run에만 넘김(설명 정정) | agent.yaml /resume에 condition 없음 | 반영 |
 | 2026-11-20 | agent | - | MCP 요청 `_meta`(dryRun, idempotencyKey, trustLevel)를 `contracts/mcp/README.md`에 적음 | LLM이 고를 수 없는 값 | 반영 |
 | 2026-11-20 | agent | #15 | agent `POST /baseline/slots`(rule·llm, 실행 없이 도구·인자 반환) | 기준선과 LLM 경로를 같은 입력으로 비교 | 반영 |
+| 2026-11-20 | eval | - | 조건별 장치 구성 `contracts/eval/conditions.md`, external-request `usage`·`costUsd` | gateway 장치가 조건에 따라 켜지고 꺼지지 않음, 비용 상한 | 반영, gateway·agent 구현 이슈 |
