@@ -1,0 +1,107 @@
+import type { components } from './schema.js'
+import { readSse } from './sse.js'
+
+export type Schemas = components['schemas']
+export type ChatEvent = Schemas['ChatEvent']
+
+/** gateway 호출 실패. problem+json의 title을 message로, HTTP 상태(연결 실패는 0)를 status로 둡니다. */
+export class GatewayError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message)
+  }
+}
+
+/** 브리지가 gateway에 바라는 것. 시험에서는 가짜로 바꿉니다. */
+export interface Gateway {
+  /** 슬랙 사용자 ID로 직원 토큰을 받습니다. 매핑이 없으면 null(gateway 403). */
+  login(slackUserId: string): Promise<string | null>
+  createConversation(token: string): Promise<string>
+  /** 메시지를 보내고 SSE 이벤트를 차례로 돌려줍니다. 마지막은 done입니다. */
+  send(token: string, conversationId: string, content: string): AsyncGenerator<ChatEvent>
+  decide(token: string, approvalId: string, decision: 'approve' | 'reject'): AsyncGenerator<ChatEvent>
+  undo(token: string, actionId: string, idempotencyKey: string): Promise<Schemas['ActionResult']>
+  notifications(token: string): Promise<Schemas['Notification'][]>
+}
+
+type Options = { baseUrl: string; bridgeSecret: string; fetch?: typeof fetch }
+
+export function httpGateway({ baseUrl, bridgeSecret, fetch: f = fetch }: Options): Gateway {
+  const url = (path: string) => `${baseUrl.replace(/\/$/, '')}${path}`
+
+  async function call(token: string | null, path: string, init: RequestInit = {}): Promise<Response> {
+    let res: Response
+    try {
+      res = await f(url(path), {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(init.headers as Record<string, string> | undefined),
+        },
+      })
+    } catch {
+      throw new GatewayError('gateway에 연결하지 못했습니다.', 0)
+    }
+    if (!res.ok) throw new GatewayError(await problemTitle(res), res.status)
+    return res
+  }
+
+  async function* stream(res: Response): AsyncGenerator<ChatEvent> {
+    if (!res.body) throw new GatewayError('응답 본문이 없습니다.', res.status)
+    let done = false
+    for await (const msg of readSse(res.body)) {
+      const e = JSON.parse(msg.data) as ChatEvent
+      if (e.type === 'done') done = true
+      yield e
+    }
+    // 계약상 마지막은 done입니다. 없이 닫히면 답이 잘린 것입니다.
+    if (!done) throw new GatewayError('응답이 중간에 끊겼습니다.', 0)
+  }
+
+  return {
+    async login(slackUserId) {
+      try {
+        const res = await call(null, '/auth/slack', {
+          method: 'POST',
+          headers: { 'X-Slack-Bridge-Secret': bridgeSecret },
+          body: JSON.stringify({ slackUserId }),
+        })
+        return ((await res.json()) as Schemas['LoginResponse']).accessToken
+      } catch (e) {
+        if (e instanceof GatewayError && e.status === 403) return null
+        throw e
+      }
+    },
+    async createConversation(token) {
+      const res = await call(token, '/conversations', { method: 'POST', body: '{}' })
+      return ((await res.json()) as Schemas['ConversationSummary']).conversationId
+    },
+    async *send(token, conversationId, content) {
+      yield* stream(await call(token, `/conversations/${encodeURIComponent(conversationId)}/messages`, { method: 'POST', body: JSON.stringify({ content }) }))
+    },
+    async *decide(token, approvalId, decision) {
+      yield* stream(await call(token, `/execution-approvals/${encodeURIComponent(approvalId)}`, { method: 'POST', body: JSON.stringify({ decision }) }))
+    },
+    async undo(token, actionId, idempotencyKey) {
+      const res = await call(token, `/actions/${encodeURIComponent(actionId)}/undo`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: '{}' })
+      return (await res.json()) as Schemas['ActionResult']
+    },
+    async notifications(token) {
+      const res = await call(token, '/notifications?unreadOnly=true')
+      return ((await res.json()) as { items: Schemas['Notification'][] }).items
+    },
+  }
+}
+
+async function problemTitle(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { title?: string; detail?: string }
+    if (body.title) return body.detail ? `${body.title} ${body.detail}` : body.title
+  } catch {
+    // problem+json이 아니면 상태 코드로 씁니다.
+  }
+  return `gateway가 ${res.status}로 답했습니다.`
+}
