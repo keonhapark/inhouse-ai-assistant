@@ -438,3 +438,72 @@ def test_usage_records_models_sent_for_begun_conversation(client, app, token_for
     client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(local_only)},
                 json={"model": "local", "messages": MSG})             # 연결 실패: 보내지 않음
     assert usage.take("conv-9") is None
+
+
+# ---------- 평가 조건별 출구 장치(#134) ----------
+def _cond(app, condition):
+    app.state.egress.condition_of = lambda cid: condition if cid == "conv-9" else None
+
+
+def _send(client, token, model, content):
+    return client.post("/v1/chat/completions", headers={"X-Delegation-Token": token},
+                       json={"model": model, "messages": [{"role": "user", "content": content}]})
+
+
+PII_TEXT = "연락처 010-1234-5678, 메일 hong@example.com"
+
+
+def test_no_guard_turns_off_all_gateway_guards(client, app, token_for, litellm, glossary):
+    local_only, _ = _agent_ids(app)
+    _cond(app, "no_guard")
+    t = token_for(local_only)
+    assert _send(client, t, "external", PII_TEXT).status_code == 200            # 로컬 강제 끔
+    assert litellm.last_body()["messages"][0]["content"] == PII_TEXT            # 가림 끔
+    assert _send(client, t, "external", "원가표 요약").status_code == 200        # 기밀 판정 끔
+    assert litellm.last_body()["model"] == "external"
+
+
+def test_baseline_tools_uses_stock_recognizers_only(client, app, token_for, litellm, glossary):
+    from gateway.pii import BaselineRedactor
+
+    app.state.egress.baseline_redactor = BaselineRedactor()
+    local_only, _ = _agent_ids(app)
+    _cond(app, "baseline_tools")
+    t = token_for(local_only)
+    assert _send(client, t, "external", PII_TEXT).status_code == 200
+    sent = litellm.last_body()["messages"][0]["content"]
+    assert "<EMAIL_ADDRESS>" in sent and "[전화번호]" not in sent              # 기성 기본값, 한국 인식기 없음
+    assert _send(client, t, "external", "원가표 요약").status_code == 200        # 기밀 판정 끔
+
+
+@pytest.mark.parametrize("condition", ["write_blocked", "approve_all", "full"])
+def test_guarded_conditions_keep_all_guards(client, app, token_for, litellm, glossary, condition):
+    local_only, external_ok = _agent_ids(app)
+    _cond(app, condition)
+    assert _send(client, token_for(local_only), "external", "x").status_code == 403
+    assert _send(client, token_for(external_ok), "external", PII_TEXT).status_code == 200
+    assert "[전화번호]" in litellm.last_body()["messages"][0]["content"]
+    assert _send(client, token_for(external_ok), "external", "원가표 요약").status_code == 403
+
+
+def test_external_log_usage_and_cost(client, app, token_for, litellm, ext_log):
+    _, external_ok = _agent_ids(app)
+    litellm.usage = {"prompt_tokens": 12, "completion_tokens": 3, "total_tokens": 15}
+    litellm.cost = "0.00042"
+    _send(client, token_for(external_ok), "external", "안녕")
+    (rec,) = ext_log.read_all()
+    Draft202012Validator(EXT_SCHEMA).validate(rec)
+    assert rec["usage"] == {"prompt_tokens": 12, "completion_tokens": 3} and rec["costUsd"] == 0.00042
+
+
+def test_external_log_usage_from_stream(client, app, token_for, litellm, ext_log):
+    from gateway.egress import response_usage
+
+    sse = ('data: {"choices":[{"delta":{"content":"a"}}]}\n\n'
+           'data: {"choices":[],"usage":{"prompt_tokens":5,"completion_tokens":1}}\n\ndata: [DONE]\n\n')
+    assert response_usage(sse) == {"prompt_tokens": 5, "completion_tokens": 1}
+    assert response_usage("not json") is None
+    _, external_ok = _agent_ids(app)
+    _send(client, token_for(external_ok), "external", "안녕")
+    (rec,) = ext_log.read_all()
+    assert rec["costUsd"] is None and "usage" not in rec              # 모르면 null·생략

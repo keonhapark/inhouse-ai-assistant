@@ -23,7 +23,7 @@ from gateway.config import Settings
 from gateway.delegation import DelegationService
 from gateway.confidential import Glossary
 from gateway.egress import Egress, load_model_info
-from gateway.pii import KoreanRedactor
+from gateway.pii import BaselineRedactor, KoreanRedactor
 from gateway.erp_client import ErpClient
 from gateway.problems import ProblemError, problem_response
 from gateway.registry import Registry
@@ -57,12 +57,15 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     audit = AuditLog(settings.audit_dir)
     alerter = Alerter(settings.alert_webhook_url, transport=alert_transport)
     model_info = load_model_info(settings.litellm_config)
+    korean = KoreanRedactor()
     egress = Egress(base_url=settings.litellm_base_url,
                     locations={alias: info["location"] for alias, info in model_info.items()},
                     registry=registry, issuer=issuer, audit=audit, alerter=alerter,
                     timeout=settings.llm_timeout_seconds, api_key=os.environ.get("LITELLM_MASTER_KEY") or None,
-                    transport=llm_transport, redactor=KoreanRedactor(), glossary=Glossary.load(settings.pack_dir),
+                    transport=llm_transport, redactor=korean, glossary=Glossary.load(settings.pack_dir),
                     external_log=JsonlWriter(settings.external_log) if settings.external_log else None,
+                    # 평가 모드가 아니면 조건이 없어 쓰이지 않으므로 기성 인식기를 싣지 않습니다.
+                    baseline_redactor=BaselineRedactor() if settings.eval_mode else korean,
                     no_response_format=frozenset(a for a, i in model_info.items()
                                                  if i.get("supports_response_format") is False))
 
@@ -82,6 +85,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     agent = AgentClient(settings.agent_base_url, transport=agent_transport, timeout=settings.agent_timeout_seconds)
     app.state.chat = ChatService(erp, registry, app.state.delegation, agent, audit, eval_mode=settings.eval_mode,
                                  usage=egress.usage)
+    egress.condition_of = app.state.chat.condition_of
     app.state.audit = audit
     app.state.alerter = alerter
     app.state.egress = egress

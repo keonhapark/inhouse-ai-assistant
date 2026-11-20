@@ -355,3 +355,36 @@ def test_resume_events_carry_model(chat, h, agent):
     ev = events(chat.post(f"/api/execution-approvals/{ap}", headers=h, json={"decision": "approve"}))
     assert ev[-1]["model"] == {"name": "local", "location": "local"}
     assert next(e for e in ev if e["type"] == "message")["model"]["location"] == "local"
+
+
+# ---------- 평가 조건별 장치·토큰 범위(#134) ----------
+def _eval_conv(chat, h, condition, agent_id=None):
+    chat.app_ref.state.chat.eval_mode = True
+    body = {"agentId": agent_id} if agent_id else {}
+    return chat.post("/api/conversations", headers={**h, "X-Eval-Condition": condition}, json=body
+                     ).json()["conversationId"]
+
+
+def _token_of_last_run(agent):
+    return [c for c in agent.calls if c[0] == "/run"][-1][2]
+
+
+@pytest.mark.parametrize("condition,wide", [
+    ("no_guard", True), ("baseline_tools", True), ("write_blocked", False), ("approve_all", False), ("full", False),
+])
+def test_token_scope_by_condition(chat, h, agent, condition, wide):
+    reg = chat.app_ref.state.registry
+    cid = _eval_conv(chat, h, condition, "hr")
+    events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "규정"}))
+    claims = jwt.decode(_token_of_last_run(agent), options={"verify_signature": False})
+    schema_check.validate_file("auth/delegation-token.schema.json", claims)
+    scopes = json.loads((ROOT / "contracts/auth/scopes.json").read_text())["scopes"]
+    human = {s["id"] for s in scopes if s.get("human_only")}
+    assert not set(claims["scopes"]) & human                      # 어느 조건에서도 사람 전용은 없음
+    if wide:
+        assert set(claims["scopes"]) == {s["id"] for s in scopes} - human
+        assert set(claims["doc_scopes"]) == set(reg.all_access_tags)
+    else:
+        assert set(claims["scopes"]) == set(reg.get("hr").scopes)
+        assert set(claims["doc_scopes"]) <= set(reg.get("hr").doc_scopes)
+    assert claims["tools"] == list(reg.get("hr").tools)

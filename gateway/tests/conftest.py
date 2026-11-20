@@ -68,6 +68,8 @@ class FakeLiteLLM:
     def __init__(self):
         self.requests: list[httpx.Request] = []
         self.mode = "ok"
+        self.usage: dict | None = None      # 있으면 응답에 usage를 넣음
+        self.cost: str | None = None        # 있으면 x-litellm-response-cost 머리글
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
@@ -91,10 +93,13 @@ class FakeLiteLLM:
                 "data: [DONE]\n\n"
             )
             return httpx.Response(200, content=sse.encode(), headers={"content-type": "text/event-stream"})
-        return httpx.Response(200, json={
-            "id": "c1", "object": "chat.completion", "model": body["model"],
-            "choices": [{"index": 0, "message": {"role": "assistant", "content": "답입니다"},
-                         "finish_reason": "stop"}]})
+        out = {"id": "c1", "object": "chat.completion", "model": body["model"],
+               "choices": [{"index": 0, "message": {"role": "assistant", "content": "답입니다"},
+                            "finish_reason": "stop"}]}
+        if self.usage:
+            out["usage"] = self.usage
+        return httpx.Response(200, json=out,
+                              headers={"x-litellm-response-cost": self.cost} if self.cost else None)
 
     def last_body(self) -> dict:
         return json.loads(self.requests[-1].content)

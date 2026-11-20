@@ -44,8 +44,9 @@ LABELS = {
 class PatternOnlyNlpEngine(NlpEngine):
     """토큰만 나누고 개체 인식은 하지 않는 NLP 엔진."""
 
-    def __init__(self) -> None:
+    def __init__(self, languages: tuple[str, ...] = (LANG,)) -> None:
         self._nlp = spacy.blank("xx")
+        self._languages = list(languages)
 
     def load(self) -> None:
         pass
@@ -72,7 +73,7 @@ class PatternOnlyNlpEngine(NlpEngine):
         return []
 
     def get_supported_languages(self) -> list[str]:
-        return [LANG]
+        return self._languages
 
 
 class _KoreanPatternRecognizer(PatternRecognizer):
@@ -175,6 +176,9 @@ class Redaction:
 
 
 class KoreanRedactor:
+    language = LANG
+    threshold = THRESHOLD
+
     def __init__(self) -> None:
         self.analyzer = build_analyzer()
         self.anonymizer = AnonymizerEngine()
@@ -183,8 +187,8 @@ class KoreanRedactor:
     def redact_text(self, text: str) -> Redaction:
         if not text:
             return Redaction(text, Counter())
-        results: list[RecognizerResult] = self.analyzer.analyze(text=text, language=LANG,
-                                                                score_threshold=THRESHOLD)
+        results: list[RecognizerResult] = self.analyzer.analyze(text=text, language=self.language,
+                                                                score_threshold=self.threshold)
         if not results:
             return Redaction(text, Counter())
         out = self.anonymizer.anonymize(text=text, analyzer_results=results, operators=self.operators)
@@ -213,3 +217,23 @@ class KoreanRedactor:
             return node
 
         return {**body, "messages": walk(body.get("messages", []))}, total
+
+
+class BaselineRedactor(KoreanRedactor):
+    """평가 조건 baseline_tools: Presidio 기성 인식기 기본값만 씁니다(한국어 인식기 끔).
+
+    기본 등록부(영어)의 패턴 인식기를 그대로 쓰고, spaCy 언어 모델이 필요한 개체 인식기(SpacyRecognizer)만 뺍니다.
+    치환(`<PHONE_NUMBER>`처럼 개체 이름), 점수 문턱(0), 문맥 강화(표제어)도 Presidio 기본값입니다.
+    """
+
+    language = "en"
+    threshold = 0.0  # Presidio AnalyzerEngine 기본값
+
+    def __init__(self) -> None:
+        registry = RecognizerRegistry(supported_languages=["en"])
+        registry.load_predefined_recognizers(languages=["en"])
+        registry.recognizers = [r for r in registry.recognizers if type(r).__name__ != "SpacyRecognizer"]
+        self.analyzer = AnalyzerEngine(registry=registry, nlp_engine=PatternOnlyNlpEngine(("en",)),
+                                       supported_languages=["en"])
+        self.anonymizer = AnonymizerEngine()
+        self.operators = None

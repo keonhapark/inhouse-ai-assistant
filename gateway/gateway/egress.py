@@ -81,6 +81,23 @@ def load_model_locations(config_path: Path) -> dict[str, str]:
     return {alias: info["location"] for alias, info in load_model_info(config_path).items()}
 
 
+@dataclass(frozen=True)
+class Guards:
+    pii: str            # korean(한국 인식기) | baseline(Presidio 기성 기본값) | off
+    glossary: bool      # 사내 용어 기밀 판정
+    local_enforce: bool  # 에이전트 정책의 로컬 강제(위임 토큰 없는 호출의 외부 금지 포함)
+
+
+# 평가 조건별 출구 장치(contracts/eval/conditions.md). 조건이 없는 대화(운영)는 full입니다.
+CONDITION_GUARDS = {
+    "no_guard": Guards("off", False, False),
+    "write_blocked": Guards("korean", True, True),
+    "approve_all": Guards("korean", True, True),
+    "baseline_tools": Guards("baseline", False, False),
+    "full": Guards("korean", True, True),
+}
+
+
 class ModelUsage:
     """대화 차례마다 출구가 실제로 보낸 모델을 모읍니다(위임 토큰의 cid 기준).
 
@@ -105,6 +122,29 @@ class ModelUsage:
             return None
         name, location = next((u for u in reversed(used) if u[1] == "external"), used[-1])
         return {"name": name, "location": location}
+
+
+def response_cost(headers: httpx.Headers) -> float | None:
+    """LiteLLM 프록시가 응답 머리글로 주는 이 요청의 비용(달러)."""
+    try:
+        return float(headers["x-litellm-response-cost"])
+    except (KeyError, ValueError):
+        return None
+
+
+def response_usage(text: str) -> dict[str, int] | None:
+    """응답 본문(JSON 또는 SSE)에서 usage의 prompt_tokens·completion_tokens를 꺼냅니다."""
+    candidates: list[str] = [text]
+    if text.lstrip().startswith("data:"):
+        candidates = [ln[5:].strip() for ln in text.splitlines() if ln.startswith("data:")][::-1]
+    for c in candidates:
+        try:
+            u = json.loads(c).get("usage")
+        except (ValueError, AttributeError):
+            continue
+        if isinstance(u, dict):
+            return {k: u[k] for k in ("prompt_tokens", "completion_tokens") if isinstance(u.get(k), int)}
+    return None
 
 
 @dataclass(frozen=True)
@@ -134,13 +174,18 @@ class Egress:
                  issuer: DelegationTokenIssuer, audit: AuditLog, alerter: Alerter, timeout: float,
                  api_key: str | None = None, transport: httpx.AsyncBaseTransport | None = None,
                  redactor: Redactor = no_redaction, glossary: Glossary | None = None,
-                 external_log: JsonlWriter | None = None, no_response_format: frozenset[str] = frozenset()):
+                 external_log: JsonlWriter | None = None, no_response_format: frozenset[str] = frozenset(),
+                 baseline_redactor: Redactor = no_redaction,
+                 condition_of: Callable[[str | None], str | None] = lambda _cid: None):
         self.locations = locations
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
         self.redactor = redactor
         self.glossary = glossary or Glossary([])
         self.external_log = external_log  # contracts/events/external-request.schema.json, 평가 때만
         self.usage = ModelUsage()
+        self.baseline_redactor = baseline_redactor
+        # 위임 토큰 cid로 대화의 평가 조건을 찾습니다(채팅 흐름이 기억). 운영에서는 늘 None → full.
+        self.condition_of = condition_of
         self.no_response_format = no_response_format  # model_info.supports_response_format: false인 별칭
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
@@ -222,7 +267,8 @@ class Egress:
         model = self._model(request, body["model"])
         location = model["location"]
 
-        denial = policy_denial(caller, location)
+        guards = CONDITION_GUARDS[self.condition_of(caller.conversation_id) or "full"]
+        denial = policy_denial(caller, location) if guards.local_enforce else None
         if denial:
             self._audit(caller, model, "denied", "urn:problem:model-policy", denial)
             raise ProblemError(403, "model-policy", "모델 정책에 맞지 않습니다", denial)
@@ -230,13 +276,15 @@ class Egress:
         # 토큰 모양 문자열은 어떤 모델에도 보내지 않습니다. JWT 문자에는 따옴표가 없어 JSON 문자열째 가려도 됩니다.
         before = json.loads(scrub(json.dumps(body, ensure_ascii=False)))
         sent = before
-        if location == "external":
+        if location == "external" and guards.glossary:
             sent = self._confidential(caller, model, before)
         if model["location"] == "external":
             # think는 Ollama 전용 필드입니다. 외부 공급자는 모르는 필드를 400으로 거절하고(Anthropic 실측),
             # LiteLLM drop_params도 이 필드는 거르지 않아 gateway가 뺍니다. 추론 조절은 reasoning_effort로 합니다.
             sent = {k: v for k, v in sent.items() if k not in LOCAL_ONLY_FIELDS}
-            sent, counts = self.redactor(sent)
+            redactor = {"korean": self.redactor, "baseline": self.baseline_redactor,
+                        "off": no_redaction}[guards.pii]
+            sent, counts = redactor(sent)
             model["redactions"] = sum(counts.values())
             if counts:
                 detail = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
@@ -295,14 +343,10 @@ class Egress:
         return {**body, "model": self.local_alias}
 
     def _mark_sent(self, caller: Caller, model: dict, sent: dict, sent_out: bool = True) -> None:
-        """요청이 나갔으면 표시하고, 외부로 나갔으면 평가용 외부 요청 기록(GATEWAY_EXTERNAL_LOG)을 씁니다."""
+        """요청이 나갔는지 표시하고 차례별 사용 모델에 더합니다. 외부 요청 기록은 응답을 받은 뒤(_egress·_fail) 씁니다."""
         model["externalSent"] = model["location"] == "external" and sent_out
         if sent_out:
             self.usage.record(caller.conversation_id, model["name"], model["location"])
-        if model["externalSent"] and self.external_log is not None:
-            self.external_log.write({"conversationId": caller.conversation_id,
-                                     "agentId": caller.agent.id if caller.agent else None,
-                                     "at": now_iso(), "model": model["name"], "body": sent})
 
     async def _once(self, caller: Caller, model: dict, before: dict, sent: dict) -> Response:
         try:
@@ -314,7 +358,7 @@ class Egress:
             self._unsupported(caller, model, before, sent, r.text)
         if r.status_code >= 500:
             await self._upstream_error(caller, model, before, sent, r.status_code, r.text)
-        self._egress(caller, model, before, sent, r.status_code, r.text)
+        self._egress(caller, model, before, sent, r.status_code, r.text, response_cost(r.headers))
         self._audit(caller, model, "ok" if r.status_code < 400 else "error",
                     None if r.status_code < 400 else f"urn:problem:llm-status-{r.status_code}")
         return Response(r.content, status_code=r.status_code,
@@ -352,7 +396,8 @@ class Egress:
                 await self.alerter.alert(f"LLM 스트림 중단 model={model['name']} ({type(e).__name__})")
             finally:
                 # 호출한 쪽이 끊어 생성기가 닫혀도(GeneratorExit·취소) 이미 나간 요청은 기록합니다.
-                self._egress(caller, model, before, sent, r.status_code, b"".join(chunks).decode("utf-8", "replace"))
+                self._egress(caller, model, before, sent, r.status_code, b"".join(chunks).decode("utf-8", "replace"),
+                             response_cost(r.headers))
                 self._audit(caller, model, result, problem, detail)
                 await r.aclose()
 
@@ -367,6 +412,8 @@ class Egress:
             status, code, title = 502, "llm-unavailable", "LLM 프록시에 연결하지 못했습니다"
         # 연결 전 실패가 아니면(읽기 시간 초과 등) 요청은 이미 나갔다고 봅니다.
         self._mark_sent(caller, model, sent, sent_out=not isinstance(e, httpx.ConnectError))
+        if model["externalSent"]:
+            self._external_record(caller, model, sent, None, None)
         await self.alerter.alert(f"{title} model={model['name']} ({type(e).__name__})")
         self._audit(caller, model, "error", f"urn:problem:{code}", type(e).__name__)
         raise ProblemError(status, code, title)
@@ -399,9 +446,25 @@ class Egress:
                          model=dict(model) if model is not None else None, result=result,
                          problem_type=problem_type, detail=detail)
 
-    def _egress(self, caller: Caller, model: dict, before: dict, sent: dict, status: int, response: str) -> None:
+    def _external_record(self, caller: Caller, model: dict, sent: dict, response: str | None,
+                         cost: float | None) -> None:
+        """평가용 외부 요청 기록(GATEWAY_EXTERNAL_LOG, contracts/events/external-request.schema.json)."""
+        if self.external_log is None:
+            return
+        rec: dict[str, Any] = {"conversationId": caller.conversation_id,
+                               "agentId": caller.agent.id if caller.agent else None,
+                               "at": now_iso(), "model": model["name"], "body": sent, "costUsd": cost}
+        usage = response_usage(response) if response else None
+        if usage is not None:
+            rec["usage"] = usage
+        self.external_log.write(rec)
+
+    def _egress(self, caller: Caller, model: dict, before: dict, sent: dict, status: int, response: str,
+                cost: float | None = None) -> None:
         if model["location"] != "external":
             return
+        if model["externalSent"]:
+            self._external_record(caller, model, sent, response, cost)
         self.audit.egress.write({
             "occurredAt": now_iso(),
             "employeeId": caller.employee_id,

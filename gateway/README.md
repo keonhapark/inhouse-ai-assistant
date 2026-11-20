@@ -31,6 +31,12 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
 - 평가 경로(#63)
   - `GATEWAY_EXTERNAL_LOG`(파일 경로)가 있을 때만 외부 모델로 실제 보낸 본문(가림 뒤)을
     `contracts/events/external-request.schema.json` 형식으로 씁니다. 로컬 요청, 정책으로 막힌 요청, 연결 전에 실패한 요청은 쓰지 않습니다.
+  - 외부 요청 기록에는 `usage`(prompt·completion 토큰)와 `costUsd`(LiteLLM `x-litellm-response-cost` 머리글)를 채웁니다.
+    스트림은 머리글 시점에 비용을 몰라 `costUsd`가 null이고, usage는 마지막 조각(`stream_options.include_usage`)에서 읽습니다.
+  - 평가 조건(`contracts/eval/conditions.md`)은 대화를 만들 때 정해지고, 같은 `cid`의 출구 호출에 장치를 켜고 끕니다.
+    `no_guard`는 가림·기밀 판정·로컬 강제를 모두 끄고, `baseline_tools`는 기밀 판정·로컬 강제를 끄고 가림은 Presidio
+    기성 인식기 기본값(spaCy 개체 인식 제외, 한국 인식기 끔)만 씁니다. 두 조건의 위임 토큰은 공용 계정 범위(사람 전용을 뺀 모든
+    scope, 팩의 모든 문서 태그)입니다. 나머지 조건은 운영(full)과 같습니다.
   - `POST /api/conversations`의 `X-Eval-Condition`은 `GATEWAY_EVAL_MODE=1`일 때만 받고(아니면 400), 그 대화의 agent `/run`에
     `condition`으로 넘깁니다(`/resume`에는 넘기지 않음).
   - `POST /v1/embeddings`: 로컬 별칭(`local-embed` → Ollama `bge-m3`, 1024차원)만 받습니다. 외부 별칭은 403입니다.

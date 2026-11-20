@@ -77,7 +77,9 @@ class DelegationTokenIssuer:
                           options={"verify_aud": False, "require": ["exp", "iat", "sub", "agt", "cid"]})
 
     def issue(self, requester: Requester, agent: AgentEntry, conversation_id: str,
-              now: int | None = None) -> IssuedToken:
+              now: int | None = None, *, scopes: tuple[str, ...] | None = None,
+              doc_scopes: tuple[str, ...] | None = None) -> IssuedToken:
+        """scopes·doc_scopes를 주면 기본 범위 대신 그대로 씁니다(평가 조건의 공용 계정 범위)."""
         iat = int(time.time()) if now is None else now
         claims: dict[str, Any] = {
             "iss": "gateway",
@@ -85,9 +87,10 @@ class DelegationTokenIssuer:
             "sub": requester.id,
             "agt": agent.id,
             "cid": conversation_id,
-            "scopes": list(agent.scopes),
+            "scopes": list(agent.scopes if scopes is None else scopes),
             "tools": list(agent.tools),
-            "doc_scopes": sorted(set(requester.access_tags) & set(agent.doc_scopes)),
+            "doc_scopes": sorted(set(requester.access_tags) & set(agent.doc_scopes)) if doc_scopes is None
+            else sorted(doc_scopes),
             "iat": iat,
             "exp": iat + self.ttl,
             "jti": uuid.uuid4().hex,
