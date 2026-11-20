@@ -53,6 +53,7 @@ services:
       ERP_DEMO_PASSWORD: ${ERP_DEMO_PASSWORD}
       DELEGATION_TOKEN_PUBLIC_KEY: /keys/delegation-es256.pub.pem
       ERP_EVAL_RESET: ${ERP_EVAL_RESET:-}
+      ERP_STAGE: ${PACK_STAGE:-}
     volumes:
       - ../packs:/packs:ro
       - ../infra/dev-keys:/keys:ro
@@ -99,7 +100,7 @@ services:
       RAG_BASE_URL: http://rag:8000
       DELEGATION_JWKS_URL: http://gateway:8000/api/.well-known/jwks.json
       AGENT_AUDIT_LOG: /audit/agent.jsonl
-      AGENT_PACK_STAGE: ${AGENT_PACK_STAGE:-}
+      AGENT_PACK_STAGE: ${PACK_STAGE:-}
     volumes:
       - audit:/audit
     ports:
@@ -141,6 +142,7 @@ services:
       AUDIT_EVENT_FILES: /audit/agent.jsonl,/audit/rag.jsonl
       GATEWAY_EVAL_MODE: ${GATEWAY_EVAL_MODE:-}
       GATEWAY_EXTERNAL_LOG: ${GATEWAY_EXTERNAL_LOG:-}
+      GATEWAY_PACK_STAGE: ${PACK_STAGE:-}
     volumes:
       - ../infra/dev-keys:/keys:ro
       - audit:/audit
