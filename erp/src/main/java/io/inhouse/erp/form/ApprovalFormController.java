@@ -1,5 +1,6 @@
 package io.inhouse.erp.form;
 
+import io.inhouse.erp.auth.RequiredScope;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.inhouse.erp.org.OrgViews.Items;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ public class ApprovalFormController {
     }
 
     @GetMapping("/approval-forms")
+    @RequiredScope("approval:read")
     @Transactional(readOnly = true)
     public Items<FormView> list() {
         return new Items<>(forms.findAllByOrderBySortOrder().stream()
