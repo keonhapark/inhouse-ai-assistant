@@ -19,6 +19,9 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     별칭마다 `model_info.location`이 있고, gateway는 이것으로 로컬·외부를 가릅니다.
   - `X-Delegation-Token`이 있으면 서명·만료를 확인하고 `agt`의 `model_policy`를 따릅니다. `local_only` 에이전트와
     토큰 없는 호출은 `external`을 쓰면 403 `model-policy`이고, 밖으로 아무것도 나가지 않습니다.
+    예외: `GATEWAY_EVAL_TOOLCALL=1`인 스택(도구 호출 측정 #103 전용)에서는 토큰 없는 외부 호출도 가림·기밀 판정·외부 기록을
+    거쳐 보내고 감사 detail에 `purpose=eval-toolcall`을 적습니다. `GATEWAY_EVAL_MODE`와 따로 둡니다(#294): 정상·확인 셋
+    실행에서 열리면 대화 밖 외부 전송이 평가 판정에서 빠지기 때문입니다.
   - 토큰 헤더는 LiteLLM으로 넘기지 않고, 본문의 토큰 모양 문자열도 가린 뒤 보냅니다.
   - 기록(`GATEWAY_AUDIT_DIR`, 기본 `gateway/var/`, 커밋하지 않음): `audit.jsonl`에 감사 이벤트 `llm.request`
     (모델, 외부 전송 여부, 결과. 위임 토큰이 있으면 `actor.employeeId`·`agentId`는 토큰의 `sub`·`agt`),
@@ -26,7 +29,7 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     가림 전 원문은 저장하지 않습니다(#211, `/ops/egress` 계약). 응답 본문이 들어 있어 접근을 제한해야 하는 파일입니다.
   - 토큰 없는 호출의 `llm.request`는 `actor.employeeId`·`agentId`가 null입니다(#276). 출구는 위임 토큰으로만 요청자를
     알기 때문입니다. 지금 이런 호출은 agent 입구 라우터의 분류 호출(에이전트를 고르기 전이라 토큰이 없음), rag 질의 임베딩,
-    평가 모드의 도구 호출 측정(`purpose=eval-toolcall`)입니다. 2026-11-21 실제 스택 기록에서 토큰이 있는 호출 537건은 모두
+    도구 호출 측정 스택(`GATEWAY_EVAL_TOOLCALL=1`)의 측정 호출(`purpose=eval-toolcall`)입니다. 2026-11-21 실제 스택 기록에서 토큰이 있는 호출 537건은 모두
     채워져 있었고, null 272건은 모두 토큰 없는 호출이었습니다.
   - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
@@ -130,7 +133,7 @@ DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
 환경 변수: `ERP_BASE_URL`, `PACK_DIR`(기본 `packs/manufacturing`), `CONTRACTS_DIR`(기본 `contracts`),
 `DELEGATION_TOKEN_PRIVATE_KEY`(없으면 임시 키를 만들고 경고를 남깁니다), `LITELLM_BASE_URL`(기본 `http://localhost:4000`),
 `LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
-`AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_PACK_STAGE`.
+`AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`.
 상대 경로는 저장소 루트 기준입니다. LiteLLM은 1.108.1로 고정합니다(배포 뒤 2주가 지난 판).
 
 ## 시험

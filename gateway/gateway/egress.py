@@ -208,10 +208,11 @@ class Egress:
                  unit_of: Callable[[str | None], str | None] = lambda _cid: None,
                  prices: dict[str, tuple[float, float]] | None = None,
                  provider_models: dict[str, str] | None = None,
-                 vision_alias: str | None = None, eval_mode: bool = False):
+                 vision_alias: str | None = None, eval_toolcall: bool = False):
         self.locations = locations
-        # GATEWAY_EVAL_MODE=1: 토큰 없는 외부 호출을 받습니다(#268, 도구 호출 측정의 외부 기준). 측정 데이터는 지어낸 것입니다.
-        self.eval_mode = eval_mode
+        # GATEWAY_EVAL_TOOLCALL=1: 토큰 없는 외부 호출을 받습니다(#268, 도구 호출 측정의 외부 기준). 측정 데이터는 지어낸 것입니다.
+        # GATEWAY_EVAL_MODE와 따로 둡니다(#294): 정상·확인 셋 실행에서 열리면 대화 밖 외부 전송이 판정에서 빠집니다.
+        self.eval_toolcall = eval_toolcall
         self.vision_alias = vision_alias  # 이미지 입력을 보낼 로컬 별칭(model_info.vision). 없으면 이미지를 받지 않음
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
         self.redactor = redactor
@@ -318,7 +319,7 @@ class Egress:
 
         guards = CONDITION_GUARDS[self.condition_of(caller.conversation_id) or "full"]
         denial = policy_denial(caller, location) if guards.local_enforce else None
-        if denial and caller.agent is None and self.eval_mode:
+        if denial and caller.agent is None and self.eval_toolcall:
             # 평가 모드에서만 엽니다. 가림·기밀 판정·외부 기록은 그대로 거치고, 감사에 목적을 남겨 운영 호출과 가릅니다.
             denial = None
             note = f"purpose={EVAL_TOOLCALL_PURPOSE}: 평가 모드의 토큰 없는 외부 호출"
