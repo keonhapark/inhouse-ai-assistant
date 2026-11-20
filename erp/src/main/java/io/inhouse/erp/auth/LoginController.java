@@ -1,5 +1,6 @@
 package io.inhouse.erp.auth;
 
+import io.inhouse.erp.audit.AuditService;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.org.Employee;
 import io.inhouse.erp.org.EmployeeRepository;
@@ -21,9 +22,12 @@ public class LoginController {
     private final EmployeeRepository employees;
     private final OrgService org;
     private final TokenService tokens;
+    private final AuditService audit;
     private final byte[] password;
 
-    public LoginController(EmployeeRepository employees, OrgService org, TokenService tokens, AuthProperties props) {
+    public LoginController(EmployeeRepository employees, OrgService org, TokenService tokens, AuthProperties props,
+                           AuditService audit) {
+        this.audit = audit;
         this.employees = employees;
         this.org = org;
         this.tokens = tokens;
@@ -43,6 +47,8 @@ public class LoginController {
         if (e == null || !passwordOk) {
             throw new ApiException(401, "unauthorized", "사번이나 비밀번호가 틀렸습니다");
         }
+        audit.recordSeparately(ErpPrincipal.employee(e.getId()), "auth.login", "login", "ok",
+                AuditService.Extra.NONE, null, null);
         return new LoginResponse(tokens.issue(e.getId()), "Bearer", tokens.ttlSeconds(), org.full(e));
     }
 }

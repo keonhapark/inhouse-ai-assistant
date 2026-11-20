@@ -135,7 +135,7 @@ class AuthApiTest extends PostgresTestBase {
     @Test
     void blankDemoPasswordStopsStartup() {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> new LoginController(null, null, null,
-                        new AuthProperties(JWT_SECRET, 3600, " ", null)))
+                        new AuthProperties(JWT_SECRET, 3600, " ", null), null))
                 .isInstanceOf(IllegalStateException.class);
     }
 

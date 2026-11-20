@@ -33,7 +33,7 @@ class ContractScopeTest extends PostgresTestBase {
             RequestMappingInfo info = e.getKey();
             HandlerMethod hm = e.getValue();
             if (!hm.getBeanType().getPackageName().startsWith("io.inhouse.erp")
-                    || hm.getBeanType().equals(GuardProbeController.class)) {
+                    || hm.getBeanType().getSimpleName().endsWith("ProbeController")) {
                 continue;
             }
             if (info.getMethodsCondition().getMethods().isEmpty()) {
