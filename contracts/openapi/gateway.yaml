@@ -289,6 +289,13 @@ paths:
               additionalProperties: false
               properties:
                 content: {type: string, maxLength: 4000}
+                attachments:
+                  type: array
+                  maxItems: 3
+                  items: {$ref: "agent.yaml#/components/schemas/Attachment"}
+                  description: >-
+                    사용자가 붙인 이미지(영수증 등, #281). gateway는 형식·크기만 확인하고(415·413·422는 이미지 입력과 같음)
+                    agent `/run`의 `attachments`로 넘깁니다. 감사·기록에는 형식·크기·SHA-256만 남깁니다
       responses:
         "200":
           description: SSE 스트림. 각 이벤트의 data는 ChatEvent
@@ -297,6 +304,8 @@ paths:
               schema: {$ref: "#/components/schemas/ChatEvent"}
         "404": {$ref: "#/components/responses/Problem"}
         "422": {$ref: "#/components/responses/Problem"}
+        "413": {$ref: "#/components/responses/Problem"}
+        "415": {$ref: "#/components/responses/Problem"}
         "409":
           description: 실행 승인을 기다리는 중이라 새 메시지를 받지 않음
           content:
