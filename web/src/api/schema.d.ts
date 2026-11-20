@@ -820,7 +820,10 @@ export interface operations {
     createConversation: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의 agent /run·/resume에 condition으로 그대로 넘깁니다. 값은 agent.yaml의 Condition과 같습니다. */
+                "X-Eval-Condition"?: "no_guard" | "write_blocked" | "approve_all" | "baseline_tools" | "full";
+            };
             path?: never;
             cookie?: never;
         };
@@ -842,6 +845,7 @@ export interface operations {
                     "application/json": components["schemas"]["ConversationSummary"];
                 };
             };
+            400: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
         };
     };
