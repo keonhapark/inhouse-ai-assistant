@@ -27,6 +27,7 @@ jobs:
       rag: ${{ steps.f.outputs.rag }}
       eval: ${{ steps.f.outputs.eval }}
       web: ${{ steps.f.outputs.web }}
+      slack: ${{ steps.f.outputs.slack }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -64,6 +65,9 @@ jobs:
               - 'packs/**'
             web:
               - 'web/**'
+            slack:
+              - 'channels/slack/**'
+              - 'contracts/**'
 
   contracts:
     needs: changes
@@ -187,6 +191,30 @@ jobs:
           npm test --if-present
           npm run build
 
+  slack:
+    needs: changes
+    if: needs.changes.outputs.slack == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: slack 패키지 확인
+        id: has
+        run: if [ -f channels/slack/package.json ]; then echo "slack=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v7
+        if: steps.has.outputs.slack == 'true'
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: channels/slack/package-lock.json
+      - name: 설치·검사·시험·빌드
+        if: steps.has.outputs.slack == 'true'
+        working-directory: channels/slack
+        run: |
+          npm ci
+          npm run lint --if-present
+          npm test --if-present
+          npm run build --if-present
+
   paths:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -216,7 +244,7 @@ jobs:
   ci-summary:
     name: ci-summary
     if: always()
-    needs: [changes, contracts, erp, python, web, paths, secrets]
+    needs: [changes, contracts, erp, python, web, slack, paths, secrets]
     runs-on: ubuntu-latest
     steps:
       - name: 실패하거나 취소된 job이 있으면 실패
