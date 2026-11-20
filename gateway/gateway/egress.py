@@ -81,6 +81,32 @@ def load_model_locations(config_path: Path) -> dict[str, str]:
     return {alias: info["location"] for alias, info in load_model_info(config_path).items()}
 
 
+class ModelUsage:
+    """대화 차례마다 출구가 실제로 보낸 모델을 모읍니다(위임 토큰의 cid 기준).
+
+    채팅 흐름이 agent를 부르기 전에 begin, 끝난 뒤 take로 꺼내 ChatEvent model(name, location)에 씁니다.
+    begin하지 않은 대화(rag의 대화 밖 호출 등)는 모으지 않습니다.
+    """
+
+    def __init__(self) -> None:
+        self._turns: dict[str, list[tuple[str, str]]] = {}
+
+    def begin(self, conversation_id: str) -> None:
+        self._turns[conversation_id] = []
+
+    def record(self, conversation_id: str | None, alias: str, location: str) -> None:
+        if conversation_id in self._turns:
+            self._turns[conversation_id].append((alias, location))
+
+    def take(self, conversation_id: str) -> dict[str, str] | None:
+        """한 번이라도 외부로 나갔으면 external(그 별칭), 아니면 마지막으로 쓴 로컬 별칭. 쓴 모델이 없으면 None."""
+        used = self._turns.pop(conversation_id, [])
+        if not used:
+            return None
+        name, location = next((u for u in reversed(used) if u[1] == "external"), used[-1])
+        return {"name": name, "location": location}
+
+
 @dataclass(frozen=True)
 class Caller:
     employee_id: str | None
@@ -114,6 +140,7 @@ class Egress:
         self.redactor = redactor
         self.glossary = glossary or Glossary([])
         self.external_log = external_log  # contracts/events/external-request.schema.json, 평가 때만
+        self.usage = ModelUsage()
         self.no_response_format = no_response_format  # model_info.supports_response_format: false인 별칭
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
@@ -270,6 +297,8 @@ class Egress:
     def _mark_sent(self, caller: Caller, model: dict, sent: dict, sent_out: bool = True) -> None:
         """요청이 나갔으면 표시하고, 외부로 나갔으면 평가용 외부 요청 기록(GATEWAY_EXTERNAL_LOG)을 씁니다."""
         model["externalSent"] = model["location"] == "external" and sent_out
+        if sent_out:
+            self.usage.record(caller.conversation_id, model["name"], model["location"])
         if model["externalSent"] and self.external_log is not None:
             self.external_log.write({"conversationId": caller.conversation_id,
                                      "agentId": caller.agent.id if caller.agent else None,

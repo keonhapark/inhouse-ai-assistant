@@ -80,7 +80,8 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     app.state.erp = erp
     app.state.delegation = DelegationService(erp, registry, issuer)
     agent = AgentClient(settings.agent_base_url, transport=agent_transport, timeout=settings.agent_timeout_seconds)
-    app.state.chat = ChatService(erp, registry, app.state.delegation, agent, audit, eval_mode=settings.eval_mode)
+    app.state.chat = ChatService(erp, registry, app.state.delegation, agent, audit, eval_mode=settings.eval_mode,
+                                 usage=egress.usage)
     app.state.audit = audit
     app.state.alerter = alerter
     app.state.egress = egress

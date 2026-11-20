@@ -58,6 +58,8 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - 실행 승인을 기다리는 동안 새 메시지는 409입니다. 승인은 요청자 본인만(403), 한 번만(409), 10분 안에 결정합니다.
     결정은 agent `/resume`으로 넘깁니다.
   - agent가 답하지 않으면 `error`(`retryable: true`)를 보내고 대화는 그대로 둡니다.
+  - `message`·`done`의 `model`(name, location): 그 차례에 출구가 위임 토큰의 `cid`로 실제 보낸 모델입니다. 한 번이라도
+    외부로 나갔으면 `external`, 아니면 마지막 로컬 별칭입니다. 모델을 쓰지 않은 차례에는 넣지 않습니다.
   - 감사 이벤트: `auth.delegation_token_issued`(jti), `execution_approval.requested`, `execution_approval.decided`
   - 대화와 승인은 프로세스 메모리에 둡니다(1단계). gateway를 다시 띄우면 사라집니다.
 - 사람 화면 경로(`gateway/relay.py`): `/api/inbox`, `/api/inbox/{id}`, `/api/inbox/{id}/approve|reject`,
