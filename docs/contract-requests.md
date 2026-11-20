@@ -5,3 +5,4 @@
 | 날짜 | 요청 모듈 | 이슈 | 바꿀 것 | 이유 | 결과 |
 |---|---|---|---|---|---|
 | 2026-11-20 | rag | #37 | `packs/manufacturing/docs.yaml` 공개 규정 3건의 정식 제목·출처 주소·status ready, 생성 문서 5건 status ready | #16에서 법제처 원문을 확인하고 고정본을 만듦 | |
+| 2026-11-20 | gateway | #43 | 팩 선택 파일 `glossary.yaml`(사내 용어 사전: term, aliases, level, action local_only·block, reason) 형식과 제조 팩 용어 | #10 기밀 판정. 코어에 업종 용어를 둘 수 없어 팩에서 읽음 | |
