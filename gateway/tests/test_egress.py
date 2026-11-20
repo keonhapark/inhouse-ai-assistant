@@ -1,3 +1,4 @@
+import dataclasses
 import json
 
 import pytest
@@ -337,3 +338,81 @@ def test_think_is_dropped_for_external_only(client, app, token_for, litellm):
     assert "think" not in litellm.last_body()
     client.post("/v1/chat/completions", json={"model": "local", "messages": MSG, "think": False})
     assert litellm.last_body()["think"] is False
+
+
+# ---------- 거절 감사와 response_format(#95) ----------
+def _llm_events(app):
+    return [e for e in _audit(app) if e["kind"] == "llm.request"]
+
+
+def test_unknown_alias_rejection_is_audited_with_context(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "qwen3.5:9b", "messages": MSG})
+    assert r.status_code == 422
+    (ev,) = _llm_events(app)
+    assert ev["result"] == "denied" and ev["problemType"] == "urn:problem:validation"
+    assert ev["conversationId"] == "conv-9" and ev["actor"]["agentId"] == external_ok
+    assert ev["model"] == {"name": "qwen3.5:9b"} and "qwen3.5:9b" in ev["detail"] and "422" in ev["detail"]
+    assert "규정 알려 줘" not in json.dumps(ev, ensure_ascii=False)   # 본문은 넣지 않음
+
+
+@pytest.mark.parametrize("kwargs,status,code", [
+    ({"json": {"model": "local", "messages": MSG, "fallbacks": ["external"]}}, 422, "validation"),
+    ({"content": b"{", "headers": {"content-type": "application/json"}}, 422, "validation"),
+    ({"json": {"model": "local", "messages": MSG}, "headers": {"X-Delegation-Token": "bad"}}, 401, "unauthorized"),
+])
+def test_every_rejection_is_audited(client, app, kwargs, status, code):
+    r = client.post("/v1/chat/completions", **kwargs)
+    assert r.status_code == status
+    (ev,) = _llm_events(app)
+    assert ev["result"] == "denied" and ev["problemType"] == f"urn:problem:{code}"
+
+
+def test_unregistered_agent_rejection_is_audited(client, app, issuer, staff_no):
+    from gateway.registry import Requester
+
+    agent = dataclasses.replace(app.state.registry.get("assistant"), id="router")
+    token = issuer.issue(Requester(staff_no, "u", "staff", ("employee",), ()), agent, "conv-r").token
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token},
+                    json={"model": "local", "messages": MSG})
+    assert r.status_code == 403
+    (ev,) = _llm_events(app)
+    assert ev["problemType"] == "urn:problem:forbidden" and "router" in ev["detail"]
+
+
+def test_policy_denial_is_audited_once(client, app, token_for):
+    local_only, _ = _agent_ids(app)
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(local_only)},
+                json={"model": "external", "messages": MSG})
+    assert len(_llm_events(app)) == 1
+
+
+def test_response_format_on_local_is_400_before_sending(client, app, litellm, alerts):
+    r = client.post("/v1/chat/completions", json={"model": "local", "messages": MSG,
+                                                   "response_format": {"type": "json_object"}})
+    assert r.status_code == 400 and r.json()["type"] == "urn:problem:unsupported-parameter"
+    assert litellm.requests == [] and alerts == []
+    assert _llm_events(app)[-1]["problemType"] == "urn:problem:unsupported-parameter"
+
+
+def test_response_format_on_external_passes(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": MSG, "response_format": {"type": "json_object"}})
+    assert r.status_code == 200 and litellm.last_body()["response_format"] == {"type": "json_object"}
+
+
+def test_upstream_501_is_400_without_alert(client, app, token_for, litellm, alerts):
+    _, external_ok = _agent_ids(app)
+    litellm.mode = "501"
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": MSG})
+    assert r.status_code == 400 and "structured output is unavailable" in r.json()["detail"]
+    assert alerts == []
+    assert len(_llm_events(app)) == 1
+
+
+def test_embedding_rejection_is_audited(client, app):
+    assert client.post("/v1/embeddings", json={"model": "nope", "input": "x"}).status_code == 422
+    assert _llm_events(app)[-1]["model"] == {"name": "nope"}

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+from contextvars import ContextVar
 from collections import Counter
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
@@ -40,6 +41,9 @@ log = logging.getLogger(__name__)
 
 TOKEN_HEADER = "x-delegation-token"
 
+# 이 요청에서 감사 이벤트를 이미 남겼는지. 거절 사유를 따로 남긴 경로(정책·기밀·장애)는 한 번만 기록합니다.
+_audited: ContextVar[bool] = ContextVar("egress_audited", default=False)
+
 # 가림 단계: 본문을 받아 (보낼 본문, 개체 종류별 가린 개수)를 돌려줍니다(gateway/pii.py).
 Redactor = Callable[[dict[str, Any]], tuple[dict[str, Any], Counter]]
 
@@ -61,15 +65,20 @@ LOCAL_ONLY_FIELDS = frozenset({"think"})
 EMBEDDING_FIELDS = frozenset({"model", "input", "encoding_format", "dimensions"})
 
 
-def load_model_locations(config_path: Path) -> dict[str, str]:
+def load_model_info(config_path: Path) -> dict[str, dict[str, Any]]:
+    """LiteLLM 별칭마다 model_info를 돌려줍니다. location(local|external)은 꼭 있어야 합니다."""
     doc = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    out: dict[str, str] = {}
+    out: dict[str, dict[str, Any]] = {}
     for m in doc.get("model_list", []):
-        loc = (m.get("model_info") or {}).get("location")
-        if loc not in ("local", "external"):
+        info = dict(m.get("model_info") or {})
+        if info.get("location") not in ("local", "external"):
             raise ValueError(f"LiteLLM 별칭 {m.get('model_name')}에 model_info.location(local|external)이 없습니다")
-        out[m["model_name"]] = loc
+        out[m["model_name"]] = info
     return out
+
+
+def load_model_locations(config_path: Path) -> dict[str, str]:
+    return {alias: info["location"] for alias, info in load_model_info(config_path).items()}
 
 
 @dataclass(frozen=True)
@@ -99,12 +108,13 @@ class Egress:
                  issuer: DelegationTokenIssuer, audit: AuditLog, alerter: Alerter, timeout: float,
                  api_key: str | None = None, transport: httpx.AsyncBaseTransport | None = None,
                  redactor: Redactor = no_redaction, glossary: Glossary | None = None,
-                 external_log: JsonlWriter | None = None):
+                 external_log: JsonlWriter | None = None, no_response_format: frozenset[str] = frozenset()):
         self.locations = locations
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
         self.redactor = redactor
         self.glossary = glossary or Glossary([])
         self.external_log = external_log  # contracts/events/external-request.schema.json, 평가 때만
+        self.no_response_format = no_response_format  # model_info.supports_response_format: false인 별칭
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._http = httpx.AsyncClient(base_url=base_url, transport=transport, headers=headers,
@@ -116,6 +126,10 @@ class Egress:
 
     # ---------- 요청 해석 ----------
     def _caller(self, request: Request) -> Caller:
+        request.state.caller = caller = self._read_caller(request)
+        return caller
+
+    def _read_caller(self, request: Request) -> Caller:
         token = request.headers.get(TOKEN_HEADER)
         if not token:
             return Caller(None, None, None)
@@ -142,16 +156,44 @@ class Egress:
             raise ProblemError(422, "validation", "받지 않는 필드가 있습니다", ", ".join(extra))
         return body
 
-    # ---------- 처리 ----------
+    # ---------- 거절 기록 ----------
+    async def _guarded(self, request: Request, fn) -> Response:
+        """출구가 요청을 거절하면(형식 422, 인증 401, 정책 403 등) 감사 이벤트에 이유를 남깁니다(본문은 넣지 않음)."""
+        _audited.set(False)
+        try:
+            return await fn(request)
+        except ProblemError as e:
+            if not _audited.get():
+                caller = getattr(request.state, "caller", None) or Caller(None, None, None)
+                model = getattr(request.state, "model", None)
+                detail = f"{e.status} {e.title}" + (f": {e.detail}" if e.detail else "")
+                self._audit(caller, model, "denied" if e.status < 500 else "error", f"urn:problem:{e.code}",
+                            detail)
+            raise
+
     async def handle(self, request: Request) -> Response:
-        caller = self._caller(request)
-        body = await self._body(request)
-        alias = body["model"]
+        return await self._guarded(request, self._handle)
+
+    async def handle_embeddings(self, request: Request) -> Response:
+        return await self._guarded(request, self._handle_embeddings)
+
+    def _model(self, request: Request, alias: str) -> dict[str, Any]:
+        """요청한 별칭으로 기록용 model을 만듭니다. 모르는 별칭이면 이름만 남기고 422를 냅니다."""
         location = self.locations.get(alias)
         if location is None:
+            request.state.model = {"name": alias}
             raise ProblemError(422, "validation", "모르는 모델 별칭입니다",
-                               f"쓸 수 있는 별칭: {', '.join(sorted(self.locations))}")
-        model = {"name": alias, "location": location, "externalSent": False, "redactions": 0}
+                               f"{alias}. 쓸 수 있는 별칭: {', '.join(sorted(self.locations))}")
+        request.state.model = model = {"name": alias, "location": location, "externalSent": False,
+                                       "redactions": 0}
+        return model
+
+    # ---------- 처리 ----------
+    async def _handle(self, request: Request) -> Response:
+        caller = self._caller(request)
+        body = await self._body(request)
+        model = self._model(request, body["model"])
+        location = model["location"]
 
         denial = policy_denial(caller, location)
         if denial:
@@ -173,11 +215,14 @@ class Egress:
                 detail = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
                 self._audit(caller, model, "ok", detail=detail, kind="llm.redacted")
 
+        if "response_format" in sent and model["name"] in self.no_response_format:
+            raise ProblemError(400, "unsupported-parameter", "이 모델은 response_format(구조화 출력)을 지원하지 않습니다",
+                               f"{model['name']}. 형식은 도구 호출이나 프롬프트 지시로 맞출 수 있습니다")
         if sent.get("stream"):
             return await self._stream(caller, model, before, sent)
         return await self._once(caller, model, before, sent)
 
-    async def handle_embeddings(self, request: Request) -> Response:
+    async def _handle_embeddings(self, request: Request) -> Response:
         """`POST /v1/embeddings`. 로컬 별칭만 받습니다(문서 원문을 외부로 보내지 않음). 가림은 하지 않습니다."""
         caller = self._caller(request)
         try:
@@ -190,10 +235,8 @@ class Egress:
         extra = sorted(set(body) - EMBEDDING_FIELDS)
         if extra:
             raise ProblemError(422, "validation", "받지 않는 필드가 있습니다", ", ".join(extra))
-        location = self.locations.get(body["model"])
-        if location is None:
-            raise ProblemError(422, "validation", "모르는 모델 별칭입니다")
-        model = {"name": body["model"], "location": location, "externalSent": False, "redactions": 0}
+        model = self._model(request, body["model"])
+        location = model["location"]
         if location != "local":
             detail = "임베딩은 로컬 모델만 씁니다"
             self._audit(caller, model, "denied", "urn:problem:model-policy", detail)
@@ -238,6 +281,8 @@ class Egress:
         except httpx.HTTPError as e:
             await self._fail(caller, model, sent, e)
         self._mark_sent(caller, model, sent)
+        if r.status_code == 501:
+            self._unsupported(caller, model, before, sent, r.text)
         if r.status_code >= 500:
             await self._upstream_error(caller, model, before, sent, r.status_code, r.text)
         self._egress(caller, model, before, sent, r.status_code, r.text)
@@ -256,6 +301,8 @@ class Egress:
         if r.status_code >= 400:
             text = (await r.aread()).decode("utf-8", "replace")
             await r.aclose()
+            if r.status_code == 501:
+                self._unsupported(caller, model, before, sent, text)
             if r.status_code >= 500:
                 await self._upstream_error(caller, model, before, sent, r.status_code, text)
             self._egress(caller, model, before, sent, r.status_code, text)
@@ -295,6 +342,17 @@ class Egress:
         self._audit(caller, model, "error", f"urn:problem:{code}", type(e).__name__)
         raise ProblemError(status, code, title)
 
+    def _unsupported(self, caller: Caller, model: dict, before: dict, sent: dict, text: str) -> NoReturn:
+        """LiteLLM 501은 장애가 아니라 모델·실행기가 기능을 지원하지 않는 것입니다(예: Ollama MLX 실행기의 구조화 출력).
+        알림을 보내지 않고 400으로 이유를 돌려줍니다."""
+        try:
+            reason = str(json.loads(text)["error"]["message"]).split("\n")[0][:200]
+        except (ValueError, KeyError, TypeError):
+            reason = "모델이 이 요청 기능을 지원하지 않습니다"
+        self._egress(caller, model, before, sent, 501, text)
+        self._audit(caller, model, "denied", "urn:problem:unsupported-parameter", f"LiteLLM 501: {scrub(reason)}")
+        raise ProblemError(400, "unsupported-parameter", "모델이 이 요청 기능을 지원하지 않습니다", scrub(reason))
+
     async def _upstream_error(self, caller: Caller, model: dict, before: dict, sent: dict,
                               status: int, text: str) -> NoReturn:
         await self.alerter.alert(f"LLM 프록시 오류 {status} model={model['name']}")
@@ -304,9 +362,12 @@ class Egress:
 
     def _audit(self, caller: Caller, model: dict, result: str, problem_type: str | None = None,
                detail: str | None = None, kind: str = "llm.request") -> None:
+        if kind == "llm.request":
+            _audited.set(True)
         self.audit.event(kind, employee_id=caller.employee_id,
                          agent_id=caller.agent.id if caller.agent else None, via_token=caller.via_token,
-                         conversation_id=caller.conversation_id, model=dict(model), result=result,
+                         conversation_id=caller.conversation_id,
+                         model=dict(model) if model is not None else None, result=result,
                          problem_type=problem_type, detail=detail)
 
     def _egress(self, caller: Caller, model: dict, before: dict, sent: dict, status: int, response: str) -> None:
