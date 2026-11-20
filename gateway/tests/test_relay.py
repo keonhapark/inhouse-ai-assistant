@@ -148,3 +148,47 @@ def test_screen_routes_need_login(client):
                          ("GET", "/api/notifications"), ("POST", "/api/actions/x/undo")]:
         r = client.request(method, path)
         assert r.status_code == 401, path
+
+
+# ---------- 대결 설정 조회(#81) ----------
+def test_employees_and_forms_are_relayed(client, auth, team):
+    import importlib.util
+
+    from .conftest import ROOT
+    spec = importlib.util.spec_from_file_location("sc", ROOT / "contracts/tests/schema_check.py")
+    sc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sc)
+
+    r = client.get("/api/employees", headers=auth(team["leader"]),
+                   params={"q": team["deputy"]["name"][1:], "limit": 5})
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert team["deputy"]["id"] in [e["id"] for e in items] and len(items) <= 5
+    for e in items:
+        sc.validate("openapi/erp.yaml", "EmployeeSummary", e)
+    forms = client.get("/api/approval-forms", headers=auth(team["leader"])).json()["items"]
+    assert "leave" in [f["id"] for f in forms]
+    for f in forms:
+        sc.validate("openapi/erp.yaml", "ApprovalForm", f)
+    assert client.get("/api/employees").status_code == 401
+
+
+def test_inbox_steps_have_names(client, erp_http, auth, team):
+    doc = _request_leave(erp_http, auth, team["requester"])["resource"]
+    r = client.post(f"/api/inbox/{doc['id']}/approve", headers={**auth(team["leader"]), **_key()},
+                    json={"version": doc["version"]})
+    assert r.status_code == 201
+    item = client.get(f"/api/inbox/{doc['id']}", headers=auth(team["leader"])).json()
+    step = item["steps"][0]
+    assert step["approverName"] == team["leader"]["name"] and step["actedByName"] == team["leader"]["name"]
+    pending = _request_leave(erp_http, auth, team["requester"])["resource"]
+    item = next(i for i in client.get("/api/inbox?box=inbox", headers=auth(team["leader"])).json()["items"]
+                if i["id"] == pending["id"])
+    assert item["steps"][0]["approverName"] == team["leader"]["name"] and item["steps"][0]["actedByName"] is None
+    import importlib.util
+
+    from .conftest import ROOT
+    spec = importlib.util.spec_from_file_location("sc", ROOT / "contracts/tests/schema_check.py")
+    sc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sc)
+    sc.validate("openapi/gateway.yaml", "InboxItem", item)
