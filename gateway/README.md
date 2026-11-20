@@ -21,8 +21,8 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     토큰 없는 호출은 `external`을 쓰면 403 `model-policy`이고, 밖으로 아무것도 나가지 않습니다.
   - 토큰 헤더는 LiteLLM으로 넘기지 않고, 본문의 토큰 모양 문자열도 가린 뒤 보냅니다.
   - 기록(`GATEWAY_AUDIT_DIR`, 기본 `gateway/var/`, 커밋하지 않음): `audit.jsonl`에 감사 이벤트 `llm.request`
-    (모델, 외부 전송 여부, 결과), `egress.jsonl`에 외부로 나간 요청의 가림 전후 본문과 응답. `egress.jsonl`은 원문이
-    들어 있어 접근을 제한해야 하는 파일입니다.
+    (모델, 외부 전송 여부, 결과), `egress.jsonl`에 외부로 나간 요청의 가림 뒤 본문, 가린 자리(종류·위치), 응답, 사용량·비용.
+    가림 전 원문은 저장하지 않습니다(#211, `/ops/egress` 계약). 응답 본문이 들어 있어 접근을 제한해야 하는 파일입니다.
   - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
   - 비용 상한(`gateway/budgets.py`, 팩 선택 파일 `budgets.yaml`, #155): 외부 응답 비용(LiteLLM `x-litellm-response-cost`,
@@ -66,7 +66,7 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     계좌번호(앞 15글자 안에 "계좌·은행·입금" 같은 문맥 낱말이 있어야 함), 사업자등록번호(검증 숫자), 운전면허번호, 여권번호,
     이메일, 카드번호(Luhn)를 `[전화번호]`처럼 바꿉니다.
   - 가린 개수는 감사 이벤트 `llm.redacted`(개체 종류별 개수)와 `llm.request`의 `model.redactions`에 남고,
-    가림 전 원문은 `egress.jsonl`에만 남습니다.
+    가린 자리는 `egress.jsonl`의 `redactionSpans`에 남고, 가림 전 원문은 어디에도 저장하지 않습니다.
   - 규칙이 못 잡는 형태: 사람 이름, 주소, 한글로 쓴 숫자("공일공"), 숫자 사이에 낯선 구분자를 넣은 것, 문맥 낱말 없는 계좌번호.
     이런 것은 장치 쪽 규칙을 늘리지 않고 평가에서 따로 잽니다.
 - 채팅 화면(`gateway/chat.py`): `GET /api/agents`(부를 수 있는 에이전트), `GET·POST /api/conversations`,
@@ -87,6 +87,9 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   `/api/delegations`(조회·등록, `?dryRun=true` 미리보기), `/api/delegations/{id}/revoke`, `/api/actions/{id}/undo`,
   `/api/notifications`, `/api/employees`, `/api/approval-forms`. 직원 JWT와 `Idempotency-Key`를 그대로 erp에 넘기고 erp 응답(오류 포함)을 그대로 돌려줍니다.
   읽기에는 요청자·원 결재자·양식·위임자·대리인 이름과 결재선 단계의 `approverName`·`actedByName`을 붙이고, 대결로 들어온 결재 건에는 `viaDelegation`을 채웁니다.
+- 관리자 콘솔 `GET /api/ops/egress`(`gateway/ops.py`, auditor만): 외부로 실제 보낸 요청을 최근 것부터 계약의 `EgressRecord`로
+  돌려줍니다. `messages`는 가림 뒤 본문(부분 배열 content는 텍스트 부분을 줄바꿈으로 이어 붙임)이고, `redactions`의 위치는
+  화면(JavaScript)과 맞도록 UTF-16 단위입니다. content 밖(도구 호출 인자)에서 가린 것은 위치를 돌려주지 않습니다.
 - 감사 조회 `GET /api/audit-events`(`gateway/audit_query.py`, erp `auditor` 역할만): erp `GET /audit-events`,
   gateway 자기 `audit.jsonl`, `AUDIT_EVENT_FILES`(쉼표로 구분한 경로나 glob, agent·MCP·rag가 쓰는 JSON Lines)를 시각 순으로
   합칩니다. `eventId`가 같으면 한 번만 넣습니다. 필터는 `conversationId`, `actorId`, `agentId`, `kind`, `since`·`until`

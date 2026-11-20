@@ -70,7 +70,7 @@ def test_external_allowed_agent_sends_and_records_body(client, app, token_for, l
     assert r.status_code == 200
     rec = app.state.audit.egress.read_all()[-1]
     assert rec["agentId"] == external_ok and rec["model"] == "external"
-    assert rec["requestBeforeRedaction"]["messages"] == MSG and rec["requestSent"]["messages"] == MSG
+    assert rec["requestSent"]["messages"] == MSG and "requestBeforeRedaction" not in rec
     assert "답입니다" in rec["response"]
     assert _audit(app)[-1]["model"]["externalSent"] is True
 
@@ -155,7 +155,10 @@ def test_external_request_is_redacted_and_recorded(client, app, token_for, litel
     assert "010-1234-5678" not in sent and "900101-1234568" not in sent
     assert "[전화번호]" in sent and "[주민등록번호]" in sent
     rec = app.state.audit.egress.read_all()[-1]
-    assert rec["requestBeforeRedaction"]["messages"] == PII_MSG       # 가림 전 원문은 외부 전송 기록에만
+    assert "requestBeforeRedaction" not in rec                        # 가림 전 원문은 저장하지 않음(/ops/egress 계약)
+    assert "010-1234-5678" not in json.dumps(rec, ensure_ascii=False)
+    assert [(x["entity"], x["placeholder"]) for x in rec["redactionSpans"]] == [("KR_PHONE", "[전화번호]"),
+                                                                               ("KR_RRN", "[주민등록번호]")]
     assert rec["requestSent"]["messages"][0]["content"] == sent and rec["redactions"] == 2
     events = _audit(app)
     red = [e for e in events if e["kind"] == "llm.redacted"][-1]
@@ -532,7 +535,7 @@ def test_sampling_params_dropped_for_external_only(client, app, token_for, litel
     body = litellm.last_body()
     assert "temperature" not in body and "top_p" not in body and body["reasoning_effort"] == "low"
     rec = app.state.audit.egress.read_all()[-1]
-    assert rec["requestBeforeRedaction"]["temperature"] == 0 and "temperature" not in rec["requestSent"]
+    assert "temperature" not in rec["requestSent"]
     client.post("/v1/chat/completions", json={"model": "local", "messages": MSG, "temperature": 0})
     assert litellm.last_body()["temperature"] == 0
 
@@ -652,7 +655,7 @@ def test_timeout_after_send_is_in_egress_log(client, app, token_for, litellm):
     assert r.status_code == 504
     (rec,) = app.state.audit.egress.read_all()                 # 외부 한 건만(로컬 폴백 시도는 외부 기록 아님)
     assert rec["status"] == 504 and rec["model"] == "external" and rec["response"] == ""
-    assert rec["requestBeforeRedaction"]["messages"] == PII_MSG
+    assert "requestBeforeRedaction" not in rec and "900101" not in json.dumps(rec)
     assert "[전화번호]" in rec["requestSent"]["messages"][0]["content"]
 
 
