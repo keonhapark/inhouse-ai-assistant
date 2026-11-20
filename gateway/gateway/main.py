@@ -77,7 +77,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                                                  if i.get("supports_response_format") is False),
                     vision_alias=next((a for a, i in model_info.items()
                                        if i.get("vision") and i["location"] == "local"), None),
-                    eval_mode=settings.eval_mode)
+                    eval_toolcall=settings.eval_toolcall)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):

@@ -34,6 +34,7 @@ class Settings:
     agent_timeout_seconds: float = 120.0
     external_log: Path | None = None   # GATEWAY_EXTERNAL_LOG: 평가용 외부 요청 기록(JSON Lines)
     eval_mode: bool = False            # GATEWAY_EVAL_MODE=1: X-Eval-Condition을 받음
+    eval_toolcall: bool = False        # GATEWAY_EVAL_TOOLCALL=1: 토큰 없는 외부 호출을 받음(#294, 도구 호출 측정 스택만)
     pack_stage: int | None = None      # GATEWAY_PACK_STAGE: pack.yaml stage 덮어쓰기(#170). 없으면 pack.yaml
 
     @classmethod
@@ -54,6 +55,7 @@ class Settings:
             external_log=_path(os.environ["GATEWAY_EXTERNAL_LOG"], REPO_ROOT)
             if os.environ.get("GATEWAY_EXTERNAL_LOG") else None,
             eval_mode=os.environ.get("GATEWAY_EVAL_MODE") == "1",
+            eval_toolcall=os.environ.get("GATEWAY_EVAL_TOOLCALL") == "1",
             pack_stage=int(os.environ["GATEWAY_PACK_STAGE"]) if os.environ.get("GATEWAY_PACK_STAGE") else None,
             audit_event_files=tuple(x.strip() for x in os.environ.get("AUDIT_EVENT_FILES", "").split(",") if x.strip()),
         )
