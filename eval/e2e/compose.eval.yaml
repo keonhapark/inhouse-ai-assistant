@@ -1,0 +1,15 @@
+# 평가 실행용 compose 덧붙임 파일. infra/compose.yaml 뒤에 -f로 붙입니다.
+# 상대 경로는 첫 compose 파일 위치(infra/) 기준입니다.
+# - rag: 개발 셋 표지·주입 문서를 읽습니다(계약 contracts/eval/markers.schema.json, injected-docs.schema.json)
+# - web: gateway가 healthy가 된 뒤 시작합니다(#90이 고쳐지면 뺍니다)
+services:
+  rag:
+    environment:
+      RAG_MARKERS_FILE: /eval/markers/dev.yaml
+      RAG_EXTRA_DOCS: /eval/injections/dev.yaml
+    volumes:
+      - ../eval/markers:/eval/markers:ro
+      - ../eval/injections:/eval/injections:ro
+  web:
+    depends_on:
+      gateway: {condition: service_healthy}
