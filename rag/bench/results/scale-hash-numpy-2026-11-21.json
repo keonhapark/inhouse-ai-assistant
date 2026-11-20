@@ -1,0 +1,186 @@
+{
+ "measuredAt": "2026-11-21T00:39:07+0900",
+ "machine": "Darwin arm64",
+ "embedder": "hash",
+ "corpus": {
+  "gitCommit": "c1af8c35b4caabca83a51d3600099af62eb78ee9",
+  "uncommittedCorpusChanges": false,
+  "files": [
+   {
+    "path": "corpus/law/admrul-duty-discipline.json",
+    "sha256": "6ac07a53d57a5f62e82fdc06180348c77e9ce0a36e5aa965d945483ee58b2ed8"
+   },
+   {
+    "path": "corpus/law/law-civil-service-duty.json",
+    "sha256": "68de8e3ff0575ae0df3c7f7ffd624a7e612ce762472faf97c0e373eaad07e5df"
+   },
+   {
+    "path": "corpus/law/law-travel-expense.json",
+    "sha256": "bf845777f8be19572cda709e66d1f8ba518734b0cb80d7b2135b5a807d088763"
+   },
+   {
+    "path": "corpus/law/law-travel-expense@2026-01-02.json",
+    "sha256": "433ac84085208264fccabf54304d7e3228e23dcc0d5df5dd96d5b69ac8882ab7"
+   },
+   {
+    "path": "corpus/law/law-travel-expense@2026-07-01.json",
+    "sha256": "192afacaa79174de273c270a0ab5d6a50de4893ddda9fc284b056bf55837662c"
+   },
+   {
+    "path": "templates/gen-account-access.md",
+    "sha256": "5b06d3ddbf2b42b20b4b94b277401d2437cc1fe288021661aa4a6530a7fe1145"
+   },
+   {
+    "path": "templates/gen-delegation-rule.md",
+    "sha256": "077b40f8a8bc0361633d9f30a4b27549a3e2b0d10751731af3d6bafbd7a57f8c"
+   },
+   {
+    "path": "templates/gen-hr-notice.md",
+    "sha256": "0481ddd3a9421592a66edb74f1ef9d8ad576f456bbf1fb2e1c0bf5023ecc4cf0"
+   },
+   {
+    "path": "templates/gen-incident-response.md",
+    "sha256": "175bf71209c0458ff589b36cfd2fb19955ac04c8157b5481d070c15beea2c9ca"
+   },
+   {
+    "path": "templates/gen-leave-guide.md",
+    "sha256": "059885ae1d1cbf03b7461ea096e67997272f452f98599d2e7fa1844bf099a496"
+   },
+   {
+    "path": "templates/gen-purchase-rule.md",
+    "sha256": "951ac7bd05053c964e1aabeaf1b796547c1e8516556edb7429de5c12c00a13e1"
+   },
+   {
+    "path": "templates/gen-room-guide.md",
+    "sha256": "e55f2026ea2cc5221910e5010ab2931be0ee087c4e1f468964698f85b539655d"
+   },
+   {
+    "path": "templates/gen-salary-standard.md",
+    "sha256": "332ee5ae39e2c0fb0fd7fefbe92ff4a80041f326a3a3f67090080f981c6ca76f"
+   }
+  ]
+ },
+ "repeat": 3,
+ "scales": [
+  {
+   "scale": 1,
+   "documents": 11,
+   "chunks": 240,
+   "indexSecondsLexical": 0.027,
+   "indexSecondsWithEmbedding": 0.066,
+   "maxRssMb": 48.2,
+   "latencyMs": {
+    "bm25": {
+     "p50": 0.14,
+     "p95": 0.22,
+     "n": 48
+    },
+    "vector": {
+     "p50": 0.16,
+     "p95": 0.22,
+     "n": 48
+    },
+    "hybrid": {
+     "p50": 0.26,
+     "p95": 0.31,
+     "n": 48
+    }
+   },
+   "hitRate": {
+    "bm25": {
+     "top1": 0.688,
+     "top5": 0.875
+    },
+    "vector": {
+     "top1": 0.438,
+     "top5": 0.75
+    },
+    "hybrid": {
+     "top1": 0.562,
+     "top5": 0.938
+    }
+   },
+   "questions": 16
+  },
+  {
+   "scale": 10,
+   "documents": 110,
+   "chunks": 2030,
+   "indexSecondsLexical": 0.207,
+   "indexSecondsWithEmbedding": 0.543,
+   "maxRssMb": 100.4,
+   "latencyMs": {
+    "bm25": {
+     "p50": 0.59,
+     "p95": 0.77,
+     "n": 48
+    },
+    "vector": {
+     "p50": 0.98,
+     "p95": 1.08,
+     "n": 48
+    },
+    "hybrid": {
+     "p50": 1.28,
+     "p95": 1.55,
+     "n": 48
+    }
+   },
+   "hitRate": {
+    "bm25": {
+     "top1": 0.625,
+     "top5": 0.688
+    },
+    "vector": {
+     "top1": 0.375,
+     "top5": 0.5
+    },
+    "hybrid": {
+     "top1": 0.5,
+     "top5": 0.688
+    }
+   },
+   "questions": 16
+  },
+  {
+   "scale": 100,
+   "documents": 1100,
+   "chunks": 19829,
+   "indexSecondsLexical": 1.805,
+   "indexSecondsWithEmbedding": 5.573,
+   "maxRssMb": 490.0,
+   "latencyMs": {
+    "bm25": {
+     "p50": 5.69,
+     "p95": 7.56,
+     "n": 48
+    },
+    "vector": {
+     "p50": 10.54,
+     "p95": 11.59,
+     "n": 48
+    },
+    "hybrid": {
+     "p50": 13.48,
+     "p95": 15.87,
+     "n": 48
+    }
+   },
+   "hitRate": {
+    "bm25": {
+     "top1": 0.5,
+     "top5": 0.688
+    },
+    "vector": {
+     "top1": 0.375,
+     "top5": 0.375
+    },
+    "hybrid": {
+     "top1": 0.375,
+     "top5": 0.562
+    }
+   },
+   "questions": 16
+  }
+ ]
+}
