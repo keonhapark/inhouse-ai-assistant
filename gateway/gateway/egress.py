@@ -80,6 +80,13 @@ def load_model_info(config_path: Path) -> dict[str, dict[str, Any]]:
     return out
 
 
+def load_provider_models(config_path: Path) -> dict[str, str]:
+    """LiteLLM 별칭 → 실제 모델 이름(litellm_params.model, 예: anthropic/claude-haiku-5-5)."""
+    doc = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    return {m["model_name"]: m["litellm_params"]["model"] for m in doc.get("model_list", [])
+            if (m.get("litellm_params") or {}).get("model")}
+
+
 def load_model_locations(config_path: Path) -> dict[str, str]:
     return {alias: info["location"] for alias, info in load_model_info(config_path).items()}
 
@@ -189,7 +196,8 @@ class Egress:
                  condition_of: Callable[[str | None], str | None] = lambda _cid: None,
                  budget: BudgetLedger | None = None,
                  unit_of: Callable[[str | None], str | None] = lambda _cid: None,
-                 prices: dict[str, tuple[float, float]] | None = None):
+                 prices: dict[str, tuple[float, float]] | None = None,
+                 provider_models: dict[str, str] | None = None):
         self.locations = locations
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
         self.redactor = redactor
@@ -202,6 +210,7 @@ class Egress:
         self.condition_of = condition_of
         self.budget = budget
         self.unit_of = unit_of  # 위임 토큰 cid → 요청자 소속 부서(채팅 흐름이 기억). 모르면 None
+        self.provider_models = provider_models or {}  # 별칭 → 실제 모델 이름(외부 요청 기록 model)
         self.prices = prices or {}  # 별칭 → (입력, 출력) USD/토큰. 비용 머리글이 없을 때(스트림) 씁니다
         self.no_response_format = no_response_format  # model_info.supports_response_format: false인 별칭
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
@@ -522,7 +531,8 @@ class Egress:
             return
         rec: dict[str, Any] = {"conversationId": caller.conversation_id,
                                "agentId": caller.agent.id if caller.agent else None,
-                               "at": now_iso(), "model": model["name"], "body": sent, "costUsd": cost}
+                               "at": now_iso(), "model": self.provider_models.get(model["name"], model["name"]),
+                               "body": sent, "costUsd": cost}
         usage = response_usage(response) if response else None
         if usage is not None:
             rec["usage"] = usage
@@ -544,6 +554,7 @@ class Egress:
             "agentId": caller.agent.id if caller.agent else None,
             "conversationId": caller.conversation_id,
             "model": model["name"],
+            "providerModel": self.provider_models.get(model["name"]),
             "redactions": model["redactions"],
             "requestBeforeRedaction": before,
             "requestSent": sent,

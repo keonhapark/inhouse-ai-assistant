@@ -41,6 +41,9 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
 - 평가 경로(#63)
   - `GATEWAY_EXTERNAL_LOG`(파일 경로)가 있을 때만 외부 모델로 실제 보낸 본문(가림 뒤)을
     `contracts/events/external-request.schema.json` 형식으로 씁니다. 로컬 요청, 정책으로 막힌 요청, 연결 전에 실패한 요청은 쓰지 않습니다.
+  - 외부 요청 기록(`GATEWAY_EXTERNAL_LOG`)의 `model`은 별칭이 아니라 실제 모델 이름(LiteLLM 설정 `litellm_params.model`,
+    예: `anthropic/claude-haiku-5-5`)입니다(#203). 응답 헤더 `X-Egress-Model`은 별칭이고, 운영 기록 `egress.jsonl`에는 별칭(`model`)과
+    실제 이름(`providerModel`)을 둘 다 둡니다.
   - 외부 요청 기록에는 `usage`(prompt·completion 토큰)와 `costUsd`(LiteLLM `x-litellm-response-cost` 머리글)를 채웁니다.
     스트림은 머리글 시점에 비용을 몰라 `costUsd`가 null이고, usage는 마지막 조각(`stream_options.include_usage`)에서 읽습니다.
   - 평가 조건(`contracts/eval/conditions.md`)은 대화를 만들 때 정해지고, 같은 `cid`의 출구 호출에 장치를 켜고 끕니다.
