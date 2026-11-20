@@ -76,3 +76,19 @@ def test_condition_header_and_external_log(tmp_path):
         {"conversationId": "other", "at": "t", "model": "m", "body": {"messages": []}},
     ]) + "\n", encoding="utf-8")
     assert read("c9") == [{"messages": [{"content": "가"}]}]
+
+
+def test_docker_external_log(monkeypatch):
+    import subprocess
+
+    from harness.sut import docker_external_log
+
+    lines = "\n".join(json.dumps(r) for r in [{"conversationId": "c1", "at": "t", "model": "m", "body": {"a": 1}},
+                                              {"conversationId": "c2", "at": "t", "model": "m", "body": {"a": 2}}])
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 0, stdout=lines + "\n"))
+    assert docker_external_log("gw", "/audit/x.jsonl")("c1") == [{"a": 1}]
+
+    def boom(*a, **k):
+        raise OSError("no docker")
+    monkeypatch.setattr(subprocess, "run", boom)
+    assert docker_external_log("gw", "/audit/x.jsonl")("c1") is None

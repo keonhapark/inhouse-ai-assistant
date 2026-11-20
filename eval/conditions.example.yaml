@@ -14,7 +14,9 @@ erp:
 gateway:
   baseUrl: http://localhost:8510/api      # GATEWAY_EVAL_MODE=1로 띄워야 X-Eval-Condition을 받습니다
   auditor: E0057         # 감사 조회 역할 직원(팩 org.yaml의 auditor)
-  externalLog: /tmp/iaa-s5-external-requests.jsonl   # gateway의 GATEWAY_EXTERNAL_LOG와 같은 파일
+  externalLog: /tmp/iaa-s5-external-requests.jsonl   # gateway의 GATEWAY_EXTERNAL_LOG와 같은 파일(호스트에서 보일 때)
+  # 기록이 compose 볼륨 안에만 있으면 대신 아래를 씁니다
+  # externalLogDocker: {container: iaa-s5-gateway-1, path: /audit/external.jsonl}
   conditions:            # 조건 ID는 agent 계약 Condition
     - no_guard
     - write_blocked
