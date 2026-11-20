@@ -57,10 +57,13 @@ export function apiBaseUrl(): string {
 export const api = createClient<paths>({ baseUrl: apiBaseUrl(), fetch: (req) => globalThis.fetch(req) })
 api.use(auth)
 
-/** problem+json이면 title을, 아니면 fallback을 돌려줍니다(DESIGN.md: 서버 오류는 title을 그대로 보여 줌). */
+/**
+ * problem+json이면 title을 그대로(DESIGN.md), detail이 있으면 뒤에 붙여 돌려줍니다. 아니면 fallback.
+ */
 export function problemTitle(error: unknown, fallback = '요청을 처리하지 못했습니다.'): string {
   if (error && typeof error === 'object' && 'title' in error && typeof error.title === 'string' && error.title) {
-    return error.title
+    const detail = 'detail' in error && typeof error.detail === 'string' && error.detail ? ` ${error.detail}` : ''
+    return error.title + detail
   }
   return fallback
 }

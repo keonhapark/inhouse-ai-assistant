@@ -111,6 +111,16 @@ export function PreviewCard({ agentName, approval, decision, closed, busy, now: 
       }
     >
       <p>{preview.summary}</p>
+      <PreviewChanges preview={preview} />
+      {!preview.undoable && <p className="warning-line">실행하면 되돌릴 수 없습니다.</p>}
+    </Card>
+  )
+}
+
+/** 미리보기(WritePreview)의 바뀌는 값과 경고. 채팅 미리보기 카드와 대결 등록이 같이 씁니다. */
+export function PreviewChanges({ preview }: { preview: Schemas['WritePreview'] }) {
+  return (
+    <>
       {preview.changes.map((c, i) => (
         <div key={i} className="changes">
           <span className="muted">
@@ -135,8 +145,7 @@ export function PreviewCard({ agentName, approval, decision, closed, busy, now: 
           {w}
         </p>
       ))}
-      {!preview.undoable && <p className="warning-line">실행하면 되돌릴 수 없습니다.</p>}
-    </Card>
+    </>
   )
 }
 
