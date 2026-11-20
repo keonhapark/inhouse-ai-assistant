@@ -28,3 +28,4 @@ erp:
   jwt-ttl-seconds: 3600
   demo-password: ${ERP_DEMO_PASSWORD:demo}
   delegation-public-key: ${DELEGATION_TOKEN_PUBLIC_KEY:}
+  eval-reset: ${ERP_EVAL_RESET:0}
