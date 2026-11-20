@@ -16,7 +16,9 @@ type DelegationCreate = Schemas['DelegationCreate']
 
 const NETWORK = '서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.'
 
-export function DelegationPanel() {
+type PanelProps = { forms: Schemas['ApprovalForm'][]; formsError: string | null }
+
+export function DelegationPanel({ forms, formsError }: PanelProps) {
   const { state } = useAuth()
   const meId = state.status === 'signed-in' ? state.employee.id : null
   const [items, setItems] = useState<DelegationView[] | null>(null)
@@ -29,8 +31,6 @@ export function DelegationPanel() {
   // 미리보기를 만든 요청 본문과 멱등 키를 묶어 둡니다. 등록은 이 본문을 그대로 보내
   // 미리보기와 다른 위임이 등록되지 않게 하고, 다시 눌러도 같은 키로 한 번만 등록되게 합니다.
   const [previewed, setPreviewed] = useState<{ body: DelegationCreate; key: string } | null>(null)
-  const [forms, setForms] = useState<Schemas['ApprovalForm'][]>([])
-  const [formsError, setFormsError] = useState<string | null>(null)
 
   async function refresh() {
     try {
@@ -46,14 +46,6 @@ export function DelegationPanel() {
 
   useEffect(() => {
     let alive = true
-    api.GET('/approval-forms').then(
-      ({ data, error: p }) => {
-        if (!alive) return
-        if (data) setForms(data.items)
-        else setFormsError(problemTitle(p, '양식 목록을 불러오지 못했습니다.'))
-      },
-      () => alive && setFormsError('양식 목록을 불러오지 못했습니다.'),
-    )
     api.GET('/delegations', { params: { query: { role: 'all' } } }).then(
       ({ data, error: p }) => {
         if (!alive) return

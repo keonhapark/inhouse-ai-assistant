@@ -7,6 +7,17 @@ type Doc = Schemas['ApprovalDocument']
 type Delegation = Schemas['Delegation']
 type InboxItem = Schemas['InboxItem']
 
+// 실제 erp는 팩 forms.yaml의 fields를 그대로 돌려줍니다. 화면은 title·x-labels가 있으면 씁니다.
+const LEAVE_SCHEMA = {
+  type: 'object',
+  properties: {
+    leave_type: { type: 'string', title: '종류', 'x-labels': { annual: '연차', half_pm: '오후 반차' } },
+    start_date: { type: 'string', format: 'date', title: '시작일' },
+    end_date: { type: 'string', format: 'date', title: '종료일' },
+    reason: { type: 'string', title: '사유' },
+  },
+}
+
 const FORMS: Record<string, string> = { leave: '휴가 신청', expense: '경비 정산', purchase: '구매 요청' }
 const DAY = 86_400_000
 
@@ -39,7 +50,7 @@ export function resetMockInbox() {
       title: '연차 휴가 신청(11/27~11/28)',
       requesterId: 'emp-1001',
       status: 'in_progress',
-      fields: { 시작일: '2026-11-27', 종료일: '2026-11-28', 일수: 2, 사유: '개인 사정' },
+      fields: { leave_type: 'annual', start_date: '2026-11-27', end_date: '2026-11-28', reason: '개인 사정' },
       amount: null,
       steps: [step(1, 'emp-2001', 'pending')],
       currentStep: 1,
@@ -65,7 +76,7 @@ export function resetMockInbox() {
       title: '반차 신청(11/18 오후)',
       requesterId: 'emp-1002',
       status: 'approved',
-      fields: { 날짜: '2026-11-18', 구분: '오후 반차' },
+      fields: { leave_type: 'half_pm', start_date: '2026-11-18', end_date: '2026-11-18', reason: '병원' },
       amount: null,
       steps: [step(1, 'emp-2001', 'approved', { actedBy: 'emp-2001', actedAt: iso(-3 * DAY) })],
       currentStep: null,
@@ -244,7 +255,7 @@ export const inboxHandlers = [
     const items: Schemas['ApprovalForm'][] = Object.entries(FORMS).map(([id, name]) => ({
       id,
       name,
-      fieldsSchema: {},
+      fieldsSchema: id === 'leave' ? LEAVE_SCHEMA : {},
       amountField: id === 'leave' ? null : 'amount',
     }))
     return HttpResponse.json({ items })

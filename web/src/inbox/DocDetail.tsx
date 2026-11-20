@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, problemTitle } from '../api/client'
+import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { newIdempotencyKey } from '../chat/api'
+import { fieldRows } from './fields'
 import { type InboxItem, type Step } from './types'
 import { DOC_STATUS, formatAmount, formatDateTime, STEP_STATUS } from './labels'
 
 
 type Props = {
   doc: InboxItem
+  /** 이 문서의 양식(필드 이름·값 표시용). 모르면 키를 그대로 보여 줍니다 */
+  form?: Schemas['ApprovalForm']
   /** 이 탭에서 결재할 수 있는지(내 차례·대결) */
   canDecide: boolean
   onDecided(message: string): void
@@ -23,9 +26,7 @@ function stepName(s: Step, who: 'approver' | 'actedBy'): string {
   return who === 'approver' ? (s.approverName ?? s.approverId) : (s.actedByName ?? s.actedBy ?? '처리자 미상')
 }
 
-const fieldText = (v: unknown) => (v === null || v === undefined ? '–' : typeof v === 'object' ? JSON.stringify(v) : String(v))
-
-export function DocDetail({ doc, canDecide, onDecided, onReload, onClose }: Props) {
+export function DocDetail({ doc, form, canDecide, onDecided, onReload, onClose }: Props) {
   const [comment, setComment] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -117,10 +118,10 @@ export function DocDetail({ doc, canDecide, onDecided, onReload, onClose }: Prop
           <dt>상신</dt>
           <dd className="mono">{formatDateTime(doc.createdAt)}</dd>
         </div>
-        {Object.entries(doc.fields).map(([k, v]) => (
-          <div key={k}>
-            <dt>{k}</dt>
-            <dd>{fieldText(v)}</dd>
+        {fieldRows(doc.fields, form).map((r) => (
+          <div key={r.key}>
+            <dt>{r.label}</dt>
+            <dd>{r.value}</dd>
           </div>
         ))}
       </dl>
