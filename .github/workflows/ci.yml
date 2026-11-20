@@ -48,12 +48,20 @@ jobs:
               - 'packs/**'
             gateway:
               - 'gateway/**'
+              - 'contracts/**'
+              - 'packs/**'
             agent:
               - 'agent/**'
+              - 'contracts/**'
+              - 'packs/**'
             rag:
               - 'rag/**'
+              - 'contracts/**'
+              - 'packs/**'
             eval:
               - 'eval/**'
+              - 'contracts/**'
+              - 'packs/**'
             web:
               - 'web/**'
 
