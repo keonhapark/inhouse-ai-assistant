@@ -105,7 +105,7 @@ def test_파기하면_감사_이벤트가_계약을_따르고_본문은_넣지_�
     schema = json.loads((REPO_ROOT / "contracts/events/audit.schema.json").read_text(encoding="utf-8"))
     Draft202012Validator(schema).validate(event)
     assert event["kind"] == "rag.document_purged" and event["result"] == "ok"
-    assert event["actor"] == {"employeeId": None, "viaDelegationToken": False, "agentId": None}
+    assert event["actor"] == {"employeeId": None, "viaDelegationToken": False, "delegationTokenId": None, "agentId": None}
     assert DOC in event["detail"] and MARK not in json.dumps(event, ensure_ascii=False)
 
 

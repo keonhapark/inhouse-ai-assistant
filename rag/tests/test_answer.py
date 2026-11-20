@@ -210,7 +210,9 @@ def test_근거를_못_대면_정해진_문구다(make_client, reply):
 def test_권한_밖_문서는_프롬프트에_들어가지_않고_뺀_사실은_감사에_남는다(make_client, audit_schema, index):
     client, chat, audit = make_client(quote_first)
     salary = [c.text for c in index.chunks if c.doc_id == "gen-salary-standard"]
-    r = ask(client, "직급별 기본급과 성과급 지급률은 얼마인가요", token(STAFF))
+    tok = token(STAFF)
+    jti = jwt.decode(tok, options={"verify_signature": False})["jti"]
+    r = ask(client, "직급별 기본급과 성과급 지급률은 얼마인가요", tok)
     assert r.status_code == 200
     prompt = chat.calls[0][0][1]["content"]
     assert not any(t in prompt for t in salary)
@@ -220,8 +222,11 @@ def test_권한_밖_문서는_프롬프트에_들어가지_않고_뺀_사실은_
         audit_schema.validate(e)
     denied = [e for e in evs if e["kind"] == "rag.access_denied"]
     assert denied and "gen-salary-standard" in denied[0]["detail"]
-    assert denied[0]["actor"] == {"employeeId": "E0012", "viaDelegationToken": True, "agentId": "hr-agent"}
-    assert any(e["kind"] == "rag.answered" and e["result"] == "ok" for e in evs)
+    actor = {"employeeId": "E0012", "viaDelegationToken": True, "delegationTokenId": jti, "agentId": "hr-agent"}
+    assert denied[0]["actor"] == actor
+    [answered] = [e for e in evs if e["kind"] == "rag.answered"]
+    assert answered["result"] == "ok" and answered["actor"] == actor
+    assert tok not in audit.path.read_text(encoding="utf-8")
 
 
 def test_인사_제한_권한이_있으면_급여_기준을_근거로_쓴다(make_client):
