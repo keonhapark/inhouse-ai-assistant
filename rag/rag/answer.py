@@ -48,7 +48,16 @@ class ChatClient(Protocol):
     model: str
     location: str
 
-    def complete(self, messages: list[dict[str, str]], delegation_token: str) -> str: ...
+    def complete(self, messages: list[dict[str, str]], delegation_token: str) -> ChatReply | str: ...
+
+
+@dataclass(frozen=True)
+class ChatReply:
+    """모델 답 글과, gateway가 실제로 보낸 별칭·위치."""
+
+    content: str
+    model: str
+    location: str
 
 
 class GatewayChat:
@@ -69,7 +78,9 @@ class GatewayChat:
         self._timeout = timeout
         self._transport = transport
 
-    def complete(self, messages: list[dict[str, str]], delegation_token: str) -> str:
+    def complete(self, messages: list[dict[str, str]], delegation_token: str) -> ChatReply:
+        """gateway가 기밀 용어로 로컬로 돌리거나 외부 장애로 폴백하면 요청한 별칭과 실제가 다릅니다.
+        응답 헤더 `X-Egress-Model`·`X-Egress-Location`(gateway 계약)이 있으면 그것을, 없으면 요청한 별칭을 씁니다."""
         body: dict[str, Any] = {"model": self.model, "messages": messages, "temperature": 0}
         if self.reasoning_effort:
             body["reasoning_effort"] = self.reasoning_effort
@@ -81,9 +92,13 @@ class GatewayChat:
         if r.status_code >= 400:
             raise LLMError(f"gateway 응답 {r.status_code}")
         try:
-            return r.json()["choices"][0]["message"]["content"] or ""
+            content = r.json()["choices"][0]["message"]["content"] or ""
         except (ValueError, KeyError, IndexError, TypeError) as e:
             raise LLMError("gateway 응답 형식이 다릅니다") from e
+        location = r.headers.get("x-egress-location")
+        if location not in ("local", "external"):
+            return ChatReply(content, self.model, self.location)
+        return ChatReply(content, r.headers.get("x-egress-model") or self.model, location)
 
 
 _QUOTES = str.maketrans("", "", "「」『』“”‘’\"'")
@@ -220,11 +235,17 @@ class Answerer:
     ) -> AnswerResult:
         withheld = withheld_docs(self.index, question, doc_scopes)
         today = self.index.today()
-        hits = self.index.search(question, doc_scopes, self.method, self.top_k, as_of)  # type: ignore[arg-type]
+        hits = self.index.search(
+            question, doc_scopes, self.method, self.top_k, as_of, delegation_token  # type: ignore[arg-type]
+        )
         if not hits:
             return AnswerResult(False, NOT_FOUND, [], None, "근거 후보 0건", withheld)
-        model = {"name": self.llm.model, "location": self.llm.location}
-        reply = parse_reply(self.llm.complete(build_messages(question, hits), delegation_token))
+        out = self.llm.complete(build_messages(question, hits), delegation_token)
+        if isinstance(out, ChatReply):
+            model, content = {"name": out.model, "location": out.location}, out.content
+        else:  # 글만 돌려주는 클라이언트(시험용 가짜 등)는 요청한 별칭으로 적습니다.
+            model, content = {"name": self.llm.model, "location": self.llm.location}, out
+        reply = parse_reply(content)
         if reply is None:
             return AnswerResult(False, NOT_FOUND, [], model, "모델 출력을 JSON으로 읽지 못함", withheld)
         raw = reply.get("citations")

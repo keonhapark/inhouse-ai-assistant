@@ -61,10 +61,14 @@ class Embedder(Protocol):
     def embed(self, texts: list[str]) -> list[list[float]]: ...
 
 
-def embed_query(embedder: Embedder, query: str) -> list[float]:
-    """질의 임베딩. 캐시가 있는 임베더라도 질의는 캐시를 거치지 않습니다(`CachedEmbedder.embed_query`)."""
+def embed_query(embedder: Embedder, query: str, delegation_token: str | None = None) -> list[float]:
+    """질의 임베딩. 캐시가 있는 임베더라도 질의는 캐시를 거치지 않습니다(`CachedEmbedder.embed_query`).
+
+    `delegation_token`은 요청한 대화의 위임 토큰입니다. gateway가 같은 대화의 조건과 감사(conversationId)를
+    적용하도록 임베딩 요청에도 붙입니다(contracts/eval/conditions.md).
+    """
     if fn := getattr(embedder, "embed_query", None):
-        return fn(query)
+        return fn(query, delegation_token)
     return embedder.embed([query])[0]
 
 
@@ -189,12 +193,14 @@ class SearchIndex:
     def vector(self, query: str, ids: list[int]) -> list[tuple[int, float]]:
         return self._vector(self._state, query, ids)
 
-    def _vector(self, st: _State, query: str, ids: list[int]) -> list[tuple[int, float]]:
+    def _vector(
+        self, st: _State, query: str, ids: list[int], token: str | None = None
+    ) -> list[tuple[int, float]]:
         if self.embedder is None or st.vectors is None:
             raise RuntimeError("임베딩 모델이 설정되지 않았습니다")
         if not ids:
             return []
-        q = embed_query(self.embedder, query)
+        q = embed_query(self.embedder, query, token)
         vectors = st.vectors
         scored = [(i, _cosine(q, vectors[i])) for i in ids]
         return sorted(scored, key=lambda x: (-x[1], x[0]))
@@ -202,10 +208,12 @@ class SearchIndex:
     def hybrid(self, query: str, ids: list[int], depth: int = 50) -> list[tuple[int, float]]:
         return self._hybrid(self._state, query, ids, depth)
 
-    def _hybrid(self, st: _State, query: str, ids: list[int], depth: int = 50) -> list[tuple[int, float]]:
+    def _hybrid(
+        self, st: _State, query: str, ids: list[int], depth: int = 50, token: str | None = None
+    ) -> list[tuple[int, float]]:
         """BM25와 벡터 순위를 Reciprocal Rank Fusion으로 합칩니다. 점수 크기가 달라 순위만 씁니다."""
         fused: dict[int, float] = {}
-        for ranking in (self._bm25(st, query, ids)[:depth], self._vector(st, query, ids)[:depth]):
+        for ranking in (self._bm25(st, query, ids)[:depth], self._vector(st, query, ids, token)[:depth]):
             for rank, (i, _) in enumerate(ranking, start=1):
                 fused[i] = fused.get(i, 0.0) + 1 / (self.RRF_K + rank)
         return sorted(fused.items(), key=lambda x: (-x[1], x[0]))
@@ -217,13 +225,19 @@ class SearchIndex:
         method: Method = "hybrid",
         top_k: int = 5,
         as_of: date | None = None,
+        delegation_token: str | None = None,
     ) -> list[Hit]:
         if not tokenize(query):
             return []  # 빈 질의나 기호뿐인 질의에 벡터 유사도만으로 아무 조문이나 내지 않습니다.
         st = self._state
         ids = self._allowed(st, doc_scopes, as_of)
-        rank = {"bm25": self._bm25, "vector": self._vector, "hybrid": self._hybrid}[method]
-        ranked = self._articles_first(st, query, rank(st, query, ids))
+        if method == "bm25":
+            ranked = self._bm25(st, query, ids)
+        elif method == "vector":
+            ranked = self._vector(st, query, ids, delegation_token)
+        else:
+            ranked = self._hybrid(st, query, ids, token=delegation_token)
+        ranked = self._articles_first(st, query, ranked)
         return [Hit(st.chunks[i], round(s, 6)) for i, s in ranked[:top_k]]
 
     def _articles_first(self, st: _State, query: str, ranked: list[tuple[int, float]]) -> list[tuple[int, float]]:

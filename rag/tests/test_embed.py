@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 
-from rag.embed import CachedEmbedder, GatewayEmbedder, HashEmbedder, embedder_from_env
+from rag.embed import CachedEmbedder, EmbedError, GatewayEmbedder, HashEmbedder, embedder_from_env
 
 
 def fake_gateway(calls: list, shuffle: bool = True, drop: bool = False):
@@ -32,7 +32,7 @@ def test_gateway_임베딩은_묶어_보내고_index_순서로_맞춘다():
 
 def test_gateway가_개수를_다르게_주면_실패한다():
     emb = GatewayEmbedder("http://gw/v1", "m", transport=fake_gateway([], drop=True))
-    with pytest.raises(ValueError):
+    with pytest.raises(EmbedError):
         emb.embed(["a", "b"])
 
 
@@ -125,7 +125,7 @@ def test_시작_대기_시간을_넘기면_실패한다():
     transport, _ = flaky(100, httpx.ConnectError("refused"))
     clock = FakeClock()
     emb = GatewayEmbedder("http://gw/v1", "m", transport=transport, startup_wait=20, sleep=clock.sleep, clock=clock)
-    with pytest.raises(httpx.ConnectError):
+    with pytest.raises(EmbedError, match="연결 실패"):
         emb.embed(["a"])
     assert sum(clock.sleeps) <= 20
 
@@ -136,7 +136,7 @@ def test_한_번_성공한_뒤에는_다시_시도하지_않는다():
     emb = GatewayEmbedder("http://gw/v1", "m", transport=transport, startup_wait=60, sleep=clock.sleep, clock=clock)
     emb.embed(["a"])
     emb._transport = flaky(5, httpx.ConnectError("down"))[0]  # 이제 gateway가 내려감
-    with pytest.raises(httpx.ConnectError):
+    with pytest.raises(EmbedError, match="연결 실패"):
         emb.embed(["q"])
     assert clock.sleeps == []
 
@@ -145,6 +145,6 @@ def test_재시도하지_않는_오류는_바로_돌려준다():
     transport, state = flaky(1, 422)
     clock = FakeClock()
     emb = GatewayEmbedder("http://gw/v1", "m", transport=transport, startup_wait=60, sleep=clock.sleep, clock=clock)
-    with pytest.raises(httpx.HTTPStatusError):
+    with pytest.raises(EmbedError, match="응답"):
         emb.embed(["a"])
     assert state["n"] == 1 and clock.sleeps == []

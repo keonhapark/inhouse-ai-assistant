@@ -22,7 +22,7 @@ from pathlib import Path
 
 import httpx
 
-from rag.search import Embedder, tokenize
+from rag.search import Embedder, embed_query, tokenize
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +42,15 @@ class HashEmbedder:
             norm = math.sqrt(sum(x * x for x in v)) or 1.0
             out.append([x / norm for x in v])
         return out
+
+
+class EmbedError(Exception):
+    """gateway 임베딩 실패. `unreachable`이면 gateway에 닿지 못한 것(503), 아니면 gateway가 오류를 돌려준 것(502)."""
+
+    def __init__(self, detail: str, unreachable: bool = False):
+        super().__init__(detail)
+        self.detail = detail
+        self.unreachable = unreachable
 
 
 class GatewayEmbedder:
@@ -70,14 +79,14 @@ class GatewayEmbedder:
         self._clock = clock
         self._ready = False
 
-    def _post(self, client: httpx.Client, batch: list[str]) -> httpx.Response:
+    def _post(self, client: httpx.Client, batch: list[str], headers: dict[str, str]) -> httpx.Response:
         deadline = self._clock() + (0 if self._ready else self._startup_wait)
         delay = 1.0
         while True:
             error: httpx.TransportError | None = None
             r: httpx.Response | None = None
             try:
-                r = client.post(self._url, json={"model": self.name, "input": batch}, headers=self._headers)
+                r = client.post(self._url, json={"model": self.name, "input": batch}, headers=headers)
             except httpx.TransportError as e:
                 error = e
             if r is not None and r.status_code not in self.RETRY_STATUS:
@@ -92,19 +101,31 @@ class GatewayEmbedder:
             self._sleep(delay)
             delay = min(delay * 2, 10.0)
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
+    def embed(self, texts: list[str], delegation_token: str | None = None) -> list[list[float]]:
+        headers = dict(self._headers)
+        if delegation_token:
+            headers["X-Delegation-Token"] = delegation_token
         vectors: list[list[float]] = []
-        with httpx.Client(timeout=self._timeout, transport=self._transport) as client:
-            for i in range(0, len(texts), self.BATCH):
-                batch = texts[i : i + self.BATCH]
-                r = self._post(client, batch)
-                r.raise_for_status()
-                data = sorted(r.json()["data"], key=lambda d: d["index"])
-                if len(data) != len(batch):
-                    raise ValueError(f"임베딩 {len(batch)}개를 보냈는데 {len(data)}개가 왔습니다")
-                vectors.extend(d["embedding"] for d in data)
-                self._ready = True
+        try:
+            with httpx.Client(timeout=self._timeout, transport=self._transport) as client:
+                for i in range(0, len(texts), self.BATCH):
+                    batch = texts[i : i + self.BATCH]
+                    r = self._post(client, batch, headers)
+                    if r.status_code >= 400:
+                        raise EmbedError(f"gateway 임베딩 응답 {r.status_code}")
+                    data = sorted(r.json()["data"], key=lambda d: d["index"])
+                    if len(data) != len(batch):
+                        raise EmbedError(f"임베딩 {len(batch)}개를 보냈는데 {len(data)}개가 왔습니다")
+                    vectors.extend(d["embedding"] for d in data)
+                    self._ready = True
+        except httpx.TransportError as e:
+            raise EmbedError(f"gateway 임베딩 연결 실패({type(e).__name__})", unreachable=True) from e
+        except (ValueError, KeyError, TypeError) as e:
+            raise EmbedError("gateway 임베딩 응답 형식이 다릅니다") from e
         return vectors
+
+    def embed_query(self, text: str, delegation_token: str | None = None) -> list[float]:
+        return self.embed([text], delegation_token)[0]
 
 
 class CachedEmbedder:
@@ -151,8 +172,8 @@ class CachedEmbedder:
             f.write(json.dumps(self._cache))
         os.replace(tmp, self._path)
 
-    def embed_query(self, text: str) -> list[float]:
-        return self.inner.embed([text])[0]
+    def embed_query(self, text: str, delegation_token: str | None = None) -> list[float]:
+        return embed_query(self.inner, text, delegation_token)
 
 
 def embedder_from_env(cache_dir: Path) -> Embedder:
