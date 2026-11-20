@@ -36,6 +36,25 @@
     "body": {
       "type": "object",
       "description": "외부로 보낸 OpenAI 호환 요청 본문 그대로"
+    },
+    "usage": {
+      "type": "object",
+      "description": "출구 응답의 토큰 수",
+      "properties": {
+        "prompt_tokens": {
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "type": "integer"
+        }
+      }
+    },
+    "costUsd": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "LiteLLM이 계산한 이 요청의 비용(달러). 모르면 null"
     }
   }
 }
