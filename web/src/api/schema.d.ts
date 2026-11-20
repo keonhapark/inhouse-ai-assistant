@@ -754,7 +754,7 @@ export interface components {
         Change: {
             /** @enum {string} */
             op: "create" | "update" | "delete";
-            /** @description 예: approval_document, delegation, room_reservation, leave_balance */
+            /** @description 예: approval_document, delegation, room_reservation, leave_balance, ticket, ticket_comment */
             resource: string;
             /** @description 미리보기에서 새로 만들 것은 null */
             resourceId?: string | null;
