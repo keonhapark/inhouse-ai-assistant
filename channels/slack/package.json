@@ -11,8 +11,8 @@
     "start": "node dist/main.js",
     "dev": "npm run build && node --env-file=../../.env dist/main.js",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.test.json",
-    "gen:api": "openapi-typescript ../../contracts/openapi/gateway.yaml --empty-objects-unknown -o src/schema.d.ts"
+    "gen:api": "openapi-typescript ../../contracts/openapi/gateway.yaml --empty-objects-unknown -o src/schema.d.ts",
+    "lint": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
     "@slack/bolt": "5.1.0"

@@ -54,7 +54,7 @@
 cd channels/slack
 npm ci
 npm test            # 시험(가짜 gateway·슬랙)
-npm run typecheck
+npm run lint       # 타입 검사
 source ../../scripts/env.sh 6 && npm run dev   # 빌드 후 ../../.env를 읽어 실행
 ```
 
