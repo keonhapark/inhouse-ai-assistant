@@ -17,6 +17,7 @@ info:
       같은 키·다른 본문이면 422 `idempotency-key-reused`입니다. 키는 24시간 보관합니다.
     - 실행된 쓰기는 `actionId`를 갖고, `undoable`이면 `POST /actions/{actionId}/undo`로 되돌립니다. 되돌릴 수 없는 상태면 409입니다. 부분 되돌리기는 없습니다.
     - 오류는 RFC 9457 `application/problem+json`이고 `type`은 `urn:problem:<코드>`입니다(아래 `ProblemCode`).
+      정의되지 않은 메서드는 405 Problem(`validation`), 처리하지 못한 서버 오류는 500 Problem(`internal`)입니다. 이 둘은 경로마다 적지 않습니다.
     - 시각은 RFC 3339(오프셋 포함), 날짜는 `YYYY-MM-DD`, 금액은 원 단위 정수입니다.
     - 모든 쓰기는 감사 이벤트(`contracts/events/audit.schema.json`)를 남깁니다.
 servers:
@@ -788,6 +789,7 @@ components:
         - not-undoable
         - already-undone
         - undo-conflict
+        - internal
 
     Problem:
       type: object
