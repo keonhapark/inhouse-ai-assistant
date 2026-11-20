@@ -63,3 +63,34 @@ def test_resume_refuses_mixed_systems_unless_allowed(tmp_path):
     # 끝난 회차뿐이라 새로 돌 것이 없고, 보고서에 회차별 실행 시스템이 나옵니다
     assert main([*args, "--allow-mixed"]) == 0
     assert "하네스 `0ldc0mm`, 단계 1 1회차" in (tmp_path / "r.md").read_text(encoding="utf-8")
+
+
+def _fake_rag(monkeypatch, value):
+    import subprocess
+
+    def run(cmd, **kw):
+        assert cmd[:3] == ["docker", "exec", "rag-c"]
+        return subprocess.CompletedProcess(cmd, 0, stdout=value, stderr="")
+
+    monkeypatch.setattr(subprocess, "run", run)
+
+
+def test_rag_injected_docs_check(monkeypatch):
+    from harness.cli import rag_injected_docs
+
+    assert rag_injected_docs({}) is None
+    _fake_rag(monkeypatch, "/data/injected.yaml")
+    assert rag_injected_docs({"rag": {"container": "rag-c"}}) is True
+    _fake_rag(monkeypatch, "")
+    assert rag_injected_docs({"rag": {"container": "rag-c"}}) is False
+
+
+def test_injected_docs_split_refuses_mismatched_stack(tmp_path, monkeypatch):
+    cfg = {"repeats": 1, "rag": {"container": "rag-c"}, "erp": {"baseUrl": "http://erp.invalid"},
+           "gateway": {"baseUrl": "http://gw.invalid", "conditions": ["full"]}}
+    (tmp_path / "c.yaml").write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    _fake_rag(monkeypatch, "")
+    args = ["run", "--config", str(tmp_path / "c.yaml"), "--scenarios", str(EVAL_DIR / "scenarios"), "--set", "dev",
+            "--out", str(tmp_path / "r"), "--injected-docs", "only"]
+    with pytest.raises(SystemExit, match="꺼져 있습니다"):
+        main(args)
