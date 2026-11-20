@@ -59,3 +59,25 @@ def test_환경_변수가_모자라면_알린다(monkeypatch, tmp_path):
         embedder_from_env(tmp_path)
     monkeypatch.setenv("RAG_EMBEDDER", "hash")
     assert isinstance(embedder_from_env(tmp_path), HashEmbedder)
+
+
+def test_질의는_캐시를_거치지_않는다(tmp_path):
+    """질의가 캐시에 맞으면 응답이 빨라져 제한 청크 문장을 응답 시간으로 맞혀 볼 수 있습니다."""
+    from rag.chunk import Chunk
+    from rag.search import SearchIndex
+
+    calls: list = []
+    emb = CachedEmbedder(GatewayEmbedder("http://gw/v1", "m", transport=fake_gateway(calls)), tmp_path)
+    chunk = Chunk("d#1", "d", "문서", None, "급여 인상률", "trusted", frozenset({"hr-restricted"}))
+    index = SearchIndex([chunk], emb)
+    calls.clear()
+    for _ in range(2):
+        index.search("문서 급여 인상률", {"hr-restricted"}, "vector")
+    assert len(calls) == 2
+    cached = json.loads(next(tmp_path.glob("embeddings-*.json")).read_text())
+    assert len(cached) == 1  # 색인할 때 넣은 청크 하나뿐
+
+
+def test_캐시_파일은_주인만_읽는다(tmp_path):
+    CachedEmbedder(HashEmbedder(8), tmp_path).embed(["a"])
+    assert next(tmp_path.glob("embeddings-*.json")).stat().st_mode & 0o777 == 0o600

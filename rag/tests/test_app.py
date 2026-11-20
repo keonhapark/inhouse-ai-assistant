@@ -88,7 +88,9 @@ def test_공개만_가진_토큰은_인사_규정도_못_본다(client):
 
 def test_결과에_신뢰_등급과_조문_표시가_있다(client):
     r = post(client, {"query": "연가 일수 재직기간", "method": "bm25", "topK": 5}, token(STAFF))
-    hit = next(h for h in r.json()["hits"] if h["docId"] == "law-civil-service-duty")
+    hits = [h for h in r.json()["hits"] if h["docId"] == "law-civil-service-duty"]
+    assert hits, r.json()
+    hit = hits[0]
     assert hit["trust"] == "trusted"
     assert hit["article"].startswith("제15조(연가 일수)")
 
@@ -102,14 +104,47 @@ def test_결과에_신뢰_등급과_조문_표시가_있다(client):
         token(STAFF, aud=["erp"]),  # rag 대상 아님
         token(STAFF, iss="someone"),
         token(STAFF, exp=int(time.time()) - 60),  # 만료
+        jwt.encode({"iss": "gateway", "aud": ["rag"], "doc_scopes": HR}, None, algorithm="none"),
+        jwt.encode({"iss": "gateway", "aud": ["rag"], "doc_scopes": HR}, "x" * 32, algorithm="HS256"),
     ],
-    ids=["없음", "형식", "서명", "aud", "iss", "만료"],
+    ids=["없음", "형식", "서명", "aud", "iss", "만료", "alg-none", "HS256"],
 )
 def test_토큰이_없거나_틀리면_401_problem_json(client, tok):
     r = post(client, {"query": "연가"}, tok)
     assert r.status_code == 401
     assert r.headers["content-type"].startswith("application/problem+json")
     assert r.json()["type"] == "urn:problem:unauthorized"
+
+
+@pytest.mark.parametrize("method", ["hybrid", "bm25", "vector"])
+@pytest.mark.parametrize(
+    "query,doc_id,label",
+    [("여비 규정 제16조", "law-travel-expense", "제16조"), ("제13조의2에 따른 허가권자", "law-civil-service-duty", "제13조의2")],
+)
+def test_조문_번호_질의는_그_조문을_상위에_둔다(client, method, query, doc_id, label):
+    r = post(client, {"query": query, "method": method, "topK": 2}, token(STAFF))
+    assert any(h["docId"] == doc_id and h["article"].startswith(label + "(") for h in r.json()["hits"])
+
+
+@pytest.mark.parametrize("method", ["hybrid", "bm25", "vector"])
+@pytest.mark.parametrize("query", ["", "   ", "!!!"])
+def test_말이_없는_질의는_빈_결과다(client, method, query):
+    r = post(client, {"query": query, "method": method}, token(STAFF))
+    assert r.status_code == 200 and r.json()["hits"] == []
+
+
+def test_말뭉치_조문_범위는_한_종류이고_오름차순이다(client):
+    import re
+
+    from rag.chunk import chunk_documents
+    from rag.corpus import load_documents
+    from rag.pack import load_pack
+
+    for c in chunk_documents(load_documents(load_pack())):
+        m = re.search(r"(제(\d+)항|\((\d+)\))~(제(\d+)항|\((\d+)\))$", c.article or "")
+        if m:
+            assert bool(m.group(2)) == bool(m.group(5)), c.article
+            assert int(m.group(2) or m.group(3)) < int(m.group(5) or m.group(6)), c.article
 
 
 def test_doc_scopes가_없는_토큰은_401(client):

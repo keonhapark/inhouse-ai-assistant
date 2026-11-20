@@ -32,3 +32,10 @@ def test_청크는_문서의_ACL과_신뢰_등급을_물려받는다():
     doc = Document("d1", "문서", "guide", ("hr-policy",), "untrusted", 1, {}, (Section("제1조", None, "본문"),))
     [c] = chunk_documents([doc])
     assert (c.id, c.doc_id, c.acl_tags, c.trust) == ("d1#1", "d1", frozenset({"hr-policy"}), "untrusted")
+
+
+def test_항목이_있는_절은_항목만_경계로_쓰고_번호가_거꾸로_가면_경계로_보지_않는다():
+    text = "\n".join(["(1) " + "가" * 20, "① 표 기호", "(2) " + "나" * 20, "(1) 인용 번호", "(3) " + "다" * 20])
+    parts = split_section(Section("4. 라.", "특별휴가", text), 40)
+    assert [a for a, _ in parts] == ["4. 라.(특별휴가) (1)", "4. 라.(특별휴가) (2)", "4. 라.(특별휴가) (3)"]
+    assert "① 표 기호" in parts[0][1] and "(1) 인용 번호" in parts[1][1]

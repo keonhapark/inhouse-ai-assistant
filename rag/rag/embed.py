@@ -3,6 +3,9 @@
 - `GatewayEmbedder`: `RAG_EMBED_BASE_URL`(없으면 `GATEWAY_LLM_URL`, 예: http://gateway:8000/v1)과 `RAG_EMBED_MODEL`(기본 local-embed)
 - `HashEmbedder`: 음절 2-gram을 해시해 고정 차원에 담는 비의미 임베딩. 시험과 모델 없는 개발용입니다.
 - `CachedEmbedder`: 본문 SHA-256으로 벡터를 파일에 저장해, 재시작 때 같은 청크를 다시 보내지 않습니다.
+  질의는 캐시하지 않습니다. 질의가 제한 청크와 글자까지 같으면 캐시 적중으로 응답이 빨라져, 권한 없는 사람이
+  응답 시간만으로 제한 문서 문장을 맞혀 볼 수 있기 때문입니다. 캐시 파일에는 제한 청크의 해시와 벡터가 있으므로
+  권한 0600으로 씁니다.
 """
 
 from __future__ import annotations
@@ -79,8 +82,13 @@ class CachedEmbedder:
             got = self.inner.embed([t for _, t in missing])
             self._cache.update({k: v for (k, _), v in zip(missing, got, strict=True)})
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            self._path.write_text(json.dumps(self._cache), encoding="utf-8")
+            fd = os.open(self._path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(json.dumps(self._cache))
         return [self._cache[k] for k in keys]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self.inner.embed([text])[0]
 
 
 def embedder_from_env(cache_dir: Path) -> Embedder:

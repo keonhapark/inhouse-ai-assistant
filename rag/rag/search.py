@@ -18,6 +18,7 @@ from rag.chunk import Chunk
 Method = Literal["hybrid", "bm25", "vector"]
 
 _HANGUL = re.compile(r"[가-힣]+")
+_ARTICLE_REF = re.compile(r"제\s*(\d+)\s*조(?:\s*의\s*(\d+))?")
 _OTHER = re.compile(r"[A-Za-z]+|\d+")
 
 
@@ -25,9 +26,12 @@ def tokenize(text: str) -> list[str]:
     """한글은 음절 2-gram, 영문·숫자는 단어 하나를 토큰으로 씁니다.
 
     형태소 분석기 없이 조사·어미가 붙은 말("연가를", "연가는")이 같은 토큰("연가")을 갖게 하려는 것입니다.
-    한 음절 낱말은 그 음절 하나를 토큰으로 씁니다.
+    한 음절 낱말은 그 음절 하나를 토큰으로 씁니다. "제16조", "제13조의2" 같은 조문 번호는 통째로 토큰 하나를
+    더합니다. 2-gram만으로는 "제", "조"가 거의 모든 조문에 있어 조문 번호 질의를 가려내지 못합니다.
     """
-    tokens: list[str] = []
+    tokens: list[str] = [
+        f"제{m.group(1)}조" + (f"의{m.group(2)}" if m.group(2) else "") for m in _ARTICLE_REF.finditer(text)
+    ]
     for word in _HANGUL.findall(text):
         if len(word) == 1:
             tokens.append(word)
@@ -41,6 +45,13 @@ class Embedder(Protocol):
     name: str
 
     def embed(self, texts: list[str]) -> list[list[float]]: ...
+
+
+def embed_query(embedder: Embedder, query: str) -> list[float]:
+    """질의 임베딩. 캐시가 있는 임베더라도 질의는 캐시를 거치지 않습니다(`CachedEmbedder.embed_query`)."""
+    if fn := getattr(embedder, "embed_query", None):
+        return fn(query)
+    return embedder.embed([query])[0]
 
 
 @dataclass(frozen=True)
@@ -102,7 +113,7 @@ class SearchIndex:
             raise RuntimeError("임베딩 모델이 설정되지 않았습니다")
         if not ids:
             return []
-        q = self.embedder.embed([query])[0]
+        q = embed_query(self.embedder, query)
         scored = [(i, _cosine(q, self._vectors[i])) for i in ids]
         return sorted(scored, key=lambda x: (-x[1], x[0]))
 
@@ -115,6 +126,22 @@ class SearchIndex:
         return sorted(fused.items(), key=lambda x: (-x[1], x[0]))
 
     def search(self, query: str, doc_scopes: set[str], method: Method = "hybrid", top_k: int = 5) -> list[Hit]:
+        if not tokenize(query):
+            return []  # 빈 질의나 기호뿐인 질의에 벡터 유사도만으로 아무 조문이나 내지 않습니다.
         ids = self.allowed(doc_scopes)
         ranked = {"bm25": self.bm25, "vector": self.vector, "hybrid": self.hybrid}[method](query, ids)
+        ranked = self._articles_first(query, ranked)
         return [Hit(self.chunks[i], round(s, 6)) for i, s in ranked[:top_k]]
+
+    def _articles_first(self, query: str, ranked: list[tuple[int, float]]) -> list[tuple[int, float]]:
+        """질의에 "제16조"처럼 조문 번호가 있으면, 그 번호가 자기 조문 표시인 청크를 순서를 지킨 채 앞에 둡니다.
+
+        본문 속 참조("제16조에 따라")와 그 조문 자체를 BM25 점수로는 가려낼 수 없기 때문입니다.
+        """
+        refs = {t for t in tokenize(query) if t.startswith("제") and t[-1] in "조0123456789"}
+        if not refs:
+            return ranked
+        def own(i: int) -> bool:
+            return (self.chunks[i].article or "").split("(")[0].split(" ")[0] in refs
+
+        return [x for x in ranked if own(x[0])] + [x for x in ranked if not own(x[0])]

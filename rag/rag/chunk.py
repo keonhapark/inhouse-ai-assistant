@@ -31,25 +31,39 @@ class Chunk:
     acl_tags: frozenset[str]
 
 
-def _unit_key(line: str) -> str | None:
-    """항(①)이나 항목((1))으로 시작하는 줄이면 그 표시를 돌려줍니다."""
+def _marker(line: str) -> tuple[str, int] | None:
+    """줄머리 표시의 종류와 번호. 항(①)은 ("para", 1), 항목((1))은 ("item", 1)."""
     if line[:1] and line[0] in _PARAGRAPH:
-        return f"제{_PARAGRAPH.index(line[0]) + 1}항"
+        return "para", _PARAGRAPH.index(line[0]) + 1
     if m := _ITEM.match(line):
-        return f"({m.group(1)})"
+        return "item", int(m.group(1))
     return None
 
 
+def _label(kind: str, n: int) -> str:
+    return f"제{n}항" if kind == "para" else f"({n})"
+
+
 def _units(text: str) -> list[tuple[str | None, str]]:
-    """본문을 항·항목 경계로 나눕니다. 첫 경계 앞의 글은 표시 없는 단위입니다."""
+    """본문을 항·항목 경계로 나눕니다. 첫 경계 앞의 글은 표시 없는 단위입니다.
+
+    한 절에서는 한 종류의 표시만 경계로 씁니다. 항목((1))이 있으면 항목만 씁니다. 예규에서는 ①이
+    표나 사례 기호로도 쓰이기 때문입니다. 번호는 앞 경계보다 클 때만 경계로 봅니다.
+    """
+    lines = text.split("\n")
+    marks = [_marker(x) for x in lines]
+    kind = "item" if any(m and m[0] == "item" for m in marks) else "para"
     units: list[tuple[str | None, list[str]]] = []
-    for line in text.split("\n"):
-        key = _unit_key(line)
-        if key or not units:
-            units.append((key, [line]))
+    last = 0
+    for line, mark in zip(lines, marks, strict=True):
+        if mark and mark[0] == kind and mark[1] > last:
+            last = mark[1]
+            units.append((_label(kind, mark[1]), [line]))
+        elif not units:
+            units.append((None, [line]))
         else:
             units[-1][1].append(line)
-    return [(k, "\n".join(lines)) for k, lines in units]
+    return [(k, "\n".join(body)) for k, body in units]
 
 
 def _hard_split(text: str, max_chars: int) -> list[str]:
