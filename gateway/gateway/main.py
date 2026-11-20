@@ -74,7 +74,9 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                             if "input_cost_per_token" in i and "output_cost_per_token" in i},
                     baseline_redactor=BaselineRedactor() if settings.eval_mode else korean,
                     no_response_format=frozenset(a for a, i in model_info.items()
-                                                 if i.get("supports_response_format") is False))
+                                                 if i.get("supports_response_format") is False),
+                    vision_alias=next((a for a, i in model_info.items()
+                                       if i.get("vision") and i["location"] == "local"), None))
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):

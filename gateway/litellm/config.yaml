@@ -25,6 +25,18 @@ model_list:
       location: local
       supports_response_format: true
 
+  - model_name: local-vision                         # 이미지 입력 전용(#261). 이미지가 든 요청은 gateway가 모두 여기로 보냅니다
+    litellm_params:
+      # local-gguf와 같은 Qwen3.5-9B GGUF Q4_K_M(Apache-2.0, Ollama 능력 vision 포함). 새 모델을 받지 않고 이미 받은
+      # 가중치를 씁니다. 지어낸 영수증 PNG(420x400)에서 가맹점·날짜·합계를 읽음(2026-11-21 실측, PR 본문).
+      model: ollama_chat/qwen3.5:9b-q4_K_M
+      api_base: os.environ/OLLAMA_BASE_URL
+      num_ctx: 8192
+    model_info:
+      location: local
+      vision: true
+      supports_response_format: true
+
   - model_name: local-embed                          # rag 벡터 검색용 임베딩. 로컬만
     litellm_params:
       model: ollama/bge-m3

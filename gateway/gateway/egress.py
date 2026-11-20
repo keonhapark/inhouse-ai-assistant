@@ -9,6 +9,8 @@
    돌립니다. 그래도 외부로 나가면 한국어 개인정보를 가립니다(gateway/pii.py). 둘 다 감사 이벤트 llm.redacted를 남깁니다.
    로컬 모델로 가는 요청은 가리지 않습니다.
 6. 외부로 나간 요청은 가림 뒤 본문·가린 자리·응답을 egress.jsonl에(가림 전 원문은 저장하지 않음), 모든 요청은 감사 이벤트 llm.request로 남깁니다.
+   이미지(`image_url`)가 든 요청은 2·3단계 전에 형식·크기를 확인하고(gateway/vision.py), 요청한 별칭·정책과 관계없이
+   로컬 비전 별칭(model_info.vision)으로만 보냅니다. 감사에는 이미지 본문 대신 형식·크기·해시를 남깁니다(#261).
 7. 시간 초과(504)·연결 실패(502)·LiteLLM 5xx(502)는 실패 알림을 보냅니다.
 """
 
@@ -38,6 +40,7 @@ from gateway.problems import ProblemError
 from gateway.redact import scrub
 from gateway.registry import AgentEntry, Registry
 from gateway.tokens import DelegationTokenIssuer
+from gateway.vision import inspect_images
 
 log = logging.getLogger(__name__)
 
@@ -203,8 +206,10 @@ class Egress:
                  budget: BudgetLedger | None = None,
                  unit_of: Callable[[str | None], str | None] = lambda _cid: None,
                  prices: dict[str, tuple[float, float]] | None = None,
-                 provider_models: dict[str, str] | None = None):
+                 provider_models: dict[str, str] | None = None,
+                 vision_alias: str | None = None):
         self.locations = locations
+        self.vision_alias = vision_alias  # 이미지 입력을 보낼 로컬 별칭(model_info.vision). 없으면 이미지를 받지 않음
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
         self.redactor = redactor
         self.glossary = glossary or Glossary([])
@@ -296,6 +301,15 @@ class Egress:
     async def _handle(self, request: Request) -> Response:
         caller = self._caller(request)
         body = await self._body(request)
+        images = inspect_images(body)
+        note = None
+        if images:
+            # 영수증 등 이미지에는 카드 번호·사업자번호가 그대로 있어 가림이 듣지 않습니다. 외부로 보내지 않습니다.
+            if self.vision_alias is None or self.locations.get(self.vision_alias) != "local":
+                raise ProblemError(400, "unsupported-parameter", "이미지를 읽을 로컬 모델이 없습니다")
+            note = (f"이미지 {len(images)}장({', '.join(i.describe() for i in images)}): "
+                    f"요청 별칭 {body['model']} 대신 {self.vision_alias}")
+            body = {**body, "model": self.vision_alias}
         model = self._model(request, body["model"])
         location = model["location"]
 
@@ -308,7 +322,6 @@ class Egress:
         # 토큰 모양 문자열은 어떤 모델에도 보내지 않습니다. JWT 문자에는 따옴표가 없어 JSON 문자열째 가려도 됩니다.
         before = json.loads(scrub(json.dumps(body, ensure_ascii=False)))
         sent = before
-        note = None
         if location == "external" and guards.glossary:
             sent = self._confidential(caller, model, before)
         # 비용 상한도 정책 장치라, 로컬 강제를 끄는 평가 조건(no_guard·baseline_tools)에서는 같이 끕니다.
