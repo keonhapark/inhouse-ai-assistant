@@ -5,12 +5,16 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import httpx
+
 from harness.clarify import answer_for, looks_like_question
 from harness.record import Clarification, RunRecord
 from harness.sut import ChatSystem
 
 MAX_CLARIFICATIONS = 3
 MAX_APPROVALS = 5
+# 하네스가 대상 시스템에 닿지도 못한 경우만 실행 환경 문제로 봅니다. 응답 시간 초과·HTTP 오류는 "실패로 끝남"입니다
+CONNECTION_ERRORS = (httpx.ConnectError, httpx.ConnectTimeout)
 
 
 def _pending_approval(events: list[dict[str, Any]]) -> str | None:
@@ -59,9 +63,13 @@ def run_conversation(scenario: dict[str, Any], system: ChatSystem, *, time_limit
                 break
     except Exception as e:  # noqa: BLE001 - 대상 시스템의 어떤 오류든 "실패로 끝남"으로 기록합니다
         record.error = f"{type(e).__name__}: {e}"
+        if isinstance(e, CONNECTION_ERRORS):
+            record.env_failure = "gateway 연결 실패"
     retryable = [e for e in record.events if e.get("type") == "error" and e.get("error", {}).get("retryable")]
-    if retryable and not record.error:
-        # 재시도 가능한 오류(모델 서버·터널 끊김 등)는 모델의 실패가 아니라 실행 환경 문제로 보고,
-        # 하네스 오류로 남겨 이어 돌리기 때 다시 돌립니다
-        record.error = "재시도 가능한 오류: " + str(retryable[-1]["error"].get("message", ""))[:200]
+    if retryable:
+        # gateway는 agent 오류·시간 초과에도 재시도 가능으로 표시하므로 이것만으로는 실행 환경 문제로 보지 않습니다.
+        # "실패로 끝남"으로 남기고, 모델 서버가 죽었는지는 실행기가 확인합니다(eval/protocol.md 2절)
+        record.retryable_event = True
+        if not record.error:
+            record.error = "재시도 가능한 오류: " + str(retryable[-1]["error"].get("message", ""))[:200]
     return record

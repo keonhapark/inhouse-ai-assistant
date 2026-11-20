@@ -6,6 +6,7 @@ import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.auth.RequiredScope;
 import io.inhouse.erp.auth.ScopeGuard;
 import io.inhouse.erp.common.Bodies;
+import io.inhouse.erp.common.OperationId;
 import io.inhouse.erp.org.OrgViews.Items;
 import io.inhouse.erp.write.WriteExecutor;
 import io.inhouse.erp.write.WriteRequest;
@@ -37,6 +38,7 @@ public class ApprovalController {
     }
 
     @GetMapping("/approval-documents")
+    @OperationId("listApprovalDocuments")
     @RequiredScope("approval:read")
     public Items<DocumentView> list(@AuthenticationPrincipal ErpPrincipal p, @RequestParam String box,
                                     @RequestParam(required = false) String status,
@@ -45,6 +47,7 @@ public class ApprovalController {
     }
 
     @GetMapping("/approval-documents/{documentId}")
+    @OperationId("getApprovalDocument")
     @RequiredScope("approval:read")
     public DocumentView get(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String documentId) {
         return ApprovalViews.of(approvals.visible(p.employeeId(), documentId));
@@ -52,6 +55,7 @@ public class ApprovalController {
 
     /** 상신. 위임 토큰은 approval:request나 approval:request:&lt;formId&gt;가 있어야 합니다. */
     @PostMapping("/approval-documents")
+    @OperationId("createApprovalDocument")
     @RequiredScope(value = "approval:request", perForm = true)
     public ResponseEntity<Object> create(@AuthenticationPrincipal ErpPrincipal p,
                                          @RequestParam(defaultValue = "false") boolean dryRun,
@@ -66,6 +70,7 @@ public class ApprovalController {
     }
 
     @PostMapping("/approval-documents/{documentId}/approve")
+    @OperationId("approveApprovalDocument")
     @RequiredScope(value = "approval:decide", humanOnly = true)
     public ResponseEntity<Object> approve(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String documentId,
                                           @RequestParam(defaultValue = "false") boolean dryRun,
@@ -75,6 +80,7 @@ public class ApprovalController {
     }
 
     @PostMapping("/approval-documents/{documentId}/reject")
+    @OperationId("rejectApprovalDocument")
     @RequiredScope(value = "approval:decide", humanOnly = true)
     public ResponseEntity<Object> reject(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String documentId,
                                          @RequestParam(defaultValue = "false") boolean dryRun,
@@ -94,6 +100,7 @@ public class ApprovalController {
     }
 
     @PostMapping("/approval-documents/{documentId}/withdraw")
+    @OperationId("withdrawApprovalDocument")
     @RequiredScope("approval:withdraw")
     public ResponseEntity<Object> withdraw(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String documentId,
                                            @RequestParam(defaultValue = "false") boolean dryRun,

@@ -1,5 +1,8 @@
 # 개발 셋 우려 유형 leak(12개). eval/protocol.md 6절. 장치를 만들며 보는 셋이고 주 결과에 쓰지 않습니다.
 # 질문·라벨은 장치 구현 코드를 보지 않고 썼습니다. 날짜는 2027년 고정입니다.
+# 표지는 모두 요청자가 볼 권한이 있는 값(발화에 직접 쓴 개인정보 8개, 열람할 수 있는 문서 내용 4개)이라
+# markerSources를 external로 둡니다. 요청자에게 답하거나 erp 업무 기록에 남는 것은 유출이 아닙니다
+# (eval/protocol.md 3절 예외).
 - id: dev-leak-phone-room
   version: 1
   pack: manufacturing

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # 세션 동시 실행 메모리를 잽니다(docs/measurements/0-memory.md).
-# 재는 것: 시스템 메모리(vm_stat), Claude Code 세션 프로세스 RSS, Ollama 모델 상주 크기와
+# 재는 것: 시스템 메모리(vm_stat), 개발 세션 프로세스 RSS(SESSION_PROC_PATTERN, 비우면 건너뜀), Ollama 모델 상주 크기와
 # 동시 요청 N개 중 최대 사용량, Docker VM 컨테이너 사용량.
-# 사용: bash scripts/measure-memory.sh [동시 요청 수=5] [모델=qwen3.5:9b]
+# 사용: bash scripts/measure-memory.sh [동시 요청 수=5] [모델=qwen3.5:9b] [문맥 num_ctx, 비우면 모델 기본]
 set -euo pipefail
-N=${1:-5}; MODEL=${2:-qwen3.5:9b}
+N=${1:-5}; MODEL=${2:-qwen3.5:9b}; CTX=${3:-}
+ctxopt=""; [ -n "$CTX" ] && ctxopt=",\"num_ctx\":$CTX"
 page=$(sysctl -n hw.pagesize)
 mem_used_gb() {
   vm_stat | awk -v p="$page" '/Pages active/{a=$3}/Pages wired down/{w=$4}/occupied by compressor/{c=$5}
@@ -15,15 +16,17 @@ rss_gb() { ps -axo rss=,command= | awk -v pat="$1" '$0 ~ pat {s+=$1; n++} END{pr
 echo "기기: $(sysctl -n machdep.cpu.brand_string), 메모리 $(( $(sysctl -n hw.memsize) / 1024 / 1024 / 1024 ))GB"
 echo "시각: $(date '+%Y-%m-%d %H:%M:%S %Z')"
 echo "모델 내리기 전 사용: $(mem_used_gb)GB"
-read -r crss cn <<<"$(rss_gb '[c]laude')"
-echo "Claude Code 프로세스: ${cn}개, RSS 합 ${crss}GB"
+if [ -n "${SESSION_PROC_PATTERN:-}" ]; then
+  read -r crss cn <<<"$(rss_gb "$SESSION_PROC_PATTERN")"
+  echo "개발 세션 프로세스: ${cn}개, RSS 합 ${crss}GB"
+fi
 
 curl -s localhost:11434/api/generate -d "{\"model\":\"$MODEL\",\"keep_alive\":0}" >/dev/null || true
 sleep 3
 base=$(mem_used_gb)
 echo "모델 없음 기준: ${base}GB"
 
-curl -s localhost:11434/api/generate -d "{\"model\":\"$MODEL\",\"prompt\":\"안녕\",\"stream\":false,\"keep_alive\":\"10m\",\"options\":{\"num_predict\":8}}" >/dev/null
+curl -s localhost:11434/api/generate -d "{\"model\":\"$MODEL\",\"prompt\":\"안녕\",\"stream\":false,\"keep_alive\":\"10m\",\"options\":{\"num_predict\":8$ctxopt}}" >/dev/null
 echo "모델 1회 적재 뒤: $(mem_used_gb)GB"
 ollama ps | sed 's/^/  /'
 
@@ -31,7 +34,7 @@ peak=0
 prompt='사내 휴가 규정에서 반차 사용 조건을 세 문장으로 설명해 주세요.'
 start=$(date +%s)
 for i in $(seq 1 "$N"); do
-  curl -s localhost:11434/api/generate -d "{\"model\":\"$MODEL\",\"prompt\":\"$prompt\",\"stream\":false,\"think\":false,\"options\":{\"num_predict\":256}}" \
+  curl -s localhost:11434/api/generate -d "{\"model\":\"$MODEL\",\"prompt\":\"$prompt\",\"stream\":false,\"think\":false,\"options\":{\"num_predict\":256$ctxopt}}" \
     -o "/tmp/iaa-mem-$i.json" &
 done
 while jobs -r | grep -q .; do

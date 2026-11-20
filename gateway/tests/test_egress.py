@@ -78,7 +78,8 @@ def test_external_allowed_agent_sends_and_records_body(client, app, token_for, l
 def test_no_token_means_local_only(client, app, litellm):
     assert client.post("/v1/chat/completions", json={"model": "external", "messages": MSG}).status_code == 403
     assert client.post("/v1/chat/completions", json={"model": "local", "messages": MSG}).status_code == 200
-    assert _audit(app)[-1]["actor"] == {"employeeId": None, "viaDelegationToken": False, "agentId": None}
+    assert _audit(app)[-1]["actor"] == {"employeeId": None, "viaDelegationToken": False, "agentId": None,
+                                        "delegationTokenId": None}
 
 
 def test_token_is_not_forwarded_and_scrubbed_from_body(client, app, token_for, litellm):
@@ -583,3 +584,130 @@ def test_no_fallback_cases(client, app, token_for, litellm, case):
     r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)}, json=body)
     assert len(litellm.requests) == 1                       # 다시 보내지 않음
     assert r.status_code == {"response_format": 502, "unsupported": 400, "local_failure": 502, "ok": 200}[case]
+
+
+# ---------- 비용 상한(#143) ----------
+@pytest.fixture
+def ledger(app):
+    from gateway.budgets import BudgetLedger
+
+    led = BudgetLedger({"period": "month", "agents": {}, "units": {}}, {"team": "div", "div": None},
+                       "Asia/Seoul")
+    app.state.egress.budget = led
+    app.state.egress.unit_of = lambda cid: "team" if cid == "conv-9" else None
+    return led
+
+
+def test_cost_is_added_to_agent_and_units(client, app, token_for, litellm, ledger):
+    _, external_ok = _agent_ids(app)
+    ledger.agent_limits = {external_ok: 1.0}
+    litellm.cost = "0.25"
+    _send(client, token_for(external_ok), "external", "안녕")
+    assert ledger.spent() == {"agents": {external_ok: 0.25}, "units": {"team": 0.25, "div": 0.25}}
+
+
+def test_over_budget_goes_local_from_next_request(client, app, token_for, litellm, ledger):
+    _, external_ok = _agent_ids(app)
+    ledger.unit_limits = {"div": 0.3}
+    litellm.cost = "0.25"
+    t = token_for(external_ok)
+    _send(client, t, "external", "첫째")                    # 0.25 < 0.3: 외부
+    _send(client, t, "external", "둘째")                    # 아직 0.25: 외부, 끝나면 0.5
+    assert [json.loads(q.content)["model"] for q in litellm.requests] == ["external", "external"]
+    r = _send(client, t, "external", PII_TEXT)               # 0.5 ≥ 0.3: 로컬로 내림
+    assert r.status_code == 200 and litellm.last_body()["model"] == "local"
+    assert litellm.last_body()["messages"][0]["content"] == PII_TEXT
+    ev = _llm_events(app)[-1]
+    assert ev["model"]["location"] == "local" and "비용 상한 초과(unit div" in ev["detail"]
+
+
+def test_stream_cost_estimated_from_usage(client, app, token_for, litellm, ledger):
+    from gateway.egress import Caller
+
+    _, external_ok = _agent_ids(app)
+    ledger.agent_limits = {external_ok: 1.0}
+    app.state.egress.prices = {"external": (1e-07, 5e-07)}
+    app.state.egress._egress(
+        Caller("E1", app.state.registry.get(external_ok), "conv-9"),
+        {"name": "external", "location": "external", "externalSent": True, "redactions": 0}, {}, {}, 200,
+        'data: {"choices":[],"usage":{"prompt_tokens":1000,"completion_tokens":200}}\n\ndata: [DONE]\n\n')
+    assert abs(ledger.spent()["agents"][external_ok] - (1000 * 1e-07 + 200 * 5e-07)) < 1e-12
+
+
+def test_budget_off_in_no_guard(client, app, token_for, litellm, ledger):
+    _, external_ok = _agent_ids(app)
+    ledger.agent_limits = {external_ok: 0}
+    _cond(app, "no_guard")
+    _send(client, token_for(external_ok), "external", "x")
+    assert litellm.last_body()["model"] == "external"
+
+
+# ---------- 시간 초과도 운영 외부 전송 기록에(#165) ----------
+def test_timeout_after_send_is_in_egress_log(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    litellm.mode = "timeout"   # 외부·로컬 모두 시간 초과(폴백도 실패)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": PII_MSG})
+    assert r.status_code == 504
+    (rec,) = app.state.audit.egress.read_all()                 # 외부 한 건만(로컬 폴백 시도는 외부 기록 아님)
+    assert rec["status"] == 504 and rec["model"] == "external" and rec["response"] == ""
+    assert rec["requestBeforeRedaction"]["messages"] == PII_MSG
+    assert "[전화번호]" in rec["requestSent"]["messages"][0]["content"]
+
+
+def test_connect_failure_is_not_in_egress_log(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    litellm.mode = "down"
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                json={"model": "external", "messages": MSG})
+    assert app.state.audit.egress.read_all() == []             # 나가지 않은 요청
+# ---------- 감사 이벤트의 위임 토큰 ID(#179) ----------
+def test_delegated_requests_carry_token_jti(client, app, login, issue, staff_no, litellm):
+    import jwt as _jwt
+
+    _, external_ok = _agent_ids(app)
+    issued = issue(login(staff_no), external_ok, "conv-9")
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": issued.token},
+                json={"model": "external", "messages": PII_MSG})                     # llm.redacted + llm.request
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": issued.token},
+                json={"model": "nope", "messages": MSG})                             # 거절도
+    jti = _jwt.decode(issued.token, options={"verify_signature": False})["jti"]
+    evs = [e for e in _audit(app) if e["actor"]["viaDelegationToken"]]
+    assert {e["kind"] for e in evs} >= {"llm.request", "llm.redacted"}
+    assert all(e["actor"]["delegationTokenId"] == jti for e in evs)
+    issued_ev = [e for e in _audit(app) if e["kind"] == "auth.delegation_token_issued"]
+    assert all(e["actor"]["delegationTokenId"] is None for e in issued_ev)  # 발급은 토큰으로 한 일이 아님
+
+
+# ---------- 실제로 간 모델 헤더(#188) ----------
+@pytest.mark.parametrize("case,expect", [
+    ("external", ("external", "external")),
+    ("local", ("local", "local")),
+    ("glossary", ("local", "local")),
+    ("fallback", ("local", "local")),
+    ("budget", ("local", "local")),
+])
+def test_egress_headers_show_actual_route(client, app, token_for, litellm, case, expect):
+    from gateway.budgets import BudgetLedger
+    from gateway.confidential import Glossary
+
+    _, external_ok = _agent_ids(app)
+    model, content = ("local" if case == "local" else "external"), "안녕"
+    if case == "glossary":
+        app.state.egress.glossary = Glossary.from_doc({"terms": [{"term": "원가표", "action": "local_only"}]})
+        content = "원가표 요약"
+    elif case == "fallback":
+        litellm.external_mode = "500"
+    elif case == "budget":
+        app.state.egress.budget = BudgetLedger({"period": "month", "agents": {external_ok: 0}}, {}, "Asia/Seoul")
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": model, "messages": [{"role": "user", "content": content}]})
+    assert r.status_code == 200
+    assert (r.headers["x-egress-model"], r.headers["x-egress-location"]) == expect
+
+
+def test_egress_headers_on_stream(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": MSG, "stream": True})
+    assert r.headers["x-egress-location"] == "external"

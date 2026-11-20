@@ -15,4 +15,4 @@ requires_erp_features:
   - leave
   - rooms
   - doc_access
-stage: 1
+stage: 2

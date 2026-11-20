@@ -38,8 +38,13 @@ public final class PackLoader {
 
         String tz = pack.path("company").path("timezone").asText("Asia/Seoul");
         JsonNode policy = org.path("delegation_policy");
+        int stage = pack.path("stage").asInt(0);
+        if (stage < 1) {
+            throw new IllegalStateException("pack.yaml에 stage(1 이상)가 없습니다: " + dir.toAbsolutePath());
+        }
         return new Pack(
                 pack.path("id").asText(),
+                stage,
                 ZoneId.of(tz),
                 list(org.path("grades"), g -> new Pack.Grade(g.path("id").asText(), g.path("name").asText(),
                         g.path("rank").asInt())),

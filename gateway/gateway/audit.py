@@ -43,14 +43,16 @@ class AuditLog:
 
     def event(self, kind: str, *, employee_id: str | None, agent_id: str | None, via_token: bool,
               result: str, conversation_id: str | None = None, model: dict[str, Any] | None = None,
-              problem_type: str | None = None, detail: str | None = None) -> str:
+              problem_type: str | None = None, detail: str | None = None,
+              delegation_token_id: str | None = None) -> str:
         event_id = "evt_" + uuid.uuid4().hex
         self.events.write({
             "eventId": event_id,
             "occurredAt": now_iso(),
             "source": "gateway",
             "kind": kind,
-            "actor": {"employeeId": employee_id, "viaDelegationToken": via_token, "agentId": agent_id},
+            "actor": {"employeeId": employee_id, "viaDelegationToken": via_token, "agentId": agent_id,
+                      "delegationTokenId": delegation_token_id},
             "conversationId": conversation_id,
             "model": model,
             "result": result,

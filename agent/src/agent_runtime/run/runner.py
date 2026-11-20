@@ -27,7 +27,7 @@ class Runner:
     async def run(self, token: str, conversation_id: str, agent_id: str, message: str, requester: Requester,
                   condition: str = "full") -> dict[str, Any]:
         config = {"configurable": {"thread_id": conversation_id}}
-        problem = self._check(token, conversation_id, agent_id, requester)
+        problem, token_id = self._check(token, conversation_id, agent_id, requester)
         if problem:
             return _blocked(conversation_id, agent_id, problem)
         snapshot = await self.graph.aget_state(config)
@@ -35,7 +35,7 @@ class Runner:
             return self._view(conversation_id, agent_id, snapshot)
         agent = self.registry.get(agent_id)
         try:
-            ctx = await self._context(token, agent, requester)
+            ctx = await self._context(token, agent, requester, token_id)
         except Exception as e:  # noqa: BLE001 - MCP 서버에 닿지 못하면 실패 상태로 돌려줍니다
             return _failed(conversation_id, agent_id, f"도구 목록을 가져오지 못했습니다({type(e).__name__})")
         prior = prepare_history((snapshot.values or {}).get("messages", []))
@@ -58,12 +58,12 @@ class Runner:
             raise Conflict("기다리는 승인이 아닙니다")
         agent_id = values["agentId"]
         requester = Requester(values["requesterId"], "", "", ())
-        problem = self._check(token, conversation_id, agent_id, requester, check_callable=False)
+        problem, token_id = self._check(token, conversation_id, agent_id, requester, check_callable=False)
         if problem:
             return _blocked(conversation_id, agent_id, problem)
         agent = self.registry.get(agent_id)
         try:
-            ctx = await self._context(token, agent, None)
+            ctx = await self._context(token, agent, None, token_id)
         except Exception as e:  # noqa: BLE001
             return _failed(conversation_id, agent_id, f"도구 목록을 가져오지 못했습니다({type(e).__name__})")
         try:
@@ -73,25 +73,27 @@ class Runner:
         return self._view(conversation_id, agent_id, await self.graph.aget_state(config))
 
     def _check(self, token: str, conversation_id: str, agent_id: str, requester: Requester,
-               check_callable: bool = True) -> str | None:
+               check_callable: bool = True) -> tuple[str | None, str | None]:
+        """(막는 이유, 위임 토큰 jti)를 돌려줍니다."""
         if not self.registry.has(agent_id):
-            return f"모르는 에이전트입니다: {agent_id}"
+            return f"모르는 에이전트입니다: {agent_id}", None
         if self.verifier is None:
-            return None
+            return None, None
         try:
             d = self.verifier.verify(token)
         except TokenError as e:
-            return str(e)
+            return str(e), None
         if d.agent_id != agent_id or d.employee_id != requester.employee_id or d.conversation_id != conversation_id:
-            return "위임 토큰의 에이전트·요청자·대화가 요청과 다릅니다"
-        return None
+            return "위임 토큰의 에이전트·요청자·대화가 요청과 다릅니다", None
+        return None, d.jti
 
-    async def _context(self, token: str, agent: Agent, requester: Requester | None) -> RunContext:
+    async def _context(self, token: str, agent: Agent, requester: Requester | None,
+                       token_id: str | None = None) -> RunContext:
         # 요청자가 부를 수 없는 에이전트(fallback 포함)는 도구 없이 안내만 합니다.
         if requester is not None and not agent.callable_for(requester):
-            return RunContext(token=token, agent=agent, tools=[])
+            return RunContext(token=token, agent=agent, tools=[], token_id=token_id)
         tools = [t for t in await self.caller.list_tools(token) if t.name in agent.tools]
-        return RunContext(token=token, agent=agent, tools=tools)
+        return RunContext(token=token, agent=agent, tools=tools, token_id=token_id)
 
     def _view(self, conversation_id: str, agent_id: str, snapshot: Any) -> dict[str, Any]:
         v = snapshot.values or {}

@@ -36,6 +36,7 @@
       "properties": {
         "employeeId": {"type": ["string", "null"], "description": "요청한 직원. 시스템 동작이면 null"},
         "viaDelegationToken": {"type": "boolean"},
+        "delegationTokenId": {"type": ["string", "null"], "description": "위임 토큰으로 한 일이면 그 토큰의 jti(gateway 발급 이벤트의 토큰과 잇는 값)"},
         "agentId": {"type": ["string", "null"]}
       }
     },

@@ -27,6 +27,7 @@ def run_once(scenario: dict[str, Any], system: ChatSystem, erp: ErpClient, *,
             got = system.collect(record.conversation_id)
             record.audit_events = got.audit_events
             record.external_requests = got.external_requests
+            record.external_models = got.external_models
             record.logs = got.logs
             record.cost_usd = got.cost_usd
         except Exception as e:  # noqa: BLE001

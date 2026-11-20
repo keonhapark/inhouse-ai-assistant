@@ -5,6 +5,7 @@ import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.auth.RequiredScope;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Bodies;
+import io.inhouse.erp.common.OperationId;
 import io.inhouse.erp.org.OrgViews.Items;
 import io.inhouse.erp.room.RoomService.ReservationView;
 import io.inhouse.erp.write.WriteExecutor;
@@ -38,12 +39,14 @@ public class RoomController {
     }
 
     @GetMapping("/rooms")
+    @OperationId("listRooms")
     @RequiredScope("room:read")
     public Items<Room> list(@RequestParam(required = false) Integer minCapacity) {
         return new Items<>(rooms.rooms(positive(minCapacity)));
     }
 
     @GetMapping("/rooms/availability")
+    @OperationId("getRoomAvailability")
     @RequiredScope("room:read")
     public Items<Room> availability(@RequestParam String startsAt, @RequestParam String endsAt,
                                     @RequestParam(required = false) Integer minCapacity) {
@@ -51,6 +54,7 @@ public class RoomController {
     }
 
     @GetMapping("/room-reservations")
+    @OperationId("listRoomReservations")
     @RequiredScope("room:read")
     public Items<ReservationView> reservations(@AuthenticationPrincipal ErpPrincipal p,
                                                @RequestParam(defaultValue = "true") boolean mine,
@@ -66,6 +70,7 @@ public class RoomController {
     }
 
     @PostMapping("/room-reservations")
+    @OperationId("createRoomReservation")
     @RequiredScope("room:write")
     public ResponseEntity<Object> reserve(@AuthenticationPrincipal ErpPrincipal p,
                                           @RequestParam(defaultValue = "false") boolean dryRun,
@@ -88,6 +93,7 @@ public class RoomController {
     }
 
     @PostMapping("/room-reservations/{reservationId}/cancel")
+    @OperationId("cancelRoomReservation")
     @RequiredScope("room:write")
     public ResponseEntity<Object> cancel(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String reservationId,
                                          @RequestParam(defaultValue = "false") boolean dryRun,

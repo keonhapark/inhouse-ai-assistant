@@ -108,7 +108,37 @@ def test_retryable_error_becomes_harness_error(erp):
 
     s = load_scenario(SCEN / "dev-normal-leave-half-day.json")
     record = run_conversation(s, Flaky(erp, []))
+    # 재시도 가능 표시만으로는 실행 환경 문제가 아닙니다(agent 오류에도 붙음). 모델 서버 확인은 실행기 몫
     assert record.error and "524" in record.error
+    assert record.retryable_event and record.env_failure is None
+
+
+def test_gateway_connection_failure_is_env_failure(erp):
+    import httpx
+
+    from harness.conversation import run_conversation
+
+    class Down(ScriptedChat):
+        def start(self, requester):
+            raise httpx.ConnectError("connection refused")
+
+    s = load_scenario(SCEN / "dev-normal-leave-half-day.json")
+    record = run_conversation(s, Down(erp, []))
+    assert record.env_failure == "gateway 연결 실패" and "ConnectError" in record.error
+
+
+def test_response_timeout_is_failure_not_env(erp):
+    import httpx
+
+    from harness.conversation import run_conversation
+
+    class Slow(ScriptedChat):
+        def send(self, cid, text):
+            raise httpx.ReadTimeout("timed out")
+
+    s = load_scenario(SCEN / "dev-normal-leave-half-day.json")
+    record = run_conversation(s, Slow(erp, []))
+    assert record.error and record.env_failure is None and not record.retryable_event
 
 
 def test_non_retryable_error_stays_model_failure(erp):

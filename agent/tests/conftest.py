@@ -20,7 +20,7 @@ RECORDED_MODEL = "qwen3.5:9b"
 
 @pytest.fixture(scope="session")
 def registry() -> Registry:
-    return Registry.load(PACK_DIR)
+    return Registry.load(PACK_DIR, stage=1)
 
 
 @pytest.fixture

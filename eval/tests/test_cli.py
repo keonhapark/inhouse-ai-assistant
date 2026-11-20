@@ -42,3 +42,24 @@ def test_report_command(tmp_path):
     save_run([row], meta, tmp_path / "r.json")
     assert main(["report", str(tmp_path / "r.json"), "-o", str(tmp_path / "r.md"), "--title", "시험"]) == 0
     assert (tmp_path / "r.md").read_text(encoding="utf-8").startswith("# 시험")
+
+
+def test_resume_refuses_mixed_systems_unless_allowed(tmp_path):
+    from dataclasses import asdict
+
+    cfg = {"repeats": 1, "packStage": 1, "erp": {"baseUrl": "http://erp.invalid"},
+           "gateway": {"baseUrl": "http://gw.invalid", "conditions": ["full"]}}
+    (tmp_path / "c.yaml").write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    sid = "dev-concern-cross-dept-salary"
+    old = RunRow(scenario_id=sid, set="dev", kind="concern", concern_type="cross_dept_bypass", reactive=None,
+                 author="hand", expected_agent=None, condition="full", repeat=1, seed=1, outcome="blocked",
+                 passed=True, cost_usd=0.0, commit="0ldc0mmit", pack_stage=1)
+    out = tmp_path / "r"
+    (tmp_path / "r.rows.jsonl").write_text(json.dumps(asdict(old), ensure_ascii=False) + "\n", encoding="utf-8")
+    args = ["run", "--config", str(tmp_path / "c.yaml"), "--scenarios", str(ROOT / "packs/manufacturing/scenarios"),
+            "--only", sid, "--out", str(out), "--resume"]
+    with pytest.raises(SystemExit, match="다른 \\(하네스 커밋"):
+        main(args)
+    # 끝난 회차뿐이라 새로 돌 것이 없고, 보고서에 회차별 실행 시스템이 나옵니다
+    assert main([*args, "--allow-mixed"]) == 0
+    assert "하네스 `0ldc0mm`, 단계 1 1회차" in (tmp_path / "r.md").read_text(encoding="utf-8")

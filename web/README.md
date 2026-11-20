@@ -88,7 +88,7 @@ GIF는 화면이 바뀌지 않는 구간(로컬 모델 응답을 기다리는 20
 |---|---|---|---|
 | 답 조각(`delta`), 도구 기록(`tool_call`) | 보냄 | 보내지 않음(답이 `message` 한 번에 옴) | 답이 한 번에 나타남. 스트리밍 커서와 "도구 실행" 줄이 없음 |
 | 쓴 모델(`model`) | `message`·`done`에 붙임 | 붙이지 않음 | "로컬에서 처리" 배지가 나오지 않음 |
-| 실행 승인 카드 | 회의실 예약에서 나옴 | 인사 에이전트의 휴가 신청은 `reversible_write`·`auto_with_undo` 정책이라 카드 없이 실행되고 되돌리기가 붙음 | 정책대로 동작 |
+| 실행 승인 카드 | 결재 회수(`irreversible`)에서 나옴. 회의실 예약(`reversible_write`)은 카드 없이 실행하고 되돌리기를 붙임 | 같은 위험 등급 정책(결정 0003). 휴가 신청도 `reversible_write`·`auto_with_undo`라 카드 없이 실행되고 되돌리기가 붙음 | 정책대로 동작 |
 | `toolLabel` | 있음 | 없음 | 카드 머리에 도구 ID를 보여 줌 |
 | `blocked.code` | 이유별 | `policy_denied` 하나 | 문구만 보여 주므로 영향 없음 |
 | 결재 문서 `fields` | 한국어 키 | 팩 `forms.yaml`의 키(`leave_type`, `start_date`)와 값(`half_pm`) | 값은 양식 스키마의 `x-labels`로 바꿔 보여 줌("오후 반차"). 필드 이름은 스키마에 `title`이 없어 키 그대로 |
@@ -103,13 +103,13 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 # E0006으로 로그인 → 승인함 → 승인
 ```
 
-2026-11-20 확인 때는 compose에 맞지 않는 곳이 두 군데 있어 로컬 덮어쓰기 파일로 우회했습니다. rag가 빈 `RAG_EXTRA_DOCS`·`RAG_MARKERS_FILE`을 거절해 두 변수를 뺐고, agent가 모델 별칭 대신 `qwen3.5:9b`를 보내 gateway가 422로 거절해 `AGENT_LLM_MODEL=local`을 넣었습니다. 두 가지는 해당 모듈에서 고칠 일입니다.
+2026-11-20 확인 때는 compose에 맞지 않는 곳이 두 군데 있어 로컬 덮어쓰기 파일로 우회했습니다. rag가 빈 `RAG_EXTRA_DOCS`·`RAG_MARKERS_FILE`을 거절해 두 변수를 뺐고, agent가 모델 별칭 대신 `qwen3.5:9b`를 보내 gateway가 422로 거절해 `AGENT_LLM_MODEL=local`을 넣었습니다. 두 가지는 이후 rag(#97)와 agent(#96)에서 고쳐졌습니다.
 
 ## 화면
 
 모의 서버(`npm run dev:mock`)로 실행해 찍은 화면입니다.
 
-| 미리보기 카드 | 실행·되돌리기·차단 |
+| 미리보기 카드(결재 회수, 되돌릴 수 없음) | 회의실 예약·되돌리기·차단 |
 |---|---|
 | ![미리보기](docs/images/chat-preview-light.png) | ![행동](docs/images/chat-action-light.png) |
 

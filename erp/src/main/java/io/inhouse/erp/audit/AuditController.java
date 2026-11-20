@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.auth.RequiredScope;
 import io.inhouse.erp.common.ApiException;
+import io.inhouse.erp.common.OperationId;
 import io.inhouse.erp.org.OrgService;
 import io.inhouse.erp.org.OrgViews.Items;
 import java.time.OffsetDateTime;
@@ -27,6 +28,7 @@ public class AuditController {
     }
 
     @GetMapping("/audit-events")
+    @OperationId("listAuditEvents")
     @RequiredScope(value = "audit:read", humanOnly = true)
     public Items<JsonNode> list(@AuthenticationPrincipal ErpPrincipal p,
                                 @RequestParam(required = false) String actorId,

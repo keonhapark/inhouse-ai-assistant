@@ -2,12 +2,13 @@ package io.inhouse.erp.delegation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.inhouse.erp.approval.ApprovalDocumentRepository;
-import io.inhouse.erp.approval.ApprovalViews;
 import io.inhouse.erp.approval.ApprovalViews.DocumentView;
+import io.inhouse.erp.approval.ApprovalViews;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.auth.RequiredScope;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Bodies;
+import io.inhouse.erp.common.OperationId;
 import io.inhouse.erp.delegation.DelegationService.DelegationView;
 import io.inhouse.erp.org.OrgViews.Items;
 import io.inhouse.erp.write.WriteExecutor;
@@ -45,6 +46,7 @@ public class DelegationController {
     }
 
     @GetMapping("/delegations")
+    @OperationId("listDelegations")
     @RequiredScope("delegation:read")
     public Items<DelegationView> list(@AuthenticationPrincipal ErpPrincipal p, @RequestParam String role,
                                       @RequestParam(required = false) String activeAt) {
@@ -52,6 +54,7 @@ public class DelegationController {
     }
 
     @GetMapping("/delegations/{delegationId}")
+    @OperationId("getDelegation")
     @RequiredScope("delegation:read")
     public DelegationView get(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String delegationId) {
         return delegations.view(delegations.visible(p.employeeId(), delegationId));
@@ -59,6 +62,7 @@ public class DelegationController {
 
     /** 이 위임으로 대리인이 결재한 문서(후열 확인용). */
     @GetMapping("/delegations/{delegationId}/acted-documents")
+    @OperationId("listDelegationActedDocuments")
     @RequiredScope("delegation:read")
     @Transactional(readOnly = true)
     public Items<DocumentView> acted(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String delegationId) {
@@ -67,6 +71,7 @@ public class DelegationController {
     }
 
     @PostMapping("/delegations")
+    @OperationId("createDelegation")
     @RequiredScope("delegation:write")
     public ResponseEntity<Object> create(@AuthenticationPrincipal ErpPrincipal p,
                                          @RequestParam(defaultValue = "false") boolean dryRun,
@@ -78,6 +83,7 @@ public class DelegationController {
     }
 
     @PostMapping("/delegations/{delegationId}/revoke")
+    @OperationId("revokeDelegation")
     @RequiredScope("delegation:write")
     public ResponseEntity<Object> revoke(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String delegationId,
                                          @RequestParam(defaultValue = "false") boolean dryRun,

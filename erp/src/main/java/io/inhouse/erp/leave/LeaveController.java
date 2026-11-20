@@ -3,6 +3,7 @@ package io.inhouse.erp.leave;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.auth.RequiredScope;
 import io.inhouse.erp.common.ApiException;
+import io.inhouse.erp.common.OperationId;
 import io.inhouse.erp.org.OrgService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +23,7 @@ public class LeaveController {
 
     /** 본인 잔여. 다른 사람 것은 인사 담당만 봅니다. */
     @GetMapping("/leave/balance")
+    @OperationId("getLeaveBalance")
     @RequiredScope("leave:read")
     public LeaveService.BalanceView balance(@AuthenticationPrincipal ErpPrincipal p,
                                             @RequestParam(required = false) String employeeId) {

@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -33,11 +35,14 @@ import org.springframework.transaction.support.TransactionTemplate;
  *   <li>dryRun: 같은 명령을 트랜잭션 안에서 돌리고 되돌립니다. 그래서 검사 규칙이 실행과 같고 상태는 바뀌지 않습니다.</li>
  *   <li>실행: Idempotency-Key가 필요합니다. 같은 사람·같은 키면 24시간 동안 처음 응답을 그대로 돌려주고,
  *       본문이 다르면 422입니다. 명령, 행동 기록, 감사 이벤트, 멱등 기록을 한 트랜잭션에 씁니다.</li>
- *   <li>거절·충돌은 업무 트랜잭션이 되돌려지므로 감사 이벤트(erp.denied)만 따로 남깁니다.</li>
+ *   <li>거절·충돌은 업무 트랜잭션이 되돌려지므로 감사 이벤트(erp.denied)만 따로 남깁니다. 이보다 앞에서 난 거절
+ *       (scope, 본문 검사, Idempotency-Key 없음)은 {@link io.inhouse.erp.audit.DeniedRequestAuditor}가 남깁니다.</li>
  * </ul>
  */
 @Service
 public class WriteExecutor {
+
+    private static final Logger log = LoggerFactory.getLogger(WriteExecutor.class);
 
     static final Duration KEY_TTL = Duration.ofHours(24);
 
@@ -157,10 +162,16 @@ public class WriteExecutor {
         return body;
     }
 
+    /** 감사 저장이 실패해도 원래 거절(403·409 등)을 그대로 돌려줍니다. 500으로 바꾸지 않습니다. */
     private void auditDenied(WriteRequest req, ApiException e) {
-        audit.recordSeparately(req.principal(), "erp.denied", req.operation(),
-                e.status() == 409 ? "conflict" : "denied", new AuditService.Extra(null, null, null, req.undoOf()),
-                e.code(), e.detail());
+        try {
+            audit.recordSeparately(req.principal(), "erp.denied", req.operation(),
+                    e.status() == 409 ? "conflict" : "denied", new AuditService.Extra(null, null, null, req.undoOf()),
+                    e.code(), e.detail());
+            e.markAudited();
+        } catch (RuntimeException ex) {
+            log.error("거절 감사 이벤트를 남기지 못했습니다: {} {}", req.operation(), e.code(), ex);
+        }
     }
 
     private Optional<ResponseEntity<Object>> replay(IdempotencyRecord.Key recordKey, String hash) {
