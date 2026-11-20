@@ -60,6 +60,6 @@
 ## 6. 각 모듈이 갖출 것
 
 - 시험 명령: Python 모듈은 `<모듈>/pyproject.toml`과 `uv run pytest`(CI가 `uv sync --frozen`을 쓰므로 `uv.lock` 커밋), erp는 `erp/gradlew test`, web은 `npm ci`·`npm run build`(`lint`·`test` 스크립트가 있으면 같이 돎)
-- erp는 `erp/ci/start.sh`를 둡니다. 8040 포트에 erp를 띄우고 건강해질 때까지 기다리는 스크립트입니다. CI가 이것으로 `contracts/tests/test_erp_behavior.py`를 실제 erp에 돌립니다.
+- erp는 `erp/ci/start.sh`를 둡니다. 8040 포트에 erp를 띄우고 건강해질 때까지 기다리는 스크립트입니다. CI가 이것으로 `contracts/tests/test_erp_behavior.py`를 실제 erp에 돌립니다. 기능을 나눠 만드는 동안은 `erp/ci/behavior-tests.txt`(시험 이름 한 줄에 하나)에 구현한 시험만 적어 그것만 돌리고, 마지막 erp 이슈에서 이 파일을 지워 전체를 돌립니다.
 - 실행 이미지: `<모듈>/Dockerfile`과 건강 확인(`GET /health`, erp는 `GET /api/v1/health`). `infra/compose.yaml`의 `full` 프로필이 이것을 씁니다.
 - 감사·추적 이벤트는 `contracts/events/`의 형식으로 JSON Lines에 씁니다.
