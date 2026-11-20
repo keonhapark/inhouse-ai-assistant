@@ -193,3 +193,18 @@ def test_pack_erp_roles_are_checked(tmp_path) -> None:
     assert any("erp_roles.auditor" in e for e in check_pack(pack))
     org.write_text(re.sub(r"(?m)^erp_roles:\n(  .*\n)+", "", text), encoding="utf-8")
     assert check_pack(pack) == []          # 항목이 없으면 기본값(hr_staff, auditor)
+
+
+def test_pack_amount_product_of_is_checked(tmp_path) -> None:
+    """양식 선택 항목 amount_product_of: 없는 필드나 정수가 아닌 필드를 가리키면 잡습니다."""
+    import shutil
+
+    from tools.check_packs import check_pack
+
+    pack = tmp_path / "manufacturing"
+    shutil.copytree(PACKS / "manufacturing", pack)
+    forms = pack / "forms.yaml"
+    text = forms.read_text(encoding="utf-8")
+    forms.write_text(text.replace("amount_product_of: [quantity, unit_price]", "amount_product_of: [quantity, reason]"),
+                     encoding="utf-8")
+    assert any("amount_product_of 'reason'" in e for e in check_pack(pack))

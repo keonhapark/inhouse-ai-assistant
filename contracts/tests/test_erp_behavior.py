@@ -694,3 +694,20 @@ def test_ticket_delegation_token_scope(api: Api, org: Org) -> None:
                 json={"status": "in_progress", "version": 0})
     assert r.status_code == 403
     assert problem_code(r) == "scope-missing"
+
+
+# ---------- 금액 대조 ----------
+
+def test_purchase_total_must_equal_quantity_times_price(api: Api, org: Org) -> None:
+    emp = org.members("procurement")[2]
+    fields = {"item_code": "BRG-6204", "quantity": 1000, "unit_price": 100000, "total_amount": 1, "reason": "증산"}
+    for params in ({"dryRun": "true"}, {}):
+        r = api.post("/approval-documents", emp, params=params, json={"formId": "purchase", "fields": fields})
+        assert r.status_code == 422, r.text
+        assert problem_code(r) == "form-validation-failed"
+        assert any(e["field"] == "total_amount" for e in r.json().get("errors", []))
+    ok = {**fields, "total_amount": 100_000_000}
+    r = api.post("/approval-documents", emp, json={"formId": "purchase", "fields": ok})
+    assert r.status_code == 201, r.text
+    # 500만 원을 넘으므로 팀장 + 본부장 두 단계입니다
+    assert len(r.json()["resource"]["steps"]) == 2

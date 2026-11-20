@@ -1,4 +1,3 @@
-# 계약 변경 요청
 
 모듈 세션이 계약(`contracts/`)이나 팩(`packs/`)을 바꿔야 할 때 한 줄 적고 `contract` 라벨 이슈를 엽니다. 프로젝트 리드가 `contract/*` PR로 반영하고 결과를 적습니다.
 
@@ -28,3 +27,4 @@
 | 2026-11-20 | erp | #228 | erp.yaml `ProblemCode`에 `internal`, 머리말에 405(`validation`)·500(`internal`) 한 줄 | #166 구현이 내는 응답이 계약에 없음 | 직접 PR |
 | 2026-11-21 | erp | #238 | erp.yaml IT 티켓(`/tickets` 목록·상세·작성·댓글·상태 변경), scope `ticket:read·write·manage`, tools.json `ticket_list·get·create·comment`(stage 2), 팩 `erp_roles.ticket_handler`·`fixtures/tickets.json`(선택) | #99 IT운영 에이전트 | 직접 PR |
 | 2026-11-21 | gateway | #263 | gateway LLM 출구 이미지 입력: `image_url`(jpeg·png data URL, 한 장 5MB)은 `local-vision`으로만, 413 `payload-too-large`·415 `unsupported-media-type` | #261 영수증 읽기(#100) | contract/gateway-vision PR |
+| 2026-11-21 | erp | #252 | 팩 forms 선택 항목 `amount_product_of`(금액 필드 = 필드들의 곱, 다르면 422 form-validation-failed), 제조 팩 구매 양식 `[quantity, unit_price]` | 합계를 틀리게 적어 고액 확인·결재선을 비켜 감 | 직접 PR |

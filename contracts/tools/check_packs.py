@@ -135,6 +135,13 @@ def check_pack(pack_dir: Path) -> list[str]:
             errors.append(f"{p}forms.yaml {f['id']}: 금액 조건이 있는데 amount_field가 없습니다")
         if "amount_field" in f and f["amount_field"] not in f["fields"].get("properties", {}):
             errors.append(f"{p}forms.yaml {f['id']}: amount_field '{f['amount_field']}'가 fields에 없습니다")
+        if "amount_product_of" in f:
+            props = f["fields"].get("properties", {})
+            if "amount_field" not in f:
+                errors.append(f"{p}forms.yaml {f['id']}: amount_product_of가 있는데 amount_field가 없습니다")
+            for name in f["amount_product_of"]:
+                if props.get(name, {}).get("type") != "integer" or name not in f["fields"].get("required", []):
+                    errors.append(f"{p}forms.yaml {f['id']}: amount_product_of '{name}'는 필수 정수 필드여야 합니다")
 
     doc_ids = [d["id"] for d in docs["documents"]]
     for dup, n in Counter(doc_ids).items():

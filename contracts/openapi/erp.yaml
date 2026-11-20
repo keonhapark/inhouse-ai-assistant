@@ -248,7 +248,7 @@ paths:
                 title: {type: string, maxLength: 100}
                 fields:
                   type: object
-                  description: 양식의 fields 스키마를 따릅니다. 어기면 422 form-validation-failed
+                  description: 양식의 fields 스키마를 따릅니다. 어기면 422 form-validation-failed. 양식에 `amount_product_of`가 있으면 금액 필드가 그 필드들의 곱과 같아야 합니다(다르면 같은 422)
       responses:
         "200": {$ref: "#/components/responses/WritePreview"}
         "201": {$ref: "#/components/responses/ActionResult"}

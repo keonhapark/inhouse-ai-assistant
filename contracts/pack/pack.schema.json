@@ -254,6 +254,13 @@
               "stage": {"type": "integer", "minimum": 1},
               "fields": {"type": "object", "description": "JSON Schema"},
               "amount_field": {"type": "string"},
+              "amount_product_of": {
+                "type": "array",
+                "minItems": 2,
+                "items": {"type": "string"},
+                "uniqueItems": true,
+                "description": "amount_field 값이 이 정수 필드들의 곱과 같아야 합니다(예: [quantity, unit_price]). 다르면 erp가 422 form-validation-failed"
+              },
               "effects": {
                 "type": "object",
                 "additionalProperties": false,

@@ -481,6 +481,14 @@ class State(TicketsMixin):
                 for e in Draft202012Validator(form["fields"]).iter_errors(fields)]
         if errs:
             raise ProblemError(422, "form-validation-failed", "양식 입력이 올바르지 않습니다", errs)
+        product_of = form.get("amount_product_of")
+        if product_of:
+            want = 1
+            for name in product_of:
+                want *= fields[name]
+            if fields[form["amount_field"]] != want:
+                raise ProblemError(422, "form-validation-failed", f"{form['amount_field']}가 {' × '.join(product_of)}"
+                                   f"({want})와 다릅니다", [{"field": form["amount_field"], "message": "mismatch"}])
         requester = self.employee(p.employee_id)
         amount = fields.get(form["amount_field"]) if form.get("amount_field") else None
         days = 0.0
