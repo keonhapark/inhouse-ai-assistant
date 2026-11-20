@@ -35,7 +35,7 @@ def _audit(app) -> list[dict]:
 
 def test_litellm_config_aliases_have_location():
     locs = load_model_locations(ROOT / "gateway/litellm/config.yaml")
-    assert locs == {"local": "local", "local-embed": "local", "external": "external"}
+    assert locs == {"local": "local", "local-gguf": "local", "local-embed": "local", "external": "external"}
 
 
 def test_local_only_agent_cannot_use_external(client, app, token_for, litellm):
@@ -724,3 +724,19 @@ def test_operational_egress_log_keeps_alias_and_provider_model(client, app, toke
     rec = app.state.audit.egress.read_all()[-1]
     assert rec["model"] == "external" and rec["providerModel"] == "anthropic/claude-haiku-5-5"
     assert r.headers["x-egress-model"] == "external"            # 헤더는 별칭(#188)
+
+
+# ---------- 구조화 출력이 되는 로컬 별칭(#205) ----------
+def test_local_gguf_accepts_response_format(client, app, litellm):
+    from gateway.egress import load_model_info, load_provider_models
+
+    cfg = ROOT / "gateway/litellm/config.yaml"
+    assert load_model_info(cfg)["local-gguf"]["supports_response_format"] is True
+    assert load_provider_models(cfg)["local-gguf"] == "ollama_chat/qwen3.5:9b-q4_K_M"
+    assert app.state.egress.local_alias == "local"             # 폴백·로컬 내림은 그대로 local
+    rf = {"type": "json_schema", "json_schema": {"name": "r", "schema": {"type": "object"}}}
+    r = client.post("/v1/chat/completions", json={"model": "local-gguf", "messages": MSG, "response_format": rf})
+    assert r.status_code == 200 and litellm.last_body()["response_format"] == rf
+    assert r.headers["x-egress-model"] == "local-gguf" and r.headers["x-egress-location"] == "local"
+    r = client.post("/v1/chat/completions", json={"model": "local", "messages": MSG, "response_format": rf})
+    assert r.status_code == 400
