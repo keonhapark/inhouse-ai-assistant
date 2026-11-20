@@ -1,6 +1,6 @@
 # web
 
-직원 채팅과 팀장 승인함 화면입니다(승인함은 준비 중). React, TypeScript, Vite로 만들고, gateway(`contracts/openapi/gateway.yaml`)만 부릅니다. 디자인 기준은 `DESIGN.md`입니다.
+직원 채팅과 팀장 승인함 화면입니다. React, TypeScript, Vite로 만들고, gateway(`contracts/openapi/gateway.yaml`)만 부릅니다. 디자인 기준은 `DESIGN.md`입니다.
 
 ## 실행
 
@@ -31,6 +31,7 @@ npm run gen:api  # 계약이 바뀌면 src/api/schema.d.ts를 다시 만듭니�
 | `src/styles/tokens.css` | DESIGN.md 토큰(라이트·다크) |
 | `src/components/` | 기본 부품(버튼, 배지, 카드) |
 | `src/pages/` | 로그인, 상단바, 디자인 부품(`/design`) |
+| `src/inbox/` | 팀장 승인함(탭 4개, 결재선, 승인·반려)과 대결 설정(대리인 찾기, 양식 범위, 미리보기 → 등록, 해지) |
 | `src/chat/` | 직원 채팅. SSE 읽기(`sse.ts`), ChatEvent를 화면 상태로 바꾸는 리듀서(`thread.ts`), 미리보기·행동·근거 부품 |
 | `src/mocks/` | gateway 계약 모의 서버(MSW)와 지어낸 직원 데이터 |
 | `Dockerfile`, `nginx/` | 정적 파일과 `/api` 프록시, `GET /health` |
@@ -62,6 +63,13 @@ docker run -p 8600:80 -e GATEWAY_URL=http://host.docker.internal:8610 iaa-web
 
 `seq`가 이미 반영한 값 이하이면 버립니다. 대화를 다시 열면 `GET /conversations/{id}`의 `events`를 같은 리듀서로 다시 그립니다.
 
+## 승인함이 계약을 쓰는 방법
+
+- 승인·반려는 화면이 본 문서 `version`을 보냅니다. 409(`version-conflict`)면 오류 문구를 보여 주고 문서를 다시 불러옵니다.
+- `Idempotency-Key`는 결정·버전·의견이 모두 같은 재시도에만 다시 씁니다. 내용이 다른데 키가 같으면 erp가 `idempotency-key-reused`로 거절하기 때문입니다.
+- 대결 등록은 `dryRun=true` 미리보기를 먼저 받고, 등록에는 미리보기를 만든 요청 본문을 그대로 보냅니다. 미리보기 뒤 입력을 바꾸면 미리보기를 지웁니다.
+- 결재선 이름은 gateway가 붙인 `steps[].approverName`·`actedByName`을 쓰고, 없으면 직원 ID를 보여 줍니다.
+
 ## 화면
 
 모의 서버(`npm run dev:mock`)로 실행해 찍은 화면입니다.
@@ -73,6 +81,10 @@ docker run -p 8600:80 -e GATEWAY_URL=http://host.docker.internal:8610 iaa-web
 | 근거와 로컬 처리 | 다크 모드 |
 |---|---|
 | ![근거](docs/images/chat-citations-light.png) | ![다크](docs/images/chat-preview-dark.png) |
+
+| 승인함과 대결 설정 | 다크 모드 |
+|---|---|
+| ![승인함](docs/images/inbox-light.png) | ![승인함 다크](docs/images/inbox-dark.png) |
 
 | 로그인 오류 | 디자인 부품 |
 |---|---|
