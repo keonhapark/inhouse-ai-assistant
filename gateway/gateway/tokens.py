@@ -71,6 +71,11 @@ class DelegationTokenIssuer:
     def jwks(self) -> dict[str, Any]:
         return {"keys": [{**self._jwk, "kid": self.kid, "use": "sig", "alg": "ES256"}]}
 
+    def verify(self, token: str) -> dict[str, Any]:
+        """이 gateway가 서명한 위임 토큰인지, 만료되지 않았는지 봅니다. 틀리면 jwt.PyJWTError를 냅니다."""
+        return jwt.decode(token, self._key.public_key(), algorithms=["ES256"], issuer="gateway",
+                          options={"verify_aud": False, "require": ["exp", "iat", "sub", "agt", "cid"]})
+
     def issue(self, requester: Requester, agent: AgentEntry, conversation_id: str,
               now: int | None = None) -> IssuedToken:
         iat = int(time.time()) if now is None else now

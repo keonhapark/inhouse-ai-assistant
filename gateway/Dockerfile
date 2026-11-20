@@ -5,6 +5,7 @@ WORKDIR /repo/gateway
 COPY gateway/pyproject.toml gateway/uv.lock ./
 RUN uv sync --frozen --no-dev
 COPY gateway/gateway ./gateway
+COPY gateway/litellm ./litellm
 COPY contracts/mcp /repo/contracts/mcp
 COPY contracts/auth /repo/contracts/auth
 COPY packs/ /repo/packs/

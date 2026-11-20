@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 import httpx
@@ -13,8 +14,11 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 
 from gateway import redact
+from gateway.alerts import Alerter
+from gateway.audit import AuditLog
 from gateway.config import Settings
 from gateway.delegation import DelegationService
+from gateway.egress import Egress, load_model_locations
 from gateway.erp_client import ErpClient
 from gateway.problems import ProblemError, problem_response
 from gateway.registry import Registry
@@ -43,17 +47,25 @@ def _relay(r: httpx.Response) -> Response:
 
 
 def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBaseTransport | None = None,
-               issuer: DelegationTokenIssuer | None = None) -> FastAPI:
+               issuer: DelegationTokenIssuer | None = None, llm_transport: httpx.AsyncBaseTransport | None = None,
+               alert_transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     redact.install()
     registry = Registry.load(settings.pack_dir, settings.contracts_dir)
     issuer = issuer or _issuer(settings)
     erp = ErpClient(settings.erp_base_url, transport=erp_transport)
+    audit = AuditLog(settings.audit_dir)
+    alerter = Alerter(settings.alert_webhook_url, transport=alert_transport)
+    egress = Egress(base_url=settings.litellm_base_url, locations=load_model_locations(settings.litellm_config),
+                    registry=registry, issuer=issuer, audit=audit, alerter=alerter,
+                    timeout=settings.llm_timeout_seconds, api_key=os.environ.get("LITELLM_MASTER_KEY") or None,
+                    transport=llm_transport)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         yield
         await erp.aclose()
+        await egress.aclose()
 
     app = FastAPI(title="gateway", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
@@ -61,6 +73,9 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     app.state.issuer = issuer
     app.state.erp = erp
     app.state.delegation = DelegationService(erp, registry, issuer)
+    app.state.audit = audit
+    app.state.alerter = alerter
+    app.state.egress = egress
 
     @app.exception_handler(ProblemError)
     async def _problem(_: Request, e: ProblemError) -> JSONResponse:
@@ -89,6 +104,12 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
         return _relay(await erp.request("GET", "/me", bearer=_bearer(request)))
 
     app.include_router(api)
+
+    # LLM 출구는 OpenAI 호환 경로라 /api 밖에 둡니다(agent·rag의 GATEWAY_LLM_URL=http://gateway:8000/v1).
+    @app.post("/v1/chat/completions")
+    async def chat_completions(request: Request) -> Response:
+        return await egress.handle(request)
+
     return app
 
 

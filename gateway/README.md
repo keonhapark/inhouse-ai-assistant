@@ -2,7 +2,7 @@
 
 web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway.yaml`(서버 기준 경로 `/api`)입니다.
 
-지금 있는 것(1단계 #8):
+지금 있는 것(1단계 #8, #9):
 
 - `GET /health`, `GET /api/health`
 - `GET /api/.well-known/jwks.json`: 위임 토큰 검증용 공개 키. `kid`는 RFC 7638 지문입니다.
@@ -12,6 +12,18 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     직원 JWT는 erp에서 모든 scope를 가지므로, 요청자 쪽 제한은 erp가 "토큰 주인의 권한 ∩ 토큰 scopes"로 다시 봅니다.
   - `doc_scopes`: erp `/me/access-tags` ∩ 에이전트 `doc_scopes`
   - 에이전트 `callable_by`에 맞지 않는 요청자는 403입니다.
+- LLM 출구 `POST /v1/chat/completions`(OpenAI 호환, `/api` 밖): 정책을 확인한 뒤 LiteLLM 프록시로 넘깁니다(`gateway/egress.py`).
+  - `model`은 `litellm/config.yaml`의 별칭만 받습니다: `local`(Ollama `qwen3.5:9b`, 문맥 8192), `external`(Claude Haiku).
+    별칭마다 `model_info.location`이 있고, gateway는 이것으로 로컬·외부를 가릅니다.
+  - `X-Delegation-Token`이 있으면 서명·만료를 확인하고 `agt`의 `model_policy`를 따릅니다. `local_only` 에이전트와
+    토큰 없는 호출은 `external`을 쓰면 403 `model-policy`이고, 밖으로 아무것도 나가지 않습니다.
+  - 토큰 헤더는 LiteLLM으로 넘기지 않고, 본문의 토큰 모양 문자열도 가린 뒤 보냅니다.
+  - 기록(`GATEWAY_AUDIT_DIR`, 기본 `gateway/var/`, 커밋하지 않음): `audit.jsonl`에 감사 이벤트 `llm.request`
+    (모델, 외부 전송 여부, 결과), `egress.jsonl`에 외부로 나간 요청의 가림 전후 본문과 응답. `egress.jsonl`은 원문이
+    들어 있어 접근을 제한해야 하는 파일입니다.
+  - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
+    LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
+  - 스트림(`"stream": true`)은 받은 대로 흘려보내고, 끝나면 기록합니다.
 - 토큰 위생: 모든 로그 레코드에서 JWT 모양과 `Bearer <값>`을 가립니다(`gateway/redact.py`). 발급 기록은 `jti`만 남깁니다.
 
 ## 실행
@@ -21,13 +33,19 @@ source ../scripts/env.sh 2
 bash ../scripts/dev-keys.sh                       # 위임 토큰 키(커밋하지 않음)
 (cd ../contracts && DELEGATION_TOKEN_PUBLIC_KEY=infra/dev-keys/delegation-es256.pub.pem \
   uv run uvicorn fakes.erp.app:app --port $PORT_FAKE_ERP) &
+export LITELLM_MASTER_KEY=sk-...                   # LiteLLM 프록시와 gateway가 같은 값을 씁니다
+(cd .. && OLLAMA_BASE_URL=http://localhost:11434 \
+  uvx --python 3.12 --from 'litellm[proxy]==1.108.1' litellm --config gateway/litellm/config.yaml --port $PORT_LITELLM) &
 ERP_BASE_URL=http://localhost:$PORT_FAKE_ERP/api/v1 \
+LITELLM_BASE_URL=http://localhost:$PORT_LITELLM \
 DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
   uv run uvicorn --factory gateway.main:create_app --port $PORT_GATEWAY
 ```
 
 환경 변수: `ERP_BASE_URL`, `PACK_DIR`(기본 `packs/manufacturing`), `CONTRACTS_DIR`(기본 `contracts`),
-`DELEGATION_TOKEN_PRIVATE_KEY`(없으면 임시 키를 만들고 경고를 남깁니다). 상대 경로는 저장소 루트 기준입니다.
+`DELEGATION_TOKEN_PRIVATE_KEY`(없으면 임시 키를 만들고 경고를 남깁니다), `LITELLM_BASE_URL`(기본 `http://localhost:4000`),
+`LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`.
+상대 경로는 저장소 루트 기준입니다. LiteLLM은 1.108.1로 고정합니다(배포 뒤 2주가 지난 판).
 
 ## 시험
 
