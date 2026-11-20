@@ -4,7 +4,8 @@
 - 모두 끔(S0): 업무 실행과 같은 시스템 프롬프트(full 조건)와 그 에이전트의 도구 목록
 - grammar: 첫 호출로 도구를 고르고, 둘째 호출에서 그 도구의 입력 스키마를 response_format(json_schema)으로 걸어 인자를 받습니다
 - toolFilterK: 요청 문장과 도구 설명의 글자 두 개 묶음(bigram) 겹침으로 후보를 k개로 줄입니다(같으면 tools.json 순서)
-- fewShot: 개발 묶음(eval_dev/tool_calls.jsonl)에서 후보 도구마다 예시 하나를 시스템 프롬프트에 넣습니다.
+- fewShot: 개발 묶음(eval_dev/tool_calls.jsonl, contracts/eval/toolcall 형식)에서 후보 도구마다 도구를 부르는 예시
+  하나를 시스템 프롬프트에 넣습니다.
   평가하는 요청과 문장이 같은 예시는 뺍니다
 - thinking: reasoning_effort를 low(켬)·none(끔)으로 보냅니다. null이면 보내지 않습니다
 """
@@ -48,14 +49,14 @@ def load_tools(tools_file: Path) -> dict[str, dict[str, Any]]:
 
 
 def load_examples(path: Path) -> list[dict[str, Any]]:
-    """개발 묶음에서 도구를 부르는 항목만 읽습니다. 파일이 없으면 빈 목록입니다(fewShot을 쓰면 400)."""
+    """개발 묶음에서 정답이 도구 호출(expected.type=call)인 항목만 읽습니다. 파일이 없으면 빈 목록입니다(fewShot을 쓰면 400)."""
     if not path.is_file():
         return []
     out = []
     for line in path.read_text("utf-8").splitlines():
         if line.strip():
             item = json.loads(line)
-            if item.get("expect", {}).get("tool"):
+            if (item.get("expected") or {}).get("type") == "call":
                 out.append(item)
     return out
 
@@ -75,12 +76,12 @@ def filter_tools(message: str, tools: list[dict[str, Any]], k: int) -> list[dict
 
 
 def few_shot_lines(examples: list[dict[str, Any]], tool_names: list[str], message: str) -> list[str]:
-    lines = ["예시(자유 문장 인자 reason·title·purpose·question 등은 요청에서 채웁니다):"]
+    lines = ["예시(괄호 안은 그 예시의 기준일):"]
     for name in tool_names:
-        ex = next((e for e in examples if e["expect"]["tool"] == name and e["message"] != message), None)
+        ex = next((e for e in examples if e["expected"]["tool"] == name and e["utterance"] != message), None)
         if ex:
-            args = json.dumps(ex["expect"].get("arguments", {}), ensure_ascii=False)
-            lines.append(f"- 요청 \"{ex['message']}\" → {name} {args}")
+            args = json.dumps(ex["expected"].get("args", {}), ensure_ascii=False)
+            lines.append(f"- 요청 \"{ex['utterance']}\" ({ex['referenceDate']}) → {name} {args}")
     return lines if len(lines) > 1 else []
 
 
