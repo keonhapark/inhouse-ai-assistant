@@ -2,7 +2,7 @@
 
 사용: python3 scripts/ci/check_paths.py <브랜치 이름> <바뀐 파일 목록 파일>
 - feat|fix|test|refactor|perf/<모듈>-<주제>: <모듈>/ 안과 공용 허용 파일만
-- contract/*, pack/*, chore/*, docs/*, ci/*, release/*, hotfix/*: 프로젝트 리드(S0) 브랜치라 검사하지 않음
+- contract/*, pack/*, chore/*, docs/*, ci/*, release/*, hotfix/*, develop(릴리즈 PR): 프로젝트 리드(S0) 브랜치라 검사하지 않음
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ MODULE_PATHS = {
 }
 # 모듈 세션도 고칠 수 있는 공용 파일
 SHARED_OK = ["docs/contract-requests.md"]
-LEAD_PREFIXES = ("contract/", "pack/", "chore/", "docs/", "ci/", "release/", "hotfix/")
+LEAD_PREFIXES = ("contract/", "pack/", "chore/", "docs/", "ci/", "release/", "hotfix/", "develop")
 
 
 def main() -> int:
