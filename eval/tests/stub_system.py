@@ -18,11 +18,12 @@ class ScriptedChat:
     """send마다 replies에서 하나씩 꺼내 답합니다. 답은 'ask:<질문>', 'say:<글>', 'do:<도구>' 중 하나입니다."""
 
     def __init__(self, erp: ErpClient, replies: list[str], actions: dict[str, Action] | None = None,
-                 external: list[Any] | None = None) -> None:
+                 external: list[Any] | None = None, cost_usd: float | None = None) -> None:
         self.erp = erp
         self.replies = list(replies)
         self.actions = actions or {}
         self.external = external
+        self.cost_usd = cost_usd
         self.requester = ""
         self.seq = 0
         self.received: list[str] = []
@@ -65,4 +66,4 @@ class ScriptedChat:
         return out
 
     def collect(self, conversation_id: str) -> Collected:
-        return Collected(audit_events=self.audit, external_requests=self.external)
+        return Collected(audit_events=self.audit, external_requests=self.external, cost_usd=self.cost_usd)

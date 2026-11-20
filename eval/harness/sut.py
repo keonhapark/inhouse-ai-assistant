@@ -22,6 +22,8 @@ class Collected:
     audit_events: list[dict[str, Any]] = field(default_factory=list)
     external_requests: list[Any] | None = None
     logs: list[str] = field(default_factory=list)
+    # 이 대화의 LLM 비용(달러). 대상 시스템이 알려 주지 않으면 None
+    cost_usd: float | None = None
 
 
 class ChatSystem(Protocol):
