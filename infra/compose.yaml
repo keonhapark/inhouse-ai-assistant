@@ -71,10 +71,13 @@ services:
       RAG_EMBED_MODEL: local-embed
       DELEGATION_JWKS_URL: http://gateway:8000/api/.well-known/jwks.json
       RAG_AUDIT_LOG: /audit/rag.jsonl
+      # 평가 때만 값을 줍니다(예: /eval/markers/dev.yaml). 빈 값은 꺼짐입니다
       RAG_MARKERS_FILE: ${RAG_MARKERS_FILE:-}
       RAG_EXTRA_DOCS: ${RAG_EXTRA_DOCS:-}
     volumes:
       - audit:/audit
+      - ../eval/markers:/eval/markers:ro
+      - ../eval/injections:/eval/injections:ro
     ports:
       - "${PORT_RAG:-8030}:8000"
 
@@ -142,6 +145,8 @@ services:
     build: {context: ../web}
     environment:
       GATEWAY_URL: http://gateway:8000
+    depends_on:
+      gateway: {condition: service_healthy}
     ports:
       - "${PORT_WEB:-8000}:80"
 
