@@ -1,0 +1,26 @@
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api/v1
+  error:
+    whitelabel:
+      enabled: false
+
+spring:
+  application:
+    name: erp
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/erp}
+    username: ${SPRING_DATASOURCE_USERNAME:iaa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  jackson:
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+
+erp:
+  pack-dir: ${PACK_DIR:../packs/manufacturing}
