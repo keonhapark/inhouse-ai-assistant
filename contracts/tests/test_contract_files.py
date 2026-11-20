@@ -12,7 +12,7 @@ from jsonschema import Draft202012Validator
 from openapi_spec_validator import validate as validate_openapi
 from openapi_spec_validator.readers import read_from_filename
 
-from tests.schema_check import validate_file
+from tests.schema_check import validate, validate_file
 from tools.check_packs import main as check_packs_main
 from tools.common import CONTRACTS, PACKS, ROOT, load, openapi_operations
 
@@ -77,6 +77,26 @@ def test_example_events_follow_schema() -> None:
         "startedAt": "2026-11-20T10:00:00+09:00", "durationMs": 120.5, "status": "ok",
         "llm": {"model": "qwen3.5:9b", "location": "local", "inputTokens": 512, "outputTokens": 20,
                 "costUsd": 0, "cached": False}})
+
+
+def test_agent_registry_matches_pack() -> None:
+    """팩 agents.yaml의 항목을 등록부 스키마로 옮길 수 있어야 합니다(gateway 구현과 같은 변환)."""
+    tools = {t["name"]: t for t in load(CONTRACTS / "mcp/tools.json")["tools"]}
+    for pack in sorted(p for p in PACKS.iterdir() if (p / "agents.yaml").exists()):
+        for a in load(pack / "agents.yaml")["agents"]:
+            rp = a["risk_policy"]
+            entry = {
+                "id": a["id"], "name": a["name"], "version": a["version"], "stage": a["stage"],
+                "ownerUnitId": a["owner_unit"], "ownerUnitName": None, "description": a["description"],
+                "callable": True, "callableBy": a["callable_by"],
+                "tools": [{"name": n, "risk": tools[n]["risk"]} for n in a["tools"]],
+                "allowedRisk": a["allowed_risk"], "docScopes": a.get("doc_scopes", []),
+                "modelPolicy": a["model_policy"],
+                "riskPolicy": {"read": rp["read"], "reversibleWrite": rp["reversible_write"],
+                               "irreversible": rp["irreversible"], "overrides": rp.get("overrides", [])},
+                "routingKeywords": a.get("routing", {}).get("keywords", []),
+            }
+            validate("openapi/gateway.yaml", "AgentRegistryEntry", entry)
 
 
 def test_no_human_only_operation_is_a_tool() -> None:
