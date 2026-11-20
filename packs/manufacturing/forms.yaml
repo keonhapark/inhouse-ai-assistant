@@ -57,6 +57,7 @@ forms:
         total_amount: {title: 합계, type: integer, minimum: 0, description: quantity × unit_price와 같아야 합니다}
         reason: {title: 사유, type: string, maxLength: 200}
     amount_field: total_amount
+    amount_product_of: [quantity, unit_price]
     approval_line:
       - when: {amount_lte: 5000000}
         steps: [team_leader]
