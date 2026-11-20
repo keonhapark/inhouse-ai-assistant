@@ -36,13 +36,18 @@ def _edit_agents(pack: Path, fn) -> None:
 def test_agents_of_later_stage_are_not_enabled(tmp_path: Path) -> None:
     pack = _copy_pack(tmp_path)
 
-    def add_stage2(doc):
-        later = dict(doc["agents"][1], id="later", stage=2)
+    def add_later(doc):
+        later = dict(doc["agents"][1], id="later", stage=3)
         doc["agents"].append(later)
 
-    _edit_agents(pack, add_stage2)
+    _edit_agents(pack, add_later)
     reg = Registry.load(pack)
     assert not reg.has("later")
+
+
+def test_default_stage_follows_pack_yaml() -> None:
+    reg = Registry.load(PACK_DIR)
+    assert reg.pack_stage == 2 and reg.has("finance") and reg.has("procurement")
 
 
 def test_fallback_agent_must_be_enabled(tmp_path: Path) -> None:
