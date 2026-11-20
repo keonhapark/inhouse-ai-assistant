@@ -85,3 +85,13 @@ def test_구매_규정_템플릿을_채운다(pack):
     assert sections["제3조"]["heading"] == "결재선"
     assert "- 합계 5,000,000원 초과: 팀장 → 본부장" in sections["제3조"]["text"]
     assert "{{" not in "".join(s["text"] for s in sections.values())
+
+
+@pytest.mark.parametrize("doc_id", ["gen-incident-response", "gen-account-access"])
+def test_IT_운영_문서_템플릿을_채운다(pack, doc_id):
+    from rag.generate import render_document
+
+    sections = render_document(doc_id, pack)
+    assert [s["label"] for s in sections] == [f"제{n}조" for n in range(1, 8)]
+    text = "".join(s["text"] for s in sections)
+    assert "{{" not in text and "IT 관리자" in text
