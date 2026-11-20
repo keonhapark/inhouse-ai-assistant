@@ -24,7 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 회의실 예약. 30분 단위(정각·30분), 같은 날 안, 최대 4시간, 지난 시각은 안 됩니다(시각은 팩 시간대 기준).
- * 겹침은 먼저 조회로 거절하고, 조회를 함께 지난 동시 요청은 DB 배제 제약(room_reservation_no_overlap)이 막습니다.
+ * 같은 회의실 예약은 회의실 행을 잠가 줄 세운 뒤 겹침을 조회로 거절합니다. DB 배제 제약(room_reservation_no_overlap)은
+ * 마지막 보장입니다.
  */
 @Service
 public class RoomService {
@@ -58,7 +59,7 @@ public class RoomService {
     // ---------- 예약·취소 ----------
 
     public WriteOutcome reserve(ErpPrincipal p, ReserveRequest req) {
-        Room room = rooms.findById(req.roomId() == null ? "" : req.roomId())
+        Room room = rooms.lockById(req.roomId() == null ? "" : req.roomId())
                 .orElseThrow(() -> ApiException.validation("roomId", "unknown"));
         validateSlot(req.startsAt(), req.endsAt());
         if (reservations.overlaps(room.getId(), req.startsAt(), req.endsAt(), "")) {
@@ -118,6 +119,7 @@ public class RoomService {
         if (!r.getStartsAt().isAfter(OffsetDateTime.now(clock))) {
             throw new ApiException(409, "undo-conflict", "예약 시작 시각이 지났습니다");
         }
+        rooms.lockById(r.getRoomId());
         if (reservations.overlaps(r.getRoomId(), r.getStartsAt(), r.getEndsAt(), r.getId())) {
             throw new ApiException(409, "undo-conflict", "그 시간에 다른 예약이 들어왔습니다");
         }

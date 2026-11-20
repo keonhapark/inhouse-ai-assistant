@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -102,10 +103,11 @@ class RoomApiTest extends ApiTestBase {
         assertThat(problem(post("/room-reservations", a, noOffset))).isEqualTo("validation");
     }
 
-    @Test
+    /** 같은 회의실·같은 시간에 7건을 동시에 보내기를 10번. 교착으로 500이 섞이던 것을 막습니다(#120). */
+    @RepeatedTest(10)
     void concurrentSameSlotOneWins() throws Exception {
         OffsetDateTime s = slot();
-        List<String> people = members("production-control").subList(0, 4);
+        List<String> people = members("production-control").subList(0, 7);
         ExecutorService pool = Executors.newFixedThreadPool(people.size());
         CountDownLatch go = new CountDownLatch(1);
         List<Future<MockHttpServletResponse>> fs = new ArrayList<>();
