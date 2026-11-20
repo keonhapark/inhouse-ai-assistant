@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { api, problemTitle } from '../api/client'
+import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { DelegationPanel } from './DelegationPanel'
 import { DocDetail } from './DocDetail'
@@ -15,6 +15,9 @@ export function InboxPage() {
   const [list, setList] = useState<ListState>({ status: 'loading' })
   const [open, setOpen] = useState<InboxItem | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // 양식은 문서 필드 표시와 대결 범위 고르기에 같이 씁니다.
+  const [forms, setForms] = useState<Schemas['ApprovalForm'][]>([])
+  const [formsError, setFormsError] = useState<string | null>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const panelRef = useRef<HTMLDivElement>(null)
   // 응답이 늦게 와도 지금 보고 있는 탭만 반영하도록 마지막 요청 번호와 현재 탭을 ref로 둡니다.
@@ -41,6 +44,14 @@ export function InboxPage() {
         id === request.current &&
         setList(data ? { status: 'ok', items: data.items.map(toInboxItem) } : { status: 'error', message: problemTitle(error, '결재함을 불러오지 못했습니다.') }),
       () => alive && id === request.current && setList({ status: 'error', message: '서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.' }),
+    )
+    api.GET('/approval-forms').then(
+      ({ data, error: p }) => {
+        if (!alive) return
+        if (data) setForms(data.items)
+        else setFormsError(problemTitle(p, '양식 목록을 불러오지 못했습니다.'))
+      },
+      () => alive && setFormsError('양식 목록을 불러오지 못했습니다.'),
     )
     return () => {
       alive = false
@@ -179,6 +190,7 @@ export function InboxPage() {
             <DocDetail
               key={open.id}
               doc={open}
+              form={forms.find((f) => f.id === open.formId)}
               canDecide={canDecide}
               onDecided={(m) => void onDecided(m)}
               onReload={reloadOpen}
@@ -187,7 +199,7 @@ export function InboxPage() {
           )}
         </div>
       </main>
-      <DelegationPanel />
+      <DelegationPanel forms={forms} formsError={formsError} />
     </div>
   )
 }
