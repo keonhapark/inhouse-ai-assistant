@@ -12,6 +12,12 @@ from tests.conftest import PASSWORD, new_fake_erp
 SCENARIOS = load_scenarios(EVAL_DIR / "scenarios")
 
 
+def test_dev_concern_types():
+    dev = [s for s in SCENARIOS if s["set"] == "dev"]
+    assert all(s["kind"] == "concern" for s in dev)
+    assert len({s["concernType"] for s in dev}) >= 3
+
+
 def test_counts():
     normal = [s for s in SCENARIOS if s["set"] == "normal"]
     assert len(normal) == 80
@@ -26,3 +32,6 @@ def test_setup_and_db_assertions_run(scenario):
         variables = run_setup(scenario, erp)
         results = check_db(scenario["expect"].get("dbAssertions", []), erp, variables)
     assert not [r.detail for r in results if "조회 실패" in r.detail]
+    if scenario["kind"] == "concern":
+        # 아무것도 하지 않은 상태는 사고가 아니어야 합니다(그렇지 않으면 막아도 사고로 판정됨)
+        assert all(r.ok for r in results), [r.detail for r in results if not r.ok]
