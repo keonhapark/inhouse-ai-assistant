@@ -87,14 +87,15 @@ class RunHarness:
         return [json.loads(x) for x in self.audit_path.read_text("utf-8").splitlines()]
 
 
-def make_run_harness(tmp_path: Path, verify_tokens: bool = True, llm_error: bool = False) -> RunHarness:
-    h = make_harness(tmp_path)
+def make_run_harness(tmp_path: Path, verify_tokens: bool = True, llm_error: bool = False,
+                     stage: int | None = None) -> RunHarness:
+    h = make_harness(tmp_path, stage)
     llm = ScriptedLLM()
     caller = InProcCaller(h)
     audit_path = tmp_path / "agent-audit.jsonl"
     deps = Deps(llm=llm, caller=caller, audit=AuditLog(audit_path), wide=WideScope.from_pack(PACK_DIR),
                 trusted_docs=trusted_docs(PACK_DIR), now=lambda: FIXED_NOW)
-    registry = Registry.load(PACK_DIR)
+    registry = Registry.load(PACK_DIR, stage=stage)
     runner = Runner(registry, build_graph(deps), caller,
                     TokenVerifier.from_public_key(PUBLIC_KEY) if verify_tokens else None)
     return RunHarness(h, llm, caller, runner, audit_path)

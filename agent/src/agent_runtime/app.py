@@ -2,6 +2,7 @@
 
 환경 변수
 - PACK_DIR: 업종 팩 폴더(필수)
+- AGENT_PACK_STAGE: 켤 단계(기본 pack.yaml의 stage). 에이전트·도구 모두 이 단계 이하만 켭니다
 - AGENT_AUDIT_LOG: 감사 이벤트 JSON Lines 경로(기본 var/audit.jsonl)
 - AGENT_ROUTER_MIN_CONFIDENCE: LLM 라우터 확신도 기준(기본 0.5)
 - AGENT_LLM_BACKEND, GATEWAY_LLM_URL, AGENT_LLM_MODEL, AGENT_OLLAMA_BASE_URL: llm.LLMSettings 참고
@@ -106,7 +107,8 @@ def services_from_env() -> Services:
     pack_dir = os.environ.get("PACK_DIR")
     if not pack_dir:
         raise RuntimeError("PACK_DIR 환경 변수가 필요합니다(예: ../packs/manufacturing)")
-    registry = Registry.load(Path(pack_dir))
+    stage = os.environ.get("AGENT_PACK_STAGE")
+    registry = Registry.load(Path(pack_dir), int(stage) if stage else None)
     chat = ChatClient(LLMSettings.from_env())
     min_conf = float(os.environ.get("AGENT_ROUTER_MIN_CONFIDENCE", "0.5"))
     log = audit.AuditLog(Path(os.environ.get("AGENT_AUDIT_LOG", "var/audit.jsonl")))

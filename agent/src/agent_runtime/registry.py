@@ -78,11 +78,12 @@ class Registry:
         return any(a.id == agent_id for a in self.agents)
 
     @classmethod
-    def load(cls, pack_dir: Path) -> Registry:
+    def load(cls, pack_dir: Path, stage: int | None = None) -> Registry:
+        """stage를 주면 pack.yaml의 stage 대신 그 단계까지 켭니다(평가 재현·단계 전환용, AGENT_PACK_STAGE)."""
         pack = _read_yaml(pack_dir / "pack.yaml")
         doc = _read_yaml(pack_dir / "agents.yaml")
         try:
-            pack_stage = int(pack["stage"])
+            pack_stage = int(stage if stage is not None else pack["stage"])
             enabled = tuple(_to_agent(a) for a in doc["agents"] if int(a["stage"]) <= pack_stage)
             fallback_id = doc["fallback_agent"]
         except (KeyError, TypeError, ValueError) as e:
