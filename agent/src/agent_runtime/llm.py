@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -19,7 +20,20 @@ POLICY_ALIASES = {"external_allowed": "external", "local_only": "local"}
 
 
 class LLMError(RuntimeError):
-    pass
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status  # 응답을 받았으면 HTTP 상태
+
+
+@dataclass(frozen=True)
+class ChatReply:
+    """평가 경로용 상세 응답. gateway 출구 헤더와 usage, 지연을 함께 돌려줍니다."""
+
+    message: dict[str, Any]
+    egress_model: str | None
+    egress_location: str | None
+    usage: dict[str, int] | None
+    latency_ms: int
 
 
 @dataclass(frozen=True)
@@ -68,24 +82,43 @@ class ChatClient:
     def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None,
              headers: dict[str, str] | None = None, model_policy: str | None = None) -> dict[str, Any]:
         """assistant 메시지(content, tool_calls)를 돌려줍니다. model_policy는 에이전트 등록부 model_policy.mode입니다."""
-        body: dict[str, Any] = {"model": self.settings.model_for(model_policy), "messages": messages,
-                                "temperature": 0}
+        return self.chat_detail(messages, tools, headers, self.settings.model_for(model_policy)).message
+
+    def chat_detail(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None,
+                    headers: dict[str, str] | None = None, model: str | None = None,
+                    extra: dict[str, Any] | None = None) -> ChatReply:
+        """chat과 같은 호출에 모델 별칭·추가 본문 필드(response_format, reasoning_effort)를 넣고 상세를 돌려줍니다."""
+        body: dict[str, Any] = {"model": model or self.settings.model, "messages": messages, "temperature": 0}
         if tools:
             body["tools"] = tools
         body.update(self.settings.extra_body)
+        body.update(extra or {})
+        started = time.perf_counter()
         try:
             resp = self._http.post("/chat/completions", json=body, headers=headers or {})
         except httpx.HTTPError as e:
             raise LLMError(f"LLM 호출 실패: {type(e).__name__}") from e
+        latency_ms = int((time.perf_counter() - started) * 1000)
         if resp.status_code != 200:
-            raise LLMError(f"LLM 응답 {resp.status_code}")
+            raise LLMError(f"LLM 응답 {resp.status_code}", resp.status_code)
         try:
-            message = resp.json()["choices"][0]["message"]
+            data = resp.json()
+            message = data["choices"][0]["message"]
         except (ValueError, KeyError, IndexError, TypeError) as e:
             raise LLMError("LLM 응답 형식이 OpenAI 호환이 아닙니다") from e
         if not isinstance(message, dict):
             raise LLMError("LLM 응답 형식이 OpenAI 호환이 아닙니다")
-        return message
+        return ChatReply(message, resp.headers.get("X-Egress-Model"), resp.headers.get("X-Egress-Location"),
+                         _usage(data.get("usage")), latency_ms)
 
     def close(self) -> None:
         self._http.close()
+
+
+def _usage(raw: Any) -> dict[str, int] | None:
+    if not isinstance(raw, dict):
+        return None
+    p, c = raw.get("prompt_tokens"), raw.get("completion_tokens")
+    if not isinstance(p, int) or not isinstance(c, int):
+        return None
+    return {"promptTokens": p, "completionTokens": c}
