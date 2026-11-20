@@ -29,6 +29,7 @@ class Settings:
     llm_timeout_seconds: float = 60.0
     audit_dir: Path = MODULE_ROOT / "var"
     alert_webhook_url: str | None = None
+    audit_event_files: tuple[str, ...] = ()
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -43,4 +44,5 @@ class Settings:
             llm_timeout_seconds=float(os.environ.get("LLM_TIMEOUT_SECONDS", "60")),
             audit_dir=_path(os.environ.get("GATEWAY_AUDIT_DIR"), MODULE_ROOT / "var"),
             alert_webhook_url=os.environ.get("ALERT_WEBHOOK_URL") or None,
+            audit_event_files=tuple(x.strip() for x in os.environ.get("AUDIT_EVENT_FILES", "").split(",") if x.strip()),
         )
