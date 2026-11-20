@@ -54,6 +54,18 @@ Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·�
 
 도구 인자는 이름으로 erp 요청에 놓습니다: path 파라미터 → 경로, query 파라미터 → 쿼리, 본문 최상위 속성 → 본문, 본문 객체 속성 안의 이름(대결 위임 `scope.formTypes` 등) → 그 객체, 그 밖은 결재 양식 `fields`. `backend.fixed` 값은 같은 이름의 인자보다 우선하고, 그 이름을 입력 스키마에 두면 시작하지 않습니다. 경로 인자는 퍼센트 인코딩합니다.
 
+## 평가 경로(도구 호출 측정)
+
+`AGENT_EVAL_MODE=1`이면 `POST /eval/tool-call`을 켭니다(아니면 404). 업무 실행의 첫 계획 호출만 하고 도구를 실행하지 않습니다(MCP·erp를 부르지 않음). 위임 토큰 없이 gateway를 부릅니다. 채점은 eval이 합니다.
+
+- 기본(S0): 업무 실행과 같은 시스템 프롬프트(`full`)와 에이전트 도구 목록(`contracts/mcp/tools.json`), 온도 0
+- `grammar`: 첫 호출로 도구를 고르고, 둘째 호출에 그 도구 입력 스키마를 `response_format`(json_schema)으로 걸어 인자를 받습니다. 별칭이 구조화 출력을 지원하지 않으면 400입니다(`local`은 지원하지 않음, #205)
+- `toolFilterK`: 요청 문장과 도구 설명의 두 글자 묶음 겹침이 큰 k개만 모델에 보입니다. 응답 `candidates`로 정답 도구가 남았는지 봅니다
+- `fewShot`: `AGENT_EVAL_FEWSHOT`(기본 `eval_dev/tool_calls.jsonl`)에서 후보 도구마다 예시 하나를 시스템 프롬프트에 넣습니다. 평가하는 요청과 문장이 같은 예시는 뺍니다
+- `thinking`: `reasoning_effort`를 `low`(켬)·`none`(끔)으로 보냅니다. null이면 보내지 않습니다
+- 응답의 `model.egress`·`location`은 gateway 출구 헤더, `usage`는 호출 토큰 합(하나라도 없으면 null), `latencyMs`는 모델 호출 시간 합입니다
+- 응답 `content`는 모델이 쓴 문장이라 감사·로그에 남기지 않습니다
+
 ## 실행
 
 ```bash

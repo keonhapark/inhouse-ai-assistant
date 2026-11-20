@@ -1,4 +1,4 @@
-"""agent HTTP API(contracts/openapi/agent.yaml): /health, /agents, /route, /run, /resume, /baseline/slots.
+"""agent HTTP API(contracts/openapi/agent.yaml): /health, /agents, /route, /run, /resume, /baseline/slots, /eval/tool-call.
 
 환경 변수
 - PACK_DIR: 업종 팩 폴더(필수)
@@ -9,6 +9,8 @@
 - AGENT_MCP_URL: 업무 실행이 부르는 MCP 서버(기본 http://localhost:$MCP_PORT/mcp, MCP_PORT 기본 8001)
 - DELEGATION_TOKEN_PUBLIC_KEY 또는 DELEGATION_JWKS_URL(필수): /run·/resume에서 토큰의 에이전트·요청자·대화를 대조.
   AGENT_ALLOW_UNVERIFIED_TOKENS=1이면 대조하지 않습니다(개발용)
+- AGENT_EVAL_MODE=1: 평가 경로 /eval/tool-call을 켭니다(아니면 404). AGENT_EVAL_FEWSHOT: few-shot 예시 파일
+  (기본 eval_dev/tool_calls.jsonl, 작업 폴더 기준)
 """
 
 from __future__ import annotations
@@ -21,11 +23,13 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from agent_runtime import audit
 from agent_runtime.baseline.llm_filler import LlmSlotFiller, load_slot_tools
 from agent_runtime.baseline.slots import KST, RuleSlotFiller, SlotFiller
+from agent_runtime.evaluation.tool_call import (EvalBadRequest, EvalToolCaller, EvalUpstreamError, Variant,
+                                                load_examples, load_tools)
 from agent_runtime.llm import ChatClient, LLMSettings
 from agent_runtime.registry import Registry, Requester
 from agent_runtime.mcp_server.tokens import TokenVerifier
@@ -85,6 +89,27 @@ class SlotsIn(BaseModel):
     method: Literal["rule", "llm"]
 
 
+class VariantIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    grammar: bool = False
+    toolFilterK: int | None = Field(default=None, ge=1)
+    fewShot: bool = False
+    thinking: bool | None = None
+
+    def to_domain(self) -> Variant:
+        return Variant(self.grammar, self.toolFilterK, self.fewShot, self.thinking)
+
+
+class EvalToolCallIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    message: str
+    agentId: str
+    requester: RequesterIn
+    today: date
+    model: str | None = None
+    variant: VariantIn = Field(default_factory=VariantIn)
+
+
 class RouteOut(BaseModel):
     agentId: str
     method: Literal["llm", "keyword", "fallback", "explicit"]
@@ -101,6 +126,7 @@ class Services:
     runner: Runner | None = None
     slot_fillers: dict[str, SlotFiller] = field(default_factory=lambda: {"rule": RuleSlotFiller()})
     rooms: list[dict] = field(default_factory=list)
+    eval_tool_call: EvalToolCaller | None = None  # AGENT_EVAL_MODE=1일 때만
 
 
 def services_from_env() -> Services:
@@ -123,7 +149,12 @@ def services_from_env() -> Services:
     contracts = Path(os.environ.get("CONTRACTS_DIR", "../contracts"))
     fillers: dict[str, SlotFiller] = {"rule": RuleSlotFiller(),
                                       "llm": LlmSlotFiller(chat, load_slot_tools(contracts / "mcp" / "tools.json"))}
-    return Services(registry, Router(registry, chat, min_conf), log, runner, fillers, load_rooms(Path(pack_dir)))
+    evaluator = None
+    if os.environ.get("AGENT_EVAL_MODE") == "1":
+        evaluator = EvalToolCaller(registry, chat, load_tools(contracts / "mcp" / "tools.json"),
+                                   load_examples(Path(os.environ.get("AGENT_EVAL_FEWSHOT", "eval_dev/tool_calls.jsonl"))))
+    return Services(registry, Router(registry, chat, min_conf), log, runner, fillers, load_rooms(Path(pack_dir)),
+                    evaluator)
 
 
 def load_rooms(pack_dir: Path) -> list[dict]:
@@ -170,6 +201,18 @@ def create_app(services: Services | None = None) -> FastAPI:
             raise HTTPException(503, f"{body.method} 슬롯 채우기가 설정되지 않았습니다")
         today = body.today or datetime.now(KST).date()
         return filler.fill(body.message, today, svc.rooms).to_dict()
+
+    @app.post("/eval/tool-call")
+    async def eval_tool_call(body: EvalToolCallIn) -> dict:
+        if svc.eval_tool_call is None:
+            raise HTTPException(404, "Not Found")
+        try:
+            return await svc.eval_tool_call.run(body.message, body.agentId, body.requester.to_domain(), body.today,
+                                                body.model, body.variant.to_domain())
+        except EvalBadRequest as e:
+            raise HTTPException(400, str(e)) from None
+        except EvalUpstreamError as e:
+            raise HTTPException(502, str(e)) from None
 
     @app.post("/run")
     async def run(body: RunIn, x_delegation_token: str = Header(...)) -> dict:
