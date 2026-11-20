@@ -1,0 +1,12 @@
+# 팩 docs.yaml의 law_open_api 문서를 국가법령정보센터의 어느 규정으로 받는지 적습니다(python -m rag.lawfetch).
+# kind: law(법령, 조문 단위) / admrul(행정규칙 첨부 PDF, chapter 장만)
+law-civil-service-duty:
+  kind: law
+  name: 국가공무원 복무규정
+law-travel-expense:
+  kind: law
+  name: 공무원 여비 규정
+admrul-duty-discipline:
+  kind: admrul
+  name: 국가공무원 복무·징계 관련 예규
+  chapter: 8
