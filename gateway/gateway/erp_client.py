@@ -29,15 +29,15 @@ class ErpClient:
         except httpx.HTTPError:
             raise ProblemError(502, "upstream-unavailable", "erp에 연결하지 못했습니다")
 
-    async def get_json(self, path: str, bearer: str) -> dict[str, Any]:
+    async def get_json(self, path: str, bearer: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """성공하면 JSON을, 실패하면 erp 상태 코드로 ProblemError를 냅니다."""
-        r = await self.request("GET", path, bearer=bearer)
+        r = await self.request("GET", path, bearer=bearer, params=params)
         if r.status_code >= 400:
-            raise _as_problem(r)
+            raise as_problem(r)
         return r.json()
 
 
-def _as_problem(r: httpx.Response) -> ProblemError:
+def as_problem(r: httpx.Response) -> ProblemError:
     try:
         body = r.json()
     except ValueError:
