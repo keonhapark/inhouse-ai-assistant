@@ -1,0 +1,30 @@
+# 비밀값과 로컬 설정
+.env
+.env.*
+!.env.example
+infra/dev-keys/
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Java
+build/
+.gradle/
+*.class
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# 기타
+.DS_Store
+.idea/
+.vscode/
+*.log
