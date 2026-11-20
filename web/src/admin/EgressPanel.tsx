@@ -74,6 +74,7 @@ function EgressItem({ record: r }: { record: Record_ }) {
             <li key={i}>
               <span className="muted egress__role">{m.role}</span>
               <p>
+                {m.content === '' && <span className="muted">(본문 없음: 도구 호출)</span>}
                 {segments(m.content, r.redactions, i).map((s, j) =>
                   s.redaction ? (
                     <mark key={j} className="redacted" title={`가림: ${entityName(s.redaction.entity)}`}>

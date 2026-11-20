@@ -89,11 +89,14 @@ GIF는 화면이 바뀌지 않는 구간(로컬 모델 응답을 기다리는 20
 | 항목 | 모의 서버 | 실제 | 화면 영향 |
 |---|---|---|---|
 | 답 조각(`delta`), 도구 기록(`tool_call`) | 보냄 | 보내지 않음(답이 `message` 한 번에 옴) | 답이 한 번에 나타남. 스트리밍 커서와 "도구 실행" 줄이 없음 |
-| 쓴 모델(`model`) | `message`·`done`에 붙임 | 붙이지 않음 | "로컬에서 처리" 배지가 나오지 않음 |
+| 쓴 모델(`model`) | `message`·`done`에 붙임(실제 모델 이름) | `done`에 붙임. 이름은 별칭(`local`, `external`)(2026-11-21 API로 확인) | 배지는 `location`으로 정하므로 같음 |
 | 실행 승인 카드 | 결재 회수(`irreversible`)에서 나옴. 회의실 예약(`reversible_write`)은 카드 없이 실행하고 되돌리기를 붙임 | 같은 위험 등급 정책(결정 0003). 휴가 신청도 `reversible_write`·`auto_with_undo`라 카드 없이 실행되고 되돌리기가 붙음 | 정책대로 동작 |
 | `toolLabel` | 있음 | 없음 | 카드 머리에 도구 ID를 보여 줌 |
 | `blocked.code` | 이유별 | `policy_denied` 하나 | 문구만 보여 주므로 영향 없음 |
 | 결재 문서 `fields` | 한국어 키 | 팩 `forms.yaml`의 키(`leave_type`, `start_date`)와 값(`half_pm`) | 값은 양식 스키마의 `x-labels`로 바꿔 보여 줌("오후 반차"). 필드 이름은 스키마에 `title`이 없어 키 그대로 |
+| 감사 로그 순서 | 시각 순(오래된 것부터) | 같음(계약) | 첫 쪽이 기간의 가장 오래된 이벤트 |
+| 감사 `llm.request`의 행위자 | 직원·에이전트 있음 | 직원·에이전트가 `null`인 것이 많음 | 직원·에이전트 필터로 찾을 수 없음(gateway에 알림) |
+| 비용 상한 0 | 없음 | 인사·기술연구소가 상한 0(`exceeded: true`) | "상한 0 · 외부 안 씀"으로 보여 줌 |
 | 라우팅 시간 | 즉시 | 로컬 모델이 바쁘면 시간 제한(504)으로 `fallback` | 에이전트를 직접 고르면 라우팅을 건너뜀 |
 
 다시 확인하는 방법:
@@ -131,7 +134,7 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 |---|---|
 | ![조직도 다크](docs/images/org-dark.png) | ![등록부 다크](docs/images/agents-dark.png) |
 
-조직도·등록부 경로(`GET /org/units`, `GET /agent-registry`)는 계약(#220)만 있고 gateway 구현 전이라 모의 서버 화면입니다.
+위 두 장은 모의 서버 화면이고, 실제 gateway에 붙인 화면은 아래 "실제 스택"에 있습니다.
 
 | 관리자 콘솔: 운영 지표(7일) | 다크 모드 |
 |---|---|
@@ -141,7 +144,30 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 |---|---|
 | ![외부 전송](docs/images/admin-egress-light.png) | ![감사 로그](docs/images/admin-audit-light.png) |
 
-관리자 콘솔은 auditor 역할 직원(모의 서버 `E2008`)만 메뉴에 보입니다. 운영 지표·외부 전송 기록(`GET /ops/metrics`, `GET /ops/egress`)은 계약(#210)만 있고 gateway 구현(#211) 전이라 모의 서버 화면입니다. 막대는 크기만 한 색으로 보여 주고 값은 옆 글자로 읽게 했습니다.
+관리자 콘솔은 auditor 역할 직원(모의 서버 `E2008`, 실제 팩 `E0057`)만 메뉴에 보입니다. 막대는 크기만 한 색으로 보여 주고 값은 옆 글자로 읽게 했습니다.
+
+### 실제 스택(관리자 콘솔·조직도·등록부)
+
+2026-11-21 `--profile full` 스택에 `E0057`(IT운영팀, auditor)로 로그인해 찍었습니다. 지표와 외부 전송 기록은 직전에 직원 `E0007`로 보낸 대화 3건(전사 비서·구매자재는 외부 모델, 인사는 로컬 모델)에서 나온 값입니다. 외부 전송 기록을 보려면 gateway에 `GATEWAY_EXTERNAL_LOG`가 있어야 합니다(아래 명령).
+
+| 운영 지표 | 외부 전송 기록(가린 자리) |
+|---|---|
+| ![실제 운영 지표](docs/images/real-admin-metrics.png) | ![실제 외부 전송](docs/images/real-admin-egress.png) |
+
+| 감사 로그 | 조직도 |
+|---|---|
+| ![실제 감사 로그](docs/images/real-admin-audit.png) | ![실제 조직도](docs/images/real-org.png) |
+
+| 에이전트 등록부(금액 조건 예외) | |
+|---|---|
+| ![실제 등록부](docs/images/real-agents.png) | |
+
+```bash
+source scripts/env.sh 6
+GATEWAY_EXTERNAL_LOG=/audit/gateway/external.jsonl docker compose -f infra/compose.yaml --env-file .env --profile full up -d --build --wait
+# http://localhost:8600 에서 E0007로 대화 몇 건 → E0057로 로그인 → 관리
+```
+
 
 | 로그인 오류 | 디자인 부품 |
 |---|---|

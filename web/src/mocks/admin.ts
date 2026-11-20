@@ -80,7 +80,8 @@ const KINDS: [Audit['kind'], Audit['source'], Audit['result'], string | null, Au
 ]
 const ACTORS = ['emp-1001', 'emp-2001', 'emp-2002']
 
-const AUDIT: Audit[] = Array.from({ length: 45 }, (_, i) => {
+// 계약(/audit-events)은 시각 순(오래된 것부터)입니다. 실제 gateway와 같게 오래된 것부터 둡니다.
+const AUDIT: Audit[] = Array.from({ length: 45 }, (_, i): Audit => {
   const [kind, source, result, operation, riskLevel, agentId] = KINDS[i % KINDS.length]
   return {
     eventId: `evt-${String(45 - i).padStart(3, '0')}`,
@@ -96,7 +97,7 @@ const AUDIT: Audit[] = Array.from({ length: 45 }, (_, i) => {
     detail: kind === 'tool.blocked' ? '문서에서 온 지시로는 대결 등록을 부를 수 없습니다(신뢰 등급).' : kind === 'llm.redacted' ? '전화번호 1건을 가렸습니다.' : null,
     model: kind.startsWith('llm.') ? { name: 'claude-haiku-5-5', location: 'external', externalSent: true, redactions: kind === 'llm.redacted' ? 1 : 0 } : null,
   }
-})
+}).reverse()
 
 /** 하루 기준 수를 기간 길이에 맞춰 늘립니다(모의 지표). */
 function counts(base: [calls: number, blocked: Record<string, number>, local: number, external: number, cost: number], days: number): Schemas['OpsCounts'] {

@@ -185,7 +185,11 @@ export function MetricsPanel({ range }: { range: Range }) {
                       <span className="bar-cell">
                         <Bar value={b.usedUsd} max={b.limitUsd} label={`${percent(b.usedUsd, b.limitUsd)}%`} />
                         {formatUsd(b.usedUsd)} / {formatUsd(b.limitUsd)}
-                        {(b.exceeded || (b.limitUsd > 0 && b.usedUsd >= b.limitUsd)) && <Badge tone="danger">상한 넘음 · 로컬로 내림</Badge>}
+                        {b.limitUsd === 0 ? (
+                          <Badge>상한 0 · 외부 안 씀</Badge>
+                        ) : (
+                          (b.exceeded || b.usedUsd >= b.limitUsd) && <Badge tone="danger">상한 넘음 · 로컬로 내림</Badge>
+                        )}
                       </span>
                     </td>
                   </tr>

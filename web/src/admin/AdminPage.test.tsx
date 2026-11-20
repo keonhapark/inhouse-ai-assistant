@@ -140,6 +140,22 @@ describe('관리자 콘솔', () => {
     expect(screen.getByText('이 기간에 막은 요청이 없습니다.')).toBeInTheDocument()
   })
 
+  it('상한이 0인 대상은 넘음 대신 외부를 쓰지 않는다고 보여 줍니다', async () => {
+    server.use(
+      http.get('*/api/ops/metrics', () => {
+        const zero = { calls: 0, blocked: { total: 0, byCode: {} }, llmRequests: { local: 0, external: 0 }, externalCostUsd: 0 }
+        return HttpResponse.json({
+          since: '2026-11-20T00:00:00Z', until: '2026-11-21T00:00:00Z', totals: zero, agents: [], routing: { total: 0, byMethod: {} },
+          budgets: { period: 'month', periodStart: '2026-11-01T00:00:00Z', agents: [{ id: 'hr', name: '인사', limitUsd: 0, usedUsd: 0, exceeded: true }], units: [] },
+        })
+      }),
+    )
+    renderAdmin()
+    const row = await screen.findByRole('row', { name: /인사/ })
+    expect(row).toHaveTextContent('상한 0 · 외부 안 씀')
+    expect(row).not.toHaveTextContent('상한 넘음')
+  })
+
   it('탭은 화살표·Home·End로 옮깁니다', async () => {
     const user = renderAdmin()
     const metrics = await screen.findByRole('tab', { name: '운영 지표' })
