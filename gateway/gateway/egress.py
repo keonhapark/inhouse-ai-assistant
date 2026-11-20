@@ -4,16 +4,19 @@
 1. `X-Delegation-Token`이 있으면 이 gateway가 서명한 토큰인지 확인하고 `agt`로 에이전트를 찾습니다.
 2. `model`은 LiteLLM 설정의 별칭만 받습니다. 별칭마다 `model_info.location`(local·external)이 있습니다.
 3. 정책: 에이전트 model_policy가 local_only이거나 위임 토큰이 없으면 외부 별칭을 막습니다(403 model-policy).
-4. 본문에서 토큰 모양 문자열을 가리고, 가림 단계(redactor)를 거친 본문을 LiteLLM으로 보냅니다.
-   토큰 헤더는 넘기지 않습니다.
-5. 외부로 나간 요청은 가림 전후 본문과 응답을 egress.jsonl에, 모든 요청은 감사 이벤트 llm.request로 남깁니다.
-6. 시간 초과(504)·연결 실패(502)·LiteLLM 5xx(502)는 실패 알림을 보냅니다.
+4. 본문에서 토큰 모양 문자열을 가립니다. 토큰 헤더는 넘기지 않습니다.
+5. 외부 별칭이면 사내 용어 사전(gateway/confidential.py)으로 기밀을 판정해 차단(403 confidential)하거나 로컬 별칭으로
+   돌립니다. 그래도 외부로 나가면 한국어 개인정보를 가립니다(gateway/pii.py). 둘 다 감사 이벤트 llm.redacted를 남깁니다.
+   로컬 모델로 가는 요청은 가리지 않습니다.
+6. 외부로 나간 요청은 가림 전후 본문과 응답을 egress.jsonl에, 모든 요청은 감사 이벤트 llm.request로 남깁니다.
+7. 시간 초과(504)·연결 실패(502)·LiteLLM 5xx(502)는 실패 알림을 보냅니다.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+from collections import Counter
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,6 +30,7 @@ from fastapi.responses import Response, StreamingResponse
 
 from gateway.alerts import Alerter
 from gateway.audit import AuditLog, now_iso
+from gateway.confidential import Glossary
 from gateway.problems import ProblemError
 from gateway.redact import scrub
 from gateway.registry import AgentEntry, Registry
@@ -36,12 +40,12 @@ log = logging.getLogger(__name__)
 
 TOKEN_HEADER = "x-delegation-token"
 
-# 가림 단계: 본문을 받아 (보낼 본문, 가린 개수)를 돌려줍니다. 한국어 가림은 #10에서 붙입니다.
-Redactor = Callable[[dict[str, Any]], tuple[dict[str, Any], int]]
+# 가림 단계: 본문을 받아 (보낼 본문, 개체 종류별 가린 개수)를 돌려줍니다(gateway/pii.py).
+Redactor = Callable[[dict[str, Any]], tuple[dict[str, Any], Counter]]
 
 
-def no_redaction(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
-    return body, 0
+def no_redaction(body: dict[str, Any]) -> tuple[dict[str, Any], Counter]:
+    return body, Counter()
 
 
 def load_model_locations(config_path: Path) -> dict[str, str]:
@@ -81,10 +85,12 @@ class Egress:
     def __init__(self, *, base_url: str, locations: dict[str, str], registry: Registry,
                  issuer: DelegationTokenIssuer, audit: AuditLog, alerter: Alerter, timeout: float,
                  api_key: str | None = None, transport: httpx.AsyncBaseTransport | None = None,
-                 redactor: Redactor = no_redaction):
+                 redactor: Redactor = no_redaction, glossary: Glossary | None = None):
         self.locations = locations
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
         self.redactor = redactor
+        self.glossary = glossary or Glossary([])
+        self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._http = httpx.AsyncClient(base_url=base_url, transport=transport, headers=headers,
                                        timeout=httpx.Timeout(timeout, connect=5.0))
@@ -135,12 +141,32 @@ class Egress:
 
         # 토큰 모양 문자열은 어떤 모델에도 보내지 않습니다. JWT 문자에는 따옴표가 없어 JSON 문자열째 가려도 됩니다.
         before = json.loads(scrub(json.dumps(body, ensure_ascii=False)))
-        sent, redactions = self.redactor(before)
-        model["redactions"] = redactions
+        sent = before
+        if location == "external":
+            sent = self._confidential(caller, model, before)
+        if model["location"] == "external":
+            sent, counts = self.redactor(sent)
+            model["redactions"] = sum(counts.values())
+            if counts:
+                detail = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
+                self._audit(caller, model, "ok", detail=detail, kind="llm.redacted")
 
         if sent.get("stream"):
             return await self._stream(caller, model, before, sent)
         return await self._once(caller, model, before, sent)
+
+    def _confidential(self, caller: Caller, model: dict, body: dict) -> dict:
+        """사내 기밀 용어가 있으면 차단하거나 로컬 별칭으로 바꾼 본문을 돌려줍니다."""
+        verdict = self.glossary.check(body)
+        if verdict is None:
+            return body
+        if verdict.action == "block" or self.local_alias is None:
+            detail = f"기밀 용어 {verdict.hits}개: 차단"
+            self._audit(caller, model, "denied", "urn:problem:confidential", detail)
+            raise ProblemError(403, "confidential", "사내 기밀이 들어 있어 보낼 수 없습니다", verdict.reason)
+        self._audit(caller, model, "ok", detail=f"기밀 용어 {verdict.hits}개: 로컬 모델로 돌림", kind="llm.redacted")
+        model.update(name=self.local_alias, location="local")
+        return {**body, "model": self.local_alias}
 
     async def _once(self, caller: Caller, model: dict, before: dict, sent: dict) -> Response:
         try:
@@ -212,8 +238,8 @@ class Egress:
         raise ProblemError(502, "llm-upstream-error", "모델 호출이 실패했습니다", f"LiteLLM {status}")
 
     def _audit(self, caller: Caller, model: dict, result: str, problem_type: str | None = None,
-               detail: str | None = None) -> None:
-        self.audit.event("llm.request", employee_id=caller.employee_id,
+               detail: str | None = None, kind: str = "llm.request") -> None:
+        self.audit.event(kind, employee_id=caller.employee_id,
                          agent_id=caller.agent.id if caller.agent else None, via_token=caller.via_token,
                          conversation_id=caller.conversation_id, model=dict(model), result=result,
                          problem_type=problem_type, detail=detail)

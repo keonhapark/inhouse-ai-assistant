@@ -138,3 +138,73 @@ def test_stream_upstream_error(client, app, litellm, alerts):
     litellm.mode = "500"
     r = client.post("/v1/chat/completions", json={"model": "local", "messages": MSG, "stream": True})
     assert r.status_code == 502 and len(alerts) == 1
+
+
+# ---------- 가림과 기밀 판정(#10) ----------
+PII_MSG = [{"role": "user", "content": "제 연락처는 010-1234-5678, 주민번호 900101-1234568입니다"}]
+
+
+def test_external_request_is_redacted_and_recorded(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": PII_MSG})
+    assert r.status_code == 200
+    sent = litellm.last_body()["messages"][0]["content"]
+    assert "010-1234-5678" not in sent and "900101-1234568" not in sent
+    assert "[전화번호]" in sent and "[주민등록번호]" in sent
+    rec = app.state.audit.egress.read_all()[-1]
+    assert rec["requestBeforeRedaction"]["messages"] == PII_MSG       # 가림 전 원문은 외부 전송 기록에만
+    assert rec["requestSent"]["messages"][0]["content"] == sent and rec["redactions"] == 2
+    events = _audit(app)
+    red = [e for e in events if e["kind"] == "llm.redacted"][-1]
+    assert red["detail"] == "KR_PHONE=1, KR_RRN=1" and red["model"]["redactions"] == 2
+    assert events[-1]["kind"] == "llm.request" and events[-1]["model"]["redactions"] == 2
+    audit_text = app.state.audit.events.path.read_text(encoding="utf-8")
+    assert "010-1234-5678" not in audit_text and "900101" not in audit_text  # 감사 이벤트에 원문 없음
+
+
+def test_local_request_is_not_redacted(client, app, litellm):
+    r = client.post("/v1/chat/completions", json={"model": "local", "messages": PII_MSG})
+    assert r.status_code == 200
+    assert litellm.last_body()["messages"] == PII_MSG
+    assert not [e for e in _audit(app) if e["kind"] == "llm.redacted"]
+
+
+@pytest.fixture
+def glossary(app):
+    from gateway.confidential import Glossary
+
+    app.state.egress.glossary = Glossary.from_doc({"terms": [
+        {"term": "프로젝트 해오름", "action": "local_only"},
+        {"term": "원가표", "action": "block", "reason": "원가 정보는 외부로 보내지 않습니다"},
+    ]})
+
+
+def test_confidential_term_reroutes_to_local(client, app, token_for, litellm, glossary):
+    _, external_ok = _agent_ids(app)
+    msg = [{"role": "user", "content": "프로젝트 해오름 담당자 010-1234-5678 일정"}]
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": msg})
+    assert r.status_code == 200
+    assert litellm.last_body()["model"] == "local"
+    assert litellm.last_body()["messages"] == msg          # 로컬로 가면 가리지 않음
+    assert app.state.audit.egress.read_all() == []          # 밖으로 나가지 않음
+    events = _audit(app)
+    assert events[-2]["kind"] == "llm.redacted" and "로컬" in events[-2]["detail"]
+    assert "해오름" not in events[-2]["detail"]              # 용어 자체는 남기지 않음
+    assert events[-1]["model"]["location"] == "local" and events[-1]["model"]["externalSent"] is False
+
+
+def test_confidential_block_term_denies(client, app, token_for, litellm, glossary):
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": [{"role": "user", "content": "원가표 요약해 줘"}]})
+    assert r.status_code == 403 and r.json()["type"] == "urn:problem:confidential"
+    assert litellm.requests == []
+    assert _audit(app)[-1]["result"] == "denied"
+
+
+def test_confidential_term_to_local_model_passes(client, litellm, glossary):
+    r = client.post("/v1/chat/completions", json={"model": "local",
+                                                   "messages": [{"role": "user", "content": "원가표 요약"}]})
+    assert r.status_code == 200

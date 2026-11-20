@@ -2,7 +2,7 @@
 
 web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway.yaml`(서버 기준 경로 `/api`)입니다.
 
-지금 있는 것(1단계 #8, #9):
+지금 있는 것(1단계 #8, #9, #10):
 
 - `GET /health`, `GET /api/health`
 - `GET /api/.well-known/jwks.json`: 위임 토큰 검증용 공개 키. `kid`는 RFC 7638 지문입니다.
@@ -24,6 +24,18 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
   - 스트림(`"stream": true`)은 받은 대로 흘려보내고, 끝나면 기록합니다.
+- 외부로 나가는 요청의 기밀 판정과 가림(로컬 모델로 가는 요청은 가리지 않습니다)
+  - 사내 용어 사전(`gateway/confidential.py`): 팩의 `glossary.yaml`(형식 요청 #43)에서 용어를 읽어, 용어의 `action`이
+    `block`이면 403 `confidential`, `local_only`면 로컬 별칭으로 돌립니다. 파일이 없으면 판정하지 않습니다.
+    기록에는 용어 자체를 남기지 않고 개수만 남깁니다.
+  - 한국어 개인정보 가림(`gateway/pii.py`): Presidio(2.2.366)에 정규식 인식기만 올립니다. spaCy 언어 모델은 쓰지 않고
+    토큰만 나누는 빈 파이프라인을 씁니다. 주민등록번호(생년월일 확인, 검증 숫자가 맞으면 확신), 전화번호(휴대폰·지역번호·+82),
+    계좌번호(앞 15글자 안에 "계좌·은행·입금" 같은 문맥 낱말이 있어야 함), 사업자등록번호(검증 숫자), 운전면허번호, 여권번호,
+    이메일, 카드번호(Luhn)를 `[전화번호]`처럼 바꿉니다.
+  - 가린 개수는 감사 이벤트 `llm.redacted`(개체 종류별 개수)와 `llm.request`의 `model.redactions`에 남고,
+    가림 전 원문은 `egress.jsonl`에만 남습니다.
+  - 규칙이 못 잡는 형태: 사람 이름, 주소, 한글로 쓴 숫자("공일공"), 숫자 사이에 낯선 구분자를 넣은 것, 문맥 낱말 없는 계좌번호.
+    이런 것은 장치 쪽 규칙을 늘리지 않고 평가에서 따로 잽니다.
 - 토큰 위생: 모든 로그 레코드에서 JWT 모양과 `Bearer <값>`을 가립니다(`gateway/redact.py`). 발급 기록은 `jti`만 남깁니다.
 
 ## 실행
