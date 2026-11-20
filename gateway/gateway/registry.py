@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -52,9 +53,12 @@ def grant_matches(grant: Any, who: Requester) -> bool:
 
 class Registry:
     def __init__(self, agents_doc: dict[str, Any], tools_doc: dict[str, Any], scopes_doc: dict[str, Any],
-                 access_tags: tuple[str, ...] = (), stage: int | None = None):
+                 access_tags: tuple[str, ...] = (), stage: int | None = None,
+                 unit_names: dict[str, str] | None = None):
         """stage를 주면 그 단계 이하 에이전트만 싣습니다(#170). None이면 모두 싣습니다."""
         self.stage = stage
+        self.unit_names = dict(unit_names or {})
+        self.tool_meta = {t["name"]: t for t in tools_doc["tools"]}
         human_only = {s["id"] for s in scopes_doc["scopes"] if s.get("human_only")}
         # 평가 조건 no_guard·baseline_tools의 공용 계정 범위: 사람 전용을 뺀 모든 scope, 팩의 모든 문서 태그
         self.wide_scopes = tuple(s["id"] for s in scopes_doc["scopes"] if not s.get("human_only"))
@@ -97,6 +101,7 @@ class Registry:
             read(contracts_dir / "auth/scopes.json"),
             tuple(t["id"] for t in org.get("access_tags", [])),
             stage,
+            {u["id"]: u["name"] for u in org.get("units", [])},
         )
 
     def get(self, agent_id: str) -> AgentEntry | None:
@@ -107,3 +112,46 @@ class Registry:
 
     def callable_for(self, who: Requester) -> list[AgentEntry]:
         return [a for a in self._agents.values() if grant_matches(a.callable_by, who)]
+
+    def registry_entry(self, a: AgentEntry, who: Requester) -> dict[str, Any]:
+        """등록부 화면용 항목(계약 AgentRegistryEntry). 라우팅 예문은 넣지 않습니다."""
+        raw = a.raw
+        tools = []
+        for name in a.tools:
+            meta = self.tool_meta[name]
+            tool = {"name": name}
+            if title := _first_sentence(meta.get("description", "")):
+                tool["title"] = title
+            tool["risk"] = meta["risk"]
+            tools.append(tool)
+        rp = raw.get("risk_policy", {})
+        risk_policy: dict[str, Any] = {"read": rp.get("read"), "reversibleWrite": rp.get("reversible_write"),
+                                       "irreversible": rp.get("irreversible")}
+        if "overrides" in rp:
+            risk_policy["overrides"] = [_override(o) for o in rp["overrides"]]
+        cb = a.callable_by
+        entry: dict[str, Any] = {
+            "id": a.id, "name": a.name, "version": raw["version"], "stage": raw.get("stage", 1),
+            "ownerUnitId": raw["owner_unit"], "ownerUnitName": self.unit_names.get(raw["owner_unit"]),
+            "description": a.description, "callable": grant_matches(cb, who),
+            "callableBy": cb if cb == "all" else {k: list(cb[k]) for k in ("units", "roles", "grades") if k in cb},
+            "tools": tools, "allowedRisk": list(raw.get("allowed_risk", [])), "docScopes": list(a.doc_scopes),
+            "modelPolicy": {k: a.model_policy[k] for k in ("mode", "reason") if k in a.model_policy},
+            "riskPolicy": risk_policy,
+        }
+        if (keywords := raw.get("routing", {}).get("keywords")) is not None:
+            entry["routingKeywords"] = list(keywords)
+        return entry
+
+
+def _first_sentence(text: str) -> str:
+    m = re.match(r"(.+?[.!?])(\s|$)", text.strip())
+    return m.group(1) if m else text.strip()
+
+
+def _override(o: dict[str, Any]) -> dict[str, Any]:
+    """팩의 인자 조건 `when: {arg, gt}`는 계약대로 `when: arg_gt`와 `arg`·`gt`로 씁니다."""
+    when = o["when"]
+    if isinstance(when, dict):
+        return {"tool": o["tool"], "when": "arg_gt", "arg": when["arg"], "gt": when["gt"], "action": o["action"]}
+    return {"tool": o["tool"], "when": when, "action": o["action"]}
