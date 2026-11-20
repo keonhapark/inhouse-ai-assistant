@@ -949,7 +949,15 @@ components:
                 required: [tool, when, action]
                 properties:
                   tool: {type: string}
-                  when: {type: string, enum: [wide_scope, always]}
+                  when:
+                    description: 팩 `risk_policy.overrides[].when`. wide_scope·always, 또는 도구 인자 `arg`가 `gt`보다 클 때
+                    oneOf:
+                      - {type: string, enum: [wide_scope, always]}
+                      - type: object
+                        required: [arg, gt]
+                        properties:
+                          arg: {type: string}
+                          gt: {type: number}
                   action: {$ref: "#/components/schemas/RiskAction"}
         routingKeywords:
           type: array
