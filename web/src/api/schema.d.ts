@@ -70,6 +70,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 대리인 고르기. erp `GET /employees`를 그대로 넘깁니다(공개 필드만). */
+        get: operations["searchEmployees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/approval-forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 대결 범위의 양식 고르기. erp `GET /approval-forms`를 그대로 넘깁니다. */
+        get: operations["listApprovalForms"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents": {
         parameters: {
             query?: never;
@@ -405,6 +439,11 @@ export interface components {
             formName: string;
             requesterName: string;
             requesterUnitName?: string;
+            /** @description erp 결재선 단계에 이름을 붙입니다 */
+            steps?: {
+                approverName: string;
+                actedByName?: string | null;
+            }[];
             /** @description 대결로 내 함에 들어온 것이면 원 결재자와 위임 */
             viaDelegation?: {
                 delegationId?: string;
@@ -453,6 +492,13 @@ export interface components {
                 field: string;
                 message: string;
             }[];
+        };
+        ApprovalForm: {
+            id: string;
+            name: string;
+            /** @description JSON Schema */
+            fieldsSchema: Record<string, unknown>;
+            amountField?: string | null;
         };
         AgentInfo: {
             id: string;
@@ -773,6 +819,55 @@ export interface operations {
             };
         };
     };
+    searchEmployees: {
+        parameters: {
+            query?: {
+                /** @description 이름 일부 */
+                q?: string;
+                unitId?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 직원 목록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["EmployeeSummary"][];
+                    };
+                };
+            };
+        };
+    };
+    listApprovalForms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 양식 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["ApprovalForm"][];
+                    };
+                };
+            };
+        };
+    };
     listAgents: {
         parameters: {
             query?: never;
@@ -821,7 +916,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /** @description 평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의 agent /run·/resume에 condition으로 그대로 넘깁니다. 값은 agent.yaml의 Condition과 같습니다. */
+                /** @description 평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의 agent /run에 condition으로 넘깁니다(이어지는 /resume은 agent 실행 상태가 조건을 기억합니다). 값은 agent.yaml의 Condition과 같습니다. */
                 "X-Eval-Condition"?: "no_guard" | "write_blocked" | "approve_all" | "baseline_tools" | "full";
             };
             path?: never;
