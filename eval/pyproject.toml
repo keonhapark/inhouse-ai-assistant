@@ -1,0 +1,27 @@
+[project]
+name = "eval"
+version = "0.1.0"
+description = "평가 하네스: 시나리오 로더, 판정기, 조건 실행기, 보고서"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "httpx==0.28.1",
+  "jsonschema==4.26.0",
+  "python-jsonpath==2.0.1",
+  "pyyaml==6.0.3",
+]
+
+[dependency-groups]
+dev = [
+  "pytest==9.2.0",
+  # 시험에서 가짜 erp(contracts/fakes/erp)를 프로세스 안에서 띄우는 데 씁니다
+  "fastapi==0.165.0",
+  "pyjwt[crypto]==2.15.1",
+  "faker==40.54.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
