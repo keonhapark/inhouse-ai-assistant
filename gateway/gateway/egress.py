@@ -370,7 +370,7 @@ class Egress:
         try:
             r = await self._http.post("/v1/embeddings", json=json.loads(scrub(json.dumps(body, ensure_ascii=False))))
         except httpx.HTTPError as e:
-            await self._fail(caller, model, body, e)
+            await self._fail(caller, model, body, body, e)
         if r.status_code >= 500:
             await self.alerter.alert(f"LLM 프록시 오류 {r.status_code} model={model['name']}")
             self._audit(caller, model, "error", "urn:problem:llm-upstream-error", f"status {r.status_code}")
@@ -404,7 +404,7 @@ class Egress:
         try:
             r = await self._http.post("/v1/chat/completions", json=sent)
         except httpx.HTTPError as e:
-            await self._fail(caller, model, sent, e)
+            await self._fail(caller, model, before, sent, e)
         self._mark_sent(caller, model, sent)
         if r.status_code == 501:
             self._unsupported(caller, model, before, sent, r.text)
@@ -422,7 +422,7 @@ class Egress:
         try:
             r = await self._http.send(req, stream=True)
         except httpx.HTTPError as e:
-            await self._fail(caller, model, sent, e)
+            await self._fail(caller, model, before, sent, e)
         self._mark_sent(caller, model, sent)
         if r.status_code >= 400:
             text = (await r.aread()).decode("utf-8", "replace")
@@ -458,15 +458,17 @@ class Egress:
                                  media_type=r.headers.get("content-type", "text/event-stream"))
 
     # ---------- 실패·기록 ----------
-    async def _fail(self, caller: Caller, model: dict, sent: dict, e: httpx.HTTPError) -> NoReturn:
+    async def _fail(self, caller: Caller, model: dict, before: dict, sent: dict, e: httpx.HTTPError) -> NoReturn:
         if isinstance(e, httpx.TimeoutException):
             status, code, title = 504, "llm-timeout", f"모델이 {self._timeout:g}초 안에 답하지 않았습니다"
         else:
             status, code, title = 502, "llm-unavailable", "LLM 프록시에 연결하지 못했습니다"
         # 연결 전 실패가 아니면(읽기 시간 초과 등) 요청은 이미 나갔다고 봅니다.
         self._mark_sent(caller, model, sent, sent_out=not isinstance(e, httpx.ConnectError))
+        # 이미 나간 외부 요청은 응답이 없어도 외부 전송 기록(가림 전후 본문)을 남깁니다(#165).
+        # 연결 전 실패(ConnectError)는 나가지 않았으므로 남기지 않습니다.
         if model["externalSent"]:
-            self._external_record(caller, model, sent, None, None)
+            self._egress(caller, model, before, sent, status, "")
         await self.alerter.alert(f"{title} model={model['name']} ({type(e).__name__})")
         self._audit(caller, model, "error", f"urn:problem:{code}", type(e).__name__)
         raise ProblemError(status, code, title)
