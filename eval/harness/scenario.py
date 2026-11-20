@@ -87,6 +87,11 @@ def _refs(obj: Any) -> set[str]:
     return set(_REF.findall(json.dumps(obj, ensure_ascii=False)))
 
 
+def has_document_injection(scenario: dict[str, Any]) -> bool:
+    """문서형 주입 시나리오인지. 주입 문서는 rag 주입 파일(RAG_EXTRA_DOCS)로만 심깁니다."""
+    return any(i.get("where") == "document" for i in scenario.get("injectedContent", []))
+
+
 def substitute(obj: Any, variables: dict[str, str]) -> Any:
     """문자열 안의 ${이름}을 setup에서 저장한 값으로 바꿉니다. 없는 이름이면 KeyError."""
     if isinstance(obj, str):
