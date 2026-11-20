@@ -119,3 +119,47 @@ def test_image_is_refused_without_local_vision_alias(client, app, litellm):
     r = client.post("/v1/chat/completions", json={"model": "local", "messages": _msg(_url(_png()))})
     assert r.status_code == 400 and r.json()["type"] == "urn:problem:unsupported-parameter"
     assert litellm.requests == []
+
+
+@pytest.mark.parametrize("part", [
+    {"type": "file", "file": {"file_data": "data:image/png;base64,iVBORw0KGgo="}},
+    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "iVBORw0KGgo="}},
+    {"type": "input_audio", "input_audio": {"data": "AAAA", "format": "wav"}},
+    "그냥 문자열",
+])
+def test_other_part_types_are_rejected(client, app, token_for, litellm, external_ok, part):
+    """file·공급자 고유 블록은 이미지를 실어 외부로 나갈 수 있어 받지 않습니다."""
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": [{"role": "user", "content": [part]}]})
+    assert r.status_code == 422, r.text
+    assert litellm.requests == [] and app.state.audit.egress.read_all() == []
+    assert "iVBOR" not in json.dumps(_audit(app), ensure_ascii=False)
+
+
+def test_inline_data_url_in_text_never_goes_external(client, app, token_for, litellm, external_ok):
+    text = "이거 읽어 줘 " + _url(_png())
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": [{"role": "user", "content": text}]})
+    assert r.status_code == 422 and litellm.requests == []
+    assert app.state.audit.egress.read_all() == []
+    assert base64.b64encode(_png()).decode() not in json.dumps(_audit(app), ensure_ascii=False)
+    # 로컬로 가는 요청은 사내에서 돌아 그대로 받습니다
+    r = client.post("/v1/chat/completions", json={"model": "local", "messages": [{"role": "user", "content": text}]})
+    assert r.status_code == 200
+
+
+def test_stream_image_goes_to_local_vision(client, app, token_for, litellm, external_ok):
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "stream": True, "messages": _msg(_url(_png()))})
+    assert r.status_code == 200 and "안녕" in r.text
+    assert litellm.last_body()["model"] == "local-vision" and app.state.audit.egress.read_all() == []
+
+
+@pytest.mark.parametrize("condition", ["no_guard", "baseline_tools"])
+def test_image_stays_local_when_eval_condition_turns_guards_off(client, app, token_for, litellm, external_ok,
+                                                                condition):
+    """로컬 강제를 끄는 평가 조건에서도 이미지는 외부로 보내지 않습니다(정책 판단 전에 별칭을 바꿈)."""
+    app.state.egress.condition_of = lambda _cid: condition
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": _msg(_url(_png()))})
+    assert r.status_code == 200 and litellm.last_body()["model"] == "local-vision"

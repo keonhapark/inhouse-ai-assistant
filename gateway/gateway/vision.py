@@ -9,12 +9,16 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import json
 import re
 from dataclasses import dataclass
 from typing import Any
 
 from gateway.problems import ProblemError
 
+# 받는 content 부분 종류. file·input_audio나 공급자 고유 블록(image·document)은 이미지·문서를 실어 외부로 내보낼 수
+# 있는데 여기서 확인하지 못하므로 422로 거절합니다.
+PART_TYPES = frozenset({"text", "image_url", "refusal"})
 MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 한 장의 디코딩 크기 상한
 _DATA_URL = re.compile(r"data:(?P<mime>[\w.+-]+/[\w.+-]+);base64,(?P<data>.*)", re.S)
 _MAGIC = {"image/png": b"\x89PNG\r\n\x1a\n", "image/jpeg": b"\xff\xd8\xff"}
@@ -37,7 +41,11 @@ def _image_urls(body: dict[str, Any]) -> list[Any]:
         if not isinstance(content, list):
             continue
         for part in content:
-            if isinstance(part, dict) and part.get("type") == "image_url":
+            kind = part.get("type") if isinstance(part, dict) else None
+            if kind not in PART_TYPES:
+                raise ProblemError(422, "validation", "받지 않는 content 부분입니다",
+                                   f"{str(kind)[:40]}. 받는 것: {', '.join(sorted(PART_TYPES))}")
+            if kind == "image_url":
                 iu = part.get("image_url")
                 urls.append(iu.get("url") if isinstance(iu, dict) else None)
     return urls
@@ -74,3 +82,8 @@ def inspect_images(body: dict[str, Any]) -> list[ImageInfo]:
                                f"{i}번째 이미지: {mime}")
         out.append(ImageInfo(mime, len(data), hashlib.sha256(data).hexdigest()))
     return out
+
+
+def has_inline_image(body: dict[str, Any]) -> bool:
+    """image_url 부분 밖(글 속)에 붙여 넣은 이미지 data URL이 있는지. 외부로 가는 본문에 씁니다."""
+    return "data:image/" in json.dumps(body, ensure_ascii=False).lower()

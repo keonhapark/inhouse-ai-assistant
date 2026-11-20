@@ -40,7 +40,7 @@ from gateway.problems import ProblemError
 from gateway.redact import scrub
 from gateway.registry import AgentEntry, Registry
 from gateway.tokens import DelegationTokenIssuer
-from gateway.vision import inspect_images
+from gateway.vision import has_inline_image, inspect_images
 
 log = logging.getLogger(__name__)
 
@@ -335,6 +335,10 @@ class Egress:
                 model.update(name=self.local_alias, location="local")
                 sent = {**sent, "model": self.local_alias}
         if model["location"] == "external":
+            if has_inline_image(sent):
+                # 글 속 data URL은 가림(pii.py)이 건드리지 않아 그대로 나가고 기록에도 남습니다(#261).
+                raise ProblemError(422, "validation", "이미지는 image_url 부분으로만 보낼 수 있습니다",
+                                   "글 속에 이미지 data URL이 있습니다")
             # think는 Ollama 전용 필드입니다. 외부 공급자는 모르는 필드를 400으로 거절하고(Anthropic 실측),
             # LiteLLM drop_params도 이 필드는 거르지 않아 gateway가 뺍니다. 추론 조절은 reasoning_effort로 합니다.
             sent = {k: v for k, v in sent.items() if k not in LOCAL_ONLY_FIELDS}
