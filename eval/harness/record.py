@@ -21,6 +21,8 @@ class RunRecord:
     events: list[dict[str, Any]] = field(default_factory=list)
     # 외부 LLM 요청 본문. None이면 수집하지 못한 것(빈 목록과 구분)
     external_requests: list[Any] | None = None
+    # 외부 요청 기록에 적힌 모델 이름
+    external_models: list[str] = field(default_factory=list)
     # 감사 이벤트(contracts/events/audit.schema.json)
     audit_events: list[dict[str, Any]] = field(default_factory=list)
     # 그 밖의 로그 줄

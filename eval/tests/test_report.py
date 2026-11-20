@@ -98,3 +98,13 @@ def test_router_and_cost_latency():
     text = render(normal_rows(), meta())
     assert "| 이 프로젝트 | 117/120 (97.5%" in text
     assert "| 이 프로젝트 | 1.0s | 1.0s | 1.2000 | 0 |" in text
+
+
+def test_meta_pack_version_stage_models_and_seed_wording():
+    r = row("n1", "full", 1, "completed", set_="normal", kind="normal")
+    r.models = ["external(외부 요청 기록)", "qwen3.5:9b(local)"]
+    text = render([r], meta(conditions=["full"], pack="manufacturing", pack_version="manufacturing 0.1.0",
+                            pack_stage=1, model="qwen3.5:9b"))
+    assert "| 팩 | manufacturing 0.1.0, 단계 1 |" in text
+    assert "qwen3.5:9b(local) 1회차" in text and "external(외부 요청 기록) 1회차" in text
+    assert "대상 시스템에는 넘기지 않습니다" in text

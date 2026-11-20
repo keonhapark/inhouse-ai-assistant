@@ -44,7 +44,8 @@ def test_gateway_chat_flow():
 
     c = httpx.Client(base_url="http://gw/api", transport=httpx.MockTransport(handler))
     g = GatewayChat(c, auditor="E0050", password="pw",
-                    external_log=lambda cid: [{"conversationId": cid, "body": f"body-{cid}", "costUsd": 0.002}])
+                    external_log=lambda cid: [{"conversationId": cid, "model": "external", "body": f"body-{cid}",
+                                                "costUsd": 0.002}])
     cid = g.start("E0016")
     assert [e["type"] for e in g.send(cid, "안녕")] == ["message", "done"]
     assert [e["type"] for e in g.decide(cid, "p1", "approve")] == ["done"]
@@ -52,6 +53,7 @@ def test_gateway_chat_flow():
     assert [a["kind"] for a in got.audit_events] == ["tool.called", "erp.write"]
     assert got.external_requests == ["body-c1"]
     assert got.cost_usd == 0.002
+    assert got.external_models == ["external"]
     chat_auth = {a for m, p, a in seen if p.startswith("/api/conversations")}
     assert chat_auth == {"Bearer tok-E0016"}
     assert {a for m, p, a in seen if p == "/api/audit-events"} == {"Bearer tok-E0050"}

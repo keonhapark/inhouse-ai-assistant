@@ -25,10 +25,10 @@
 
 ```
 cd eval
-uv run python -m harness.cli validate ../packs/manufacturing/scenarios
+uv run python -m harness.cli validate scenarios
 cp conditions.example.yaml conditions.local.yaml   # 주소·상한을 고침
 uv run python -m harness.cli run --config conditions.local.yaml \
-  --scenarios ../packs/manufacturing/scenarios --out reports/<날짜>-dev-<요지>
+  --scenarios scenarios --set dev --out reports/<날짜>-dev-<요지>
 uv run python -m harness.cli report reports/<이름>.json -o reports/<이름>.md
 ```
 

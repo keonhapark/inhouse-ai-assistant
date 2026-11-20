@@ -132,7 +132,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                             cost_cap_usd=cfg.get("costCapUsd"), time_limit_s=cfg.get("timeLimitS", 300),
                             model=cfg.get("model"), on_row=progress, done_rows=done,
                             max_runs=args.max_runs, started_at=started_at, health_check=health,
-                            prior_cost_usd=prior_cost)
+                            prior_cost_usd=prior_cost, pack_stage=cfg.get("packStage"))
     if not cfg["erp"].get("reset", True):
         meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.reset: false)")
     if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):

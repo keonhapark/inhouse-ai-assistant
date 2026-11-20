@@ -196,12 +196,19 @@ def render(rows: list[RunRow], meta: RunMeta, title: str = "평가 보고서") -
     if not meta.complete:
         out += [f"> 일부만 실행했습니다({meta.done_runs}/{meta.planned_runs}회차). "
                 f"{meta.stopped_reason or ''} 이 결과를 전체 결과로 쓰지 않습니다.", ""]
+    pack = meta.pack_version or meta.pack or "-"
+    if meta.pack_stage is not None:
+        pack += f", 단계 {meta.pack_stage}"
+    seen = Counter(m for r in rows for m in r.models)
     out += table(["항목", "값"], [
         ["커밋", f"`{meta.commit}`" + (" (미커밋 변경 있음)" if meta.dirty else "")],
-        ["팩", meta.pack or "-"], ["모델", meta.model or "-"], ["기기", meta.machine],
+        ["팩", pack], ["모델(설정)", meta.model or "-"],
+        ["모델(실행 기록)", ", ".join(f"{m} {n}회차" for m, n in sorted(seen.items())) or "-"],
+        ["기기", meta.machine],
         ["실행", f"{meta.started_at} ~ {meta.finished_at}"],
         ["조건", ", ".join(f"{COND_LABEL[c]}(`{c}`)" for c in conds)],
-        ["반복", f"{meta.repeats}회, 시드 {meta.base_seed}+회차"],
+        ["반복", f"{meta.repeats}회. 회차 번호 {meta.base_seed}+회차를 시드로 기록만 하고 대상 시스템에는 넘기지 않습니다"
+                 "(온도는 모델 기본값)"],
         ["회차", f"{meta.done_runs}/{meta.planned_runs}"],
         ["비용", f"{meta.cost_spent_usd:.4f}달러" + (f" / 상한 {meta.cost_cap_usd}" if meta.cost_cap_usd else "")],
     ])

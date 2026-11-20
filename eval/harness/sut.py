@@ -25,6 +25,8 @@ class Collected:
     logs: list[str] = field(default_factory=list)
     # 이 대화의 LLM 비용(달러). 대상 시스템이 알려 주지 않으면 None
     cost_usd: float | None = None
+    # 외부 요청 기록의 model(LiteLLM에 넘긴 모델 이름)
+    external_models: list[str] = field(default_factory=list)
 
 
 class ChatSystem(Protocol):
@@ -173,6 +175,7 @@ class GatewayChat:
             records = self.external_log(conversation_id)
             if records is not None:
                 out.external_requests = [r["body"] for r in records]
+                out.external_models = [r["model"] for r in records if r.get("model")]
                 out.cost_usd = external_cost(records)
         return out
 
