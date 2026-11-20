@@ -34,7 +34,7 @@ def _audit(app) -> list[dict]:
 
 def test_litellm_config_aliases_have_location():
     locs = load_model_locations(ROOT / "gateway/litellm/config.yaml")
-    assert locs == {"local": "local", "external": "external"}
+    assert locs == {"local": "local", "local-embed": "local", "external": "external"}
 
 
 def test_local_only_agent_cannot_use_external(client, app, token_for, litellm):
@@ -271,3 +271,69 @@ def test_stream_closed_by_caller_is_still_recorded(app, token_for):
     assert ev["kind"] == "llm.request" and ev["result"] == "error"
     assert ev["problemType"] == "urn:problem:llm-stream-aborted" and ev["model"]["externalSent"] is True
     assert "안녕" in app.state.audit.egress.read_all()[-1]["response"]
+
+
+# ---------- 평가 경로(#63) ----------
+EXT_SCHEMA = json.loads((ROOT / "contracts/events/external-request.schema.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture
+def ext_log(app, tmp_path):
+    from gateway.audit import JsonlWriter
+
+    app.state.egress.external_log = JsonlWriter(tmp_path / "external.jsonl")
+    return app.state.egress.external_log
+
+
+def test_external_request_log_has_redacted_body(client, app, token_for, litellm, ext_log):
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": PII_MSG})
+    assert r.status_code == 200
+    (rec,) = ext_log.read_all()
+    Draft202012Validator(EXT_SCHEMA).validate(rec)
+    assert rec["conversationId"] == "conv-9" and rec["agentId"] == external_ok and rec["model"] == "external"
+    assert rec["body"] == litellm.last_body()          # 실제 보낸 본문(가림 뒤) 그대로
+    assert "010-1234-5678" not in json.dumps(rec, ensure_ascii=False)
+
+
+def test_external_log_skips_local_denied_and_unsent(client, app, token_for, litellm, ext_log):
+    local_only, external_ok = _agent_ids(app)
+    client.post("/v1/chat/completions", json={"model": "local", "messages": MSG})
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(local_only)},
+                json={"model": "external", "messages": MSG})
+    litellm.mode = "down"
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                json={"model": "external", "messages": MSG})
+    assert ext_log.read_all() == []
+
+
+def test_external_log_off_by_default(client, app, token_for, settings):
+    assert app.state.egress.external_log is None
+
+
+def test_embeddings_local_only(client, app, litellm):
+    r = client.post("/v1/embeddings", json={"model": "local-embed", "input": ["규정 본문"]})
+    assert r.status_code == 200 and r.json()["data"][0]["embedding"] == [0.1, 0.2]
+    assert litellm.requests[-1].url.path == "/v1/embeddings"
+    assert _audit(app)[-1]["model"]["name"] == "local-embed"
+    n = len(litellm.requests)
+    r = client.post("/v1/embeddings", json={"model": "external", "input": "x"})
+    assert r.status_code == 403 and len(litellm.requests) == n
+    assert client.post("/v1/embeddings", json={"model": "local-embed"}).status_code == 422
+    assert client.post("/v1/embeddings", json={"model": "local-embed", "input": "x", "fallbacks": []}
+                       ).status_code == 422
+
+
+def test_reasoning_effort_is_forwarded(client, litellm):
+    r = client.post("/v1/chat/completions", json={"model": "local", "messages": MSG, "reasoning_effort": "low"})
+    assert r.status_code == 200 and litellm.last_body()["reasoning_effort"] == "low"
+
+
+def test_think_is_dropped_for_external_only(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                json={"model": "external", "messages": MSG, "think": False})
+    assert "think" not in litellm.last_body()
+    client.post("/v1/chat/completions", json={"model": "local", "messages": MSG, "think": False})
+    assert litellm.last_body()["think"] is False

@@ -18,7 +18,7 @@ from gateway.alerts import Alerter
 from gateway import audit_query
 from gateway.chat import AgentClient, ChatService
 from gateway.chat import build_router as chat_router
-from gateway.audit import AuditLog
+from gateway.audit import AuditLog, JsonlWriter
 from gateway.config import Settings
 from gateway.delegation import DelegationService
 from gateway.confidential import Glossary
@@ -59,7 +59,8 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     egress = Egress(base_url=settings.litellm_base_url, locations=load_model_locations(settings.litellm_config),
                     registry=registry, issuer=issuer, audit=audit, alerter=alerter,
                     timeout=settings.llm_timeout_seconds, api_key=os.environ.get("LITELLM_MASTER_KEY") or None,
-                    transport=llm_transport, redactor=KoreanRedactor(), glossary=Glossary.load(settings.pack_dir))
+                    transport=llm_transport, redactor=KoreanRedactor(), glossary=Glossary.load(settings.pack_dir),
+                    external_log=JsonlWriter(settings.external_log) if settings.external_log else None)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -75,7 +76,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     app.state.erp = erp
     app.state.delegation = DelegationService(erp, registry, issuer)
     agent = AgentClient(settings.agent_base_url, transport=agent_transport, timeout=settings.agent_timeout_seconds)
-    app.state.chat = ChatService(erp, registry, app.state.delegation, agent, audit)
+    app.state.chat = ChatService(erp, registry, app.state.delegation, agent, audit, eval_mode=settings.eval_mode)
     app.state.audit = audit
     app.state.alerter = alerter
     app.state.egress = egress
@@ -115,6 +116,10 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     @app.post("/v1/chat/completions")
     async def chat_completions(request: Request) -> Response:
         return await egress.handle(request)
+
+    @app.post("/v1/embeddings")
+    async def embeddings(request: Request) -> Response:
+        return await egress.handle_embeddings(request)
 
     return app
 

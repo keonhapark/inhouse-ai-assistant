@@ -36,6 +36,7 @@ from gateway.relay import bearer
 log = logging.getLogger(__name__)
 
 APPROVAL_TTL = timedelta(minutes=10)
+EVAL_CONDITIONS = ("no_guard", "write_blocked", "approve_all", "baseline_tools", "full")  # agent.yaml Condition
 MAX_CONTENT = 4000
 
 
@@ -105,6 +106,7 @@ class Conversation:
     events: list[dict[str, Any]] = field(default_factory=list)
     seq: int = 0
     pending: str | None = None
+    condition: str | None = None   # 평가 조건(X-Eval-Condition). 운영에서는 None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     def event(self, type_: str, **fields: Any) -> dict[str, Any]:
@@ -126,7 +128,8 @@ def agent_requester(who: Requester) -> dict[str, Any]:
 
 class ChatService:
     def __init__(self, erp: ErpClient, registry: Registry, delegation: DelegationService, agent: AgentClient,
-                 audit: AuditLog):
+                 audit: AuditLog, eval_mode: bool = False):
+        self.eval_mode = eval_mode
         self.erp, self.registry, self.delegation, self.agent, self.audit = erp, registry, delegation, agent, audit
         self.conversations: dict[str, Conversation] = {}
         self.approvals: dict[str, Approval] = {}
@@ -248,8 +251,11 @@ class ChatService:
 
             token = self._token(who, c)
             try:
-                state = await self.agent.run(token, {"conversationId": c.id, "agentId": c.agent_id,
-                                                     "message": content, "requester": agent_requester(who)})
+                body = {"conversationId": c.id, "agentId": c.agent_id, "message": content,
+                        "requester": agent_requester(who)}
+                if c.condition:
+                    body["condition"] = c.condition
+                state = await self.agent.run(token, body)
             except AgentUnavailable:
                 yield self._agent_down(c)
                 yield c.event("done")
@@ -404,12 +410,20 @@ def build_router(chat: ChatService) -> APIRouter:
         body = await json_body(request)
         if set(body) - {"agentId"}:
             raise ProblemError(422, "validation", "agentId만 받습니다")
+        condition = request.headers.get("x-eval-condition")
+        if condition is not None:
+            if not chat.eval_mode:
+                raise ProblemError(400, "validation", "평가 모드가 아니라 X-Eval-Condition을 받지 않습니다")
+            if condition not in EVAL_CONDITIONS:
+                raise ProblemError(422, "validation", "X-Eval-Condition 값이 올바르지 않습니다",
+                                   ", ".join(EVAL_CONDITIONS))
         agent_id = body.get("agentId")
         if agent_id is not None:
             agent = chat.registry.get(agent_id)
             if agent is None or not grant_matches(agent.callable_by, who):
                 raise ProblemError(403, "forbidden", "이 에이전트를 부를 수 없습니다", str(agent_id))
-        c = Conversation(id="conv_" + uuid.uuid4().hex, owner=who.id, created_at=now(), agent_id=agent_id)
+        c = Conversation(id="conv_" + uuid.uuid4().hex, owner=who.id, created_at=now(), agent_id=agent_id,
+                         condition=condition)
         chat.conversations[c.id] = c
         return JSONResponse(chat.summary(c), status_code=201)
 

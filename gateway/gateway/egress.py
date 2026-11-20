@@ -29,7 +29,7 @@ from fastapi import Request
 from fastapi.responses import Response, StreamingResponse
 
 from gateway.alerts import Alerter
-from gateway.audit import AuditLog, now_iso
+from gateway.audit import AuditLog, JsonlWriter, now_iso
 from gateway.confidential import Glossary
 from gateway.problems import ProblemError
 from gateway.redact import scrub
@@ -53,8 +53,12 @@ def no_redaction(body: dict[str, Any]) -> tuple[dict[str, Any], Counter]:
 ALLOWED_FIELDS = frozenset({
     "model", "messages", "stream", "stream_options", "temperature", "top_p", "max_tokens",
     "max_completion_tokens", "stop", "seed", "presence_penalty", "frequency_penalty", "tools", "tool_choice",
-    "parallel_tool_calls", "response_format", "think",
+    "parallel_tool_calls", "response_format", "think", "reasoning_effort",
 })
+
+
+LOCAL_ONLY_FIELDS = frozenset({"think"})
+EMBEDDING_FIELDS = frozenset({"model", "input", "encoding_format", "dimensions"})
 
 
 def load_model_locations(config_path: Path) -> dict[str, str]:
@@ -94,11 +98,13 @@ class Egress:
     def __init__(self, *, base_url: str, locations: dict[str, str], registry: Registry,
                  issuer: DelegationTokenIssuer, audit: AuditLog, alerter: Alerter, timeout: float,
                  api_key: str | None = None, transport: httpx.AsyncBaseTransport | None = None,
-                 redactor: Redactor = no_redaction, glossary: Glossary | None = None):
+                 redactor: Redactor = no_redaction, glossary: Glossary | None = None,
+                 external_log: JsonlWriter | None = None):
         self.locations = locations
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
         self.redactor = redactor
         self.glossary = glossary or Glossary([])
+        self.external_log = external_log  # contracts/events/external-request.schema.json, 평가 때만
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._http = httpx.AsyncClient(base_url=base_url, transport=transport, headers=headers,
@@ -158,6 +164,9 @@ class Egress:
         if location == "external":
             sent = self._confidential(caller, model, before)
         if model["location"] == "external":
+            # think는 Ollama 전용 필드입니다. 외부 공급자는 모르는 필드를 400으로 거절하고(Anthropic 실측),
+            # LiteLLM drop_params도 이 필드는 거르지 않아 gateway가 뺍니다. 추론 조절은 reasoning_effort로 합니다.
+            sent = {k: v for k, v in sent.items() if k not in LOCAL_ONLY_FIELDS}
             sent, counts = self.redactor(sent)
             model["redactions"] = sum(counts.values())
             if counts:
@@ -167,6 +176,40 @@ class Egress:
         if sent.get("stream"):
             return await self._stream(caller, model, before, sent)
         return await self._once(caller, model, before, sent)
+
+    async def handle_embeddings(self, request: Request) -> Response:
+        """`POST /v1/embeddings`. 로컬 별칭만 받습니다(문서 원문을 외부로 보내지 않음). 가림은 하지 않습니다."""
+        caller = self._caller(request)
+        try:
+            body = json.loads(await request.body())
+        except ValueError:
+            raise ProblemError(422, "validation", "JSON 본문이 아닙니다")
+        if not isinstance(body, dict) or not isinstance(body.get("model"), str) \
+                or not isinstance(body.get("input"), (str, list)):
+            raise ProblemError(422, "validation", "model과 input이 필요합니다")
+        extra = sorted(set(body) - EMBEDDING_FIELDS)
+        if extra:
+            raise ProblemError(422, "validation", "받지 않는 필드가 있습니다", ", ".join(extra))
+        location = self.locations.get(body["model"])
+        if location is None:
+            raise ProblemError(422, "validation", "모르는 모델 별칭입니다")
+        model = {"name": body["model"], "location": location, "externalSent": False, "redactions": 0}
+        if location != "local":
+            detail = "임베딩은 로컬 모델만 씁니다"
+            self._audit(caller, model, "denied", "urn:problem:model-policy", detail)
+            raise ProblemError(403, "model-policy", "모델 정책에 맞지 않습니다", detail)
+        try:
+            r = await self._http.post("/v1/embeddings", json=json.loads(scrub(json.dumps(body, ensure_ascii=False))))
+        except httpx.HTTPError as e:
+            await self._fail(caller, model, body, e)
+        if r.status_code >= 500:
+            await self.alerter.alert(f"LLM 프록시 오류 {r.status_code} model={model['name']}")
+            self._audit(caller, model, "error", "urn:problem:llm-upstream-error", f"status {r.status_code}")
+            raise ProblemError(502, "llm-upstream-error", "임베딩 호출이 실패했습니다", f"LiteLLM {r.status_code}")
+        self._audit(caller, model, "ok" if r.status_code < 400 else "error",
+                    None if r.status_code < 400 else f"urn:problem:llm-status-{r.status_code}")
+        return Response(r.content, status_code=r.status_code,
+                        media_type=r.headers.get("content-type", "application/json"))
 
     def _confidential(self, caller: Caller, model: dict, body: dict) -> dict:
         """사내 기밀 용어가 있으면 차단하거나 로컬 별칭으로 바꾼 본문을 돌려줍니다."""
@@ -181,12 +224,20 @@ class Egress:
         model.update(name=self.local_alias, location="local")
         return {**body, "model": self.local_alias}
 
+    def _mark_sent(self, caller: Caller, model: dict, sent: dict, sent_out: bool = True) -> None:
+        """요청이 나갔으면 표시하고, 외부로 나갔으면 평가용 외부 요청 기록(GATEWAY_EXTERNAL_LOG)을 씁니다."""
+        model["externalSent"] = model["location"] == "external" and sent_out
+        if model["externalSent"] and self.external_log is not None:
+            self.external_log.write({"conversationId": caller.conversation_id,
+                                     "agentId": caller.agent.id if caller.agent else None,
+                                     "at": now_iso(), "model": model["name"], "body": sent})
+
     async def _once(self, caller: Caller, model: dict, before: dict, sent: dict) -> Response:
         try:
             r = await self._http.post("/v1/chat/completions", json=sent)
         except httpx.HTTPError as e:
-            await self._fail(caller, model, e)
-        model["externalSent"] = model["location"] == "external"
+            await self._fail(caller, model, sent, e)
+        self._mark_sent(caller, model, sent)
         if r.status_code >= 500:
             await self._upstream_error(caller, model, before, sent, r.status_code, r.text)
         self._egress(caller, model, before, sent, r.status_code, r.text)
@@ -200,8 +251,8 @@ class Egress:
         try:
             r = await self._http.send(req, stream=True)
         except httpx.HTTPError as e:
-            await self._fail(caller, model, e)
-        model["externalSent"] = model["location"] == "external"
+            await self._fail(caller, model, sent, e)
+        self._mark_sent(caller, model, sent)
         if r.status_code >= 400:
             text = (await r.aread()).decode("utf-8", "replace")
             await r.aclose()
@@ -233,13 +284,13 @@ class Egress:
                                  media_type=r.headers.get("content-type", "text/event-stream"))
 
     # ---------- 실패·기록 ----------
-    async def _fail(self, caller: Caller, model: dict, e: httpx.HTTPError) -> NoReturn:
+    async def _fail(self, caller: Caller, model: dict, sent: dict, e: httpx.HTTPError) -> NoReturn:
         if isinstance(e, httpx.TimeoutException):
             status, code, title = 504, "llm-timeout", f"모델이 {self._timeout:g}초 안에 답하지 않았습니다"
         else:
             status, code, title = 502, "llm-unavailable", "LLM 프록시에 연결하지 못했습니다"
         # 연결 전 실패가 아니면(읽기 시간 초과 등) 요청은 이미 나갔다고 봅니다.
-        model["externalSent"] = model["location"] == "external" and not isinstance(e, httpx.ConnectError)
+        self._mark_sent(caller, model, sent, sent_out=not isinstance(e, httpx.ConnectError))
         await self.alerter.alert(f"{title} model={model['name']} ({type(e).__name__})")
         self._audit(caller, model, "error", f"urn:problem:{code}", type(e).__name__)
         raise ProblemError(status, code, title)
