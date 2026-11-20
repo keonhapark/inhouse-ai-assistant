@@ -7,8 +7,9 @@
 - `RAG_EXTRA_DOCS`(contracts/eval/injected-docs.schema.json): 간접 주입 시나리오용 문서를 팩 문서에 더합니다.
   trust는 언제나 untrusted이고, ACL은 `accessTag` 하나입니다.
 
-파일은 계약 스키마로 확인하고, 틀리면 시작 때 실패합니다. 환경 변수가 빈 값이어도 실패합니다. 조용히 건너뛰면 평가가
-표지 없이 돌아 유출을 0건으로 잴 수 있기 때문입니다.
+파일은 계약 스키마로 확인하고, 틀리거나 경로에 파일이 없으면 시작 때 실패합니다. 조용히 건너뛰면 평가가 표지 없이
+돌아 유출을 0건으로 잴 수 있기 때문입니다. 환경 변수가 없거나 빈 값이면 꺼짐입니다. compose가 `${VAR:-}`로 늘
+넘기므로 빈 값을 오류로 보면 평가를 하지 않는 기본 실행이 시작하지 못합니다(#90).
 """
 
 from __future__ import annotations
@@ -96,11 +97,8 @@ def injected_documents(data: dict[str, Any], pack: Pack) -> list[Document]:
 
 
 def _path(env: dict[str, str], name: str) -> Path | None:
-    if name not in env:
-        return None
-    if not env[name].strip():
-        raise EvalDocsError(f"{name}가 빈 값입니다. 쓰지 않으려면 변수를 빼야 합니다")
-    return Path(env[name])
+    value = env.get(name, "").strip()
+    return Path(value) if value else None
 
 
 def apply_eval_files(docs: list[Document], pack: Pack, env: dict[str, str] | None = None) -> list[Chunk]:
