@@ -689,6 +689,19 @@ paths:
                     items: {$ref: "../events/audit.schema.json"}
         "403": {$ref: "#/components/responses/Problem"}
 
+  /_eval/reset:
+    post:
+      tags: [eval]
+      operationId: evalReset
+      security: []
+      description: >-
+        평가 전용. ERP_EVAL_RESET=1로 띄웠을 때만 있습니다(아니면 404). 모든 상태를 팩 고정 데이터로 되돌리고
+        멱등 키·되돌리기 기록·감사 이벤트도 비웁니다. 평가 회차 사이에 부릅니다.
+      responses:
+        "204":
+          description: 초기화함
+        "404": {$ref: "#/components/responses/Problem"}
+
 components:
   securitySchemes:
     bearer:

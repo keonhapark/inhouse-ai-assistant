@@ -81,6 +81,16 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/Answer"}
         "401": {$ref: "#/components/responses/Problem"}
+        "502":
+          description: gateway 출구가 오류를 돌려줌(problem+json)
+          content:
+            application/problem+json:
+              schema: {$ref: "#/components/responses/Problem/content/application~1problem+json/schema"}
+        "503":
+          description: gateway 출구나 모델에 닿지 못함(problem+json)
+          content:
+            application/problem+json:
+              schema: {$ref: "#/components/responses/Problem/content/application~1problem+json/schema"}
 components:
   parameters:
     DelegationToken:

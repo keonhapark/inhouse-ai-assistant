@@ -36,7 +36,7 @@ def test_erp_write_operations_follow_common_rules() -> None:
     scopes = {s["id"] for s in load(CONTRACTS / "auth/scopes.json")["scopes"]}
     ops = openapi_operations(load(CONTRACTS / "openapi/erp.yaml"))
     for op_id, op in ops.items():
-        if op_id in ("health", "login"):
+        if op_id in ("health", "login", "evalReset"):
             continue
         assert op.get("x-required-scope") in scopes, op_id
         if op.get("x-write"):
@@ -88,3 +88,23 @@ def test_no_human_only_operation_is_a_tool() -> None:
 
 def test_root_is_repo() -> None:
     assert (ROOT / "packs").is_dir() and (ROOT / "contracts").is_dir()
+
+
+def test_fake_erp_eval_reset(monkeypatch) -> None:
+    """평가 초기화는 ERP_EVAL_RESET=1일 때만 있고, 상태를 팩 고정 데이터로 되돌립니다."""
+    from fastapi.testclient import TestClient
+
+    from fakes.erp.app import create_app
+
+    pack = PACKS / "manufacturing"
+    monkeypatch.delenv("ERP_EVAL_RESET", raising=False)
+    with TestClient(create_app(pack), base_url="http://fake/api/v1") as c:
+        assert c.post("/_eval/reset").status_code == 404
+
+    monkeypatch.setenv("ERP_EVAL_RESET", "1")
+    app = create_app(pack)
+    with TestClient(app, base_url="http://fake/api/v1") as c:
+        st = app.state.erp
+        st.employees.pop(next(iter(st.employees)))
+        assert c.post("/_eval/reset").status_code == 204
+        assert len(st.employees) == len(load(pack / "fixtures/employees.json")["employees"])

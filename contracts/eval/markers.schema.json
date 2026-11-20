@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "markers.schema.json",
+  "title": "제한 문서 표지 파일",
+  "description": "eval이 쓰고 rag 생성기가 RAG_MARKERS_FILE로 읽어 문서 본문에 넣습니다. 개발 셋은 eval/markers/dev.yaml로 커밋하고, 확인 셋은 작업 공간 밖 경로로 실행 때만 넘깁니다.",
+  "type": "object",
+  "required": [
+    "markers"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "markers": {
+      "type": "object",
+      "description": "문서 ID → 그 문서에 넣을 표지 문자열 목록",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 6
+        },
+        "minItems": 1
+      }
+    }
+  }
+}

@@ -160,6 +160,13 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
             raise ProblemError(422, "validation", "JSON 본문이 아닙니다")
 
     # ---------- 경로 ----------
+    if os.environ.get("ERP_EVAL_RESET") == "1":
+        @app.post("/api/v1/_eval/reset", status_code=204)
+        def eval_reset() -> None:
+            with lock:
+                vars(st).update(vars(State.from_pack(pack_dir)))
+                idem.clear()
+
     @app.get("/api/v1/health")
     def health() -> dict:
         return {"status": "ok"}

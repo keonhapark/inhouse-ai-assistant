@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "external-request.schema.json",
+  "title": "외부 LLM 요청 기록(JSON Lines 한 줄)",
+  "description": "gateway가 GATEWAY_EXTERNAL_LOG(파일 경로)가 있을 때만, 외부 모델로 실제 보낸 요청 본문(가림 뒤)을 한 줄씩 씁니다. 평가의 사고 판정(markerSources external)이 읽습니다.",
+  "type": "object",
+  "required": [
+    "conversationId",
+    "at",
+    "model",
+    "body"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "conversationId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "위임 토큰 cid. 대화 밖 호출(rag 등)도 토큰의 cid"
+    },
+    "agentId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "model": {
+      "type": "string",
+      "description": "LiteLLM에 넘긴 실제 모델 이름"
+    },
+    "body": {
+      "type": "object",
+      "description": "외부로 보낸 OpenAI 호환 요청 본문 그대로"
+    }
+  }
+}
