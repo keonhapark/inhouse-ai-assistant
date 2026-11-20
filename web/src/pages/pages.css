@@ -1,0 +1,90 @@
+.muted {
+  color: var(--text-muted);
+}
+
+.login {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--sp-16);
+}
+
+.login__card {
+  width: min(360px, 100%);
+}
+
+.login__form {
+  display: grid;
+  gap: var(--sp-12);
+  padding: var(--sp-8) 0;
+}
+
+.login__form p {
+  margin: 0;
+}
+
+.shell {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-16);
+  padding: var(--sp-8) var(--sp-24);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar__me {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-left: auto;
+}
+
+.page {
+  display: grid;
+  gap: var(--sp-24);
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--sp-32) var(--sp-16);
+}
+
+.page section {
+  display: grid;
+  gap: var(--sp-12);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sp-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.swatches li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.card p {
+  margin: 0 0 var(--sp-4);
+}

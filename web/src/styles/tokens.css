@@ -1,0 +1,70 @@
+/* web/DESIGN.md의 토큰입니다. 다크 모드는 같은 이름에 값만 바꿉니다. */
+:root {
+  color-scheme: light;
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --border: #e3e6eb;
+  --text: #1f2329;
+  --text-muted: #5f6672;
+  --accent: #2f5bdb;
+  --success: #1f8a5b;
+  --warning: #b26b00;
+  --danger: #c2372f;
+  --local: #5b4bb7;
+  /* 채움 버튼 위 글자색 */
+  --on-fill: #ffffff;
+
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --fs-12: 12px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --lh: 1.5;
+
+  --sp-4: 4px;
+  --sp-8: 8px;
+  --sp-12: 12px;
+  --sp-16: 16px;
+  --sp-24: 24px;
+  --sp-32: 32px;
+
+  --radius-control: 6px;
+  --radius-card: 10px;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 6%);
+  --control-h: 32px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #16181d;
+    --surface: #1e2128;
+    --border: #2e323b;
+    --text: #e6e8ec;
+    --text-muted: #9aa1ad;
+    --accent: #7f9cf5;
+    --success: #4cc38a;
+    --warning: #f0b44c;
+    --danger: #f2756d;
+    --local: #a99bf0;
+    --on-fill: #16181d;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #16181d;
+  --surface: #1e2128;
+  --border: #2e323b;
+  --text: #e6e8ec;
+  --text-muted: #9aa1ad;
+  --accent: #7f9cf5;
+  --success: #4cc38a;
+  --warning: #f0b44c;
+  --danger: #f2756d;
+  --local: #a99bf0;
+  --on-fill: #16181d;
+}
