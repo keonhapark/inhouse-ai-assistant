@@ -60,6 +60,16 @@ paths:
                     type: array
                     items: {$ref: "#/components/schemas/Passage"}
         "401": {$ref: "#/components/responses/Problem"}
+        "502":
+          description: 질의 임베딩에서 gateway가 오류를 돌려줌(hybrid·vector, problem+json)
+          content:
+            application/problem+json:
+              schema: {$ref: "#/components/responses/Problem/content/application~1problem+json/schema"}
+        "503":
+          description: 질의 임베딩에서 gateway에 닿지 못함(hybrid·vector, problem+json)
+          content:
+            application/problem+json:
+              schema: {$ref: "#/components/responses/Problem/content/application~1problem+json/schema"}
   /answer:
     post:
       operationId: answer
