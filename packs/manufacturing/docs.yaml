@@ -91,14 +91,3 @@ documents:
     trust: trusted
     stage: 1
     status: ready
-  - id: gen-purchase-rule
-    title: 구매 규정
-    kind: regulation
-    source:
-      type: generated
-      generator: rag
-      license: 이 저장소에서 생성
-    acl_tags: [purchase-policy]
-    trust: trusted
-    stage: 2
-    status: ready
