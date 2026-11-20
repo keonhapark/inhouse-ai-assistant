@@ -5,6 +5,8 @@ import io.inhouse.erp.approval.ApprovalDocumentRepository;
 import io.inhouse.erp.approval.ApprovalStep;
 import io.inhouse.erp.approval.DelegateAuthority;
 import io.inhouse.erp.common.ApiException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -28,8 +30,11 @@ public class DelegationAuthority implements DelegateAuthority {
     private final DelegationRepository delegations;
     private final ApprovalDocumentRepository docs;
     private final Clock clock;
+    private final EntityManager em;
 
-    public DelegationAuthority(DelegationRepository delegations, ApprovalDocumentRepository docs, Clock clock) {
+    public DelegationAuthority(DelegationRepository delegations, ApprovalDocumentRepository docs, Clock clock,
+                               EntityManager em) {
+        this.em = em;
         this.delegations = delegations;
         this.docs = docs;
         this.clock = clock;
@@ -52,11 +57,12 @@ public class DelegationAuthority implements DelegateAuthority {
         }
         List<String> problems = new ArrayList<>();
         for (Delegation d : direct) {
-            // 해지와 겹치지 않게 공유 잠금을 건 뒤 다시 봅니다.
-            Delegation locked = delegations.shareLockById(d.getId()).orElseThrow();
-            String problem = locked.problemFor(doc.getFormId(), doc.getAmount(), now);
+            // 해지와 겹치지 않게 공유 잠금을 걸고 DB 값으로 다시 읽은 뒤 판단합니다. 잠금만 걸고 이미 읽은
+            // 엔티티를 쓰면 그사이 커밋된 해지를 보지 못합니다.
+            em.refresh(d, LockModeType.PESSIMISTIC_READ);
+            String problem = d.problemFor(doc.getFormId(), doc.getAmount(), now);
             if (problem == null) {
-                return locked.getId();
+                return d.getId();
             }
             problems.add(problem);
         }

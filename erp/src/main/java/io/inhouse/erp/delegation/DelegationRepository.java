@@ -26,8 +26,4 @@ public interface DelegationRepository extends JpaRepository<Delegation, String> 
     @Query("select d from Delegation d where d.id = :id")
     Optional<Delegation> lockById(@Param("id") String id);
 
-    /** 대리 결재: 결재가 커밋될 때까지 위임이 해지되지 않게 공유 잠금을 겁니다. */
-    @Lock(LockModeType.PESSIMISTIC_READ)
-    @Query("select d from Delegation d where d.id = :id")
-    Optional<Delegation> shareLockById(@Param("id") String id);
 }

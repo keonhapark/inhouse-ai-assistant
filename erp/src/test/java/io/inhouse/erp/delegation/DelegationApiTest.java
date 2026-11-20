@@ -206,6 +206,8 @@ class DelegationApiTest extends ApiTestBase {
         JsonNode dl = json(r).path("resource");
         assertThat(dl.path("delegatorId").asText()).isEqualTo(leader);
         assertThat(dl.path("registeredBy").asText()).isEqualTo(hr);
+        assertThat(json(get("/notifications", leader)).path("items").findValuesAsText("message"))
+                .anyMatch(msg -> msg.contains("내 결재 대결로 등록"));
         assertThat(json(get("/delegations", leader, "role", "delegator")).path("items").findValuesAsText("id"))
                 .contains(dl.path("id").asText());
         assertThat(json(get("/delegations", m.get(0), "role", "delegate", "activeAt",
@@ -235,5 +237,43 @@ class DelegationApiTest extends ApiTestBase {
         assertThat(problem(undo)).isEqualTo("undo-conflict");
         assertThat(post("/delegations/" + reg.path("resource").path("id").asText() + "/revoke", leader, Map.of())
                 .getStatus()).isEqualTo(201);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired DelegationAuthority authority;
+    @org.springframework.beans.factory.annotation.Autowired DelegationRepository delegationRepo;
+    @org.springframework.beans.factory.annotation.Autowired io.inhouse.erp.approval.ApprovalDocumentRepository docRepo;
+    @org.springframework.beans.factory.annotation.Autowired
+    org.springframework.transaction.support.TransactionTemplate tx;
+
+    /** 결재 트랜잭션이 위임을 먼저 읽은 뒤 다른 요청이 해지를 커밋해도, 판단은 해지된 값으로 합니다. */
+    @Test
+    void revokeCommittedMidDecisionIsSeen() throws Exception {
+        String leader = leader("rnd");
+        List<String> m = members("rnd");
+        String dlId = delegate(leader, m.get(5), List.of("*"), null).path("resource").path("id").asText();
+        String docId = leave(m.get(6)).path("id").asText();
+        String code = tx.execute(status -> {
+            delegationRepo.findByDelegatorIdAndDelegateId(leader, m.get(5));  // 영속성 문맥에 먼저 올림
+            Thread revoker = new Thread(() -> {
+                try {
+                    assertThat(post("/delegations/" + dlId + "/revoke", leader, Map.of()).getStatus()).isEqualTo(201);
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+            revoker.start();
+            try {
+                revoker.join();
+                authority.authorize(docRepo.findById(docId).orElseThrow(), leader, m.get(5));
+                return "authorized";
+            } catch (io.inhouse.erp.common.ApiException e) {
+                return e.code();
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
+            } finally {
+                status.setRollbackOnly();
+            }
+        });
+        assertThat(code).isEqualTo("delegation-revoked");
     }
 }

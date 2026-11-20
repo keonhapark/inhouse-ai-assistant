@@ -107,6 +107,11 @@ public class DelegationService {
         String period = local(d.getStartsAt()) + " ~ " + local(d.getEndsAt());
         notifications.send(req.delegateId(), Notifications.DELEGATION_REGISTERED,
                 delegatorName + "님의 결재 대결을 맡았습니다(" + period + ")", null, d.getId());
+        if (!delegator.equals(p.employeeId())) {
+            // 다른 사람이 대신 등록했으면 위임자도 바로 알 수 있게 합니다(결재 뒤 후열로 처음 알지 않게).
+            notifications.send(delegator, Notifications.DELEGATION_REGISTERED, name(p.employeeId()) + "님이 "
+                    + name(req.delegateId()) + "님을 내 결재 대결로 등록했습니다(" + period + ")", null, d.getId());
+        }
         DelegationView view = view(d);
         return WriteOutcome.of(delegatorName + "님의 결재를 " + name(req.delegateId()) + "님이 대신합니다(" + period
                         + ", 양식 " + String.join(", ", types) + ")",
