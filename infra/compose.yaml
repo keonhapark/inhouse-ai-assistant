@@ -26,6 +26,7 @@ services:
       context: ..
       dockerfile: contracts/Dockerfile
     environment:
+      ERP_EVAL_RESET: ${ERP_EVAL_RESET:-}
       ERP_JWT_SECRET: ${ERP_JWT_SECRET:-}
       ERP_DEMO_PASSWORD: ${ERP_DEMO_PASSWORD:-demo}
       DELEGATION_TOKEN_PUBLIC_KEY: /keys/delegation-es256.pub.pem
@@ -51,6 +52,7 @@ services:
       ERP_JWT_SECRET: ${ERP_JWT_SECRET}
       ERP_DEMO_PASSWORD: ${ERP_DEMO_PASSWORD}
       DELEGATION_TOKEN_PUBLIC_KEY: /keys/delegation-es256.pub.pem
+      ERP_EVAL_RESET: ${ERP_EVAL_RESET:-}
     volumes:
       - ../packs:/packs:ro
       - ../infra/dev-keys:/keys:ro
@@ -69,6 +71,8 @@ services:
       RAG_EMBED_MODEL: local-embed
       DELEGATION_JWKS_URL: http://gateway:8000/api/.well-known/jwks.json
       RAG_AUDIT_LOG: /audit/rag.jsonl
+      RAG_MARKERS_FILE: ${RAG_MARKERS_FILE:-}
+      RAG_EXTRA_DOCS: ${RAG_EXTRA_DOCS:-}
     volumes:
       - audit:/audit
     ports:
@@ -123,6 +127,8 @@ services:
       DELEGATION_TOKEN_PRIVATE_KEY: /keys/delegation-es256.pem
       GATEWAY_AUDIT_DIR: /audit/gateway
       AUDIT_EVENT_FILES: /audit/agent.jsonl,/audit/rag.jsonl
+      GATEWAY_EVAL_MODE: ${GATEWAY_EVAL_MODE:-}
+      GATEWAY_EXTERNAL_LOG: ${GATEWAY_EXTERNAL_LOG:-}
     volumes:
       - ../infra/dev-keys:/keys:ro
       - audit:/audit
