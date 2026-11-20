@@ -18,7 +18,7 @@ LangGraph로 계획 → 판정 → 미리보기 → 승인 interrupt → 실행 
 
 - 모델은 gateway의 OpenAI 호환 엔드포인트로 부르고, 도구는 MCP 서버(`AGENT_MCP_URL`)로 부릅니다. 위임 토큰은 두 곳 모두 요청 헤더로만 넘기고, 모델 문맥과 그래프 상태에는 넣지 않습니다.
 - 도구 호출마다 판정합니다(`run/policy.py`).
-  - `full`: 위험 등급이 에이전트 `allowed_risk` 밖이면 금지, 그 밖은 `risk_policy`(auto, auto_with_undo, confirm, deny)와 `overrides`를 따릅니다. `when: wide_scope`는 팩 `org.yaml`의 `delegation_policy.wide_scope`(기간, 금액 한도, 모든 양식)로 판단하고, 판단할 수 없으면 넓다고 봅니다.
+  - `full`: 위험 등급이 에이전트 `allowed_risk` 밖이면 금지, 그 밖은 `risk_policy`(auto, auto_with_undo, confirm, deny)와 `overrides`를 따릅니다. `when: wide_scope`는 팩 `org.yaml`의 `delegation_policy.wide_scope`(기간, 금액 한도, 모든 양식)로 판단하고, 판단할 수 없으면 넓다고 봅니다. `when: {arg, gt}`는 도구 인자 `arg`가 `gt`보다 크면 맞고(같으면 맞지 않음), 인자가 없거나 숫자가 아니면 더 엄격한 쪽(override action)을 씁니다(고액 경비 정산·구매 요청 확인).
   - `no_guard`: 모두 바로 실행 / `write_blocked`: 쓰기 도구를 모델에 보이지 않고 호출도 막음 / `approve_all`, `baseline_tools`: 쓰기는 모두 승인
 - 신뢰 등급(`full`만, `run/trust.py`): 한 턴 안에 신뢰 불가 출력이 들어오면 그 턴이 끝날 때까지 `trust_required=user_direct` 도구를 막습니다. 그 대화(`conversationId`)의 다음 턴부터는 `user_direct` 도구를 바로 실행하지 않고 미리보기 승인을 받습니다(대화가 끝날 때까지). 신뢰 불가 출력은 다른 사람이 쓴 자유 문장이 든 erp 출력(사유·제목·의견 등, 작성자가 요청자가 아니거나 모름)과, 팩 `docs.yaml`에서 `trust: trusted`가 아닌 문서를 인용한 rag 답입니다. 신뢰 불가 출력에는 표시를 붙여 모델에 넘기고, 다음 턴을 시작할 때 그 본문을 기록에서 뺍니다. 모델이 쓴 문장과 막힌 호출의 인자는 기록에 남으므로, 앞 턴의 지시가 다음 턴 "진행해" 같은 짧은 답으로 실행되지 않게 승인 단계를 둡니다.
 - confirm이면 erp 미리보기(dryRun)를 받아 `awaiting_approval`과 `pendingApproval`로 멈춥니다. `/resume`의 `approvalId`가 기다리는 것과 다르거나 이미 결정됐으면 409입니다. 거절하면 실행하지 않고 끝냅니다.

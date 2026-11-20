@@ -141,3 +141,16 @@ async def test_withdraw_from_finance_needs_approval(r2: RunHarness) -> None:
     r2.llm.script = [call("approval_withdraw", {"documentId": created.data["resource"]["id"]})]
     s = await _run(r2, "finance", "그 경비 정산 회수해 줘")
     assert s["status"] == "awaiting_approval"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(("agent", "tool", "args"),
+                         [("finance", "expense_request", {**EXPENSE, "amount": 1200000}),
+                          ("procurement", "purchase_request",
+                           {**PURCHASE, "quantity": 2000, "unit_price": 3500, "total_amount": 7000000})])
+async def test_large_amount_waits_for_approval(r2: RunHarness, agent: str, tool: str, args: dict) -> None:
+    r2.llm.script = [call(tool, args), say("올렸습니다.")]
+    s = await _run(r2, agent, "올려 줘")
+    assert s["status"] == "awaiting_approval"
+    assert s["pendingApproval"]["toolPreview"]["tool"] == tool
+    assert not [c for c in r2.caller.calls if c[0] == tool and not c[2].get("dryRun")]

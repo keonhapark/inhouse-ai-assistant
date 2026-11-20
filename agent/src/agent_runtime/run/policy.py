@@ -1,7 +1,7 @@
 """도구 호출마다 무엇을 할지 정합니다: 바로 실행, 실행 후 되돌리기 안내, 미리보기 승인, 금지, 신뢰 등급으로 막음.
 
 평가 조건(contracts/openapi/agent.yaml Condition)
-- full: 에이전트 risk_policy·allowed_risk·overrides(wide_scope)와 신뢰 등급을 모두 씁니다.
+- full: 에이전트 risk_policy·allowed_risk·overrides(wide_scope, 인자 금액 {arg, gt})와 신뢰 등급을 모두 씁니다.
 - no_guard: 장치 없음. 모든 도구를 바로 실행합니다.
 - write_blocked: 읽기 도구만 모델에 보이고, 쓰기 호출은 막습니다.
 - approve_all, baseline_tools: 읽기는 바로, 쓰기는 모두 승인을 받습니다. 신뢰 등급은 쓰지 않습니다.
@@ -81,6 +81,21 @@ def _dt(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
+def _override_matches(when: Any, args: dict[str, Any], wide: WideScope) -> bool:
+    """팩 risk_policy.overrides[].when. {arg, gt}는 인자 값이 gt보다 크면 맞고, 인자가 없거나 숫자가 아니면
+    더 엄격한 쪽(override action)을 쓰려고 맞는 것으로 봅니다."""
+    if when == "always":
+        return True
+    if when == "wide_scope":
+        return wide.is_wide(args)
+    if isinstance(when, dict) and "arg" in when and "gt" in when:
+        value = args.get(when["arg"])
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return True
+        return value > when["gt"]
+    return False
+
+
 def model_policy_for(agent: Agent, condition: str) -> str:
     """출구 별칭을 고를 때 쓸 모델 정책(contracts/eval/conditions.md "출구 별칭 선택").
 
@@ -117,7 +132,7 @@ def decide(agent: Agent, tool: ToolMeta, args: dict[str, Any], condition: str, t
     for o in risk_policy.get("overrides", []) or []:
         if o.get("tool") != tool.name:
             continue
-        if o.get("when") == "always" or (o.get("when") == "wide_scope" and wide.is_wide(args)):
+        if _override_matches(o.get("when"), args, wide):
             action = o["action"]
     if action == "deny":
         return Decision("deny", f"{tool.name}은 이 에이전트에서 금지된 도구입니다")
