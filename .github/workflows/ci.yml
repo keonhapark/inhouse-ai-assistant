@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
       - run: uv sync --frozen
       - name: 계약 파일·팩·가짜 erp 행동 시험
         run: uv run pytest -q
@@ -112,7 +112,7 @@ jobs:
         if: steps.has.outputs.erp == 'true'
         working-directory: erp
         run: ./gradlew test --no-daemon
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
         if: steps.has.outputs.erp == 'true'
       - name: 실제 erp에 행동 계약 시험
         if: steps.has.outputs.erp == 'true' && hashFiles('erp/ci/start.sh') != ''
@@ -142,7 +142,7 @@ jobs:
         id: gate
         if: needs.changes.outputs[matrix.module] == 'true'
         run: if [ -f "${{ matrix.module }}/pyproject.toml" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; fi
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
         if: steps.gate.outputs.run == 'true'
       - name: 모듈 시험
         if: steps.gate.outputs.run == 'true'
