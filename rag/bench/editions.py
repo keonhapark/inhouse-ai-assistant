@@ -7,6 +7,8 @@
 셈
 - 옛 판 인용: 대조를 통과한 인용 중, 기준일에 시행 중이 아닌 판의 청크를 인용했고 그 조문 글이
   기준일 판과 다른 것. 글이 같은 판(타법개정으로 본문이 그대로인 판)은 내용이 같아 세지 않고 따로 적습니다.
+- 찾은 답(found): 답이 "규정에서 찾지 못했습니다."가 아닌 수. 대조를 통과한 신뢰 근거 인용이 하나 이상 있고
+  답의 숫자가 인용한 근거에 있을 때만 찾은 답이 됩니다(rag/answer.py). 답 내용이 맞는지는 세지 않습니다.
 - revisions 표시: 답에 다른 판의 바뀐 조문을 함께 돌려준 답의 수.
 
 실행(rag/에서, 로컬 Ollama에 qwen3.5:9b와 bge-m3이 있어야 합니다):
@@ -19,9 +21,11 @@ LLM과 임베딩은 gateway를 거치지 않고 Ollama의 OpenAI 호환 주소�
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
+import subprocess
 import sys
 import time
 from collections import Counter
@@ -103,6 +107,24 @@ def run(questions: list[dict], editions: str, repeat: int, chat: GatewayChat, em
     return {"condition": editions, "summary": dict(total), "rows": rows}
 
 
+def corpus_state() -> dict:
+    """측정한 말뭉치 판. 저장소 커밋과, 법령 고정본·템플릿 파일마다의 SHA-256(커밋에 없는 변경도 드러나게)."""
+    root = MODULE_ROOT
+    files = sorted([*(root / "corpus" / "law").glob("*.json"), *(root / "templates").glob("*.md")])
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True,
+                                check=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "corpus", "templates"], cwd=root,
+                                    capture_output=True, text=True, check=True).stdout.strip())
+    except (OSError, subprocess.CalledProcessError):
+        commit, dirty = None, None
+    return {
+        "gitCommit": commit,
+        "uncommittedCorpusChanges": dirty,
+        "files": {str(f.relative_to(root)): hashlib.sha256(f.read_bytes()).hexdigest() for f in files},
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repeat", type=int, default=3)
@@ -124,6 +146,7 @@ def main(argv: list[str]) -> int:
         "embedding": args.embed_model,
         "method": "hybrid", "topK": 5, "repeat": args.repeat, "questions": len(questions),
         "machine": f"{platform.system()} {platform.machine()}",
+        "corpus": corpus_state(),
         "conditions": [run(questions, c, args.repeat, chat, embedder, today) for c in args.conditions.split(",")],
     }
     for c in report["conditions"]:
