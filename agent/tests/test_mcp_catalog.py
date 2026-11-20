@@ -132,7 +132,62 @@ def test_build_request(catalog: Catalog, tool: str, args: dict, expected: tuple)
     assert (r.method, r.path, r.query, r.body) == expected
 
 
-@pytest.mark.parametrize("bad", ["", "..", "a/b", "."])
+@pytest.mark.parametrize("bad", ["", "..", "."])
 def test_build_request_rejects_bad_path_values(catalog: Catalog, bad: str) -> None:
     with pytest.raises(CatalogError):
         build_request(catalog.get("approval_get"), {"documentId": bad})
+
+
+@pytest.mark.parametrize(
+    ("value", "path"),
+    [
+        ("D1#", "/api/v1/approval-documents/D1%23/withdraw"),
+        ("D1?x=1", "/api/v1/approval-documents/D1%3Fx%3D1/withdraw"),
+        ("a/b", "/api/v1/approval-documents/a%2Fb/withdraw"),
+        ("%2e%2e", "/api/v1/approval-documents/%252e%252e/withdraw"),
+        ("X\n", "/api/v1/approval-documents/X%0A/withdraw"),
+    ],
+)
+def test_path_values_are_percent_encoded(catalog: Catalog, value: str, path: str) -> None:
+    assert build_request(catalog.get("approval_withdraw"), {"documentId": value}).path == path
+
+
+def test_fixed_value_wins_over_argument(catalog: Catalog) -> None:
+    r = build_request(catalog.get("approval_list_mine"), {"box": "inbox"})
+    assert r.query["box"] == "outbox"
+    r = build_request(catalog.get("room_list_my_reservations"), {"mine": False})
+    assert r.query["mine"] == "true"
+
+
+def _write_tools(tmp_path: Path, edit) -> Path:
+    doc = json.loads(json.dumps(TOOLS_JSON))
+    edit(doc)
+    path = tmp_path / "tools.json"
+    path.write_text(json.dumps(doc), "utf-8")
+    return path
+
+
+def test_catalog_refuses_fixed_name_in_input_schema(tmp_path: Path, registry: Registry) -> None:
+    def add_box(doc):
+        t = next(t for t in doc["tools"] if t["name"] == "approval_list_mine")
+        t["inputSchema"]["properties"]["box"] = {"type": "string"}
+
+    with pytest.raises(CatalogError, match="고정값"):
+        Catalog.load(_write_tools(tmp_path, add_box), CONTRACTS / "openapi", registry)
+
+
+def test_catalog_refuses_later_stage_tool_in_registry(tmp_path: Path, registry: Registry) -> None:
+    def stage2(doc):
+        next(t for t in doc["tools"] if t["name"] == "room_reserve")["stage"] = 2
+
+    with pytest.raises(CatalogError, match="단계 2"):
+        Catalog.load(_write_tools(tmp_path, stage2), CONTRACTS / "openapi", registry)
+
+
+def test_later_stage_tool_not_in_registry_is_hidden(tmp_path: Path, registry: Registry) -> None:
+    def add_stage2(doc):
+        extra = dict(next(t for t in doc["tools"] if t["name"] == "approval_get"), name="later_tool", stage=2)
+        doc["tools"].append(extra)
+
+    cat = Catalog.load(_write_tools(tmp_path, add_stage2), CONTRACTS / "openapi", registry)
+    assert cat.get("later_tool") is None

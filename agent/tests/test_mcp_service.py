@@ -228,9 +228,48 @@ async def test_input_schema_is_enforced(h: Harness, args: dict) -> None:
 
 
 @pytest.mark.anyio
-async def test_path_argument_cannot_escape(h: Harness) -> None:
-    r = await h.service.call("approval_get", {"documentId": "../../audit-events"}, mint(), CallMeta())
+@pytest.mark.parametrize("value", ["../../audit-events", "D1#", "D1?box=inbox", "X\n"])
+async def test_path_argument_cannot_change_operation(h: Harness, value: str) -> None:
+    r = await h.service.call("approval_get", {"documentId": value}, mint(), CallMeta())
+    # 인코딩된 값은 문서 ID 하나로만 쓰여 없는 문서(404)가 됩니다. 다른 operation에 닿지 않습니다.
+    assert not r.ok and r.problem["status"] == 404
+    assert h.events()[-1]["kind"] == "tool.called"
+
+
+@pytest.mark.anyio
+async def test_date_time_format_is_checked(h: Harness) -> None:
+    r = await h.service.call("room_list_availability", {"startsAt": "내일 3시", "endsAt": "2027-01-04T10:00:00+09:00"},
+                             mint(agent="assistant"), CallMeta())
     assert r.problem["type"] == "urn:problem:validation"
+
+
+def _broken_erp(h: Harness, handler) -> None:
+    import httpx
+
+    h.service.backends["erp"] = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://erp.test")
+
+
+@pytest.mark.anyio
+async def test_backend_connect_error_is_audited(h: Harness) -> None:
+    import httpx
+
+    def boom(req):
+        raise httpx.ConnectError("refused", request=req)
+
+    _broken_erp(h, boom)
+    r = await h.service.call("leave_get_balance", {}, mint(), CallMeta())
+    assert r.problem["type"] == "urn:problem:backend-unavailable" and r.problem["status"] == 502
+    assert h.events()[-1]["result"] == "error"
+
+
+@pytest.mark.anyio
+async def test_backend_html_error_is_reported(h: Harness) -> None:
+    import httpx
+
+    _broken_erp(h, lambda req: httpx.Response(500, text="<html>oops</html>", headers={"content-type": "text/html"}))
+    r = await h.service.call("leave_get_balance", {}, mint(), CallMeta())
+    assert r.problem == {"type": "urn:problem:backend-error", "status": 500}
+    assert h.events()[-1]["result"] == "error"
 
 
 @pytest.mark.anyio

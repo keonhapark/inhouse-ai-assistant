@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+import anyio
 import httpx
 import mcp_types as types
 from mcp.server.lowlevel import Server
@@ -58,7 +59,8 @@ def _token(ctx: Any) -> str | None:
 
 def build_server(service: ToolService) -> Server:
     async def on_list_tools(ctx: Any, params: types.PaginatedRequestParams | None) -> types.ListToolsResult:
-        return types.ListToolsResult(tools=[tool_descriptor(t) for t in service.visible_tools(_token(ctx))])
+        visible = await anyio.to_thread.run_sync(service.visible_tools, _token(ctx))
+        return types.ListToolsResult(tools=[tool_descriptor(t) for t in visible])
 
     async def on_call_tool(ctx: Any, params: types.CallToolRequestParams) -> types.CallToolResult:
         meta = CallMeta.from_meta(dict(params.meta) if params.meta else None)

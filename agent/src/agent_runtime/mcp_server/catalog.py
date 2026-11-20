@@ -8,12 +8,14 @@
 - 요청 본문 스키마의 최상위 속성이면 본문에 넣습니다.
 - 본문의 객체 속성(예: 대결 위임의 `scope`) 안에 있는 속성 이름이면 그 객체 안에 넣습니다.
 - 그 밖의 인자는 본문 스키마에 `fields`가 있으면 `fields` 안에 넣습니다(결재 양식 필드).
-- backend.fixed 값도 같은 규칙으로 놓습니다.
+- backend.fixed 값도 같은 규칙으로 놓고, 같은 이름이면 고정값이 이깁니다(고정값 이름은 입력 스키마에 둘 수 없음).
+- 경로 인자는 퍼센트 인코딩합니다(`?`, `#`, `/`가 경로를 바꾸지 못하게).
 """
 
 from __future__ import annotations
 
 import json
+from urllib.parse import quote
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -75,7 +77,8 @@ def build_request(tool: Tool, arguments: dict[str, Any]) -> Request:
     body: dict[str, Any] = {}
     form_fields: dict[str, Any] = {}
     nested = dict(op.nested_props)
-    for name, value in [*tool.fixed.items(), *arguments.items()]:
+    merged = {**arguments, **tool.fixed}
+    for name, value in merged.items():
         if name in op.path_params:
             path = path.replace("{" + name + "}", _path_segment(value))
         elif name in op.query_params:
@@ -96,9 +99,9 @@ def build_request(tool: Tool, arguments: dict[str, Any]) -> Request:
 
 def _path_segment(value: Any) -> str:
     s = str(value)
-    if not s or "/" in s or s in (".", ".."):
+    if not s or s in (".", ".."):
         raise CatalogError("경로 인자 값이 올바르지 않습니다")
-    return s
+    return quote(s, safe="")
 
 
 def _query_value(value: Any) -> Any:
@@ -122,9 +125,14 @@ class Catalog:
         exposed = {name for a in registry.agents for name in a.tools}
         tools = []
         for t in doc["tools"]:
-            if t["stage"] > registry.pack_stage or t["name"] not in exposed:
+            if t["name"] not in exposed:
                 continue
+            if t["stage"] > registry.pack_stage:
+                raise CatalogError(f"{t['name']}: 단계 {t['stage']} 도구가 단계 {registry.pack_stage} 등록부에 있습니다")
             backend = t["backend"]
+            clash = set(backend.get("fixed", {})) & set(t["inputSchema"].get("properties", {}))
+            if clash:
+                raise CatalogError(f"{t['name']}: 고정값 이름을 입력 스키마에 둘 수 없습니다: {', '.join(sorted(clash))}")
             op = _operation(specs[backend["service"]], backend["service"], backend["operationId"])
             if op.human_only:
                 raise CatalogError(f"{t['name']}: 사람 화면 전용 operation({op.operation_id})은 도구로 노출하지 않습니다")

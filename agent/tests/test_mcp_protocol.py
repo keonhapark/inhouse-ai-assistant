@@ -17,7 +17,7 @@ from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 
 from agent_runtime.mcp_server.server import build_server, create_mcp_app
-from tests.mcp_support import Harness, make_harness, mint
+from tests.mcp_support import Harness, future_slot, make_harness, mint
 
 
 @pytest.fixture
@@ -85,12 +85,28 @@ async def test_http_token_header_filters_and_authorizes(h: Harness, http_server:
             denied = await client.call_tool("leave_get_balance", {})
             assert denied.structured_content["problem"]["type"] == "urn:problem:tool-not-allowed"
 
+            s, e = future_slot()
+            reserved = await client.call_tool(
+                "room_reserve", {"roomId": "room-c", "startsAt": s, "endsAt": e, "title": "회의"},
+                meta={"trustLevel": "user_direct", "idempotencyKey": "idem-protocol-0001"},
+            )
+            assert not reserved.is_error, reserved.structured_content
+            assert reserved.structured_content["actionId"]
+
             preview = await client.call_tool(
                 "room_cancel_reservation", {"reservationId": "missing"},
                 meta={"trustLevel": "user_direct", "dryRun": True},
             )
             assert preview.structured_content["problem"]["type"] == "urn:problem:not-found"
     assert token not in h.audit_path.read_text("utf-8")
+
+
+@pytest.mark.anyio
+async def test_http_token_in_authorization_header_is_not_accepted(h: Harness, http_server: str) -> None:
+    async with httpx2.AsyncClient(headers={"Authorization": f"Bearer {mint()}"}, timeout=30) as http:
+        async with Client(streamable_http_client(f"{http_server}/mcp", http_client=http)) as client:
+            r = await client.call_tool("leave_get_balance", {})
+            assert r.structured_content["problem"]["type"] == "urn:problem:unauthorized"
 
 
 def test_health(h: Harness, http_server: str) -> None:

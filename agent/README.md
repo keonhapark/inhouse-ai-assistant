@@ -25,7 +25,7 @@ Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·�
 - 사람 화면 전용 operation(`x-human-only`, 결재 승인·반려)에 묶인 도구가 있으면 시작하지 않습니다.
 - 호출마다 감사 이벤트(`tool.called`, `tool.blocked`)를 남깁니다. 인자는 `argsHash`만 남기고, 토큰 문자열은 넣지 않습니다.
 
-도구 인자는 이름으로 erp 요청에 놓습니다: path 파라미터 → 경로, query 파라미터 → 쿼리, 본문 최상위 속성 → 본문, 본문 객체 속성 안의 이름(대결 위임 `scope.formTypes` 등) → 그 객체, 그 밖은 결재 양식 `fields`
+도구 인자는 이름으로 erp 요청에 놓습니다: path 파라미터 → 경로, query 파라미터 → 쿼리, 본문 최상위 속성 → 본문, 본문 객체 속성 안의 이름(대결 위임 `scope.formTypes` 등) → 그 객체, 그 밖은 결재 양식 `fields`. `backend.fixed` 값은 같은 이름의 인자보다 우선하고, 그 이름을 입력 스키마에 두면 시작하지 않습니다. 경로 인자는 퍼센트 인코딩합니다.
 
 ## 실행
 

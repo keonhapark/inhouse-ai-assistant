@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import uuid
@@ -95,7 +96,8 @@ class ToolService:
             if tool is None:
                 raise Blocked("unknown-tool", f"노출되지 않은 도구입니다: {name}")
             try:
-                delegation = self.verifier.verify(token)
+                # JWKS 조회가 동기 HTTP라 이벤트 루프를 막지 않게 스레드에서 합니다.
+                delegation = await asyncio.to_thread(self.verifier.verify, token)
             except TokenError as e:
                 raise Blocked("unauthorized", str(e)) from None
             if not self._allowed(delegation, name):
@@ -144,7 +146,7 @@ class ToolService:
         try:
             resp = await self.backends[op.service].request(req.method.upper(), req.path, params=query,
                                                            json=req.body, headers=headers)
-        except httpx.HTTPError as e:
+        except (httpx.HTTPError, httpx.InvalidURL) as e:
             return ToolResult(False, problem={"type": "urn:problem:backend-unavailable", "status": 502,
                                               "detail": f"{op.service} 호출 실패({type(e).__name__})"})
         try:

@@ -50,7 +50,7 @@ class TokenVerifier:
             return cls.from_public_key(Path(path).read_text("utf-8"))
         url = os.environ.get("DELEGATION_JWKS_URL")
         if url:
-            client = jwt.PyJWKClient(url, cache_keys=True)
+            client = jwt.PyJWKClient(url, cache_keys=True, timeout=3)
             return cls(lambda token: client.get_signing_key_from_jwt(token).key)
         raise RuntimeError("DELEGATION_TOKEN_PUBLIC_KEY(파일)나 DELEGATION_JWKS_URL이 필요합니다")
 
