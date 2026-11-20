@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -31,6 +32,8 @@ from gateway.erp_client import ErpClient
 from gateway.problems import ProblemError
 from gateway.registry import Registry, Requester, grant_matches
 from gateway.relay import bearer
+
+log = logging.getLogger(__name__)
 
 APPROVAL_TTL = timedelta(minutes=10)
 MAX_CONTENT = 4000
@@ -148,7 +151,26 @@ class ChatService:
                          result="ok", conversation_id=c.id, detail=f"jti={issued.claims['jti']}")
         return issued.token
 
+    @staticmethod
+    def _valid_state(state: Any) -> bool:
+        """RunState에서 gateway가 쓰는 필드만 봅니다. 틀리면 상태를 바꾸기 전에 거릅니다."""
+        try:
+            assert isinstance(state, dict)
+            for a in state.get("actions") or []:
+                assert all(k in a for k in ("actionId", "tool", "summary", "undoable"))
+            for m in state.get("messages") or []:
+                assert isinstance(m.get("content"), str)
+            if state.get("status") == "awaiting_approval":
+                tp = state["pendingApproval"]["toolPreview"]
+                assert isinstance(state["pendingApproval"]["approvalId"], str)
+                assert all(k in tp for k in ("tool", "risk", "preview"))
+            return True
+        except (AssertionError, AttributeError, KeyError, TypeError):
+            return False
+
     def _state_events(self, c: Conversation, who: Requester, state: dict[str, Any]) -> list[dict[str, Any]]:
+        if not self._valid_state(state):
+            return [c.event("error", error={"message": "에이전트 응답 형식이 틀렸습니다", "retryable": False})]
         out = []
         for a in state.get("actions") or []:
             out.append(c.event("action", action={k: a[k] for k in ("actionId", "tool", "summary", "undoable")}))
@@ -184,10 +206,16 @@ class ChatService:
     # ---------- 메시지 ----------
     async def message_events(self, c: Conversation, who: Requester, content: str) -> AsyncIterator[dict[str, Any]]:
         async with c.lock:
-            if c.status == "awaiting_approval":  # 앞 메시지가 승인 대기로 끝났으면 이 메시지는 받지 않습니다
-                yield c.event("error", error={"message": "실행 승인을 기다리는 중입니다", "retryable": False})
-                yield c.event("done")
-                return
+            if c.status == "awaiting_approval":
+                ap = self.approvals.get(c.pending or "")
+                if ap is None or ap.decided or now() <= ap.expires_at:
+                    # 앞 메시지가 승인 대기로 끝났으면 이 메시지는 받지 않습니다
+                    yield c.event("error", error={"message": "실행 승인을 기다리는 중입니다", "retryable": False})
+                    yield c.event("done")
+                    return
+                # 시간이 지난 승인은 거절로 처리해 agent의 대기를 풀고 새 메시지를 이어 갑니다.
+                for ev in await self._expire(ap, c, who):
+                    yield ev
             c.events.append({"type": "user_message", "content": content, "at": iso(now())})
             c.title = c.title or content[:40]
             if not c.routed:
@@ -230,6 +258,23 @@ class ChatService:
                 yield ev
             yield c.event("done")
 
+    async def _expire(self, ap: Approval, c: Conversation, who: Requester) -> list[dict[str, Any]]:
+        ap.decided = "reject"
+        out = [c.event("approval_decided", decision={"approvalId": ap.id, "decision": "reject"})]
+        self.audit.event("execution_approval.decided", employee_id=who.id, agent_id=c.agent_id, via_token=False,
+                         result="ok", conversation_id=c.id, detail=f"approval={ap.id} decision=reject(expired)")
+        try:
+            await self.agent.resume(self._token(who, c), {"conversationId": c.id, "approvalId": ap.id,
+                                                           "decision": "reject", "comment": "승인 시간 초과"})
+        except AgentUnavailable:
+            pass  # 이어지는 /run도 agent에 닿지 않으면 error로 끝납니다
+        c.status, c.pending = "active", None
+        return out
+
+    def expired_pending(self, c: Conversation) -> bool:
+        ap = self.approvals.get(c.pending or "")
+        return ap is not None and not ap.decided and now() > ap.expires_at
+
     # ---------- 실행 승인 ----------
     def claim_approval(self, approval_id: str, who: Requester, decision: str) -> tuple[Approval, Conversation]:
         """확인하고 바로 결정을 적어 둡니다. 사이에 await가 없어 같은 승인을 두 번 결정하지 못합니다."""
@@ -242,7 +287,8 @@ class ChatService:
         if ap.decided or c.pending != ap.id:
             raise ProblemError(409, "invalid-state", "이미 결정했거나 기다리는 승인이 아닙니다")
         if now() > ap.expires_at:
-            raise ProblemError(409, "invalid-state", "승인 시간이 지났습니다. 다시 요청해 주세요")
+            raise ProblemError(409, "invalid-state", "승인 시간이 지났습니다",
+                               "새 메시지를 보내면 이 실행은 거절로 처리하고 대화를 이어 갑니다")
         ap.decided = decision
         return ap, c
 
@@ -271,14 +317,49 @@ class ChatService:
                 ap.decided = None
                 yield self._agent_down(c)
             else:
-                for ev in self._state_events(c, who, r.json()):
+                try:
+                    state = r.json()
+                except ValueError:
+                    state = None
+                if not self._valid_state(state):
+                    ap.decided = None
+                for ev in self._state_events(c, who, state):
                     yield ev
             yield c.event("done")
 
 
-def stream(events: AsyncIterator[dict[str, Any]]) -> StreamingResponse:
+_running: set[asyncio.Task] = set()
+
+
+def stream(c: Conversation, events: AsyncIterator[dict[str, Any]],
+           on_fail: Callable[[], None] | None = None) -> StreamingResponse:
+    """이벤트 생성을 응답 스트림과 떼어 따로 끝까지 돌립니다.
+
+    화면이 연결을 끊어도 agent 호출과 대화 상태(승인 대기, 결정) 반영은 끝까지 갑니다. 끊긴 뒤의 이벤트는
+    대화 기록(GET /conversations/{id})에서 봅니다. 생성 중 예외가 나면 on_fail로 상태를 되돌리고 error·done을 보냅니다.
+    """
+    q: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
+
+    async def produce() -> None:
+        try:
+            async for ev in events:
+                q.put_nowait(ev)
+        except Exception as e:
+            log.exception("대화 처리 중 오류 conversation=%s", c.id)
+            if on_fail:
+                on_fail()
+            message = e.title if isinstance(e, ProblemError) else "처리 중 오류가 났습니다"
+            q.put_nowait(c.event("error", error={"message": message, "retryable": False}))
+            q.put_nowait(c.event("done"))
+        finally:
+            q.put_nowait(None)
+
+    task = asyncio.create_task(produce())
+    _running.add(task)
+    task.add_done_callback(_running.discard)
+
     async def body() -> AsyncIterator[bytes]:
-        async for ev in events:
+        while (ev := await q.get()) is not None:
             yield sse(ev)
     return StreamingResponse(body(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -345,9 +426,9 @@ def build_router(chat: ChatService) -> APIRouter:
         content = body.get("content")
         if not isinstance(content, str) or not content.strip() or len(content) > MAX_CONTENT or set(body) - {"content"}:
             raise ProblemError(422, "validation", f"content는 1~{MAX_CONTENT}자 문자열이어야 합니다")
-        if c.status == "awaiting_approval":
+        if c.status == "awaiting_approval" and not chat.expired_pending(c):
             raise ProblemError(409, "invalid-state", "실행 승인을 기다리는 중입니다")
-        return stream(chat.message_events(c, who, content))
+        return stream(c, chat.message_events(c, who, content))
 
     @api.post("/execution-approvals/{approval_id}")
     async def decide(request: Request, approval_id: str) -> StreamingResponse:
@@ -358,6 +439,11 @@ def build_router(chat: ChatService) -> APIRouter:
                 comment is not None and (not isinstance(comment, str) or len(comment) > 200)):
             raise ProblemError(422, "validation", "decision은 approve·reject, comment는 200자 이하입니다")
         ap, c = chat.claim_approval(approval_id, who, decision)
-        return stream(chat.decision_events(ap, c, who, decision, comment))
+
+        def release() -> None:
+            if c.pending == ap.id:  # agent 결과를 반영하기 전에 실패했으면 다시 결정할 수 있게 둡니다
+                ap.decided = None
+
+        return stream(c, chat.decision_events(ap, c, who, decision, comment), on_fail=release)
 
     return api
