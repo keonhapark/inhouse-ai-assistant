@@ -24,6 +24,7 @@ from gateway.pii import KoreanRedactor
 from gateway.erp_client import ErpClient
 from gateway.problems import ProblemError, problem_response
 from gateway.registry import Registry
+from gateway.relay import bearer, build_router
 from gateway.tokens import DelegationTokenIssuer
 
 log = logging.getLogger(__name__)
@@ -34,13 +35,6 @@ def _issuer(settings: Settings) -> DelegationTokenIssuer:
         return DelegationTokenIssuer.from_pem_file(settings.delegation_private_key, settings.token_ttl_seconds)
     log.warning("위임 토큰 키 파일이 없어 임시 키를 만듭니다. scripts/dev-keys.sh로 만든 키를 주면 erp·rag·MCP 서버와 키가 맞습니다.")
     return DelegationTokenIssuer.ephemeral(settings.token_ttl_seconds)
-
-
-def _bearer(request: Request) -> str:
-    auth = request.headers.get("authorization", "")
-    if not auth.lower().startswith("bearer ") or not auth[7:].strip():
-        raise ProblemError(401, "unauthorized", "로그인이 필요합니다")
-    return auth[7:].strip()
 
 
 def _relay(r: httpx.Response) -> Response:
@@ -103,9 +97,10 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
 
     @api.get("/me")
     async def me(request: Request) -> Response:
-        return _relay(await erp.request("GET", "/me", bearer=_bearer(request)))
+        return _relay(await erp.request("GET", "/me", bearer=bearer(request)))
 
     app.include_router(api)
+    app.include_router(build_router(erp), prefix="/api")
 
     # LLM 출구는 OpenAI 호환 경로라 /api 밖에 둡니다(agent·rag의 GATEWAY_LLM_URL=http://gateway:8000/v1).
     @app.post("/v1/chat/completions")

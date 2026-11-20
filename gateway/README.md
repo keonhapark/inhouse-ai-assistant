@@ -2,7 +2,7 @@
 
 web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway.yaml`(서버 기준 경로 `/api`)입니다.
 
-지금 있는 것(1단계 #8, #9, #10):
+지금 있는 것(1단계 #8, #9, #10, #11 일부):
 
 - `GET /health`, `GET /api/health`
 - `GET /api/.well-known/jwks.json`: 위임 토큰 검증용 공개 키. `kid`는 RFC 7638 지문입니다.
@@ -36,6 +36,10 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     가림 전 원문은 `egress.jsonl`에만 남습니다.
   - 규칙이 못 잡는 형태: 사람 이름, 주소, 한글로 쓴 숫자("공일공"), 숫자 사이에 낯선 구분자를 넣은 것, 문맥 낱말 없는 계좌번호.
     이런 것은 장치 쪽 규칙을 늘리지 않고 평가에서 따로 잽니다.
+- 사람 화면 경로(`gateway/relay.py`): `/api/inbox`, `/api/inbox/{id}`, `/api/inbox/{id}/approve|reject`,
+  `/api/delegations`(조회·등록, `?dryRun=true` 미리보기), `/api/delegations/{id}/revoke`, `/api/actions/{id}/undo`,
+  `/api/notifications`. 직원 JWT와 `Idempotency-Key`를 그대로 erp에 넘기고 erp 응답(오류 포함)을 그대로 돌려줍니다.
+  읽기에는 요청자·원 결재자·양식·위임자·대리인 이름을 붙이고, 대결로 들어온 결재 건에는 `viaDelegation`을 채웁니다.
 - 토큰 위생: 모든 로그 레코드에서 JWT 모양과 `Bearer <값>`을 가립니다(`gateway/redact.py`). 발급 기록은 `jti`만 남깁니다.
 
 ## 실행
