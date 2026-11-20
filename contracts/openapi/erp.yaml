@@ -36,6 +36,7 @@ tags:
   - name: delegations
   - name: leave
   - name: rooms
+  - name: tickets
   - name: access
   - name: actions
   - name: notifications
@@ -606,6 +607,151 @@ paths:
         "404": {$ref: "#/components/responses/Problem"}
         "409": {$ref: "#/components/responses/Problem"}
 
+  /tickets:
+    get:
+      tags: [tickets]
+      operationId: listTickets
+      summary: IT 티켓 목록
+      x-required-scope: ticket:read
+      description: |
+        `box=mine`은 내가 올린 티켓, `box=all`은 전체이며 티켓 담당 역할(팩 `erp_roles.ticket_handler`)만 봅니다(그 밖에는 403).
+        제목·본문은 올린 사람이 쓴 글입니다. agent는 작성자 필드(`requesterId`)로 신뢰 불가 출력을 판정합니다(결정 0004).
+      parameters:
+        - name: box
+          in: query
+          schema: {type: string, enum: [mine, all], default: mine}
+        - name: status
+          in: query
+          schema: {$ref: "#/components/schemas/TicketStatus"}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        "200":
+          description: 최근에 바뀐 순
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "#/components/schemas/Ticket"}
+        "403": {$ref: "#/components/responses/Problem"}
+    post:
+      tags: [tickets]
+      operationId: createTicket
+      summary: IT 티켓 작성(장애 신고, 계정·권한 요청 등)
+      x-write: true
+      x-required-scope: ticket:write
+      x-undo: 작성을 취소합니다(status cancelled). 그사이 댓글이 달렸거나 상태가 open이 아니면 409 undo-conflict
+      parameters:
+        - $ref: "#/components/parameters/DryRun"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, title, description]
+              additionalProperties: false
+              properties:
+                category: {$ref: "#/components/schemas/TicketCategory"}
+                title: {type: string, minLength: 1, maxLength: 100}
+                description: {type: string, minLength: 1, maxLength: 2000}
+                priority: {$ref: "#/components/schemas/TicketPriority"}
+      responses:
+        "200": {$ref: "#/components/responses/WritePreview"}
+        "201": {$ref: "#/components/responses/ActionResult"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /tickets/{ticketId}:
+    get:
+      tags: [tickets]
+      operationId: getTicket
+      summary: IT 티켓 상세(댓글 포함)
+      x-required-scope: ticket:read
+      description: |
+        올린 사람과 티켓 담당 역할만 봅니다. 그 밖에는 있는지도 알려 주지 않고 404입니다.
+        댓글은 쓴 사람(`authorId`)이 다른 글이라 agent가 신뢰 불가 출력으로 다룹니다.
+      parameters:
+        - $ref: "#/components/parameters/TicketId"
+      responses:
+        "200":
+          description: 티켓
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TicketDetail"}
+        "404": {$ref: "#/components/responses/Problem"}
+
+  /tickets/{ticketId}/comments:
+    post:
+      tags: [tickets]
+      operationId: addTicketComment
+      summary: IT 티켓 댓글
+      x-write: true
+      x-required-scope: ticket:write
+      x-undo: 댓글을 지웁니다. 그사이 티켓이 closed·cancelled가 됐으면 409 undo-conflict
+      description: |
+        올린 사람과 티켓 담당 역할만 씁니다(그 밖에는 404). closed·cancelled 티켓이면 409 invalid-state.
+      parameters:
+        - $ref: "#/components/parameters/TicketId"
+        - $ref: "#/components/parameters/DryRun"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              additionalProperties: false
+              properties:
+                body: {type: string, minLength: 1, maxLength: 2000}
+      responses:
+        "200": {$ref: "#/components/responses/WritePreview"}
+        "201": {$ref: "#/components/responses/ActionResult"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
+  /tickets/{ticketId}/status:
+    post:
+      tags: [tickets]
+      operationId: changeTicketStatus
+      summary: IT 티켓 상태 변경(티켓 담당 역할만)
+      x-write: true
+      x-required-scope: ticket:manage
+      x-undo: 이전 상태로 되돌립니다. 그사이 상태가 다시 바뀌었으면 409 undo-conflict
+      description: |
+        티켓 담당 역할(팩 `erp_roles.ticket_handler`)만 합니다. 티켓을 볼 수 있지만 담당이 아니면 403 forbidden, 볼 수 없으면 404.
+        바꿀 수 있는 상태: open → in_progress·resolved, in_progress → open·resolved, resolved → in_progress·closed.
+        closed·cancelled에서 바꾸거나 같은 상태로 바꾸면 409 invalid-state. `version`이 현재와 다르면 409 version-conflict.
+      parameters:
+        - $ref: "#/components/parameters/TicketId"
+        - $ref: "#/components/parameters/DryRun"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, version]
+              additionalProperties: false
+              properties:
+                status: {$ref: "#/components/schemas/TicketStatus"}
+                version: {type: integer, minimum: 0}
+      responses:
+        "200": {$ref: "#/components/responses/WritePreview"}
+        "201": {$ref: "#/components/responses/ActionResult"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "409": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+
   /actions/{actionId}:
     get:
       tags: [actions]
@@ -711,6 +857,11 @@ components:
       bearerFormat: JWT
 
   parameters:
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      schema: {type: string}
     DryRun:
       name: dryRun
       in: query
@@ -993,7 +1144,7 @@ components:
       required: [op, resource]
       properties:
         op: {type: string, enum: [create, update, delete]}
-        resource: {type: string, description: "예: approval_document, delegation, room_reservation, leave_balance"}
+        resource: {type: string, description: "예: approval_document, delegation, room_reservation, leave_balance, ticket, ticket_comment"}
         resourceId: {type: [string, "null"], description: 미리보기에서 새로 만들 것은 null}
         before: {type: [object, "null"]}
         after: {type: [object, "null"]}
@@ -1045,6 +1196,56 @@ components:
         undoable: {type: boolean}
         undoActionId: {type: [string, "null"]}
         createdAt: {type: string, format: date-time}
+
+    TicketCategory:
+      type: string
+      enum: [incident, access_request, other]
+      description: incident 장애, access_request 계정·권한 요청, other 그 밖의 요청
+
+    TicketPriority:
+      type: string
+      enum: [low, normal, high]
+      default: normal
+
+    TicketStatus:
+      type: string
+      enum: [open, in_progress, resolved, closed, cancelled]
+
+    Ticket:
+      type: object
+      required: [id, requesterId, category, priority, title, description, status, version, commentCount, createdAt, updatedAt]
+      properties:
+        id: {type: string}
+        requesterId: {type: string}
+        category: {$ref: "#/components/schemas/TicketCategory"}
+        priority: {$ref: "#/components/schemas/TicketPriority"}
+        title: {type: string}
+        description: {type: string}
+        status: {$ref: "#/components/schemas/TicketStatus"}
+        version: {type: integer}
+        commentCount: {type: integer}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+
+    TicketComment:
+      type: object
+      required: [id, ticketId, authorId, body, createdAt]
+      properties:
+        id: {type: string}
+        ticketId: {type: string}
+        authorId: {type: string}
+        body: {type: string}
+        createdAt: {type: string, format: date-time}
+
+    TicketDetail:
+      allOf:
+        - $ref: "#/components/schemas/Ticket"
+        - type: object
+          required: [comments]
+          properties:
+            comments:
+              type: array
+              items: {$ref: "#/components/schemas/TicketComment"}
 
     Notification:
       type: object

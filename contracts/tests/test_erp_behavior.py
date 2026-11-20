@@ -1,7 +1,7 @@
 """erp 행동 계약 시험. 가짜와 실제 erp 양쪽에서 통과해야 합니다(기획서 5-3).
 
 미리보기 → 실행 → 되돌리기, 멱등, 409, 결재 대결 규칙(기간 밖, 범위 밖, 해지 뒤, 자기 결재, 재위임, 동시 결재),
-동시 예약, 위임 토큰 scope.
+동시 예약, 위임 토큰 scope, IT 티켓(보는 사람, 댓글, 상태 변경, 되돌리기).
 """
 
 from __future__ import annotations
@@ -575,3 +575,122 @@ def test_audit_records_delegated_decision(api: Api, org: Org) -> None:
     assert any(ev["kind"] == "erp.denied" for ev in events)
     tok = api.delegation_token(auditor, ["audit:read"])
     assert api.req("GET", "/audit-events", token=tok).status_code == 403
+
+
+# ---------- IT 티켓 ----------
+
+def _ticket(api: Api, emp: str, title: str = "프린터가 인쇄하지 않습니다") -> dict:
+    r = api.post("/tickets", emp, json={"category": "incident", "title": title, "description": "3층 복합기 오류"})
+    assert r.status_code == 201, r.text
+    validate(ERP, "Ticket", r.json()["resource"])
+    return r.json()
+
+
+def test_ticket_create_dry_run_and_undo(api: Api, org: Org) -> None:
+    emp = org.members("sales")[5]
+    before = api.get("/tickets", emp).json()["items"]
+    r = api.post("/tickets", emp, params={"dryRun": "true"}, key=None,
+                 json={"category": "access_request", "title": "권한 요청", "description": "공유 폴더 열람"})
+    assert r.status_code == 200, r.text
+    validate(ERP, "WritePreview", r.json())
+    assert api.get("/tickets", emp).json()["items"] == before
+    r = api.post("/tickets", emp, json={"category": "nope", "title": "x", "description": "y"})
+    assert r.status_code == 422
+    assert problem_code(r) == "validation"
+
+    out = _ticket(api, emp)
+    t = api.get(f"/tickets/{out['resource']['id']}", emp).json()
+    validate(ERP, "TicketDetail", t)
+    assert (t["status"], t["priority"], t["requesterId"], t["comments"]) == ("open", "normal", emp, [])
+    assert api.post(f"/actions/{out['actionId']}/undo", emp).status_code == 201
+    assert api.get(f"/tickets/{t['id']}", emp).json()["status"] == "cancelled"
+
+
+def test_ticket_visibility_follows_requester_and_handler(api: Api, org: Org) -> None:
+    emp, other = org.members("sales")[6], org.members("quality")[2]
+    handler = org.members("it-ops")[0]
+    tid = _ticket(api, emp)["resource"]["id"]
+    r = api.get(f"/tickets/{tid}", other)
+    assert r.status_code == 404
+    assert problem_code(r) == "not-found"
+    r = api.get("/tickets", other, params={"box": "all"})
+    assert r.status_code == 403
+    assert problem_code(r) == "forbidden"
+    assert tid in [t["id"] for t in api.get("/tickets", emp).json()["items"]]
+    assert tid not in [t["id"] for t in api.get("/tickets", other).json()["items"]]
+    every = api.get("/tickets", handler, params={"box": "all", "limit": 100}).json()["items"]
+    assert tid in [t["id"] for t in every]
+    assert api.get(f"/tickets/{tid}", handler).status_code == 200
+    # 팩 고정 데이터의 티켓(댓글 포함)
+    fixed = api.get("/tickets/tkt_0001", handler).json()
+    validate(ERP, "TicketDetail", fixed)
+    assert len(fixed["comments"]) >= 2 and fixed["commentCount"] == len(fixed["comments"])
+
+
+def test_ticket_comment_and_undo(api: Api, org: Org) -> None:
+    emp, handler = org.members("sales")[7], org.members("it-ops")[1]
+    created = _ticket(api, emp)
+    tid = created["resource"]["id"]
+    r = api.post(f"/tickets/{tid}/comments", handler, json={"body": "확인하겠습니다"})
+    assert r.status_code == 201, r.text
+    validate(ERP, "TicketComment", r.json()["resource"])
+    t = api.get(f"/tickets/{tid}", emp).json()
+    assert [(c["authorId"], c["body"]) for c in t["comments"]] == [(handler, "확인하겠습니다")]
+    # 댓글이 달린 뒤에는 작성을 되돌리지 못합니다
+    u = api.post(f"/actions/{created['actionId']}/undo", emp)
+    assert u.status_code == 409
+    assert problem_code(u) == "undo-conflict"
+    assert api.post(f"/actions/{r.json()['actionId']}/undo", handler).status_code == 201
+    assert api.get(f"/tickets/{tid}", emp).json()["comments"] == []
+    r = api.post(f"/tickets/{tid}/comments", org.members("quality")[3], json={"body": "남의 티켓"})
+    assert r.status_code == 404
+
+
+def test_ticket_status_rules(api: Api, org: Org) -> None:
+    emp, handler = org.members("production-control")[4], org.members("it-ops")[2]
+    tid = _ticket(api, emp)["resource"]["id"]
+    path = f"/tickets/{tid}/status"
+    r = api.post(path, emp, json={"status": "resolved", "version": 0})
+    assert r.status_code == 403
+    assert problem_code(r) == "forbidden"
+    assert api.post(path, org.members("quality")[4], json={"status": "resolved", "version": 0}).status_code == 404
+    r = api.post(path, handler, json={"status": "in_progress", "version": 1})
+    assert r.status_code == 409
+    assert problem_code(r) == "version-conflict"
+    r = api.post(path, handler, json={"status": "closed", "version": 0})
+    assert r.status_code == 409
+    assert problem_code(r) == "invalid-state"
+
+    r = api.post(path, handler, json={"status": "in_progress", "version": 0})
+    assert r.status_code == 201, r.text
+    assert (r.json()["resource"]["status"], r.json()["resource"]["version"]) == ("in_progress", 1)
+    assert api.post(f"/actions/{r.json()['actionId']}/undo", handler).status_code == 201
+    t = api.get(f"/tickets/{tid}", emp).json()
+    assert t["status"] == "open"
+    r = api.post(path, handler, json={"status": "resolved", "version": t["version"]})
+    assert r.status_code == 201, r.text
+    stale = r.json()["actionId"]
+    r = api.post(path, handler, json={"status": "closed", "version": r.json()["resource"]["version"]})
+    assert r.status_code == 201, r.text
+    # 그사이 상태가 다시 바뀌었으면 앞 변경은 되돌리지 못합니다
+    u = api.post(f"/actions/{stale}/undo", handler)
+    assert u.status_code == 409
+    assert problem_code(u) == "undo-conflict"
+    r = api.post(f"/tickets/{tid}/comments", emp, json={"body": "닫힌 뒤 댓글"})
+    assert r.status_code == 409
+    assert problem_code(r) == "invalid-state"
+
+
+def test_ticket_delegation_token_scope(api: Api, org: Org) -> None:
+    emp, handler = org.members("sales")[2], org.members("it-ops")[0]
+    body = {"category": "other", "title": "에이전트 경유", "description": "노트북 배터리 교체"}
+    r = api.req("POST", "/tickets", token=api.delegation_token(emp, ["ticket:read"]), json=body)
+    assert r.status_code == 403
+    assert problem_code(r) == "scope-missing"
+    r = api.req("POST", "/tickets", token=api.delegation_token(emp, ["ticket:read", "ticket:write"]), json=body)
+    assert r.status_code == 201, r.text
+    tid = r.json()["resource"]["id"]
+    r = api.req("POST", f"/tickets/{tid}/status", token=api.delegation_token(handler, ["ticket:read", "ticket:write"]),
+                json={"status": "in_progress", "version": 0})
+    assert r.status_code == 403
+    assert problem_code(r) == "scope-missing"

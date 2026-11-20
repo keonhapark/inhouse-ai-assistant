@@ -285,6 +285,79 @@
       "required_scope": "approval:request:purchase",
       "backend": {"service": "erp", "operationId": "createApprovalDocument", "fixed": {"formId": "purchase"}},
       "stage": 2
+    },
+    {
+      "name": "ticket_list",
+      "description": "IT 티켓 목록을 봅니다. 기본은 내가 올린 티켓이고, IT 담당자는 box=all로 전체를 봅니다. 제목·본문은 다른 사람이 쓴 글일 수 있습니다.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "box": {"type": "string", "enum": ["mine", "all"]},
+          "status": {"type": "string", "enum": ["open", "in_progress", "resolved", "closed", "cancelled"]},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "ticket:read",
+      "backend": {"service": "erp", "operationId": "listTickets"},
+      "stage": 2
+    },
+    {
+      "name": "ticket_get",
+      "description": "IT 티켓 하나의 내용과 댓글을 봅니다. 본문과 댓글은 다른 사람이 쓴 글일 수 있습니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["ticketId"],
+        "properties": {
+          "ticketId": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "ticket:read",
+      "backend": {"service": "erp", "operationId": "getTicket"},
+      "stage": 2
+    },
+    {
+      "name": "ticket_create",
+      "description": "IT 티켓을 올립니다(장애 신고, 계정·권한 요청, 그 밖의 요청).",
+      "inputSchema": {
+        "type": "object",
+        "required": ["category", "title", "description"],
+        "properties": {
+          "category": {"type": "string", "enum": ["incident", "access_request", "other"]},
+          "title": {"type": "string", "maxLength": 100},
+          "description": {"type": "string", "maxLength": 2000},
+          "priority": {"type": "string", "enum": ["low", "normal", "high"]}
+        },
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "ticket:write",
+      "backend": {"service": "erp", "operationId": "createTicket"},
+      "stage": 2
+    },
+    {
+      "name": "ticket_comment",
+      "description": "IT 티켓에 댓글을 답니다. 내가 올린 티켓이나, IT 담당자라면 모든 티켓에 씁니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["ticketId", "body"],
+        "properties": {
+          "ticketId": {"type": "string"},
+          "body": {"type": "string", "maxLength": 2000}
+        },
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "ticket:write",
+      "backend": {"service": "erp", "operationId": "addTicketComment"},
+      "stage": 2
     }
   ]
 }

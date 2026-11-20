@@ -41,7 +41,8 @@ def check_pack(pack_dir: Path) -> list[str]:
         for e in Draft202012Validator(sub).iter_errors(doc):
             loc = "/".join(str(p) for p in e.absolute_path)
             errors.append(f"{pack_dir.name}/{rel}:{loc}: {e.message}")
-    for optional, def_name in (("glossary.yaml", "glossary"), ("budgets.yaml", "budgets")):  # 선택 파일
+    for optional, def_name in (("glossary.yaml", "glossary"), ("budgets.yaml", "budgets"),  # 선택 파일
+                               ("fixtures/tickets.json", "fixtures_tickets")):
         f = pack_dir / optional
         if not f.exists():
             continue
@@ -158,6 +159,10 @@ def check_pack(pack_dir: Path) -> list[str]:
     for b in balances:
         if b["employee_id"] not in emp_ids:
             errors.append(f"{p}fixtures/leave_balances.json: 없는 직원 '{b['employee_id']}'")
+    for t in (data.get("fixtures/tickets.json") or {}).get("tickets", []):
+        for who in [t["requester_id"], *(c["author_id"] for c in t.get("comments", []))]:
+            if who not in emp_ids:
+                errors.append(f"{p}fixtures/tickets.json {t['id']}: 없는 직원 '{who}'")
     _ = form_ids
     return errors
 

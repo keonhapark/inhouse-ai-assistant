@@ -29,6 +29,7 @@ from fakes.erp.domain import (
     iso,
     new_id,
     now,
+    ticket_view,
 )
 from tools.common import ROOT
 
@@ -371,6 +372,40 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
         body = await json_body(request)
         return run_write(request, p, "cancelRoomReservation", body, lambda s: s.cancel_reservation(p, rid),
                          lambda r: (lambda s: s.undo_cancel(r["id"])), "room_reservation")
+
+    # ---------- IT 티켓 ----------
+    @app.get("/api/v1/tickets")
+    def list_tickets(request: Request, box: str = "mine", status: str | None = None, limit: int = 20) -> dict:
+        p = principal(request, "ticket:read")
+        with lock:
+            return {"items": st.list_tickets(p.employee_id, box, status, limit)}
+
+    @app.get("/api/v1/tickets/{tid}")
+    def get_ticket(request: Request, tid: str) -> dict:
+        p = principal(request, "ticket:read")
+        with lock:
+            return ticket_view(st.visible_ticket(p.employee_id, tid), detail=True)
+
+    @app.post("/api/v1/tickets")
+    async def create_ticket(request: Request) -> JSONResponse:
+        p = principal(request, "ticket:write")
+        body = await json_body(request)
+        return run_write(request, p, "createTicket", body, lambda s: s.create_ticket(p, body),
+                         lambda r: (lambda s: s.undo_create_ticket(r["id"])), "ticket")
+
+    @app.post("/api/v1/tickets/{tid}/comments")
+    async def comment_ticket(request: Request, tid: str) -> JSONResponse:
+        p = principal(request, "ticket:write")
+        body = await json_body(request)
+        return run_write(request, p, "addTicketComment", body, lambda s: s.comment_ticket(p, tid, body),
+                         lambda r: (lambda s: s.undo_comment_ticket(r["id"])), "ticket_comment")
+
+    @app.post("/api/v1/tickets/{tid}/status")
+    async def ticket_status(request: Request, tid: str) -> JSONResponse:
+        p = principal(request, "ticket:manage")
+        body = await json_body(request)
+        return run_write(request, p, "changeTicketStatus", body, lambda s: s.change_ticket_status(p, tid, body),
+                         lambda r: (lambda s: s.undo_ticket_status(r["id"], r["version"])), "ticket")
 
     def action_view(a: Action) -> dict:
         return {"id": a.id, "operation": a.operation, "actorId": a.actor.employee_id,
