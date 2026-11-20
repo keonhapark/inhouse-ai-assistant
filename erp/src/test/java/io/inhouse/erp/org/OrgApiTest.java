@@ -45,6 +45,13 @@ class OrgApiTest extends PostgresTestBase {
     }
 
     @Test
+    void evalResetIsAbsentUnlessEnabled() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/_eval/reset"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("urn:problem:not-found"));
+    }
+
+    @Test
     void healthIsPublic() throws Exception {
         mvc.perform(get("/health")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ok"));
     }

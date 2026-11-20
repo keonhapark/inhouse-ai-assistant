@@ -24,7 +24,7 @@ public class SecurityConfig {
                 .anonymous(a -> a.disable())
                 .addFilterBefore(new BearerTokenFilter(tokens, mapper), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(a -> a
-                        .requestMatchers("/health", "/auth/login", "/error").permitAll()
+                        .requestMatchers("/health", "/auth/login", "/_eval/reset", "/error").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) ->
