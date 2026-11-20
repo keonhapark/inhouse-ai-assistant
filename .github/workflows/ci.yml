@@ -126,7 +126,7 @@ jobs:
           cd contracts && uv sync --frozen
           ERP_BASE_URL=http://localhost:8040/api/v1 \
           ERP_TEST_DELEGATION_PRIVATE_KEY="$GITHUB_WORKSPACE/infra/dev-keys/delegation-es256.pem" \
-            uv run pytest -q tests/test_erp_behavior.py
+            uv run pytest -q $(python3 "$GITHUB_WORKSPACE/scripts/ci/erp_behavior_targets.py")
 
   python:
     needs: changes
