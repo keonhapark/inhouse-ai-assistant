@@ -116,8 +116,161 @@ class Action:
     undo_action_id: str | None = None
 
 
+# ---------- IT 티켓 ----------
+
+TICKET_CATEGORIES = ("incident", "access_request", "other")
+TICKET_PRIORITIES = ("low", "normal", "high")
+TICKET_STATUSES = ("open", "in_progress", "resolved", "closed", "cancelled")
+TICKET_TRANSITIONS = {"open": ("in_progress", "resolved"), "in_progress": ("open", "resolved"),
+                      "resolved": ("in_progress", "closed")}
+
+
+def ticket_from_fixture(t: dict[str, Any]) -> dict[str, Any]:
+    tid = t["id"]
+    comments = [{"id": f"tcm_{tid.removeprefix('tkt_')}_{i + 1}", "ticketId": tid, "authorId": c["author_id"],
+                 "body": c["body"], "createdAt": c["created_at"]} for i, c in enumerate(t.get("comments", []))]
+    updated = max([t["created_at"], *(c["createdAt"] for c in comments)])
+    return {"id": tid, "requesterId": t["requester_id"], "category": t["category"], "priority": t["priority"],
+            "title": t["title"], "description": t["description"], "status": t["status"], "version": 0,
+            "createdAt": t["created_at"], "updatedAt": updated, "comments": comments, "_status_log": {}}
+
+
+def _text(body: dict[str, Any], name: str, max_len: int) -> str:
+    v = body.get(name)
+    if not isinstance(v, str) or not v.strip() or len(v) > max_len:
+        raise ProblemError(422, "validation", f"{name}: 1~{max_len}자", [{"field": name, "message": "invalid"}])
+    return v
+
+
+def _one_of(body: dict[str, Any], name: str, allowed: tuple[str, ...], default: str | None = None) -> str:
+    v = body.get(name, default)
+    if v not in allowed:
+        raise ProblemError(422, "validation", f"{name}: {', '.join(allowed)} 중 하나",
+                           [{"field": name, "message": "invalid"}])
+    return v
+
+
+def _only(body: dict[str, Any], allowed: set[str]) -> None:
+    if not isinstance(body, dict):
+        raise ProblemError(422, "validation", "JSON 객체가 아닙니다")
+    extra = sorted(set(body) - allowed)
+    if extra:
+        raise ProblemError(422, "validation", f"모르는 필드: {extra[0]}", [{"field": extra[0], "message": "unknown"}])
+
+
+def ticket_view(t: dict[str, Any], detail: bool = False) -> dict[str, Any]:
+    out = {k: copy.deepcopy(v) for k, v in t.items() if not k.startswith("_") and k != "comments"}
+    out["commentCount"] = len(t["comments"])
+    if detail:
+        out["comments"] = copy.deepcopy(t["comments"])
+    return out
+
+
+class TicketsMixin:
+    """State에 붙는 IT 티켓 규칙(erp.yaml tickets)."""
+
+    tickets: dict[str, dict[str, Any]]
+
+    def is_ticket_handler(self, emp_id: str) -> bool:
+        return self.has_role(emp_id, self.erp_role("ticket_handler"))  # type: ignore[attr-defined]
+
+    def visible_ticket(self, emp_id: str, tid: str) -> dict[str, Any]:
+        t = self.tickets.get(tid)
+        if t is None or (t["requesterId"] != emp_id and not self.is_ticket_handler(emp_id)):
+            raise ProblemError(404, "not-found", "티켓이 없습니다")
+        return t
+
+    def list_tickets(self, emp_id: str, box: str, status: str | None, limit: int) -> list[dict[str, Any]]:
+        if box not in ("mine", "all"):
+            raise ProblemError(422, "validation", "box: mine, all 중 하나", [{"field": "box", "message": "invalid"}])
+        if status is not None and status not in TICKET_STATUSES:
+            raise ProblemError(422, "validation", "status: 모르는 상태", [{"field": "status", "message": "invalid"}])
+        if box == "all" and not self.is_ticket_handler(emp_id):
+            raise ProblemError(403, "forbidden", "티켓 담당만 전체를 봅니다")
+        rows = [t for t in self.tickets.values()
+                if (box == "all" or t["requesterId"] == emp_id) and (status is None or t["status"] == status)]
+        rows.sort(key=lambda t: t["updatedAt"], reverse=True)
+        return [ticket_view(t) for t in rows[: max(1, min(limit, 100))]]
+
+    def create_ticket(self, p: Principal, body: dict[str, Any]) -> tuple[str, list, bool, dict]:
+        _only(body, {"category", "title", "description", "priority"})
+        category = _one_of(body, "category", TICKET_CATEGORIES)
+        priority = _one_of(body, "priority", TICKET_PRIORITIES, "normal")
+        title, description = _text(body, "title", 100), _text(body, "description", 2000)
+        at = iso(now())
+        t = {"id": new_id("tkt"), "requesterId": p.employee_id, "category": category, "priority": priority,
+             "title": title, "description": description, "status": "open", "version": 0, "createdAt": at,
+             "updatedAt": at, "comments": [], "_status_log": {}}
+        self.tickets[t["id"]] = t
+        view = ticket_view(t)
+        return (f"IT 티켓 '{title}'을 올립니다", [{"op": "create", "resource": "ticket", "resourceId": t["id"],
+                                             "before": None, "after": view}], True, view)
+
+    def undo_create_ticket(self, tid: str) -> tuple[str, list, dict]:
+        t = self.tickets[tid]
+        if t["status"] != "open" or t["comments"]:
+            raise ProblemError(409, "undo-conflict", "그사이 댓글이 달렸거나 처리가 시작됐습니다")
+        before = ticket_view(t)
+        t["status"], t["version"], t["updatedAt"] = "cancelled", t["version"] + 1, iso(now())
+        return "IT 티켓 작성을 되돌렸습니다(취소)", [{"op": "update", "resource": "ticket", "resourceId": tid,
+                                               "before": before, "after": ticket_view(t)}], ticket_view(t)
+
+    def comment_ticket(self, p: Principal, tid: str, body: dict[str, Any]) -> tuple[str, list, bool, dict]:
+        t = self.visible_ticket(p.employee_id, tid)
+        _only(body, {"body"})
+        text = _text(body, "body", 2000)
+        if t["status"] in ("closed", "cancelled"):
+            raise ProblemError(409, "invalid-state", f"{t['status']} 티켓에는 댓글을 달 수 없습니다")
+        at = iso(now())
+        c = {"id": new_id("tcm"), "ticketId": tid, "authorId": p.employee_id, "body": text, "createdAt": at}
+        t["comments"].append(c)
+        t["updatedAt"] = at
+        return (f"IT 티켓 '{t['title']}'에 댓글을 답니다", [{"op": "create", "resource": "ticket_comment",
+                                                     "resourceId": c["id"], "before": None, "after": dict(c)}],
+                True, dict(c))
+
+    def undo_comment_ticket(self, cid: str) -> tuple[str, list, dict]:
+        t = next(t for t in self.tickets.values() if any(c["id"] == cid for c in t["comments"]))
+        if t["status"] in ("closed", "cancelled"):
+            raise ProblemError(409, "undo-conflict", f"티켓이 {t['status']}입니다")
+        c = next(c for c in t["comments"] if c["id"] == cid)
+        t["comments"].remove(c)
+        return "IT 티켓 댓글을 지웠습니다", [{"op": "delete", "resource": "ticket_comment", "resourceId": cid,
+                                         "before": dict(c), "after": None}], dict(c)
+
+    def change_ticket_status(self, p: Principal, tid: str, body: dict[str, Any]) -> tuple[str, list, bool, dict]:
+        t = self.visible_ticket(p.employee_id, tid)
+        if not self.is_ticket_handler(p.employee_id):
+            raise ProblemError(403, "forbidden", "티켓 담당만 상태를 바꿉니다")
+        _only(body, {"status", "version"})
+        status = _one_of(body, "status", TICKET_STATUSES)
+        version = body.get("version")
+        if not isinstance(version, int) or isinstance(version, bool) or version < 0:
+            raise ProblemError(422, "validation", "version: 0 이상의 정수", [{"field": "version", "message": "invalid"}])
+        if version != t["version"]:
+            raise ProblemError(409, "version-conflict", "그사이 티켓이 바뀌었습니다")
+        if status not in TICKET_TRANSITIONS.get(t["status"], ()):
+            raise ProblemError(409, "invalid-state", f"{t['status']}에서 {status}로 바꿀 수 없습니다")
+        before = ticket_view(t)
+        prev = t["status"]
+        t["status"], t["version"], t["updatedAt"] = status, t["version"] + 1, iso(now())
+        t["_status_log"][t["version"]] = prev
+        return (f"IT 티켓 '{t['title']}'을 {status}로 바꿉니다",
+                [{"op": "update", "resource": "ticket", "resourceId": tid, "before": before, "after": ticket_view(t)}],
+                True, ticket_view(t))
+
+    def undo_ticket_status(self, tid: str, version: int) -> tuple[str, list, dict]:
+        t = self.tickets[tid]
+        if t["version"] != version:
+            raise ProblemError(409, "undo-conflict", "그사이 상태가 다시 바뀌었습니다")
+        before = ticket_view(t)
+        t["status"], t["version"], t["updatedAt"] = t["_status_log"][version], t["version"] + 1, iso(now())
+        return "IT 티켓 상태 변경을 되돌렸습니다", [{"op": "update", "resource": "ticket", "resourceId": tid,
+                                              "before": before, "after": ticket_view(t)}], ticket_view(t)
+
+
 @dataclass
-class State:
+class State(TicketsMixin):
     pack: dict[str, Any]
     employees: dict[str, dict[str, Any]]
     units: dict[str, dict[str, Any]]
@@ -127,6 +280,7 @@ class State:
     documents: dict[str, dict[str, Any]] = field(default_factory=dict)
     delegations: dict[str, dict[str, Any]] = field(default_factory=dict)
     reservations: dict[str, dict[str, Any]] = field(default_factory=dict)
+    tickets: dict[str, dict[str, Any]] = field(default_factory=dict)
     actions: dict[str, Action] = field(default_factory=dict)
     notifications: list[dict[str, Any]] = field(default_factory=list)
     audit: list[dict[str, Any]] = field(default_factory=list)
@@ -139,6 +293,8 @@ class State:
         emps = load(pack_dir / "fixtures/employees.json")["employees"]
         rooms = load(pack_dir / "fixtures/rooms.json")["rooms"]
         bals = load(pack_dir / "fixtures/leave_balances.json")["balances"]
+        tickets_file = pack_dir / "fixtures/tickets.json"
+        tickets = load(tickets_file)["tickets"] if tickets_file.exists() else []
         units = {u["id"]: dict(u) for u in org["units"]}
         employees = {e["id"]: dict(e) for e in emps}
         for e in employees.values():
@@ -154,6 +310,8 @@ class State:
         )
         for e in employees.values():
             e["roles"] = st._roles_of(e)
+        for t in tickets:
+            st.tickets[t["id"]] = ticket_from_fixture(t)
         return st
 
     # ---------- 조직 ----------
@@ -180,8 +338,9 @@ class State:
         return role in self.employee(emp_id)["roles"]
 
     def erp_role(self, key: str) -> str:
-        """org.yaml erp_roles의 역할 ID(hr, auditor). 없으면 hr_staff·auditor입니다."""
-        return self.pack["org"].get("erp_roles", {}).get(key, {"hr": "hr_staff", "auditor": "auditor"}[key])
+        """org.yaml erp_roles의 역할 ID(hr, auditor, ticket_handler). 없으면 hr_staff·auditor·it_admin입니다."""
+        defaults = {"hr": "hr_staff", "auditor": "auditor", "ticket_handler": "it_admin"}
+        return self.pack["org"].get("erp_roles", {}).get(key, defaults[key])
 
     def can_register_for_others(self, emp_id: str) -> bool:
         """대결을 대신 등록·해지·전체 조회할 수 있는 역할(delegation_policy.registrable_by)."""

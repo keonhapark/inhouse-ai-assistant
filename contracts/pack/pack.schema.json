@@ -119,11 +119,12 @@
         },
         "erp_roles": {
           "type": "object",
-          "description": "erp 코어가 권한 판단에 쓰는 역할 ID. 없으면 hr: hr_staff, auditor: auditor입니다",
+          "description": "erp 코어가 권한 판단에 쓰는 역할 ID. 없으면 hr: hr_staff, auditor: auditor, ticket_handler: it_admin입니다",
           "additionalProperties": false,
           "properties": {
             "hr": {"$ref": "#/$defs/id", "description": "인사 담당. 직원 상세 전체 필드, 다른 사람의 연차 잔여"},
-            "auditor": {"$ref": "#/$defs/id", "description": "감사 조회(GET /audit-events)"}
+            "auditor": {"$ref": "#/$defs/id", "description": "감사 조회(GET /audit-events)"},
+            "ticket_handler": {"$ref": "#/$defs/id", "description": "IT 티켓 담당. 전체 티켓 조회, 상태 변경. 없으면 it_admin"}
           }
         },
         "delegation_policy": {
@@ -412,6 +413,45 @@
               "name": {"type": "string"},
               "floor": {"type": "integer"},
               "capacity": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    },
+    "fixtures_tickets": {
+      "type": "object",
+      "description": "선택 파일 fixtures/tickets.json. 지어낸 IT 티켓(평가 초기화 때 이 상태로 돌아감)",
+      "required": ["tickets"],
+      "additionalProperties": false,
+      "properties": {
+        "tickets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "requester_id", "category", "priority", "title", "description", "status", "created_at"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"type": "string", "pattern": "^tkt_[a-z0-9]+$"},
+              "requester_id": {"type": "string"},
+              "category": {"enum": ["incident", "access_request", "other"]},
+              "priority": {"enum": ["low", "normal", "high"]},
+              "title": {"type": "string", "minLength": 1, "maxLength": 100},
+              "description": {"type": "string", "minLength": 1, "maxLength": 2000},
+              "status": {"enum": ["open", "in_progress", "resolved", "closed", "cancelled"]},
+              "created_at": {"type": "string", "format": "date-time"},
+              "comments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["author_id", "body", "created_at"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "author_id": {"type": "string"},
+                    "body": {"type": "string", "minLength": 1, "maxLength": 2000},
+                    "created_at": {"type": "string", "format": "date-time"}
+                  }
+                }
+              }
             }
           }
         }
