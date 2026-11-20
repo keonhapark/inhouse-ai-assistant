@@ -82,3 +82,73 @@ def test_egress_access(client, auditor, ext, login, staff_no):
     assert client.get("/api/ops/egress").status_code == 401
     assert client.get("/api/ops/egress", headers=auditor, params={"cursor": "@@"}).status_code == 400
     assert client.get("/api/ops/egress", headers=auditor, params={"since": "2026-11-20T10:00:00"}).status_code == 400
+
+
+# ---------- /ops/metrics ----------
+def _ev(kind, agent, *, result="ok", source="agent", pt=None, method=None, loc=None, trust=None, at="2026-11-20T10:00:00+09:00"):
+    import uuid
+    e = {"eventId": uuid.uuid4().hex, "occurredAt": at, "source": source, "kind": kind,
+         "actor": {"employeeId": "E1", "viaDelegationToken": True, "agentId": agent}, "result": result,
+         "problemType": pt}
+    if method:
+        e["routing"] = {"agentId": agent, "method": method, "reason": "r"}
+    if loc:
+        e["model"] = {"name": "x", "location": loc, "externalSent": loc == "external", "redactions": 0}
+    if trust:
+        e["trustLevel"] = trust
+    return e
+
+
+def test_compute_metrics_counts(app):
+    from datetime import datetime
+
+    from gateway.budgets import BudgetLedger
+    from gateway.ops import compute_metrics
+
+    reg = app.state.registry
+    a, b = [x.id for x in reg.all()][:2]
+    events = [
+        _ev("route.decided", a, method="keyword"), _ev("route.decided", a, method="explicit", source="gateway"),
+        _ev("route.decided", b, method="llm"),
+        _ev("route.decided", b, result="denied", source="gateway", pt="urn:problem:agent-not-callable", method="llm"),
+        _ev("tool.blocked", a, result="denied", pt="urn:problem:agent-policy", trust="untrusted"),
+        _ev("tool.blocked", a, result="denied", pt="urn:problem:agent-policy", trust="user_direct"),
+        _ev("tool.blocked", a, result="denied", source="mcp", pt="urn:problem:tool-not-allowed"),
+        _ev("tool.blocked", a, result="error", source="mcp", pt="urn:problem:validation"),       # 정책 차단 아님
+        _ev("rag.access_denied", b, result="denied", source="rag", pt="urn:problem:forbidden"),
+        _ev("llm.request", a, source="gateway", loc="local"), _ev("llm.request", a, source="gateway", loc="external"),
+        _ev("llm.request", b, result="denied", source="gateway", pt="urn:problem:model-policy", loc="external"),
+        _ev("route.decided", a, method="llm", at="2026-11-19T10:00:00+09:00"),                  # 기간 밖
+    ]
+    egress = [{"occurredAt": "2026-11-20T10:00:01+09:00", "agentId": a, "costUsd": 0.002},
+              {"occurredAt": "2026-11-20T10:00:02+09:00", "agentId": a, "costUsd": None}]
+    led = BudgetLedger({"period": "month", "agents": {a: 0.001}, "units": {}}, {}, "Asia/Seoul")
+    led.add(a, None, 0.002)
+    m = compute_metrics(events, egress, reg, led, datetime.fromisoformat("2026-11-20T00:00:00+09:00"),
+                        datetime.fromisoformat("2026-11-21T00:00:00+09:00"))
+    schema_check.validate("openapi/gateway.yaml", "OpsMetrics", m)
+    by = {x["agentId"]: x for x in m["agents"]}
+    assert len(m["agents"]) == len(reg.all())
+    assert by[a]["calls"] == 2 and by[b]["calls"] == 1
+    assert by[a]["blocked"]["byCode"] == {"trust_violation": 1, "policy_denied": 1, "tool_not_allowed": 1}
+    assert by[b]["blocked"]["byCode"] == {"agent_not_callable": 1, "scope_missing": 1, "model_policy": 1}
+    assert by[a]["llmRequests"] == {"local": 1, "external": 1}
+    assert by[a]["externalCostUsd"] == 0.002 and by[a]["unpricedRequests"] == 1
+    assert m["routing"] == {"total": 3, "byMethod": {"keyword": 1, "explicit": 1, "llm": 1}}
+    assert m["totals"]["blocked"]["total"] == 6 and m["totals"]["calls"] == 3
+    (u,) = m["budgets"]["agents"]
+    assert u["exceeded"] is True and u["usedUsd"] == 0.002 and m["budgets"]["periodStart"].startswith("20")
+
+
+def test_ops_metrics_endpoint(client, app, auditor, ext, login, staff_no):
+    _, token = ext
+    _send(client, token, [{"role": "user", "content": "안녕"}])
+    r = client.get("/api/ops/metrics", headers=auditor)
+    assert r.status_code == 200
+    m = r.json()
+    schema_check.validate("openapi/gateway.yaml", "OpsMetrics", m)
+    assert m["totals"]["llmRequests"]["external"] >= 1
+    assert client.get("/api/ops/metrics", headers={"Authorization": f"Bearer {login(staff_no)}"}).status_code == 403
+    assert client.get("/api/ops/metrics", headers={"Authorization": f"Bearer {token}"}).status_code == 403
+    assert client.get("/api/ops/metrics", headers=auditor, params={"since": "2026-11-21T00:00:00+09:00",
+                                                                  "until": "2026-11-20T00:00:00+09:00"}).status_code == 400

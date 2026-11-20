@@ -90,6 +90,11 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
 - 관리자 콘솔 `GET /api/ops/egress`(`gateway/ops.py`, auditor만): 외부로 실제 보낸 요청을 최근 것부터 계약의 `EgressRecord`로
   돌려줍니다. `messages`는 가림 뒤 본문(부분 배열 content는 텍스트 부분을 줄바꿈으로 이어 붙임)이고, `redactions`의 위치는
   화면(JavaScript)과 맞도록 UTF-16 단위입니다. content 밖(도구 호출 인자)에서 가린 것은 위치를 돌려주지 않습니다.
+- 관리자 콘솔 `GET /api/ops/metrics`(auditor만, `since` 없으면 `until` 24시간 전): 감사 이벤트(gateway 기록과 `AUDIT_EVENT_FILES`)와
+  운영 기록에서 에이전트별 호출 수(`route.decided`), 정책 차단(`tool.blocked`·`rag.access_denied`·출구 거절·부를 수 없는 에이전트를
+  ChatEvent `blocked.code`로 나눔), 로컬·외부 요청 수, 외부 비용(`costUsd` 합, 모르면 `unpricedRequests`), 라우팅 방식별 수,
+  비용 상한 사용량(지금 누적 기간)을 셉니다. 직원이 고른 대화(`explicit`)와 부를 수 없는 에이전트로 간 라우팅은 gateway가
+  `route.decided`를 남깁니다.
 - 감사 조회 `GET /api/audit-events`(`gateway/audit_query.py`, erp `auditor` 역할만): erp `GET /audit-events`,
   gateway 자기 `audit.jsonl`, `AUDIT_EVENT_FILES`(쉼표로 구분한 경로나 glob, agent·MCP·rag가 쓰는 JSON Lines)를 시각 순으로
   합칩니다. `eventId`가 같으면 한 번만 넣습니다. 필터는 `conversationId`, `actorId`, `agentId`, `kind`, `since`·`until`
