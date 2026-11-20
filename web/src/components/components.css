@@ -1,0 +1,113 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  height: var(--control-h);
+  padding: 0 var(--sp-12);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: var(--on-fill);
+}
+
+.btn--secondary {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn--danger {
+  background: var(--danger);
+  color: var(--on-fill);
+}
+
+/* 상태색은 테두리와 점에만 씁니다. --success·--warning은 흰 바탕 글자로 4.5:1에 못 미쳐 글자는 --text로 둡니다. */
+.badge {
+  --badge-color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  height: 20px;
+  padding: 0 var(--sp-8);
+  border: 1px solid var(--badge-color);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--badge-color);
+}
+
+.badge--warning {
+  --badge-color: var(--warning);
+}
+
+.badge--danger {
+  --badge-color: var(--danger);
+}
+
+.badge--success {
+  --badge-color: var(--success);
+}
+
+.badge--accent {
+  --badge-color: var(--accent);
+}
+
+.badge--local {
+  --badge-color: var(--local);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.card__header,
+.card__body,
+.card__footer {
+  padding: var(--sp-12) var(--sp-16);
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  border-bottom: 1px solid var(--border);
+}
+
+.card__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--sp-8);
+  border-top: 1px solid var(--border);
+}
+
+.alert {
+  padding: var(--sp-8) var(--sp-12);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-control);
+  color: var(--danger);
+}
