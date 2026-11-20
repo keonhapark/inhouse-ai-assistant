@@ -23,6 +23,10 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     들어 있어 접근을 제한해야 하는 파일입니다.
   - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
+  - 비용 상한(`gateway/budgets.py`, 팩 선택 파일 `budgets.yaml`, #155): 외부 응답 비용(LiteLLM `x-litellm-response-cost`,
+    스트림은 별칭 단가 `model_info.input_cost_per_token`·`output_cost_per_token`과 usage로 계산)을 기간(day|month)마다 에이전트와
+    부서(요청자 소속과 상위 부서)에 더해 `GATEWAY_AUDIT_DIR/budget.json`에 둡니다. 상한에 닿은 에이전트·부서의 다음 외부 요청은
+    로컬로 내리고 감사 detail에 `비용 상한 초과(...)`를 적습니다. 진행 중인 요청은 끝까지 갑니다. 로컬 강제를 끄는 평가 조건에서는 끕니다.
   - 외부 별칭이 위 세 가지로 실패하면 같은 요청을 로컬 별칭으로 한 번 다시 보냅니다(로컬 폴백). 외부 실패는 그대로 알림·감사(error)를
     남기고, 로컬 호출의 감사 이벤트 detail에 `외부 장애(<코드>)로 로컬 폴백`을 적습니다. 로컬이 지원하지 않는 `response_format`
     요청, 미지원(400), 정책 거절, 로컬 별칭 자체의 실패는 폴백하지 않습니다. 스트림은 흘려보내기 전에 실패한 경우만 폴백합니다.

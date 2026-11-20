@@ -31,6 +31,7 @@ from fastapi.responses import Response, StreamingResponse
 
 from gateway.alerts import Alerter
 from gateway.audit import AuditLog, JsonlWriter, now_iso
+from gateway.budgets import BudgetLedger
 from gateway.confidential import Glossary
 from gateway.problems import ProblemError
 from gateway.redact import scrub
@@ -179,7 +180,10 @@ class Egress:
                  external_log: JsonlWriter | None = None, no_response_format: frozenset[str] = frozenset(),
                  baseline_redactor: Redactor = no_redaction,
                  drop_params: dict[str, frozenset[str]] | None = None,
-                 condition_of: Callable[[str | None], str | None] = lambda _cid: None):
+                 condition_of: Callable[[str | None], str | None] = lambda _cid: None,
+                 budget: BudgetLedger | None = None,
+                 unit_of: Callable[[str | None], str | None] = lambda _cid: None,
+                 prices: dict[str, tuple[float, float]] | None = None):
         self.locations = locations
         self.registry, self.issuer, self.audit, self.alerter = registry, issuer, audit, alerter
         self.redactor = redactor
@@ -190,6 +194,9 @@ class Egress:
         self.drop_params = drop_params or {}  # 별칭별로 보내기 전에 뺄 필드(model_info.drop_params)
         # 위임 토큰 cid로 대화의 평가 조건을 찾습니다(채팅 흐름이 기억). 운영에서는 늘 None → full.
         self.condition_of = condition_of
+        self.budget = budget
+        self.unit_of = unit_of  # 위임 토큰 cid → 요청자 소속 부서(채팅 흐름이 기억). 모르면 None
+        self.prices = prices or {}  # 별칭 → (입력, 출력) USD/토큰. 비용 머리글이 없을 때(스트림) 씁니다
         self.no_response_format = no_response_format  # model_info.supports_response_format: false인 별칭
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
@@ -280,8 +287,19 @@ class Egress:
         # 토큰 모양 문자열은 어떤 모델에도 보내지 않습니다. JWT 문자에는 따옴표가 없어 JSON 문자열째 가려도 됩니다.
         before = json.loads(scrub(json.dumps(body, ensure_ascii=False)))
         sent = before
+        note = None
         if location == "external" and guards.glossary:
             sent = self._confidential(caller, model, before)
+        # 비용 상한도 정책 장치라, 로컬 강제를 끄는 평가 조건(no_guard·baseline_tools)에서는 같이 끕니다.
+        if (model["location"] == "external" and guards.local_enforce and self.budget is not None
+                and self.local_alias is not None):
+            over = self.budget.over(caller.agent.id if caller.agent else None,
+                                    self.unit_of(caller.conversation_id))
+            if over is not None:
+                # 상한을 넘었으면 이 요청부터 로컬로 내립니다(가림 전 본문, 로컬은 사내에서 돎).
+                note = (f"비용 상한 초과({over.kind} {over.id} ${over.spent:.6g}/${over.limit:.6g})로 로컬 모델로 내림")
+                model.update(name=self.local_alias, location="local")
+                sent = {**sent, "model": self.local_alias}
         if model["location"] == "external":
             # think는 Ollama 전용 필드입니다. 외부 공급자는 모르는 필드를 400으로 거절하고(Anthropic 실측),
             # LiteLLM drop_params도 이 필드는 거르지 않아 gateway가 뺍니다. 추론 조절은 reasoning_effort로 합니다.
@@ -301,7 +319,7 @@ class Egress:
             raise ProblemError(400, "unsupported-parameter", "이 모델은 response_format(구조화 출력)을 지원하지 않습니다",
                                f"{model['name']}. 형식은 도구 호출이나 프롬프트 지시로 맞출 수 있습니다")
         try:
-            return await self._dispatch(caller, model, before, sent)
+            return await self._dispatch(caller, model, before, sent, note=note)
         except ProblemError as e:
             fallback = self._fallback_body(model, before, e)
             if fallback is None:
@@ -481,6 +499,13 @@ class Egress:
                          model=dict(model) if model is not None else None, result=result,
                          problem_type=problem_type, detail=detail)
 
+    def _estimate_cost(self, alias: str, usage: dict[str, int] | None) -> float | None:
+        """LiteLLM 비용 머리글이 없을 때(스트림) 별칭 단가와 usage로 계산합니다. 모르면 None."""
+        price = self.prices.get(alias)
+        if price is None or not usage:
+            return None
+        return usage.get("prompt_tokens", 0) * price[0] + usage.get("completion_tokens", 0) * price[1]
+
     def _external_record(self, caller: Caller, model: dict, sent: dict, response: str | None,
                          cost: float | None) -> None:
         """평가용 외부 요청 기록(GATEWAY_EXTERNAL_LOG, contracts/events/external-request.schema.json)."""
@@ -499,6 +524,10 @@ class Egress:
         if model["location"] != "external":
             return
         if model["externalSent"]:
+            if cost is None:
+                cost = self._estimate_cost(model["name"], response_usage(response) if response else None)
+            if self.budget is not None:
+                self.budget.add(caller.agent.id if caller.agent else None, self.unit_of(caller.conversation_id), cost)
             self._external_record(caller, model, sent, response, cost)
         self.audit.egress.write({
             "occurredAt": now_iso(),

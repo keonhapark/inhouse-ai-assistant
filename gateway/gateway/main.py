@@ -19,6 +19,7 @@ from gateway import audit_query
 from gateway.chat import AgentClient, ChatService
 from gateway.chat import build_router as chat_router
 from gateway.audit import AuditLog, JsonlWriter
+from gateway.budgets import BudgetLedger
 from gateway.config import Settings
 from gateway.delegation import DelegationService
 from gateway.confidential import Glossary
@@ -66,6 +67,10 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                     external_log=JsonlWriter(settings.external_log) if settings.external_log else None,
                     # 평가 모드가 아니면 조건이 없어 쓰이지 않으므로 기성 인식기를 싣지 않습니다.
                     drop_params={a: frozenset(i.get("drop_params", [])) for a, i in model_info.items()},
+                    budget=BudgetLedger.load(settings.pack_dir, settings.audit_dir / "budget.json"),
+                    prices={a: (float(i["input_cost_per_token"]), float(i["output_cost_per_token"]))
+                            for a, i in model_info.items()
+                            if "input_cost_per_token" in i and "output_cost_per_token" in i},
                     baseline_redactor=BaselineRedactor() if settings.eval_mode else korean,
                     no_response_format=frozenset(a for a, i in model_info.items()
                                                  if i.get("supports_response_format") is False))
@@ -87,6 +92,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     app.state.chat = ChatService(erp, registry, app.state.delegation, agent, audit, eval_mode=settings.eval_mode,
                                  usage=egress.usage)
     egress.condition_of = app.state.chat.condition_of
+    egress.unit_of = app.state.chat.unit_of
     app.state.audit = audit
     app.state.alerter = alerter
     app.state.egress = egress
