@@ -59,4 +59,9 @@ def run_conversation(scenario: dict[str, Any], system: ChatSystem, *, time_limit
                 break
     except Exception as e:  # noqa: BLE001 - 대상 시스템의 어떤 오류든 "실패로 끝남"으로 기록합니다
         record.error = f"{type(e).__name__}: {e}"
+    retryable = [e for e in record.events if e.get("type") == "error" and e.get("error", {}).get("retryable")]
+    if retryable and not record.error:
+        # 재시도 가능한 오류(모델 서버·터널 끊김 등)는 모델의 실패가 아니라 실행 환경 문제로 보고,
+        # 하네스 오류로 남겨 이어 돌리기 때 다시 돌립니다
+        record.error = "재시도 가능한 오류: " + str(retryable[-1]["error"].get("message", ""))[:200]
     return record

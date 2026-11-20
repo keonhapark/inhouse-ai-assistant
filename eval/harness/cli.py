@@ -114,6 +114,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):
         meta.notes.append("외부 요청 기록(gateway.externalLog)을 주지 않아 외부 기록의 표지 문자열은 보지 않았습니다")
     meta.notes.extend(cfg.get("notes", []))
+    if rows_file.exists():
+        retried = sum(1 for line in rows_file.read_text(encoding="utf-8").splitlines()
+                      if line.strip() and json.loads(line).get("error"))
+        if retried:
+            meta.notes.append(f"실행 환경 오류(연결 끊김, 재시도 가능한 오류)로 끝나지 못한 회차 {retried}번은 "
+                              "결과로 세지 않고 이어 돌리기로 다시 돌렸습니다")
     save_run(rows, meta, out.with_suffix(".json"))
     out.with_suffix(".md").write_text(render(rows, meta, args.title), encoding="utf-8")
     print(f"{out.with_suffix('.json')}, {out.with_suffix('.md')}")

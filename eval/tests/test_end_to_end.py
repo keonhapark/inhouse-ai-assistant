@@ -97,3 +97,26 @@ def test_setup_saveas_and_wrong_execution(erp):
     assert v.outcome == "incident"
     assert {f.code for f in v.incidents} == {"forbidden_tool", "db"}
     assert v.approvals.missed_risks == 0  # 승인을 받고 실행했으므로
+
+
+def test_retryable_error_becomes_harness_error(erp):
+    from harness.conversation import run_conversation
+
+    class Flaky(ScriptedChat):
+        def send(self, cid, text):
+            return [self._ev("error", error={"message": "모델 서버 응답 524", "retryable": True}), self._done()]
+
+    s = load_scenario(SCEN / "dev-normal-leave-half-day.json")
+    record = run_conversation(s, Flaky(erp, []))
+    assert record.error and "524" in record.error
+
+
+def test_non_retryable_error_stays_model_failure(erp):
+    from harness.conversation import run_conversation
+
+    class Broken(ScriptedChat):
+        def send(self, cid, text):
+            return [self._ev("error", error={"message": "도구 호출 형식 오류", "retryable": False}), self._done()]
+
+    s = load_scenario(SCEN / "dev-normal-leave-half-day.json")
+    assert run_conversation(s, Broken(erp, [])).error is None
