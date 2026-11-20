@@ -85,6 +85,9 @@ def check_pack(pack_dir: Path) -> list[str]:
         check_grant(f"{p}org.yaml roles.{r['id']}", r["grant"])
     for t in org["access_tags"]:
         check_grant(f"{p}org.yaml access_tags.{t['id']}", t["grant"])
+    for key, v in org.get("erp_roles", {}).items():
+        if v not in role_ids:
+            errors.append(f"{p}org.yaml erp_roles.{key}: 없는 역할 '{v}'")
     for v in org["delegation_policy"]["registrable_by"]:
         if v != "self" and v not in role_ids:
             errors.append(f"{p}org.yaml delegation_policy.registrable_by: 없는 역할 '{v}'")

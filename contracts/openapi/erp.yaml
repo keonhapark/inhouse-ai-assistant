@@ -161,7 +161,7 @@ paths:
       tags: [org]
       operationId: getEmployee
       x-required-scope: org:read
-      description: 본인, 인사 담당(hr_staff)은 전체 필드, 그 밖에는 공개 필드만 돌려줍니다.
+      description: 본인, 인사 담당(팩 `erp_roles.hr`)은 전체 필드, 그 밖에는 공개 필드만 돌려줍니다.
       parameters:
         - $ref: "#/components/parameters/EmployeeId"
       responses:
@@ -367,7 +367,7 @@ paths:
         - name: role
           in: query
           required: true
-          description: delegator는 내가 맡긴 것, delegate는 내가 맡은 것. all은 인사 담당만(그 밖에는 403).
+          description: delegator는 내가 맡긴 것, delegate는 내가 맡은 것. all은 대신 등록할 수 있는 역할(팩 `delegation_policy.registrable_by`, 제조 팩은 인사 담당)만(그 밖에는 403).
           schema: {type: string, enum: [delegator, delegate, all]}
         - name: activeAt
           in: query
@@ -394,7 +394,7 @@ paths:
       x-required-scope: delegation:write
       x-undo: 해지와 같은 효과. 위임으로 이미 결재한 건이 있으면 409 undo-conflict
       description: |
-        위임자 본인이 하거나, 인사 담당이 `delegatorId`를 지정해 합니다. 그 밖에는 403 delegation-registrar-forbidden.
+        위임자 본인이 하거나, 대신 등록할 수 있는 역할(팩 `delegation_policy.registrable_by`, 제조 팩은 인사 담당)이 `delegatorId`를 지정해 합니다. 그 밖에는 403 delegation-registrar-forbidden.
         검사: 대리인 ≠ 위임자(422 delegation-self), 기간 시작 < 끝(422 validation), 기간 ≤ 팩 max_period_days(422 delegation-period-too-long),
         끝이 과거면 422 validation, formTypes는 양식 ID(422 validation).
         위임자가 결재선에 없는 사람이어도 등록은 됩니다(쓸 일이 없을 뿐).
@@ -435,7 +435,7 @@ paths:
       x-write: true
       x-required-scope: delegation:write
       x-undo: 되돌릴 수 없습니다(undoable false). 다시 등록합니다.
-      description: 위임자 본인이나 인사 담당만 합니다. 이미 해지됐거나 끝났으면 409 invalid-state.
+      description: 위임자 본인이나 대신 등록할 수 있는 역할(팩 `registrable_by`)만 합니다. 이미 해지됐거나 끝났으면 409 invalid-state.
       parameters:
         - $ref: "#/components/parameters/DelegationId"
         - $ref: "#/components/parameters/DryRun"
@@ -452,7 +452,7 @@ paths:
       tags: [delegations]
       operationId: listDelegationActedDocuments
       x-required-scope: delegation:read
-      description: 이 위임으로 대리인이 결재한 문서(후열 확인용). 위임자, 대리인, 인사 담당만.
+      description: 이 위임으로 대리인이 결재한 문서(후열 확인용). 위임자, 대리인, 등록한 사람, 대신 등록할 수 있는 역할(팩 `registrable_by`)만.
       parameters:
         - $ref: "#/components/parameters/DelegationId"
       responses:
@@ -476,7 +476,7 @@ paths:
       parameters:
         - name: employeeId
           in: query
-          description: 생략하면 본인. 다른 사람은 인사 담당만(그 밖에는 403).
+          description: 생략하면 본인. 다른 사람은 인사 담당(팩 `erp_roles.hr`)만(그 밖에는 403).
           schema: {type: string}
       responses:
         "200":
@@ -669,7 +669,7 @@ paths:
       operationId: listAuditEvents
       x-human-only: true
       x-required-scope: audit:read
-      description: auditor 역할만. erp가 남긴 감사 이벤트입니다.
+      description: 감사 조회 역할(팩 `erp_roles.auditor`)만. erp가 남긴 감사 이벤트입니다.
       parameters:
         - {name: actorId, in: query, schema: {type: string}}
         - {name: actionId, in: query, schema: {type: string}}
@@ -926,7 +926,7 @@ components:
       required: [delegateId, startsAt, endsAt, scope, reason]
       additionalProperties: false
       properties:
-        delegatorId: {type: string, description: 인사 담당이 다른 사람 대신 등록할 때만. 생략하면 본인}
+        delegatorId: {type: string, description: 대신 등록할 수 있는 역할(팩 `registrable_by`)이 다른 사람 대신 등록할 때만. 생략하면 본인}
         delegateId: {type: string}
         startsAt: {type: string, format: date-time}
         endsAt: {type: string, format: date-time}

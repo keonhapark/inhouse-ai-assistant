@@ -179,6 +179,15 @@ class State:
     def has_role(self, emp_id: str, role: str) -> bool:
         return role in self.employee(emp_id)["roles"]
 
+    def erp_role(self, key: str) -> str:
+        """org.yaml erp_roles의 역할 ID(hr, auditor). 없으면 hr_staff·auditor입니다."""
+        return self.pack["org"].get("erp_roles", {}).get(key, {"hr": "hr_staff", "auditor": "auditor"}[key])
+
+    def can_register_for_others(self, emp_id: str) -> bool:
+        """대결을 대신 등록·해지·전체 조회할 수 있는 역할(delegation_policy.registrable_by)."""
+        return any(self.has_role(emp_id, r) for r in self.pack["org"]["delegation_policy"]["registrable_by"]
+                   if r != "self")
+
     def employee(self, emp_id: str) -> dict[str, Any]:
         e = self.employees.get(emp_id)
         if e is None:
@@ -500,8 +509,7 @@ class State:
     def create_delegation(self, p: Principal, body: dict[str, Any]) -> tuple[str, list, bool, dict]:
         policy = self.pack["org"]["delegation_policy"]
         delegator = body.get("delegatorId") or p.employee_id
-        if delegator != p.employee_id and not any(self.has_role(p.employee_id, r)
-                                                  for r in policy["registrable_by"] if r != "self"):
+        if delegator != p.employee_id and not self.can_register_for_others(p.employee_id):
             raise ProblemError(403, "delegation-registrar-forbidden")
         if delegator not in self.employees:
             raise ProblemError(422, "validation", "없는 위임자입니다", [{"field": "delegatorId", "message": "unknown"}])
@@ -551,14 +559,14 @@ class State:
                                           "before": before, "after": self.delegation_view(dl)}], self.delegation_view(dl)
 
     def can_see_delegation(self, emp_id: str, dl: dict[str, Any]) -> bool:
-        return emp_id in (dl["delegatorId"], dl["delegateId"], dl["registeredBy"]) or self.has_role(emp_id, "hr_staff")
+        return emp_id in (dl["delegatorId"], dl["delegateId"], dl["registeredBy"]) or self.can_register_for_others(emp_id)
 
     def revoke_delegation(self, p: Principal, dl_id: str) -> tuple[str, list, bool, dict]:
         dl = self.delegations.get(dl_id)
         if dl is None or not self.can_see_delegation(p.employee_id, dl):
             raise ProblemError(404, "not-found", "위임이 없습니다")
-        if p.employee_id != dl["delegatorId"] and not self.has_role(p.employee_id, "hr_staff"):
-            raise ProblemError(403, "forbidden", "위임자 본인이나 인사 담당만 해지합니다")
+        if p.employee_id != dl["delegatorId"] and not self.can_register_for_others(p.employee_id):
+            raise ProblemError(403, "forbidden", "위임자 본인이나 등록 권한이 있는 역할만 해지합니다")
         view = self.delegation_view(dl)
         if view["status"] in ("revoked", "expired"):
             raise ProblemError(409, "invalid-state", f"이미 {view['status']}입니다")
