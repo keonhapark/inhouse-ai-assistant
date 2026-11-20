@@ -22,3 +22,4 @@
 | 2026-11-20 | gateway | #155 | 팩 선택 파일 `budgets.yaml`(period, agents·units별 USD 상한)과 스키마·참조 검사 | #143 비용 상한. 코어에 업종 용어를 둘 수 없어 팩에서 읽음 | contract/gateway-budgets PR |
 | 2026-11-20 | agent | #204 | agent.yaml `POST /eval/tool-call`(AGENT_EVAL_MODE=1, 실행 없이 첫 도구 호출), `ToolCallVariant`·`ToolCallResult` | #103 로컬 모델 도구 호출 측정(변형·모델별 같은 입력) | contract/agent-eval-tool-call PR. 문법 제약용 로컬 별칭은 #205(gateway) |
 | 2026-11-20 | web | #210 | gateway `GET /ops/metrics`(에이전트별 호출·정책 차단·외부/로컬·외부 비용·라우팅 결과·비용 상한 사용량), `GET /ops/egress`(외부 전송 기록, 가림 뒤 본문과 가린 자리만) | #105 관리자 콘솔(#212) | contract/web-ops PR, gateway 구현 #211 |
+| 2026-11-20 | web | #220 | gateway `GET /org/units`(erp 그대로), `GET /agent-registry`(팩 에이전트 전체: 담당 부서·도구와 위험 등급·허용 위험·문서 범위·모델 정책·위험 정책·단계) | #105 조직도·에이전트 등록부 | contract/web-registry PR, gateway 구현 필요 |
