@@ -133,3 +133,32 @@ agents:
       examples:
         - 베어링 BRG-6204 200개 개당 3,500원으로 구매 요청 올려 줘
         - 500만 원 넘는 구매는 누가 결재해?
+
+  - id: it_ops
+    name: IT운영
+    version: 0.1.0
+    stage: 2
+    owner_unit: it-ops
+    description: 장애·계정·권한 티켓 접수와 조회, 댓글로 진행 상황 묻기, IT 운영 규정 질의를 맡습니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - ticket_list
+      - ticket_get
+      - ticket_create
+      - ticket_comment
+      - policy_search
+    allowed_risk: [read, reversible_write]
+    doc_scopes: [public, it-policy]
+    model_policy:
+      mode: local_only
+      reason: 장애 티켓에는 내부 시스템 이름·계정·접속 정보가 섞일 수 있어 외부 LLM으로 보내지 않습니다.
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: deny
+    routing:
+      keywords: [장애, 오류, 접속, 계정, 비밀번호, 권한, 티켓, 메일, VPN, 프린터]
+      examples:
+        - 그룹웨어 접속이 안 돼요, 장애 접수해 줘
+        - 지난주에 올린 계정 권한 요청 어떻게 됐어?
