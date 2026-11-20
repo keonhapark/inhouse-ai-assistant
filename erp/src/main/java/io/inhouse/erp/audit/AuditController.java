@@ -17,8 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class AuditController {
 
-    static final String AUDITOR_ROLE = "auditor";
-
     private final AuditService audit;
     private final OrgService org;
 
@@ -36,7 +34,7 @@ public class AuditController {
                                 @RequestParam(required = false)
                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime since,
                                 @RequestParam(defaultValue = "100") int limit) {
-        if (!org.hasRole(p.employeeId(), AUDITOR_ROLE)) {
+        if (!org.isAuditor(p.employeeId())) {
             throw ApiException.forbidden("감사 조회 역할만 봅니다");
         }
         return new Items<>(audit.list(actorId, actionId, since, limit));
