@@ -1,16 +1,11 @@
 import { http, HttpResponse } from 'msw'
-import type { Problem, Schemas } from '../api/client'
+import type { Schemas } from '../api/client'
+import { chatHandlers } from './chat'
+import { problem } from './problem'
 import { agents, employeeForToken, employees, MOCK_PASSWORD, tokenFor } from './data'
 
 // gateway 계약(contracts/openapi/gateway.yaml)의 모의 서버입니다. 경로는 계약의 servers(/api) 기준입니다.
 const api = (path: string) => `*/api${path}`
-
-export function problem(status: number, code: string, title: string): HttpResponse<Problem> {
-  return HttpResponse.json(
-    { type: `urn:problem:${code}`, title, status },
-    { status, headers: { 'Content-Type': 'application/problem+json' } },
-  )
-}
 
 const unauthorized = () => problem(401, 'unauthorized', '로그인이 필요합니다.')
 
@@ -41,4 +36,6 @@ export const handlers = [
     if (!employeeForToken(request.headers.get('Authorization'))) return unauthorized()
     return HttpResponse.json({ items: agents })
   }),
+
+  ...chatHandlers,
 ]

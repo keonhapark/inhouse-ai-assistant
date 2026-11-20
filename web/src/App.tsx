@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './auth/useAuth'
 import { DesignPage } from './pages/DesignPage'
-import { HomePage } from './pages/HomePage'
+import { AppShell } from './pages/AppShell'
+import { ChatPage } from './chat/ChatPage'
 import { LoginPage } from './pages/LoginPage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -19,13 +20,14 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/design" element={<DesignPage />} />
       <Route
-        path="/"
         element={
           <RequireAuth>
-            <HomePage />
+            <AppShell />
           </RequireAuth>
         }
-      />
+      >
+        <Route path="/" element={<ChatPage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
