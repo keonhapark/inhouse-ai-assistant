@@ -62,3 +62,54 @@ def test_request_body_fields_are_accepted_by_gateway() -> None:
         c = ChatClient(LLMSettings.from_env(env), transport=httpx.MockTransport(handler))
         c.chat([{"role": "user", "content": "x"}], tools=[{"type": "function", "function": {"name": "f"}}])
     assert all(set(b) <= allowed for b in seen)
+
+
+# ---- 에이전트 정책별 출구 별칭(#124) ----
+
+
+def _sent_models(settings, **chat_kw) -> list[str]:
+    import json
+
+    import httpx
+
+    from agent_runtime.llm import ChatClient
+
+    seen: list[str] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(req.content)["model"])
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]})
+
+    ChatClient(settings, transport=httpx.MockTransport(handler)).chat([{"role": "user", "content": "x"}], **chat_kw)
+    return seen
+
+
+@pytest.mark.parametrize(("policy", "alias"), [("external_allowed", "external"), ("local_only", "local"),
+                                               (None, "local"), ("unknown", "local")])
+def test_gateway_alias_follows_agent_policy(policy, alias) -> None:
+    assert _sent_models(LLMSettings.from_env({}), model_policy=policy) == [alias]
+
+
+def test_policy_aliases_exist_in_gateway_config() -> None:
+    import yaml
+
+    from agent_runtime.llm import POLICY_ALIASES
+    from tests.conftest import ROOT
+
+    cfg = yaml.safe_load((ROOT / "gateway" / "litellm" / "config.yaml").read_text("utf-8"))
+    loc = {m["model_name"]: (m.get("model_info") or {}).get("location") for m in cfg["model_list"]}
+    assert loc[POLICY_ALIASES["external_allowed"]] == "external"
+    assert loc[POLICY_ALIASES["local_only"]] == "local"
+
+
+def test_ollama_backend_ignores_policy() -> None:
+    s = LLMSettings.from_env({"AGENT_LLM_BACKEND": "ollama", "LOCAL_MODEL": "m"})
+    assert _sent_models(s, model_policy="external_allowed") == ["m"]
+
+
+def test_registry_policies_are_known() -> None:
+    from agent_runtime.llm import POLICY_ALIASES
+    from agent_runtime.registry import Registry
+    from tests.conftest import PACK_DIR
+
+    assert {a.model_policy for a in Registry.load(PACK_DIR).agents} <= set(POLICY_ALIASES)

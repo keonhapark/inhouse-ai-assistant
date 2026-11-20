@@ -137,7 +137,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
                     *state.get("messages", [])]
         try:
             msg = await asyncio.to_thread(deps.llm.chat, messages, [openai_tool(t) for t in visible] or None,
-                                          {"X-Delegation-Token": ctx.token})
+                                          {"X-Delegation-Token": ctx.token}, ctx.agent.model_policy)
         except LLMError as e:
             return Command(update={"final": f"모델을 부르지 못했습니다({e}).", "status": "failed", "steps": steps},
                            goto="finish")
