@@ -88,6 +88,10 @@ def test_conversation_taint_turns_user_direct_into_confirm(hr) -> None:
     assert decide(hr, LEAVE, {}, "full", False, WIDE, True).action == "confirm"
     assert decide(hr, WITHDRAW, {}, "full", False, WIDE, True).action == "confirm"
     assert decide(hr, READ, {}, "full", False, WIDE, True).action == "auto"
+    # 넓은 범위 대결(override=confirm)은 그대로 확인입니다.
+    wide = narrow_dlg(endsAt="2027-04-30T00:00:00+09:00")
+    assert decide(hr, DLG, wide, "full", False, WIDE, True).action == "confirm"
+    assert decide(hr, DLG, narrow_dlg(), "full", False, WIDE, True).undo_note is True
     # 같은 턴의 신뢰 불가 출력은 여전히 막습니다.
     assert decide(hr, DLG, narrow_dlg(), "full", True, WIDE, True).action == "blocked"
     # 신뢰 등급은 full에서만 씁니다.

@@ -39,6 +39,7 @@ class ToolMeta:
 class Decision:
     action: Action
     reason: str = ""
+    undo_note: bool = False  # 실행 뒤 되돌리기 안내를 붙일지(auto_with_undo를 확인으로 올린 경우 포함)
 
 
 @dataclass(frozen=True)
@@ -120,6 +121,7 @@ def decide(agent: Agent, tool: ToolMeta, args: dict[str, Any], condition: str, t
             action = o["action"]
     if action == "deny":
         return Decision("deny", f"{tool.name}은 이 에이전트에서 금지된 도구입니다")
+    undo_note = action == "auto_with_undo"
     if tool.trust_required == "user_direct" and conversation_tainted and action in ("auto", "auto_with_undo"):
-        return Decision("confirm", "이 대화에서 신뢰할 수 없는 내용을 읽어 실행 전에 확인을 받습니다")
-    return Decision(action)
+        return Decision("confirm", "이 대화에서 신뢰할 수 없는 내용을 읽어 실행 전에 확인을 받습니다", undo_note)
+    return Decision(action, undo_note=undo_note)

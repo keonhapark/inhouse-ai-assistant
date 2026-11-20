@@ -214,6 +214,8 @@ async def test_next_turn_after_taint_needs_confirmation(r: RunHarness) -> None:
     assert s["pendingApproval"]["toolPreview"]["arguments"] == args
     done = await r.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
     assert done["status"] == "completed" and done["actions"][0]["tool"] == "leave_request"
+    # 확인으로 올린 auto_with_undo도 되돌리기 안내는 그대로 붙입니다.
+    assert "되돌릴 수 있습니다" in done["messages"][0]["content"]
     executed = [c for c in r.caller.calls if c[0] == "leave_request" and not c[2].get("dryRun")]
     assert [c[2]["trustLevel"] for c in executed] == ["user_direct"]
 
@@ -240,6 +242,31 @@ async def test_injection_from_previous_turn_does_not_run_on_go_ahead(r: RunHarne
     assert rejected["status"] == "completed" and rejected["actions"] == []
     mine = await r.h.service.call("delegation_list", {"role": "delegator"}, token, CallMeta())
     assert mine.data["items"] == []
+
+
+@pytest.mark.anyio
+async def test_two_user_direct_calls_after_taint_each_need_approval(r: RunHarness) -> None:
+    await _foreign_delegation(r)
+    conv = cid()
+    token = mint(cid=conv)
+    a, b = leave_args(), leave_args()
+    b["reason"] = "병원"
+    r.llm.script = [call("delegation_list", {"role": "delegate"}), say("1건입니다."),
+                    {"role": "assistant", "content": "", "tool_calls": [call("leave_request", a, "c_a")["tool_calls"][0],
+                                                                         call("leave_request", b, "c_b")["tool_calls"][0]]},
+                    say("올렸습니다.")]
+    await r.runner.run(token, conv, "hr", "맡은 대결 알려 줘", ME)
+    s = await r.runner.run(token, conv, "hr", "연차 두 건 써 줘", ME)
+    assert s["status"] == "awaiting_approval"
+    first = s["pendingApproval"]["approvalId"]
+    s2 = await r.runner.resume(token, conv, first, "approve")
+    assert s2["status"] == "awaiting_approval" and s2["pendingApproval"]["approvalId"] != first
+    executed = [c for c in r.caller.calls if c[0] == "leave_request" and not c[2].get("dryRun")]
+    assert len(executed) == 1
+    done = await r.runner.resume(token, conv, s2["pendingApproval"]["approvalId"], "approve")
+    assert done["status"] == "completed"
+    executed = [c for c in r.caller.calls if c[0] == "leave_request" and not c[2].get("dryRun")]
+    assert len(executed) == 2
 
 
 @pytest.mark.anyio
