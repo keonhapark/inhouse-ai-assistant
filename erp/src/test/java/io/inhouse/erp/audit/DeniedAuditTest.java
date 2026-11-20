@@ -68,6 +68,8 @@ class DeniedAuditTest extends ApiTestBase {
         assertThat(e.path("actor").path("viaDelegationToken").asBoolean()).isTrue();
         assertThat(e.path("actor").path("agentId").asText()).isEqualTo("hr");
         assertThat(e.path("conversationId").asText()).isEqualTo("cnv_test");
+        assertThat(e.path("actor").path("delegationTokenId").asText())
+                .isEqualTo(com.nimbusds.jwt.SignedJWT.parse(token).getJWTClaimsSet().getJWTID());
     }
 
     @Test

@@ -40,6 +40,7 @@ class WriteCommonTest extends PostgresTestBase {
     static final Set<String> AUDIT_FIELDS = Set.of("eventId", "occurredAt", "source", "kind", "actor", "onBehalfOf",
             "delegationId", "conversationId", "executionApprovalId", "actionId", "undoOf", "operation", "argsHash",
             "riskLevel", "trustLevel", "routing", "model", "result", "problemType", "detail");
+    static final Set<String> ACTOR_FIELDS = Set.of("employeeId", "viaDelegationToken", "delegationTokenId", "agentId");
     static final AtomicInteger NEXT = new AtomicInteger(20);
 
     @Autowired MockMvc mvc;
@@ -284,6 +285,12 @@ class WriteCommonTest extends PostgresTestBase {
                 .andExpect(jsonPath("$.conversationId").value("cnv_test"));
         mvc.perform(post("/actions/" + id + "/undo").header("Authorization", "Bearer " + tok)
                 .header("Idempotency-Key", key())).andExpect(status().isCreated());
+
+        // 감사 이벤트에 위임 토큰 ID(jti)가 남아 gateway의 토큰 발급 이벤트와 이어집니다.
+        String jti = com.nimbusds.jwt.SignedJWT.parse(tok).getJWTClaimsSet().getJWTID();
+        List<String> kinds = jdbc.queryForList("select kind from audit_event where actor_id = ?"
+                + " and event->'actor'->>'delegationTokenId' = ? order by seq", String.class, emp, jti);
+        assertThat(kinds).containsExactly("erp.write", "erp.undo");
     }
 
     @Test
@@ -310,6 +317,8 @@ class WriteCommonTest extends PostgresTestBase {
             ev.fieldNames().forEachRemaining(f -> assertThat(AUDIT_FIELDS).contains(f));
             assertThat(ev.path("source").asText()).isEqualTo("erp");
             assertThat(ev.path("actor").path("employeeId").asText()).isEqualTo(emp);
+            assertThat(ev.path("actor").path("delegationTokenId").isNull()).isTrue();
+            ev.path("actor").fieldNames().forEachRemaining(f -> assertThat(ACTOR_FIELDS).contains(f));
             kinds.add(ev.path("kind").asText() + "/" + ev.path("result").asText());
         }
         assertThat(kinds).containsSubsequence("erp.write/ok", "erp.undo/ok", "erp.denied/denied");

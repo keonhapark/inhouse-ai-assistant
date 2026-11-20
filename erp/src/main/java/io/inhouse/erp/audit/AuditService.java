@@ -55,7 +55,8 @@ public class AuditService {
     public AuditEvent record(ErpPrincipal p, String kind, String operation, String result, Extra extra,
                              String problemCode, String detail) {
         AuditEvent e = new AuditEvent(Ids.next("evt"), OffsetDateTime.now(clock), "erp", kind,
-                new AuditEvent.Actor(p.employeeId(), p.viaDelegationToken(), p.agentId()),
+                new AuditEvent.Actor(p.employeeId(), p.viaDelegationToken(), p.delegationTokenId(),
+                        p.agentId()),
                 extra.onBehalfOf(), extra.delegationId(), p.conversationId(), extra.actionId(), extra.undoOf(),
                 operation, result, problemCode == null ? null : "urn:problem:" + problemCode, detail);
         JsonNode json = mapper.valueToTree(e);
