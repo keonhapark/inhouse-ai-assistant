@@ -36,6 +36,7 @@ from agent_runtime.mcp_server.tokens import TokenVerifier
 from agent_runtime.router import Router
 from agent_runtime.run.graph import Deps, build_graph
 from agent_runtime.run.policy import WideScope
+from agent_runtime.run.receipt import ReceiptReader
 from agent_runtime.run.runner import Conflict, Runner
 from agent_runtime.run.tools import McpToolCaller
 from agent_runtime.run.trust import trusted_docs
@@ -65,6 +66,12 @@ class AgentInfo(BaseModel):
     modelPolicy: Literal["external_allowed", "local_only"]
 
 
+class AttachmentIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["image"]
+    dataUrl: str = Field(pattern=r"^data:image/(jpeg|png);base64,")
+
+
 class RunIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     conversationId: str
@@ -72,6 +79,7 @@ class RunIn(BaseModel):
     message: str
     requester: RequesterIn
     condition: Literal["no_guard", "write_blocked", "approve_all", "baseline_tools", "full"] = "full"
+    attachments: list[AttachmentIn] | None = Field(default=None, max_length=3)
 
 
 class ResumeIn(BaseModel):
@@ -145,7 +153,7 @@ def services_from_env() -> Services:
     verifier: TokenVerifier | None = None
     if os.environ.get("AGENT_ALLOW_UNVERIFIED_TOKENS") != "1":
         verifier = TokenVerifier.from_env()
-    runner = Runner(registry, build_graph(deps), deps.caller, verifier)
+    runner = Runner(registry, build_graph(deps), deps.caller, verifier, ReceiptReader(chat))
     contracts = Path(os.environ.get("CONTRACTS_DIR", "../contracts"))
     fillers: dict[str, SlotFiller] = {"rule": RuleSlotFiller(),
                                       "llm": LlmSlotFiller(chat, load_slot_tools(contracts / "mcp" / "tools.json"))}
@@ -217,7 +225,8 @@ def create_app(services: Services | None = None) -> FastAPI:
     @app.post("/run")
     async def run(body: RunIn, x_delegation_token: str = Header(...)) -> dict:
         return await _runner().run(x_delegation_token, body.conversationId, body.agentId, body.message,
-                                   body.requester.to_domain(), body.condition)
+                                   body.requester.to_domain(), body.condition,
+                                   [a.dataUrl for a in body.attachments or []])
 
     @app.post("/resume")
     async def resume(body: ResumeIn, x_delegation_token: str = Header(...)) -> dict:
