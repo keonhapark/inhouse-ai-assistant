@@ -108,7 +108,7 @@ export const registry: Entry[] = [
     allowedRisk: ['read', 'reversible_write', 'irreversible'],
     docScopes: ['public', 'finance-policy'],
     modelPolicy: { mode: 'local_only', reason: '금액·거래처·사업자번호가 든 재무 정보는 외부 LLM으로 보내지 않습니다.' },
-    riskPolicy: { ...STANDARD, overrides: [{ tool: 'expense_request', when: { arg: 'amount', gt: 1_000_000 }, action: 'confirm' }] },
+    riskPolicy: { ...STANDARD, overrides: [{ tool: 'expense_request', when: 'arg_gt', arg: 'amount', gt: 1_000_000, action: 'confirm' }] },
     routingKeywords: ['경비', '정산', '영수증', '출장비', '여비', '법인카드', '지출'],
   },
   {
@@ -125,7 +125,7 @@ export const registry: Entry[] = [
     allowedRisk: ['read', 'reversible_write', 'irreversible'],
     docScopes: ['public', 'purchase-policy'],
     modelPolicy: { mode: 'external_allowed' },
-    riskPolicy: { ...STANDARD, overrides: [{ tool: 'purchase_request', when: { arg: 'total_amount', gt: 5_000_000 }, action: 'confirm' }] },
+    riskPolicy: { ...STANDARD, overrides: [{ tool: 'purchase_request', when: 'arg_gt', arg: 'total_amount', gt: 5_000_000, action: 'confirm' }] },
     routingKeywords: ['구매', '발주', '자재', '품목', '단가', '수량', '견적'],
   },
 ]

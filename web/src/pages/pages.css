@@ -29,6 +29,7 @@
 
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-16);
   padding: var(--sp-8) var(--sp-24);
@@ -91,6 +92,7 @@
 
 .topbar__nav {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-12);
 }
 

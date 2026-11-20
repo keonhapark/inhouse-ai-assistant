@@ -31,9 +31,12 @@ export function AgentRegistryPage() {
     }
   }, [])
 
-  // 조직도에서 #agent-<id>로 들어오면 그 카드로 옮깁니다.
+  // 조직도에서 #agent-<id>로 들어오면 그 카드로 옮기고 카드 제목에 포커스를 둡니다.
   useEffect(() => {
-    if (state.status === 'ok' && hash) document.getElementById(hash.slice(1))?.scrollIntoView?.({ block: 'start' })
+    if (state.status !== 'ok' || !hash) return
+    const card = document.getElementById(decodeURIComponent(hash.slice(1)))
+    card?.scrollIntoView?.({ block: 'start' })
+    card?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true })
   }, [state.status, hash])
 
   return (
@@ -67,7 +70,9 @@ function AgentCard({ agent: a, isFallback }: { agent: Entry; isFallback: boolean
       className="registry__card"
       header={
         <>
-          <strong id={titleId}>{a.name}</strong>
+          <h2 id={titleId} className="registry__name" tabIndex={-1}>
+            {a.name}
+          </h2>
           <code className="muted">v{a.version}</code>
           <Badge>{a.stage}단계</Badge>
           {a.modelPolicy.mode === 'local_only' ? <Badge tone="local">로컬 모델만</Badge> : <Badge>외부 모델 허용</Badge>}
@@ -118,8 +123,8 @@ function AgentCard({ agent: a, isFallback }: { agent: Entry; isFallback: boolean
         </tbody>
       </table>
       {a.riskPolicy.overrides?.map((o) => (
-        <p key={`${o.tool}-${JSON.stringify(o.when)}`} className="muted">
-          예외: <code>{o.tool}</code>은 {overrideWhen(o.when)} {RISK_ACTION[o.action]}
+        <p key={`${o.tool}-${o.when}-${o.arg ?? ''}`} className="muted">
+          예외: <code>{o.tool}</code>은 {overrideWhen(o)} {RISK_ACTION[o.action]}
         </p>
       ))}
 

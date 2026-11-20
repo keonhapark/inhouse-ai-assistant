@@ -1,8 +1,8 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
 import { tokenStore } from '../api/client'
 import { AuthProvider } from '../auth/AuthContext'
@@ -55,6 +55,55 @@ describe('조직도', () => {
     expect(screen.getByText('이 부서가 맡은 에이전트가 없습니다.')).toBeInTheDocument()
   })
 
+  it('하위 부서 버튼으로 고르면 새 부서 제목에 포커스를 두고 주소에 남깁니다', async () => {
+    const user = renderAt('/org')
+    const detail = await screen.findByRole('region', { name: '대표이사실 상세' })
+    await user.click(within(detail).getByRole('button', { name: '경영지원본부' }))
+    const heading = await screen.findByRole('heading', { level: 2, name: /경영지원본부/ })
+    expect(heading).toHaveFocus()
+    expect(await screen.findByText('임채원')).toBeInTheDocument()
+  })
+
+  it('주소의 ?unit=으로 그 부서를 엽니다', async () => {
+    renderAt('/org?unit=finance')
+    const detail = await screen.findByRole('region', { name: '재무팀 상세' })
+    expect(await within(detail).findByText('윤서진')).toBeInTheDocument()
+  })
+
+  it('앞 부서의 늦은 응답이 지금 부서의 구성원을 덮지 않습니다', async () => {
+    server.use(
+      http.get('*/api/employees', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('unitId') === 'ceo-office') {
+          await delay(150)
+          return HttpResponse.json({ items: [{ id: 'late', name: '늦은응답', unitId: 'ceo-office', unitName: '대표이사실', grade: 'ceo' }] })
+        }
+        return undefined
+      }),
+    )
+    const user = renderAt('/org')
+    const tree = await screen.findByRole('navigation', { name: '부서' })
+    await user.click(await within(tree).findByRole('button', { name: '인사팀' }))
+    expect(await screen.findByText('서도윤')).toBeInTheDocument()
+    await new Promise((r) => setTimeout(r, 200))
+    expect(screen.queryByText('늦은응답')).toBeNull()
+  })
+
+  it('구성원을 못 받으면 상세에 problem title을 보여 줍니다', async () => {
+    server.use(http.get('*/api/employees', () => problemJson(503, 'erp 직원 조회가 실패했습니다.')))
+    renderAt('/org')
+    const detail = await screen.findByRole('region', { name: '대표이사실 상세' })
+    expect(await within(detail).findByRole('alert')).toHaveTextContent('erp 직원 조회가 실패했습니다.')
+  })
+
+  it('등록부를 못 받으면 "맡은 에이전트 없음" 대신 실패를 알립니다', async () => {
+    server.use(http.get('*/api/agent-registry', () => problemJson(500, '팩을 읽지 못했습니다.')))
+    const user = renderAt('/org')
+    const tree = await screen.findByRole('navigation', { name: '부서' })
+    await user.click(await within(tree).findByRole('button', { name: '인사팀' }))
+    expect(await screen.findByText('팩을 읽지 못했습니다.')).toBeInTheDocument()
+    expect(screen.queryByText('이 부서가 맡은 에이전트가 없습니다.')).toBeNull()
+  })
+
   it('부서 목록을 못 받으면 problem title을 보여 줍니다', async () => {
     server.use(http.get('*/api/org/units', () => problemJson(503, 'erp가 응답하지 않습니다.')))
     renderAt('/org')
@@ -82,6 +131,16 @@ describe('에이전트 등록부', () => {
 
     const finance = screen.getByRole('region', { name: '재무' })
     expect(within(finance).getByText(/amount가 1,000,000보다 클 때 실행 전 확인/)).toBeInTheDocument()
+  })
+
+  it('#agent-<id>로 들어오면 그 카드 제목에 포커스를 둡니다', async () => {
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+    renderAt('/agents#agent-finance')
+    const title = await screen.findByRole('heading', { level: 2, name: '재무' })
+    await vi.waitFor(() => expect(title).toHaveFocus())
+    expect(scroll).toHaveBeenCalled()
+    delete (Element.prototype as Partial<Element>).scrollIntoView
   })
 
   it('불러오지 못하면 problem title을 보여 줍니다', async () => {

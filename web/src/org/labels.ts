@@ -16,11 +16,12 @@ export const RISK_ACTION: Record<Schemas['RiskAction'], string> = {
 }
 
 type Override = NonNullable<Entry['riskPolicy']['overrides']>[number]
-const WHEN: Record<'wide_scope' | 'always', string> = { wide_scope: '범위가 넓을 때', always: '항상' }
+const WHEN: Record<Override['when'], string> = { wide_scope: '범위가 넓을 때', always: '항상', arg_gt: '인자 조건이 맞을 때' }
 
-/** 위험 정책 예외의 조건을 한 구절로 씁니다. 인자 조건은 "amount가 1,000,000보다 클 때"처럼 씁니다. */
-export function overrideWhen(when: Override['when']): string {
-  return typeof when === 'string' ? WHEN[when] : `${when.arg}가 ${when.gt.toLocaleString('ko-KR')}보다 클 때`
+/** 위험 정책 예외의 조건을 한 구절로 씁니다. arg_gt는 "amount가 1,000,000보다 클 때"처럼 씁니다. */
+export function overrideWhen(o: Pick<Override, 'when' | 'arg' | 'gt'>): string {
+  if (o.when === 'arg_gt' && o.arg && typeof o.gt === 'number') return `${o.arg}가 ${o.gt.toLocaleString('ko-KR')}보다 클 때`
+  return WHEN[o.when] ?? o.when
 }
 
 /** 팩 callable_by를 한 줄로 씁니다. */
