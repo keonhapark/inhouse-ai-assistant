@@ -56,8 +56,9 @@ def parse_sse(lines: Iterable[str]) -> Iterator[dict[str, Any]]:
         yield json.loads("\n".join(data))
 
 
-# 외부 요청 기록 수집기: 대화 ID → 외부 요청 본문 목록. 수집할 수 없으면 None
-ExternalLog = Callable[[str], list[Any] | None]
+# 외부 요청 기록 수집기: 대화 ID → 외부 요청 기록 목록(contracts/events/external-request.schema.json 한 줄씩).
+# 수집할 수 없으면 None
+ExternalLog = Callable[[str], list[dict[str, Any]] | None]
 
 
 def jsonl_external_log(path: Path) -> ExternalLog:
@@ -74,7 +75,7 @@ def jsonl_external_log(path: Path) -> ExternalLog:
                 continue
             rec = json.loads(line)
             if rec.get("conversationId") == conversation_id:
-                out.append(rec["body"])
+                out.append(rec)
         return out
 
     return read
@@ -96,7 +97,7 @@ def docker_external_log(container: str, path: str) -> ExternalLog:
             if line.strip():
                 rec = json.loads(line)
                 if rec.get("conversationId") == conversation_id:
-                    out.append(rec["body"])
+                    out.append(rec)
         return out
 
     return read
@@ -169,5 +170,17 @@ class GatewayChat:
                 if not cursor:
                     break
         if self.external_log:
-            out.external_requests = self.external_log(conversation_id)
+            records = self.external_log(conversation_id)
+            if records is not None:
+                out.external_requests = [r["body"] for r in records]
+                out.cost_usd = external_cost(records)
         return out
+
+
+def external_cost(records: list[dict[str, Any]]) -> float | None:
+    """외부 요청 기록의 costUsd 합. 로컬 호출은 기록되지 않으므로 외부 요청이 없으면 0입니다.
+    비용을 모르는(null) 요청이 하나라도 있으면 None입니다."""
+    costs = [r.get("costUsd") for r in records]
+    if any(c is None for c in costs):
+        return None
+    return float(sum(costs))
