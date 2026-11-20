@@ -29,6 +29,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
     implementation("com.nimbusds:nimbus-jose-jwt:9.48")
+    implementation("com.networknt:json-schema-validator:1.5.8")
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
