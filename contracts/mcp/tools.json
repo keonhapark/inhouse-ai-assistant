@@ -243,6 +243,48 @@
       "required_scope": "profile:read",
       "backend": {"service": "rag", "operationId": "answer"},
       "stage": 1
+    },
+    {
+      "name": "expense_request",
+      "description": "경비 정산 결재를 올립니다. 금액에 따라 결재선(팀장, 또는 팀장과 본부장)은 erp가 정합니다. 실행 전에 미리보기를 보여 줍니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["amount", "spent_on", "merchant", "purpose"],
+        "properties": {
+          "amount": {"type": "integer", "minimum": 1},
+          "spent_on": {"type": "string", "format": "date"},
+          "merchant": {"type": "string", "maxLength": 100},
+          "business_no": {"type": "string", "pattern": "^[0-9]{3}-[0-9]{2}-[0-9]{5}$"},
+          "purpose": {"type": "string", "maxLength": 200}
+        },
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "approval:request:expense",
+      "backend": {"service": "erp", "operationId": "createApprovalDocument", "fixed": {"formId": "expense"}},
+      "stage": 2
+    },
+    {
+      "name": "purchase_request",
+      "description": "구매 요청 결재를 올립니다. 합계는 수량 × 단가와 같아야 하고, 금액에 따라 결재선은 erp가 정합니다. 실행 전에 미리보기를 보여 줍니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["item_code", "quantity", "unit_price", "total_amount", "reason"],
+        "properties": {
+          "item_code": {"type": "string"},
+          "quantity": {"type": "integer", "minimum": 1},
+          "unit_price": {"type": "integer", "minimum": 0},
+          "total_amount": {"type": "integer", "minimum": 0},
+          "reason": {"type": "string", "maxLength": 200}
+        },
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "approval:request:purchase",
+      "backend": {"service": "erp", "operationId": "createApprovalDocument", "fixed": {"formId": "purchase"}},
+      "stage": 2
     }
   ]
 }
