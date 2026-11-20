@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
@@ -95,6 +95,62 @@ describe('관리자 콘솔', () => {
       for (const r of rows) expect(r).toHaveTextContent('도구 차단')
     })
     expect(screen.getAllByText(/신뢰 등급/).length).toBeGreaterThan(0)
+  })
+
+  it('같은 조건으로 돌아오면 예전에 더 보기로 붙인 쪽을 다시 붙이지 않습니다', async () => {
+    const user = renderAdmin()
+    await user.click(await screen.findByRole('tab', { name: '감사 로그' }))
+    const rows = async () => within(await screen.findByRole('table')).getAllByRole('row').length
+    expect(await rows()).toBe(21)
+    await user.click(screen.getByRole('button', { name: '더 보기' }))
+    await vi.waitFor(async () => expect(await rows()).toBeGreaterThan(21))
+
+    await user.selectOptions(screen.getByLabelText('종류'), 'tool.blocked')
+    await user.click(screen.getByRole('button', { name: '적용' }))
+    await vi.waitFor(async () => expect(await rows()).toBeLessThan(21))
+    await user.click(screen.getByRole('button', { name: '필터 지우기' }))
+    await vi.waitFor(async () => expect(await rows()).toBe(21))
+  })
+
+  it('더 보기가 실패하면 problem title을 보여 주고 목록은 둡니다', async () => {
+    server.use(
+      http.get('*/api/audit-events', ({ request }) =>
+        new URL(request.url).searchParams.get('cursor')
+          ? HttpResponse.json({ type: 'urn:problem:x', title: '감사 저장소가 응답하지 않습니다.', status: 503 }, { status: 503, headers: { 'Content-Type': 'application/problem+json' } })
+          : undefined,
+      ),
+    )
+    const user = renderAdmin()
+    await user.click(await screen.findByRole('tab', { name: '감사 로그' }))
+    await screen.findByRole('table')
+    await user.click(screen.getByRole('button', { name: '더 보기' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('감사 저장소가 응답하지 않습니다.')
+    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(21)
+  })
+
+  it('비용 상한이 없으면 그렇다고 알립니다', async () => {
+    server.use(
+      http.get('*/api/ops/metrics', () => {
+        const zero = { calls: 0, blocked: { total: 0, byCode: {} }, llmRequests: { local: 0, external: 0 }, externalCostUsd: 0 }
+        return HttpResponse.json({ since: '2026-11-20T00:00:00Z', until: '2026-11-21T00:00:00Z', totals: zero, agents: [], routing: { total: 0, byMethod: {} }, budgets: null })
+      }),
+    )
+    renderAdmin()
+    expect(await screen.findByText('비용 상한을 두지 않았습니다(팩에 budgets.yaml 없음).')).toBeInTheDocument()
+    expect(screen.getByText('이 기간에 막은 요청이 없습니다.')).toBeInTheDocument()
+  })
+
+  it('탭은 화살표·Home·End로 옮깁니다', async () => {
+    const user = renderAdmin()
+    const metrics = await screen.findByRole('tab', { name: '운영 지표' })
+    metrics.focus()
+    await user.keyboard('{ArrowRight}')
+    expect(screen.getByRole('tab', { name: '외부 전송 기록' })).toHaveFocus()
+    expect(screen.getByRole('tab', { name: '외부 전송 기록' })).toHaveAttribute('aria-selected', 'true')
+    await user.keyboard('{End}')
+    expect(screen.getByRole('tab', { name: '감사 로그' })).toHaveAttribute('tabindex', '0')
+    await user.keyboard('{Home}{ArrowLeft}')
+    expect(screen.getByRole('tab', { name: '감사 로그' })).toHaveFocus()
   })
 
   it('auditor가 아니면 메뉴가 없고, 열어도 problem title을 보여 줍니다', async () => {

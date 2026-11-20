@@ -31,37 +31,53 @@ const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD',
 export const formatUsd = (n: number) => usd.format(n)
 export const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
 
+/** 비율 글자. 0보다 크면 0%로, 100보다 작으면 100%로 반올림하지 않습니다(외부 전송 여부를 잘못 읽지 않게). */
+export function percentText(part: number, whole: number): string {
+  if (whole <= 0) return '0%'
+  const r = (part / whole) * 100
+  if (r > 0 && r < 1) return '<1%'
+  if (r > 99 && r < 100) return '>99%'
+  return `${Math.round(r)}%`
+}
+
 type Page<T> = { items: T[]; nextCursor?: string | null }
 
 /**
- * 커서로 넘기는 목록. key(조건)가 바뀌면 첫 쪽부터 다시 불러오고, '더 보기'로 붙인 쪽은 버립니다.
- * fetchPage(cursor)는 cursor가 없으면 첫 쪽입니다.
+ * 커서로 넘기는 목록. key(조건)가 바뀌면 첫 쪽부터 다시 불러옵니다.
+ * '더 보기'로 붙인 쪽은 그 첫 쪽 응답에 묶어 둡니다. 같은 조건으로 돌아와 첫 쪽을 새로 받으면 예전에 붙인 쪽은 버립니다.
  */
 export function usePaged<T>(key: string, fetchPage: (cursor?: string) => Promise<{ data?: Page<T>; error?: unknown }>, fallback: string) {
   const first = useLoad<Page<T>>(key, () => fetchPage(), fallback)
-  const [more, setMore] = useState<{ key: string; items: T[]; nextCursor: string | null } | null>(null)
-  const [moreError, setMoreError] = useState<{ key: string; message: string } | null>(null)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const extra = more?.key === key ? more : null
+  const base = first.status === 'ok' ? first.data : null
+  const [more, setMore] = useState<{ base: Page<T>; items: T[]; nextCursor: string | null } | null>(null)
+  const [moreError, setMoreError] = useState<{ base: Page<T>; message: string } | null>(null)
+  const [loading, setLoading] = useState<Page<T> | null>(null)
+  const extra = base && more?.base === base ? more : null
 
-  const items = first.status === 'ok' ? [...first.data.items, ...(extra?.items ?? [])] : []
-  const next = extra ? extra.nextCursor : first.status === 'ok' ? (first.data.nextCursor ?? null) : null
+  const items = base ? [...base.items, ...(extra?.items ?? [])] : []
+  const next = extra ? extra.nextCursor : (base?.nextCursor ?? null)
 
   async function loadMore() {
-    if (!next) return
-    const k = key
-    setLoadingMore(true)
+    if (!next || !base) return
+    setLoading(base)
     setMoreError(null)
     try {
       const { data, error } = await fetchPage(next)
-      if (data) setMore((cur) => ({ key: k, items: [...(cur?.key === k ? cur.items : []), ...data.items], nextCursor: data.nextCursor ?? null }))
-      else setMoreError({ key: k, message: problemTitle(error, '다음 목록을 불러오지 못했습니다.') })
+      if (data) setMore((cur) => ({ base, items: [...(cur?.base === base ? cur.items : []), ...data.items], nextCursor: data.nextCursor ?? null }))
+      else setMoreError({ base, message: problemTitle(error, '다음 목록을 불러오지 못했습니다.') })
     } catch {
-      setMoreError({ key: k, message: NETWORK })
+      setMoreError({ base, message: NETWORK })
     } finally {
-      setLoadingMore(false)
+      setLoading((cur) => (cur === base ? null : cur))
     }
   }
 
-  return { first, items, next, loadMore, loadingMore, moreError: moreError?.key === key ? moreError.message : null }
+  return {
+    first,
+    items,
+    next,
+    loadMore,
+    loadingMore: base !== null && loading === base,
+    moreError: base && moreError?.base === base ? moreError.message : null,
+  }
 }

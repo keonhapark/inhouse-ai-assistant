@@ -97,7 +97,7 @@
 
 .metrics__pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: var(--sp-16);
 }
 
@@ -173,6 +173,24 @@
 .egress__messages p {
   margin: var(--sp-4) 0 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.egress__item summary code {
+  overflow-wrap: anywhere;
+}
+
+.egress__item summary::before {
+  content: '▸';
+  color: var(--text-muted);
+}
+
+.egress__item details[open] > summary::before {
+  content: '▾';
+}
+
+.egress__item summary::-webkit-details-marker {
+  display: none;
 }
 
 .egress__role {
@@ -195,8 +213,23 @@
   justify-items: start;
 }
 
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .audit__table {
   width: 100%;
+  min-width: 720px;
+}
+
+.metrics__agents {
+  min-width: 640px;
+}
+
+.admin__period {
+  margin: 0;
+  font-size: var(--fs-12);
 }
 
 .audit__table caption {
@@ -223,9 +256,8 @@
     margin-left: 0;
   }
 
-  .audit__table,
-  .metrics table {
-    display: block;
-    overflow-x: auto;
+  .metrics .table th,
+  .metrics .table td {
+    padding: var(--sp-8);
   }
 }

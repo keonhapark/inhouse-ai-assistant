@@ -34,6 +34,8 @@ const RESULT: Record<Audit['result'], { label: string; tone: BadgeTone }> = {
   pending: { label: '대기', tone: 'neutral' },
 }
 
+const UNKNOWN = { label: '', tone: 'neutral' as BadgeTone }
+
 type Filters = { kind: string; agentId: string; actorId: string }
 const EMPTY: Filters = { kind: '', agentId: '', actorId: '' }
 
@@ -110,10 +112,12 @@ export function AuditPanel({ range }: { range: Range }) {
         )}
       </form>
 
+      {agents.status === 'error' && <p className="muted">{agents.message}</p>}
       {first.status === 'loading' && <p className="muted">불러오는 중입니다.</p>}
       {first.status === 'error' && <p role="alert">{first.message}</p>}
       {first.status === 'ok' && items.length === 0 && <p className="muted">조건에 맞는 감사 이벤트가 없습니다.</p>}
       {items.length > 0 && (
+        <div className="table-scroll" role="region" aria-label="감사 이벤트 표" tabIndex={0}>
         <table className="table audit__table">
           <caption className="muted">{items.length}건{next ? ' (더 있음)' : ''}</caption>
           <thead>
@@ -144,12 +148,13 @@ export function AuditPanel({ range }: { range: Range }) {
                   {e.detail && <div className="muted audit__detail">{e.detail}</div>}
                 </td>
                 <td>
-                  <Badge tone={RESULT[e.result].tone}>{RESULT[e.result].label}</Badge>
+                  <Badge tone={(RESULT[e.result] ?? UNKNOWN).tone}>{(RESULT[e.result] ?? { label: e.result }).label}</Badge>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
       {moreError && <p role="alert">{moreError}</p>}
       {next && (

@@ -35,6 +35,7 @@ export function EgressPanel({ range }: { range: Range }) {
             ))}
         </select>
       </label>
+      {agents.status === 'error' && <p className="muted">{agents.message}</p>}
       {first.status === 'loading' && <p className="muted">불러오는 중입니다.</p>}
       {first.status === 'error' && <p role="alert">{first.message}</p>}
       {first.status === 'ok' && items.length === 0 && <p className="muted">이 기간에 외부로 보낸 요청이 없습니다.</p>}

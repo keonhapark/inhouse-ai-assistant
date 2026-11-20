@@ -70,18 +70,25 @@ export function AdminPage() {
         <form className="admin__custom" onSubmit={applyCustom}>
           <label>
             <span className="muted">시작</span>
-            <input type="date" value={from} max={today} onChange={(e) => setFrom(e.target.value)} />
+            <input type="date" value={from} max={today} aria-invalid={!!rangeError} aria-describedby={rangeError ? 'admin-range-error' : undefined} onChange={(e) => setFrom(e.target.value)} />
           </label>
           <label>
             <span className="muted">끝</span>
-            <input type="date" value={to} max={today} onChange={(e) => setTo(e.target.value)} />
+            <input type="date" value={to} max={today} aria-invalid={!!rangeError} aria-describedby={rangeError ? 'admin-range-error' : undefined} onChange={(e) => setTo(e.target.value)} />
           </label>
-          <Button type="submit" variant={period.kind === 'custom' ? 'primary' : 'secondary'} aria-pressed={period.kind === 'custom'}>
+          <Button type="submit" variant={period.kind === 'custom' ? 'primary' : 'secondary'}>
             날짜로 보기
           </Button>
         </form>
       </div>
-      {rangeError && <p role="alert">{rangeError}</p>}
+      {rangeError && (
+        <p role="alert" id="admin-range-error">
+          {rangeError}
+        </p>
+      )}
+      <p className="muted admin__period" aria-live="polite">
+        {period.kind === 'custom' ? `${period.from} ~ ${period.to}` : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}을 보고 있습니다.
+      </p>
 
       <div role="tablist" aria-label="관리자 콘솔" className="tabs">
         {TABS.map((t, i) => (
@@ -103,7 +110,7 @@ export function AdminPage() {
           </button>
         ))}
       </div>
-      <div role="tabpanel" id="admin-panel" aria-labelledby={`admin-tab-${tab}`} className="admin__panel">
+      <div role="tabpanel" id="admin-panel" aria-labelledby={`admin-tab-${tab}`} className="admin__panel" tabIndex={0}>
         {tab === 'metrics' && <MetricsPanel range={range} />}
         {tab === 'egress' && <EgressPanel range={range} />}
         {tab === 'audit' && <AuditPanel range={range} />}

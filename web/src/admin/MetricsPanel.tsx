@@ -1,7 +1,7 @@
 import { api, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import type { Range } from './AdminPage'
-import { formatUsd, percent, useLoad } from './load'
+import { formatUsd, percent, percentText, useLoad } from './load'
 
 type Metrics = Schemas['OpsMetrics']
 
@@ -59,7 +59,7 @@ export function MetricsPanel({ range }: { range: Range }) {
         <div className="tile">
           <dt>외부 모델 요청</dt>
           <dd>
-            {percent(t.llmRequests.external, llm)}% <span className="muted tile__sub">{t.llmRequests.external.toLocaleString('ko-KR')} / {llm.toLocaleString('ko-KR')}건</span>
+            {percentText(t.llmRequests.external, llm)} <span className="muted tile__sub">{t.llmRequests.external.toLocaleString('ko-KR')} / {llm.toLocaleString('ko-KR')}건</span>
           </dd>
         </div>
         <div className="tile">
@@ -73,7 +73,8 @@ export function MetricsPanel({ range }: { range: Range }) {
 
       <section aria-labelledby="m-agents">
         <h2 id="m-agents">에이전트별</h2>
-        <table className="table">
+        <div className="table-scroll" role="region" aria-label="에이전트별 표" tabIndex={0}>
+        <table className="table metrics__agents">
           <thead>
             <tr>
               <th scope="col">에이전트</th>
@@ -86,7 +87,6 @@ export function MetricsPanel({ range }: { range: Range }) {
           <tbody>
             {m.agents.map((a) => {
               const n = a.llmRequests.local + a.llmRequests.external
-              const ext = percent(a.llmRequests.external, n)
               return (
                 <tr key={a.agentId}>
                   <th scope="row">{a.agentName}</th>
@@ -100,7 +100,7 @@ export function MetricsPanel({ range }: { range: Range }) {
                   <td>
                     <span className="bar-cell">
                       <Bar value={a.llmRequests.external} max={n} label={`외부 ${a.llmRequests.external} / 전체 ${n}`} />
-                      {n === 0 ? <span className="muted">요청 없음</span> : `${ext}% (외부 ${a.llmRequests.external} · 로컬 ${a.llmRequests.local})`}
+                      {n === 0 ? <span className="muted">요청 없음</span> : `${percentText(a.llmRequests.external, n)} (외부 ${a.llmRequests.external} · 로컬 ${a.llmRequests.local})`}
                     </span>
                   </td>
                   <td className="num">{formatUsd(a.externalCostUsd)}</td>
@@ -109,6 +109,7 @@ export function MetricsPanel({ range }: { range: Range }) {
             })}
           </tbody>
         </table>
+        </div>
       </section>
 
       <div className="metrics__pair">
@@ -147,7 +148,7 @@ export function MetricsPanel({ range }: { range: Range }) {
                     <td>
                       <span className="bar-cell">
                         <Bar value={n} max={m.routing.total} label={`${n}건`} />
-                        {percent(n, m.routing.total)}% ({n}건)
+                        {percentText(n, m.routing.total)} ({n}건)
                       </span>
                     </td>
                   </tr>
