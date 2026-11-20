@@ -14,6 +14,8 @@ import httpx
 
 
 GATEWAY_DEFAULT_ALIAS = "local"
+# 에이전트 model_policy.mode → gateway 출구 별칭. 기밀 판정으로 로컬로 돌리는 것은 gateway가 합니다.
+POLICY_ALIASES = {"external_allowed": "external", "local_only": "local"}
 
 
 class LLMError(RuntimeError):
@@ -26,6 +28,14 @@ class LLMSettings:
     model: str
     timeout_s: float = 60.0
     extra_body: dict[str, Any] = field(default_factory=dict)
+    # gateway 경로에서만 씁니다. 비어 있으면 정책과 관계없이 model을 씁니다(Ollama 개발 경로).
+    policy_aliases: dict[str, str] = field(default_factory=dict)
+
+    def model_for(self, model_policy: str | None) -> str:
+        """에이전트 정책에 맞는 모델. 정책이 없거나(라우터·슬롯 기준선) 모르는 값이면 model(기본 local)입니다."""
+        if model_policy and self.policy_aliases:
+            return self.policy_aliases.get(model_policy, GATEWAY_DEFAULT_ALIAS)
+        return self.model
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> LLMSettings:
@@ -43,7 +53,8 @@ class LLMSettings:
         default_gw = f"http://localhost:{env.get('PORT_GATEWAY', '8010')}/v1"
         # gateway는 LiteLLM 별칭(gateway/litellm/config.yaml의 model_name)만 받습니다. 로컬 모델 이름을 보내면 422입니다.
         model = env.get("AGENT_LLM_MODEL") or GATEWAY_DEFAULT_ALIAS
-        return cls(base_url=env.get("GATEWAY_LLM_URL", default_gw).rstrip("/"), model=model, timeout_s=timeout)
+        return cls(base_url=env.get("GATEWAY_LLM_URL", default_gw).rstrip("/"), model=model, timeout_s=timeout,
+                   policy_aliases=dict(POLICY_ALIASES))
 
 
 class ChatClient:
@@ -55,9 +66,10 @@ class ChatClient:
         return self.chat(messages, headers=headers).get("content") or ""
 
     def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None,
-             headers: dict[str, str] | None = None) -> dict[str, Any]:
-        """assistant 메시지(content, tool_calls)를 돌려줍니다."""
-        body: dict[str, Any] = {"model": self.settings.model, "messages": messages, "temperature": 0}
+             headers: dict[str, str] | None = None, model_policy: str | None = None) -> dict[str, Any]:
+        """assistant 메시지(content, tool_calls)를 돌려줍니다. model_policy는 에이전트 등록부 model_policy.mode입니다."""
+        body: dict[str, Any] = {"model": self.settings.model_for(model_policy), "messages": messages,
+                                "temperature": 0}
         if tools:
             body["tools"] = tools
         body.update(self.settings.extra_body)

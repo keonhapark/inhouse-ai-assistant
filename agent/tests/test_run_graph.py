@@ -407,3 +407,18 @@ async def test_own_document_text_is_trusted(r: RunHarness) -> None:
     r.llm.script = [call("approval_list_mine", {}), call("leave_request", leave_args()), say("올렸습니다.")]
     s = await run(r, "내 결재 보고 하나 더 올려 줘")
     assert s["status"] == "completed" and s["actions"][0]["tool"] == "leave_request"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(("agent", "policy"), [("hr", "local_only"), ("assistant", "external_allowed")])
+async def test_model_policy_is_passed_to_llm(r: RunHarness, agent: str, policy: str) -> None:
+    r.llm.script = [say("네")]
+    await run(r, "안녕", agent=agent)
+    assert r.llm.requests[0]["model_policy"] == policy
+
+
+@pytest.mark.anyio
+async def test_no_guard_keeps_model_policy(r: RunHarness) -> None:
+    r.llm.script = [say("네")]
+    await run(r, "안녕", agent="hr", condition="no_guard")
+    assert r.llm.requests[0]["model_policy"] == "local_only"
