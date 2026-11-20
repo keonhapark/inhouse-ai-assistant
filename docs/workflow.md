@@ -27,7 +27,7 @@
 2. 최신 `develop`에서 브랜치를 만듭니다: `git fetch origin && git switch -c feat/<모듈>-<주제> origin/develop`
 3. 구현하고 시험을 붙입니다. 모듈 시험이 로컬에서 통과해야 합니다.
 4. PR을 엽니다. 제목은 커밋 형식, 본문은 PR 양식, `Closes #<번호>`를 적습니다.
-5. 필수 검사 `ci-summary`가 통과하면 직접 squash 병합하고 브랜치를 지웁니다: `gh pr merge <번호> --squash --delete-branch`
+5. 필수 검사 `ci-summary`가 통과하면 직접 squash 병합하고 브랜치를 지웁니다: `gh pr merge <번호> --squash --delete-branch --author-email "$(git config user.email)"`. 작성자를 저장소에 설정된 noreply 주소로 지정합니다(지정하지 않으면 GitHub 계정의 기본 메일이 들어갑니다, #158)
 6. 최신 `develop`을 받고 1로 돌아갑니다.
 
 - 실패한 검사는 고쳐서 다시 올립니다. 검사를 끄거나 건너뛰지 않습니다.
