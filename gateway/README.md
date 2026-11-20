@@ -13,7 +13,7 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - `doc_scopes`: erp `/me/access-tags` ∩ 에이전트 `doc_scopes`
   - 에이전트 `callable_by`에 맞지 않는 요청자는 403입니다.
 - LLM 출구 `POST /v1/chat/completions`(OpenAI 호환, `/api` 밖): 정책을 확인한 뒤 LiteLLM 프록시로 넘깁니다(`gateway/egress.py`).
-  - `model`은 `litellm/config.yaml`의 별칭만 받습니다: `local`(Ollama `qwen3.5:9b`, 문맥 8192), `external`(Claude Haiku).
+  - `model`은 `litellm/config.yaml`의 별칭만 받습니다: `local`(Ollama `qwen3.5:9b`, 문맥 8192), `external`(Claude Haiku 5.5, `claude-haiku-5-5`).
     별칭마다 `model_info.location`이 있고, gateway는 이것으로 로컬·외부를 가릅니다.
   - `X-Delegation-Token`이 있으면 서명·만료를 확인하고 `agt`의 `model_policy`를 따릅니다. `local_only` 에이전트와
     토큰 없는 호출은 `external`을 쓰면 403 `model-policy`이고, 밖으로 아무것도 나가지 않습니다.
@@ -24,6 +24,9 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
   - 스트림(`"stream": true`)은 받은 대로 흘려보내고, 끝나면 기록합니다.
+  - 별칭 설정 `model_info.drop_params`에 적은 필드는 보내기 전에 뺍니다. `external`(Claude Haiku 5.5)은 기본값이 아닌
+    `temperature`·`top_p`를 400으로 거절해 둘을 뺍니다(LiteLLM 1.108.1도 빼지만 판이 바뀌어도 안전하게).
+    `reasoning_effort`는 LiteLLM이 `thinking: adaptive`와 `output_config.effort`로 바꿔 넘깁니다(실측).
   - 출구가 요청을 거절하면(형식 422, 인증 401, 정책·등록부 403, 미지원 400) 감사 이벤트 `llm.request`에 대화 ID, 에이전트,
     요청한 별칭, 상태와 이유를 남깁니다(본문은 넣지 않음).
   - `response_format`: `model_info.supports_response_format: false`인 별칭(`local`, Ollama MLX 실행기의 qwen3.5:9b)은 보내기 전에

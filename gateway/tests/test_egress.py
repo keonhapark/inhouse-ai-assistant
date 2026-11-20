@@ -507,3 +507,29 @@ def test_external_log_usage_from_stream(client, app, token_for, litellm, ext_log
     _send(client, token_for(external_ok), "external", "안녕")
     (rec,) = ext_log.read_all()
     assert rec["costUsd"] is None and "usage" not in rec              # 모르면 null·생략
+
+
+# ---------- 외부 모델 Haiku 5.5(#139) ----------
+def test_external_alias_is_haiku_5_5_and_drops_sampling():
+    import yaml
+
+    from gateway.egress import load_model_info
+    doc = yaml.safe_load((ROOT / "gateway/litellm/config.yaml").read_text(encoding="utf-8"))
+    ext = next(m for m in doc["model_list"] if m["model_name"] == "external")
+    assert ext["litellm_params"]["model"] == "anthropic/claude-haiku-5-5"
+    assert set(load_model_info(ROOT / "gateway/litellm/config.yaml")["external"]["drop_params"]) >= {"temperature", "top_p"}
+
+
+def test_sampling_params_dropped_for_external_only(client, app, token_for, litellm):
+    app.state.egress.drop_params = {"external": frozenset({"temperature", "top_p"})}
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": MSG, "temperature": 0, "top_p": 0.9,
+                          "reasoning_effort": "low"})
+    assert r.status_code == 200
+    body = litellm.last_body()
+    assert "temperature" not in body and "top_p" not in body and body["reasoning_effort"] == "low"
+    rec = app.state.audit.egress.read_all()[-1]
+    assert rec["requestBeforeRedaction"]["temperature"] == 0 and "temperature" not in rec["requestSent"]
+    client.post("/v1/chat/completions", json={"model": "local", "messages": MSG, "temperature": 0})
+    assert litellm.last_body()["temperature"] == 0
