@@ -15,8 +15,9 @@
 
 ```
 source scripts/env.sh 5
-export LITELLM_MASTER_KEY=sk-<임의 값> ERP_EVAL_RESET=1 GATEWAY_EVAL_MODE=1 GATEWAY_EXTERNAL_LOG=/audit/external.jsonl
-docker compose -f infra/compose.yaml -f eval/e2e/compose.eval.yaml --env-file .env --profile full up -d --build --wait
+export LITELLM_MASTER_KEY=sk-<임의 값> ERP_EVAL_RESET=1 GATEWAY_EVAL_MODE=1 GATEWAY_EXTERNAL_LOG=/audit/external.jsonl \
+  RAG_MARKERS_FILE=/eval/markers/dev.yaml RAG_EXTRA_DOCS=/eval/injections/dev.yaml
+docker compose -f infra/compose.yaml --env-file .env --profile full up -d --build --wait
 
 cd eval
 set -a; . ../.env; set +a      # ERP_DEMO_PASSWORD
@@ -25,22 +26,25 @@ E2E_GATEWAY_URL=http://localhost:${PORT_GATEWAY}/api E2E_ERP_URL=http://localhos
 ```
 
 - erp는 시험 시작 때 `POST /_eval/reset`으로 팩 고정 데이터 상태로 되돌립니다(`ERP_EVAL_RESET=1` 필요).
+- rag는 시작할 때 문서 임베딩을 만들어 30초쯤 unhealthy일 수 있습니다. 그동안 `--wait`가 실패로 끝나면 `docker compose -p iaa-s5 ps`로 rag가 healthy가 된 뒤 시험을 돌립니다.
+- 에이전트가 되묻으면 시험이 정해 둔 답(`followup`)으로 한두 번 답합니다. 휴가 신청은 인사 에이전트 정책상 되돌릴 수 있는 쓰기라 실행 승인 없이 실행될 수 있고, 승인 카드가 나오면 미리보기를 확인한 뒤 승인합니다.
 - 로컬 모델은 Ollama `qwen3.5:9b`(호스트 11434)를 씁니다. 모델 시험 하나에 수십 초~수 분 걸립니다.
 
 ## 결과
 
-### 2026-11-20 19:50, develop `abdbfbb` 이후, M1 Pro 32GB(Docker 메모리 8GB)
+### 2026-11-20 20:05, develop `8e5bdfd`, M1 Pro 32GB(Docker 메모리 8GB)
 
 | 시험 | 결과 |
 |---|---|
+| 채팅 반차 신청·되돌리기 | 통과(인사 에이전트가 날짜·기간을 한 번 되물은 뒤 실행) |
+| 규정 질의 근거 | 통과 |
 | 승인함 승인 | 통과 |
 | 대결 등록 뒤 대리 결재 | 통과 |
-| 채팅 반차 신청·되돌리기 | 실패: agent → gateway LLM 출구가 422, 라우터는 fallback(`assistant`), 실행은 "모델을 부르지 못했습니다" (#89) |
-| 규정 질의 근거 | 실패: 같은 422 (#89) |
 
-시작 단계에서 찾은 것:
+4개 통과, 146초. 같은 시험을 다시 돌리면 모델 답이 달라 시간과 되묻기 횟수가 달라질 수 있습니다.
 
-- rag가 빈 `RAG_EXTRA_DOCS`로 종료, web이 gateway보다 먼저 떠 nginx 종료(#90). 위 `compose.eval.yaml`로 우회했습니다.
-- 위 `compose.eval.yaml`을 붙이면 rag가 개발 셋 표지·주입 문서를 읽은 채로 healthy가 됩니다.
+### 2026-11-20 19:50, develop `abdbfbb` 이후(첫 실행)
 
-#89가 고쳐지면 다시 돌려 이 표를 고칩니다.
+- 2개 통과(승인함, 대결), 2개 실패: agent → gateway LLM 출구 422(#89, #96에서 고침)
+- 시작 문제: rag가 빈 평가 변수로 종료, web이 gateway보다 먼저 시작(#90, #94·#97에서 고침)
+- 첫 실행 뒤 하네스의 되묻기 판단을 고쳤습니다. 질문 목록 뒤에 서술문으로 끝나는 답을 놓쳐서, 답의 어느 줄이든 물음 모양으로 끝나면 되묻기로 봅니다(`harness/clarify.py`, 프로토콜 2절).

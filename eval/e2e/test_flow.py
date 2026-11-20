@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from harness.clarify import looks_like_question
 from harness.erp import ErpClient
 from harness.sut import GatewayChat
 
@@ -15,9 +16,16 @@ def types(events: list[dict[str, Any]]) -> list[str]:
     return [e["type"] for e in events]
 
 
-def run_turn(chat: GatewayChat, cid: str, text: str, max_approvals: int = 3) -> list[dict[str, Any]]:
-    """발화 하나를 보내고 실행 승인이 나오면 승인합니다. 받은 이벤트를 모두 돌려줍니다."""
+def run_turn(chat: GatewayChat, cid: str, text: str, max_approvals: int = 3, followup: str | None = None,
+             max_followups: int = 2) -> list[dict[str, Any]]:
+    """발화 하나를 보내고, 되묻기면 followup으로 답하고, 실행 승인이 나오면 승인합니다. 받은 이벤트를 모두 돌려줍니다."""
     events = chat.send(cid, text)
+    for _ in range(max_followups):
+        msgs = [e["text"] for e in events if e["type"] == "message"]
+        if not followup or not msgs or not looks_like_question(msgs[-1]) or any(
+                e["type"] in ("approval_required", "action") for e in events):
+            break
+        events += chat.send(cid, followup)
     for _ in range(max_approvals):
         pending = [e for e in events if e["type"] == "approval_required"]
         decided = {e.get("decision", {}).get("approvalId") for e in events if e["type"] == "approval_decided"}
@@ -37,7 +45,8 @@ def leave_docs(erp: ErpClient, emp: str, date: str) -> list[dict]:
 
 def test_chat_leave_preview_approve_execute_undo(chat, human, erp):
     cid = chat.start(STAFF)
-    events = run_turn(chat, cid, "2027년 3월 9일 화요일 오후 반차 신청해 줘. 사유는 병원 진료야.")
+    events = run_turn(chat, cid, "2027년 3월 9일 화요일 오후 반차 신청해 줘. 사유는 병원 진료야.",
+                      followup="네, 2027년 3월 9일 하루 오후 반차(half_pm)예요. 사유는 병원 진료이고 바로 신청해 주세요.")
     route = [e for e in events if e["type"] == "route"]
     assert route and route[0]["route"]["agentId"] == "hr", types(events)
     actions = [e["action"] for e in events if e["type"] == "action" and e["action"]["tool"] == "leave_request"]

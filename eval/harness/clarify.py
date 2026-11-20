@@ -11,8 +11,13 @@ _QUESTION_ENDINGS = ("?", "？", "까요", "나요", "가요", "습니까", "십
 
 
 def looks_like_question(text: str) -> bool:
-    t = text.strip().rstrip(".!~ ")
-    return t.endswith(_QUESTION_ENDINGS)
+    """답의 어느 줄이든 물음 모양으로 끝나면 되묻기로 봅니다.
+    모델이 질문 목록 뒤에 "알려 주시면 바로 신청해 드리겠습니다."처럼 서술문으로 끝내는 경우가 있어서입니다."""
+    for line in text.splitlines():
+        t = line.strip().rstrip(".!~* ")
+        if t and t.endswith(_QUESTION_ENDINGS):
+            return True
+    return False
 
 
 def answer_for(question: str, clarifications: list[dict[str, Any]]) -> tuple[str, bool]:
