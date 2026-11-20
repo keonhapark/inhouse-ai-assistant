@@ -25,20 +25,14 @@ async function say(user: ReturnType<typeof userEvent.setup>, text: string) {
 }
 
 describe('직원 채팅', () => {
-  it('회의실 예약: 미리보기 카드로 실행하고, 행동 카드에서 되돌립니다', async () => {
+  it('회의실 예약: 되돌릴 수 있는 쓰기라 카드 없이 실행하고 되돌리기를 붙입니다', async () => {
     const user = renderChat()
     await say(user, '내일 오후 회의실 잡아 줘')
 
-    const card = await screen.findByRole('region', { name: '실행 미리보기: 회의실 예약' })
-    expect(within(card).getByText('되돌릴 수 있음')).toBeInTheDocument()
-    expect(within(card).getByText('3층 소회의실을 내일 14:00–15:00에 예약합니다.')).toBeInTheDocument()
-    expect(screen.getByText('미리보기 카드에서 실행하거나 취소하면 이어서 쓸 수 있습니다.')).toBeInTheDocument()
-    expect(screen.getByLabelText('메시지')).toBeDisabled()
-    expect(within(card).getByText('전사 비서')).toBeInTheDocument()
-
-    await user.click(within(card).getByRole('button', { name: '실행' }))
     const action = await screen.findByRole('region', { name: '실행한 일' })
-    expect(within(card).getByText('실행함')).toBeInTheDocument()
+    expect(within(action).getByText('3층 소회의실을 내일 14:00–15:00에 예약했습니다.')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /실행 미리보기/ })).toBeNull()
+    expect(await screen.findByText(/필요 없으면 되돌리기를 누르면 됩니다/)).toBeInTheDocument()
     expect(screen.getByLabelText('메시지')).toBeEnabled()
 
     await user.click(within(action).getByRole('button', { name: '되돌리기' }))
@@ -46,13 +40,32 @@ describe('직원 채팅', () => {
     expect(within(action).queryByRole('button', { name: '되돌리기' })).toBeNull()
   })
 
+  it('결재 회수: 되돌릴 수 없어 미리보기 카드로 확인받고, 실행 뒤 되돌리기는 없습니다', async () => {
+    const user = renderChat()
+    await say(user, '휴가 결재 회수해 줘')
+
+    const card = await screen.findByRole('region', { name: '실행 미리보기: 결재 회수' })
+    expect(within(card).getByText('되돌릴 수 없음')).toBeInTheDocument()
+    expect(within(card).getByText('실행하면 되돌릴 수 없습니다.')).toBeInTheDocument()
+    expect(within(card).getByText('휴가 결재 APR-0042(11/24 오후 반차)를 회수합니다.')).toBeInTheDocument()
+    expect(screen.getByText('미리보기 카드에서 실행하거나 취소하면 이어서 쓸 수 있습니다.')).toBeInTheDocument()
+    expect(screen.getByLabelText('메시지')).toBeDisabled()
+    expect(within(card).getByText('인사')).toBeInTheDocument()
+
+    await user.click(within(card).getByRole('button', { name: '실행' }))
+    const action = await screen.findByRole('region', { name: '실행한 일' })
+    expect(within(card).getByText('실행함')).toBeInTheDocument()
+    expect(within(action).queryByRole('button', { name: '되돌리기' })).toBeNull()
+    expect(screen.getByLabelText('메시지')).toBeEnabled()
+  })
+
   it('취소하면 실행하지 않습니다', async () => {
     const user = renderChat()
-    await say(user, '회의실 예약')
-    const card = await screen.findByRole('region', { name: '실행 미리보기: 회의실 예약' })
+    await say(user, '결재 회수')
+    const card = await screen.findByRole('region', { name: '실행 미리보기: 결재 회수' })
     await user.click(within(card).getByRole('button', { name: '취소' }))
     expect(await within(card).findByText('취소함')).toBeInTheDocument()
-    expect(await screen.findByText('예약하지 않았습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('회수하지 않았습니다.')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: '실행한 일' })).toBeNull()
   })
 
@@ -149,8 +162,8 @@ describe('직원 채팅', () => {
 
   it('실행 결정이 409로 거절되면 카드를 닫고 입력을 풉니다', async () => {
     const user = renderChat()
-    await say(user, '회의실 예약')
-    const card = await screen.findByRole('region', { name: '실행 미리보기: 회의실 예약' })
+    await say(user, '결재 회수')
+    const card = await screen.findByRole('region', { name: '실행 미리보기: 결재 회수' })
     server.use(
       http.post('*/api/execution-approvals/:id', () =>
         HttpResponse.json(
