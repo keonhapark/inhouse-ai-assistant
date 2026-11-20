@@ -46,7 +46,14 @@ class ChatClient:
         self._http = httpx.Client(base_url=settings.base_url, timeout=settings.timeout_s, transport=transport)
 
     def complete(self, messages: list[dict[str, str]], headers: dict[str, str] | None = None) -> str:
+        return self.chat(messages, headers=headers).get("content") or ""
+
+    def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None,
+             headers: dict[str, str] | None = None) -> dict[str, Any]:
+        """assistant 메시지(content, tool_calls)를 돌려줍니다."""
         body: dict[str, Any] = {"model": self.settings.model, "messages": messages, "temperature": 0}
+        if tools:
+            body["tools"] = tools
         body.update(self.settings.extra_body)
         try:
             resp = self._http.post("/chat/completions", json=body, headers=headers or {})
@@ -55,9 +62,12 @@ class ChatClient:
         if resp.status_code != 200:
             raise LLMError(f"LLM 응답 {resp.status_code}")
         try:
-            return resp.json()["choices"][0]["message"]["content"] or ""
+            message = resp.json()["choices"][0]["message"]
         except (ValueError, KeyError, IndexError, TypeError) as e:
             raise LLMError("LLM 응답 형식이 OpenAI 호환이 아닙니다") from e
+        if not isinstance(message, dict):
+            raise LLMError("LLM 응답 형식이 OpenAI 호환이 아닙니다")
+        return message
 
     def close(self) -> None:
         self._http.close()

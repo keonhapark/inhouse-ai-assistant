@@ -47,6 +47,7 @@ def tool_descriptor(tool: Tool) -> types.Tool:
             "trustRequired": tool.trust_required,
             "requiredScope": tool.required_scope,
             "stage": tool.stage,
+            "service": tool.operation.service,
         },
     )
 

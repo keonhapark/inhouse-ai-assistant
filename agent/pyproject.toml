@@ -12,6 +12,7 @@ dependencies = [
   "pyjwt[crypto]==2.15.1",
   "jsonschema==4.26.0",
   "rfc3339-validator==0.1.4",
+  "langgraph==1.2.24",
 ]
 
 [dependency-groups]

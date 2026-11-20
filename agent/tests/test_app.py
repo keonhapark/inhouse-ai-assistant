@@ -107,6 +107,7 @@ def test_services_from_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     monkeypatch.setenv("PACK_DIR", str(PACK_DIR))
     monkeypatch.setenv("AGENT_AUDIT_LOG", str(tmp_path / "a.jsonl"))
     monkeypatch.setenv("AGENT_ROUTER_MIN_CONFIDENCE", "0.7")
+    monkeypatch.setenv("AGENT_ALLOW_UNVERIFIED_TOKENS", "1")
     svc = app_module.services_from_env()
     assert svc.router.min_confidence == 0.7
     assert svc.registry.fallback_agent_id == "assistant"
@@ -143,3 +144,12 @@ def test_audit_never_holds_request_text_or_model_sentence(registry: Registry, st
     jsonschema.validate(json.loads(raw), AUDIT_SCHEMA)
     assert "요청원문표지" not in raw
     assert SECRET not in raw
+
+
+def test_services_from_env_requires_token_key(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("PACK_DIR", str(PACK_DIR))
+    monkeypatch.setenv("AGENT_AUDIT_LOG", str(tmp_path / "a.jsonl"))
+    for k in ("AGENT_ALLOW_UNVERIFIED_TOKENS", "DELEGATION_TOKEN_PUBLIC_KEY", "DELEGATION_JWKS_URL"):
+        monkeypatch.delenv(k, raising=False)
+    with pytest.raises(RuntimeError, match="DELEGATION"):
+        app_module.services_from_env()
