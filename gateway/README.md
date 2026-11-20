@@ -23,6 +23,9 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     들어 있어 접근을 제한해야 하는 파일입니다.
   - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
+  - 외부 별칭이 위 세 가지로 실패하면 같은 요청을 로컬 별칭으로 한 번 다시 보냅니다(로컬 폴백). 외부 실패는 그대로 알림·감사(error)를
+    남기고, 로컬 호출의 감사 이벤트 detail에 `외부 장애(<코드>)로 로컬 폴백`을 적습니다. 로컬이 지원하지 않는 `response_format`
+    요청, 미지원(400), 정책 거절, 로컬 별칭 자체의 실패는 폴백하지 않습니다. 스트림은 흘려보내기 전에 실패한 경우만 폴백합니다.
   - 스트림(`"stream": true`)은 받은 대로 흘려보내고, 끝나면 기록합니다.
   - 별칭 설정 `model_info.drop_params`에 적은 필드는 보내기 전에 뺍니다. `external`(Claude Haiku 5.5)은 기본값이 아닌
     `temperature`·`top_p`를 400으로 거절해 둘을 뺍니다(LiteLLM 1.108.1도 빼지만 판이 바뀌어도 안전하게).

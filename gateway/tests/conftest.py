@@ -70,18 +70,20 @@ class FakeLiteLLM:
         self.mode = "ok"
         self.usage: dict | None = None      # 있으면 응답에 usage를 넣음
         self.cost: str | None = None        # 있으면 x-litellm-response-cost 머리글
+        self.external_mode = "ok"           # external 별칭에만 적용하는 실패(timeout·down·500·501)
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
         body = json.loads(request.content)
-        if self.mode == "timeout":
+        mode = self.external_mode if body.get("model") == "external" and self.external_mode != "ok" else self.mode
+        if mode == "timeout":
             raise httpx.ReadTimeout("slow", request=request)
-        if self.mode == "down":
+        if mode == "down":
             raise httpx.ConnectError("down", request=request)
-        if self.mode == "501":
+        if mode == "501":
             return httpx.Response(501, json={"error": {"message": "litellm.APIError: structured output is unavailable\nmore",
                                                        "code": "501"}})
-        if self.mode == "500":
+        if mode == "500":
             return httpx.Response(500, json={"error": {"message": "provider failed"}})
         if request.url.path.endswith("/embeddings"):
             return httpx.Response(200, json={"object": "list", "model": body["model"],

@@ -62,6 +62,8 @@ ALLOWED_FIELDS = frozenset({
 
 
 LOCAL_ONLY_FIELDS = frozenset({"think"})
+# 외부 장애로 보고 로컬로 폴백하는 오류(시간 초과, 연결 실패, LiteLLM 5xx). 미지원(400)·정책 거절은 폴백하지 않습니다.
+FALLBACK_CODES = frozenset({"llm-timeout", "llm-unavailable", "llm-upstream-error"})
 EMBEDDING_FIELDS = frozenset({"model", "input", "encoding_format", "dimensions"})
 
 
@@ -298,9 +300,35 @@ class Egress:
         if "response_format" in sent and model["name"] in self.no_response_format:
             raise ProblemError(400, "unsupported-parameter", "이 모델은 response_format(구조화 출력)을 지원하지 않습니다",
                                f"{model['name']}. 형식은 도구 호출이나 프롬프트 지시로 맞출 수 있습니다")
+        try:
+            return await self._dispatch(caller, model, before, sent)
+        except ProblemError as e:
+            fallback = self._fallback_body(model, before, e)
+            if fallback is None:
+                raise
+            # 외부 장애는 위에서 알림·감사(error)를 남겼습니다. 같은 요청을 로컬 별칭으로 한 번 다시 보냅니다.
+            local = {"name": self.local_alias, "location": "local", "externalSent": False, "redactions": 0}
+            request.state.model = local
+            note = f"외부 장애({e.code})로 로컬 폴백"
+            return await self._dispatch(caller, local, before, fallback, note=note)
+
+    async def _dispatch(self, caller: Caller, model: dict, before: dict, sent: dict,
+                        note: str | None = None) -> Response:
         if sent.get("stream"):
-            return await self._stream(caller, model, before, sent)
-        return await self._once(caller, model, before, sent)
+            return await self._stream(caller, model, before, sent, note)
+        return await self._once(caller, model, before, sent, note)
+
+    def _fallback_body(self, model: dict, before: dict, e: ProblemError) -> dict | None:
+        """외부 장애(시간 초과·연결 실패·5xx)면 로컬로 보낼 본문을, 폴백할 수 없으면 None을 돌려줍니다.
+
+        로컬 모델은 사내에서 돌므로 가림 전 본문(토큰 모양만 가린 것)을 보냅니다. 로컬이 지원하지 않는
+        response_format 요청은 폴백하지 않고 원래 오류를 돌려줍니다.
+        """
+        if model["location"] != "external" or e.code not in FALLBACK_CODES or self.local_alias is None:
+            return None
+        if "response_format" in before and self.local_alias in self.no_response_format:
+            return None
+        return {**before, "model": self.local_alias}
 
     async def _handle_embeddings(self, request: Request) -> Response:
         """`POST /v1/embeddings`. 로컬 별칭만 받습니다(문서 원문을 외부로 보내지 않음). 가림은 하지 않습니다."""
@@ -353,7 +381,8 @@ class Egress:
         if sent_out:
             self.usage.record(caller.conversation_id, model["name"], model["location"])
 
-    async def _once(self, caller: Caller, model: dict, before: dict, sent: dict) -> Response:
+    async def _once(self, caller: Caller, model: dict, before: dict, sent: dict,
+                    note: str | None = None) -> Response:
         try:
             r = await self._http.post("/v1/chat/completions", json=sent)
         except httpx.HTTPError as e:
@@ -365,11 +394,12 @@ class Egress:
             await self._upstream_error(caller, model, before, sent, r.status_code, r.text)
         self._egress(caller, model, before, sent, r.status_code, r.text, response_cost(r.headers))
         self._audit(caller, model, "ok" if r.status_code < 400 else "error",
-                    None if r.status_code < 400 else f"urn:problem:llm-status-{r.status_code}")
+                    None if r.status_code < 400 else f"urn:problem:llm-status-{r.status_code}", note)
         return Response(r.content, status_code=r.status_code,
                         media_type=r.headers.get("content-type", "application/json"))
 
-    async def _stream(self, caller: Caller, model: dict, before: dict, sent: dict) -> Response:
+    async def _stream(self, caller: Caller, model: dict, before: dict, sent: dict,
+                      note: str | None = None) -> Response:
         req = self._http.build_request("POST", "/v1/chat/completions", json=sent)
         try:
             r = await self._http.send(req, stream=True)
@@ -395,7 +425,7 @@ class Egress:
                 async for chunk in r.aiter_bytes():  # 압축은 풀어서 넘깁니다(content-encoding 헤더를 넘기지 않음)
                     chunks.append(chunk)
                     yield chunk
-                result, problem, detail = "ok", None, None
+                result, problem, detail = "ok", None, note
             except httpx.HTTPError as e:
                 problem, detail = "urn:problem:llm-stream-broken", type(e).__name__
                 await self.alerter.alert(f"LLM 스트림 중단 model={model['name']} ({type(e).__name__})")

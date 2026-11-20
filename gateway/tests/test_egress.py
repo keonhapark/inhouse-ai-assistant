@@ -533,3 +533,53 @@ def test_sampling_params_dropped_for_external_only(client, app, token_for, litel
     assert rec["requestBeforeRedaction"]["temperature"] == 0 and "temperature" not in rec["requestSent"]
     client.post("/v1/chat/completions", json={"model": "local", "messages": MSG, "temperature": 0})
     assert litellm.last_body()["temperature"] == 0
+
+
+# ---------- 외부 장애 때 로컬 폴백(#143) ----------
+@pytest.mark.parametrize("mode,code,sent_out", [
+    ("timeout", "llm-timeout", True), ("500", "llm-upstream-error", True), ("down", "llm-unavailable", False),
+])
+def test_external_failure_falls_back_to_local(client, app, token_for, litellm, alerts, mode, code, sent_out):
+    _, external_ok = _agent_ids(app)
+    litellm.external_mode = mode
+    app.state.egress.usage.begin("conv-9")
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": PII_MSG})
+    assert r.status_code == 200 and r.json()["choices"][0]["message"]["content"] == "답입니다"
+    bodies = [json.loads(q.content) for q in litellm.requests]
+    assert [b["model"] for b in bodies] == ["external", "local"]
+    assert bodies[1]["messages"] == PII_MSG                 # 로컬은 가리지 않은 본문
+    assert len(alerts) == 1                                 # 외부 장애 알림은 그대로
+    ev = _llm_events(app)
+    assert ev[-2]["result"] == "error" and ev[-2]["problemType"] == f"urn:problem:{code}"
+    assert ev[-1]["result"] == "ok" and ev[-1]["model"]["name"] == "local"
+    assert ev[-1]["detail"] == f"외부 장애({code})로 로컬 폴백"
+    # 화면 표시: 요청이 실제로 외부로 나갔으면 external로 남습니다
+    used = app.state.egress.usage.take("conv-9")
+    assert used["location"] == ("external" if sent_out else "local")
+
+
+def test_stream_falls_back_before_streaming(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    litellm.external_mode = "500"
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": MSG, "stream": True})
+    assert r.status_code == 200 and "하세요" in r.text
+    assert _llm_events(app)[-1]["detail"].endswith("로컬 폴백")
+
+
+@pytest.mark.parametrize("case", ["response_format", "unsupported", "local_failure", "ok"])
+def test_no_fallback_cases(client, app, token_for, litellm, case):
+    _, external_ok = _agent_ids(app)
+    body = {"model": "external", "messages": MSG}
+    if case == "response_format":
+        litellm.external_mode = "500"
+        body["response_format"] = {"type": "json_object"}
+    elif case == "unsupported":
+        litellm.external_mode = "501"
+    elif case == "local_failure":
+        litellm.mode = "500"
+        body["model"] = "local"
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)}, json=body)
+    assert len(litellm.requests) == 1                       # 다시 보내지 않음
+    assert r.status_code == {"response_format": 502, "unsupported": 400, "local_failure": 502, "ok": 200}[case]
