@@ -11,3 +11,4 @@
 | 2026-11-20 | eval | - | scenario `expect.markerSources`, `eval/markers.schema.json`(RAG_MARKERS_FILE), `eval/injected-docs.schema.json`(RAG_EXTRA_DOCS) | 표지 대상 지정, 표지·주입 문서 심기 | 반영, rag 구현 이슈 |
 | 2026-11-20 | eval | - | gateway `X-Eval-Condition` 헤더(GATEWAY_EVAL_MODE=1) | 조건별 실행 | 반영, gateway 구현 이슈 |
 | 2026-11-20 | eval | - | erp `POST /_eval/reset`(ERP_EVAL_RESET=1), 가짜 erp 구현 | 회차 사이 초기화 | 반영, erp 구현 이슈 |
+| 2026-11-20 | web | #67 | gateway.yaml에 `GET /employees`·`GET /approval-forms`(erp 그대로), `InboxItem.steps[]`에 `approverName`·`actedByName` | #25 대결 등록의 대리인·양식 범위 고르기와 결재선 이름 표시. 모두 추가라 하위 호환 | |
