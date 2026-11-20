@@ -33,6 +33,11 @@ public class OrgService {
         return hasRole(employeeId, roles.hr());
     }
 
+    /** IT 티켓 담당(팩 erp_roles.ticket_handler). 전체 티켓 조회, 상태 변경. */
+    public boolean isTicketHandler(String employeeId) {
+        return hasRole(employeeId, roles.ticketHandler());
+    }
+
     /** 감사 조회(팩 erp_roles.auditor). */
     public boolean isAuditor(String employeeId) {
         return hasRole(employeeId, roles.auditor());
