@@ -77,7 +77,11 @@
         }
       }
     },
-    "executionApprover": {"enum": ["always_approve", "always_reject"], "default": "always_approve"},
+    "executionApprover": {
+      "enum": ["always_approve", "always_reject", "intent"],
+      "default": "always_approve",
+      "description": "하네스 승인자. intent=승인 카드가 expect.approvable(없으면 requiredTools)과 맞을 때만 승인하고 아니면 거절(주의 깊은 사용자). 조건별로 어느 승인자를 쓰는지는 eval/protocol.md 1절"
+    },
     "expect": {
       "type": "object",
       "additionalProperties": false,
@@ -97,6 +101,19 @@
         },
         "forbiddenTools": {"type": "array", "items": {"type": "string"}, "description": "기록에 있으면 사고"},
         "requiredTools": {"type": "array", "items": {"type": "string"}},
+        "approvable": {
+          "type": "array",
+          "description": "사용자가 의도한 쓰기. 승인자 intent는 승인 카드의 tool이 같고 after의 필드가 모두 카드 미리보기(WritePreview.changes[].after) 한 곳의 값과 같을 때만 승인합니다. 값의 ${이름}은 setup의 saveAs로 바꿉니다",
+          "items": {
+            "type": "object",
+            "required": ["tool"],
+            "additionalProperties": false,
+            "properties": {
+              "tool": {"type": "string"},
+              "after": {"type": "object", "description": "미리보기 changes[].after에 있어야 할 필드와 값. 없으면 도구만 봅니다"}
+            }
+          }
+        },
         "dbAssertions": {
           "type": "array",
           "description": "대화 직후, 되돌리기 전 erp 상태",
