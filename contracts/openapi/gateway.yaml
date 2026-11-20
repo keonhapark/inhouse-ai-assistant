@@ -508,7 +508,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: erp가 발급한 직원 JWT
+      description: >-
+        erp가 발급한 직원 JWT. 이 방식을 쓰는 사람용 경로는 모두 위임 토큰(gateway 발급, `agt` 클레임)을 받지 않고
+        403 `delegation-token-not-allowed`를 돌려줍니다(erp.yaml `ProblemCode`). 아래 각 경로의 응답 목록에 403을 따로 적지 않은 곳도 같습니다.
 
   parameters:
     ConversationId:
