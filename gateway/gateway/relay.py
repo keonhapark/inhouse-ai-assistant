@@ -139,10 +139,6 @@ def build_router(erp: ErpClient) -> APIRouter:
     async def search_employees(request: Request) -> Response:
         return await forward(request, "GET", "/employees", with_body=False)
 
-    @api.get("/org/units")
-    async def org_units(request: Request) -> Response:
-        return await forward(request, "GET", "/org/units", with_body=False)
-
     @api.get("/approval-forms")
     async def approval_forms(request: Request) -> Response:
         return await forward(request, "GET", "/approval-forms", with_body=False)

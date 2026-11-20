@@ -4,7 +4,6 @@ import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.org.OrgViews.EmployeeFull;
 import io.inhouse.erp.org.OrgViews.EmployeeSummary;
 import io.inhouse.erp.org.OrgViews.UnitView;
-import io.inhouse.erp.pack.Pack;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -16,26 +15,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class OrgService {
 
+    public static final String HR_ROLE = "hr_staff";
+
     private final EmployeeRepository employees;
     private final OrgUnitRepository units;
     private final OrgPolicy policy;
-    private final Pack.ErpRoles roles;
 
-    public OrgService(EmployeeRepository employees, OrgUnitRepository units, OrgPolicy policy, Pack pack) {
+    public OrgService(EmployeeRepository employees, OrgUnitRepository units, OrgPolicy policy) {
         this.employees = employees;
         this.units = units;
         this.policy = policy;
-        this.roles = pack.erpRoles();
-    }
-
-    /** 인사 담당(팩 erp_roles.hr). 직원 상세 전체 필드, 다른 사람의 연차 잔여를 봅니다. */
-    public boolean isHr(String employeeId) {
-        return hasRole(employeeId, roles.hr());
-    }
-
-    /** 감사 조회(팩 erp_roles.auditor). */
-    public boolean isAuditor(String employeeId) {
-        return hasRole(employeeId, roles.auditor());
     }
 
     public Employee employee(String id) {
@@ -61,7 +50,7 @@ public class OrgService {
     /** 본인과 인사 담당은 전체 필드, 그 밖에는 공개 필드만 봅니다. */
     public Object view(String viewerId, String employeeId) {
         Employee target = employee(employeeId);
-        if (viewerId.equals(employeeId) || isHr(viewerId)) {
+        if (viewerId.equals(employeeId) || hasRole(viewerId, HR_ROLE)) {
             return full(target);
         }
         return summary(target, unitNames());

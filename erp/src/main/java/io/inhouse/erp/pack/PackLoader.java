@@ -54,8 +54,6 @@ public final class PackLoader {
                         grant(r.path("grant")))),
                 list(org.path("access_tags"), t -> new Pack.AccessTagDef(t.path("id").asText(),
                         t.path("name").asText(), grant(t.path("grant")))),
-                new Pack.ErpRoles(org.path("erp_roles").path("hr").asText(Pack.ErpRoles.DEFAULT.hr()),
-                        org.path("erp_roles").path("auditor").asText(Pack.ErpRoles.DEFAULT.auditor())),
                 new Pack.DelegationPolicy(policy.path("max_period_days").asInt(30),
                         strings(policy.path("registrable_by"))),
                 list(forms.path("forms"), PackLoader::form),

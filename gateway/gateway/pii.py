@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
@@ -173,8 +173,6 @@ def build_analyzer() -> AnalyzerEngine:
 class Redaction:
     text: str
     counts: Counter
-    # 가린 자리: (종류, 바꿔 넣은 표시, 시작, 끝). 위치는 가린 뒤 문자열의 파이썬 문자 위치입니다.
-    spans: list[tuple[str, str, int, int]] = field(default_factory=list)
 
 
 class KoreanRedactor:
@@ -194,54 +192,31 @@ class KoreanRedactor:
         if not results:
             return Redaction(text, Counter())
         out = self.anonymizer.anonymize(text=text, analyzer_results=results, operators=self.operators)
-        spans = sorted(((i.entity_type, i.text, i.start, i.end) for i in out.items), key=lambda x: x[2])
-        return Redaction(out.text, Counter(i.entity_type for i in out.items), spans)
+        return Redaction(out.text, Counter(i.entity_type for i in out.items))
 
-    def __call__(self, body: dict[str, Any]) -> tuple[dict[str, Any], Counter, list[dict[str, Any]]]:
-        """messages 안의 모든 문자열(내용, 도구 호출 인자 등)을 가린 새 본문, 개체 종류별 개수, 가린 자리를 돌려줍니다.
+    def __call__(self, body: dict[str, Any]) -> tuple[dict[str, Any], Counter]:
+        """messages 안의 모든 문자열(내용, 도구 호출 인자 등)을 가린 새 본문과 개체 종류별 개수를 돌려줍니다.
 
         구조 키(role, type, id 등)는 건드리지 않습니다. 도구 호출 인자는 JSON 문자열이라 통째로 가려도
         자리표시가 문자열 안에 들어가 형식이 깨지지 않습니다.
-        가린 자리는 `messages[messageIndex].content`(문자열) 또는 그 `partIndex`번째 텍스트 부분 안의 위치이고,
-        content 밖(도구 호출 인자 등)에서 가린 것은 `field`가 "other"입니다.
         """
         total: Counter = Counter()
-        spans: list[dict[str, Any]] = []
 
-        def walk(node: Any, key: str | None, loc: dict[str, Any]) -> Any:
+        def walk(node: Any, key: str | None = None) -> Any:
             nonlocal total
             if isinstance(node, str):
                 if key in STRUCTURAL_KEYS:
                     return node
                 r = self.redact_text(node)
                 total += r.counts
-                spans.extend({**loc, "entity": e, "placeholder": ph, "start": a, "end": b}
-                             for e, ph, a, b in r.spans)
                 return r.text
             if isinstance(node, list):
-                return [walk(x, key, loc) for x in node]
+                return [walk(x, key) for x in node]
             if isinstance(node, dict):
-                return {k: walk(v, k, loc) for k, v in node.items()}
+                return {k: walk(v, k) for k, v in node.items()}
             return node
 
-        messages = []
-        for mi, m in enumerate(body.get("messages", [])):
-            if not isinstance(m, dict):
-                messages.append(walk(m, None, {"messageIndex": mi, "partIndex": None, "field": "other"}))
-                continue
-            out = {}
-            for k, v in m.items():
-                if k == "content" and isinstance(v, str):
-                    out[k] = walk(v, k, {"messageIndex": mi, "partIndex": None, "field": "content"})
-                elif k == "content" and isinstance(v, list):
-                    out[k] = [walk(p, k, {"messageIndex": mi, "partIndex": pi,
-                                          "field": "content" if isinstance(p, dict) and p.get("type") == "text"
-                                          else "other"})
-                              for pi, p in enumerate(v)]
-                else:
-                    out[k] = walk(v, k, {"messageIndex": mi, "partIndex": None, "field": "other"})
-            messages.append(out)
-        return {**body, "messages": messages}, total, spans
+        return {**body, "messages": walk(body.get("messages", []))}, total
 
 
 class BaselineRedactor(KoreanRedactor):

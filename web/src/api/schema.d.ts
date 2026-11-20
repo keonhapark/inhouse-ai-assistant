@@ -876,7 +876,7 @@ export interface components {
             createdAt: string;
         };
         DelegationCreate: {
-            /** @description 대신 등록할 수 있는 역할(팩 `registrable_by`)이 다른 사람 대신 등록할 때만. 생략하면 본인 */
+            /** @description 인사 담당이 다른 사람 대신 등록할 때만. 생략하면 본인 */
             delegatorId?: string;
             delegateId: string;
             /** Format: date-time */

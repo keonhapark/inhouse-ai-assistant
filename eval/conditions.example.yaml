@@ -14,9 +14,6 @@ httpTimeoutS: 120
 notes:                   # 보고서 실행 정보에 그대로 적을 말(프로토콜과 다르게 돌린 이유 등)
   - 예: 반복 수를 바꾼 이유는 docs/decisions/NNNN에 있습니다
 
-rag:
-  container: iaa-s5-rag-1   # 주입 문서 파일(RAG_EXTRA_DOCS)이 켜져 있는지 docker exec로 봅니다(--injected-docs)
-
 erp:
   baseUrl: http://localhost:8540/api/v1   # S5 erp(PORT_BASE+40)
   reset: true            # 회차마다 POST /_eval/reset. erp를 ERP_EVAL_RESET=1로 띄워야 합니다

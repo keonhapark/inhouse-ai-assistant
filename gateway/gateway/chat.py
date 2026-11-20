@@ -261,22 +261,11 @@ class ChatService:
                     route = {"agentId": agent.id, "agentName": agent.name, "method": "explicit",
                              "reason": "직원이 골랐습니다", "suggestedAgentId": None}
                 if not grant_matches(agent.callable_by, who):
-                    # 운영 지표의 차단 수(agent_not_callable)에 들어가도록 거절한 라우팅도 감사 이벤트로 남깁니다.
-                    self.audit.event("route.decided", employee_id=who.id, agent_id=agent.id, via_token=False,
-                                     result="denied", conversation_id=c.id,
-                                     problem_type="urn:problem:agent-not-callable",
-                                     routing={"agentId": agent.id, "method": route["method"],
-                                              "reason": "요청자가 부를 수 없는 에이전트"})
                     yield c.event("blocked", blocked={"reason": f"{agent.name} 에이전트를 부를 수 없습니다",
                                                       "code": "agent_not_callable"})
                     yield c.event("done")
                     return
                 c.agent_id, c.routed = agent.id, True
-                if route["method"] == "explicit":
-                    # 직원이 고른 대화는 agent 라우터를 거치지 않아 gateway가 route.decided를 남깁니다(운영 지표 호출 수).
-                    self.audit.event("route.decided", employee_id=who.id, agent_id=agent.id, via_token=False,
-                                     result="ok", conversation_id=c.id,
-                                     routing={"agentId": agent.id, "method": "explicit", "reason": route["reason"]})
                 yield c.event("route", route=route)
 
             token = self._token(who, c)
@@ -432,16 +421,6 @@ def build_router(chat: ChatService) -> APIRouter:
                   "modelPolicy": a.model_policy.get("mode", "local_only"),
                   "callable": grant_matches(a.callable_by, who)} for a in chat.registry.all()]
         return JSONResponse({"items": [a for a in items if a["callable"]]})
-
-    @api.get("/agent-registry")
-    async def agent_registry(request: Request) -> JSONResponse:
-        """부를 수 없는 에이전트까지 모두 보여 줍니다. 팩 단계 밖 에이전트는 등록부에 싣지 않았으므로 빠집니다(#170)."""
-        who = await requester(request)
-        reg = chat.registry
-        body: dict[str, Any] = {"items": [reg.registry_entry(a, who) for a in reg.all()]}
-        if reg.fallback_agent is not None:
-            body["fallbackAgentId"] = reg.fallback_agent
-        return JSONResponse(body)
 
     @api.get("/conversations")
     async def list_conversations(request: Request) -> JSONResponse:

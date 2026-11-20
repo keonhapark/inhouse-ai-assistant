@@ -50,28 +50,10 @@ def test_body_redaction_keeps_shape(r):
                                      {"type": "image_url", "image_url": {"url": "data:,"}}]},
         {"role": "user", "content": "메일 a@b.io, 전화 010-4444-5555"},
     ]}
-    sent, counts, spans = r(body)
+    sent, counts = r(body)
     assert sent["temperature"] == 0 and sent["messages"][0]["content"] == "도우미입니다"
     assert sent["messages"][1]["content"][0]["text"] == "전화 [전화번호]"
     assert sent["messages"][1]["content"][1] == body["messages"][1]["content"][1]
     assert sent["messages"][2]["content"] == "메일 [이메일], 전화 [전화번호]"
     assert counts == {"KR_PHONE": 2, "EMAIL_ADDRESS": 1}
     assert body["messages"][2]["content"] == "메일 a@b.io, 전화 010-4444-5555"  # 원본은 그대로
-
-
-def test_spans_locate_placeholders(r):
-    body = {"messages": [
-        {"role": "user", "content": "전화 010-2222-3333, 메일 a@b.io"},
-        {"role": "user", "content": [{"type": "text", "text": "x"}, {"type": "text", "text": "주민 900101-1234568"}]},
-        {"role": "assistant", "content": None, "tool_calls": [{"id": "c", "type": "function",
-                                                               "function": {"name": "f", "arguments": "{\"p\": \"010-1111-2222\"}"}}]},
-    ]}
-    sent, _, spans = r(body)
-    for sp in spans:
-        if sp["field"] != "content":
-            continue
-        m = sent["messages"][sp["messageIndex"]]["content"]
-        text = m if sp["partIndex"] is None else m[sp["partIndex"]]["text"]
-        assert text[sp["start"]:sp["end"]] == sp["placeholder"]
-    assert {(s["messageIndex"], s["partIndex"], s["field"]) for s in spans} == {
-        (0, None, "content"), (1, 1, "content"), (2, None, "other")}

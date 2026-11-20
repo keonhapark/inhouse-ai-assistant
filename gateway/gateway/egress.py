@@ -8,7 +8,7 @@
 5. 외부 별칭이면 사내 용어 사전(gateway/confidential.py)으로 기밀을 판정해 차단(403 confidential)하거나 로컬 별칭으로
    돌립니다. 그래도 외부로 나가면 한국어 개인정보를 가립니다(gateway/pii.py). 둘 다 감사 이벤트 llm.redacted를 남깁니다.
    로컬 모델로 가는 요청은 가리지 않습니다.
-6. 외부로 나간 요청은 가림 뒤 본문·가린 자리·응답을 egress.jsonl에(가림 전 원문은 저장하지 않음), 모든 요청은 감사 이벤트 llm.request로 남깁니다.
+6. 외부로 나간 요청은 가림 전후 본문과 응답을 egress.jsonl에, 모든 요청은 감사 이벤트 llm.request로 남깁니다.
 7. 시간 초과(504)·연결 실패(502)·LiteLLM 5xx(502)는 실패 알림을 보냅니다.
 """
 
@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 import logging
-import uuid
 from contextvars import ContextVar
 from collections import Counter
 from collections.abc import AsyncIterator, Callable
@@ -46,12 +45,12 @@ TOKEN_HEADER = "x-delegation-token"
 # 이 요청에서 감사 이벤트를 이미 남겼는지. 거절 사유를 따로 남긴 경로(정책·기밀·장애)는 한 번만 기록합니다.
 _audited: ContextVar[bool] = ContextVar("egress_audited", default=False)
 
-# 가림 단계: 본문을 받아 (보낼 본문, 개체 종류별 가린 개수, 가린 자리)를 돌려줍니다(gateway/pii.py).
-Redactor = Callable[[dict[str, Any]], tuple[dict[str, Any], Counter, list[dict[str, Any]]]]
+# 가림 단계: 본문을 받아 (보낼 본문, 개체 종류별 가린 개수)를 돌려줍니다(gateway/pii.py).
+Redactor = Callable[[dict[str, Any]], tuple[dict[str, Any], Counter]]
 
 
-def no_redaction(body: dict[str, Any]) -> tuple[dict[str, Any], Counter, list[dict[str, Any]]]:
-    return body, Counter(), []
+def no_redaction(body: dict[str, Any]) -> tuple[dict[str, Any], Counter]:
+    return body, Counter()
 
 
 # LiteLLM에 넘기는 본문 필드. 그 밖의 필드(fallbacks, api_base, metadata, mock_response 등)는 정책 검사를 건너뛰어
@@ -133,11 +132,6 @@ class ModelUsage:
             return None
         name, location = next((u for u in reversed(used) if u[1] == "external"), used[-1])
         return {"name": name, "location": location}
-
-
-def public_model(model: dict | None) -> dict | None:
-    """감사 이벤트용 model. 밑줄로 시작하는 내부 키(가린 자리 등)는 뺍니다."""
-    return None if model is None else {k: v for k, v in model.items() if not k.startswith("_")}
 
 
 def egress_headers(model: dict) -> dict[str, str]:
@@ -327,8 +321,7 @@ class Egress:
             sent = {k: v for k, v in sent.items() if k not in LOCAL_ONLY_FIELDS}
             redactor = {"korean": self.redactor, "baseline": self.baseline_redactor,
                         "off": no_redaction}[guards.pii]
-            sent, counts, spans = redactor(sent)
-            model["_spans"] = spans  # 운영 기록용(가린 자리). 감사 이벤트에는 넣지 않습니다
+            sent, counts = redactor(sent)
             model["redactions"] = sum(counts.values())
             if counts:
                 detail = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
@@ -488,7 +481,7 @@ class Egress:
             status, code, title = 502, "llm-unavailable", "LLM 프록시에 연결하지 못했습니다"
         # 연결 전 실패가 아니면(읽기 시간 초과 등) 요청은 이미 나갔다고 봅니다.
         self._mark_sent(caller, model, sent, sent_out=not isinstance(e, httpx.ConnectError))
-        # 이미 나간 외부 요청은 응답이 없어도 외부 전송 기록(가림 뒤 본문)을 남깁니다(#165).
+        # 이미 나간 외부 요청은 응답이 없어도 외부 전송 기록(가림 전후 본문)을 남깁니다(#165).
         # 연결 전 실패(ConnectError)는 나가지 않았으므로 남기지 않습니다.
         if model["externalSent"]:
             self._egress(caller, model, before, sent, status, "")
@@ -521,7 +514,7 @@ class Egress:
         self.audit.event(kind, employee_id=caller.employee_id,
                          agent_id=caller.agent.id if caller.agent else None, via_token=caller.via_token,
                          conversation_id=caller.conversation_id,
-                         model=public_model(model), result=result,
+                         model=dict(model) if model is not None else None, result=result,
                          problem_type=problem_type, detail=detail, delegation_token_id=caller.token_id)
 
     def _estimate_cost(self, alias: str, usage: dict[str, int] | None) -> float | None:
@@ -555,10 +548,7 @@ class Egress:
             if self.budget is not None:
                 self.budget.add(caller.agent.id if caller.agent else None, self.unit_of(caller.conversation_id), cost)
             self._external_record(caller, model, sent, response, cost)
-        usage = response_usage(response) if response else None
         self.audit.egress.write({
-            # 가림 전 원문은 저장하지 않습니다(contracts/openapi/gateway.yaml /ops/egress). 가린 자리만 남깁니다.
-            "recordId": "egr_" + uuid.uuid4().hex,
             "occurredAt": now_iso(),
             "employeeId": caller.employee_id,
             "agentId": caller.agent.id if caller.agent else None,
@@ -566,11 +556,9 @@ class Egress:
             "model": model["name"],
             "providerModel": self.provider_models.get(model["name"]),
             "redactions": model["redactions"],
-            "redactionSpans": model.get("_spans", []),
+            "requestBeforeRedaction": before,
             "requestSent": sent,
             "status": status,
-            "usage": usage,
-            "costUsd": cost,
             "response": scrub(response),
         })
 

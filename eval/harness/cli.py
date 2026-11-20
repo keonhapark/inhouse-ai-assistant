@@ -24,7 +24,7 @@ from harness.erp import ErpClient
 from harness.report import render
 from harness.runner import (CONDITIONS, MAX_RETRIES, HealthCheck, RunRow, _git, count_retries, load_rows_jsonl,
                             load_run, run_matrix, save_run, signature_counts)
-from harness.scenario import ScenarioError, has_document_injection, load_scenarios
+from harness.scenario import ScenarioError, load_scenarios
 from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
 
 
@@ -89,22 +89,6 @@ def make_health_check(cfg: dict[str, Any]) -> HealthCheck | None:
     return check
 
 
-def rag_injected_docs(cfg: dict[str, Any]) -> bool | None:
-    """rag 컨테이너에 주입 문서 파일(RAG_EXTRA_DOCS)이 켜져 있는지 docker exec로 봅니다. 설정이 없거나 docker를
-    부르지 못하면 None(확인 못 함)."""
-    import subprocess
-
-    container = cfg.get("rag", {}).get("container")
-    if not container:
-        return None
-    try:
-        r = subprocess.run(["docker", "exec", container, "sh", "-c", 'printf %s "$RAG_EXTRA_DOCS"'],
-                           capture_output=True, text=True, timeout=30, check=True)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return bool(r.stdout.strip())
-
-
 def cmd_validate(args: argparse.Namespace) -> int:
     try:
         got = load_scenarios(Path(args.dir))
@@ -123,13 +107,6 @@ def cmd_run(args: argparse.Namespace) -> int:
         scenarios = [s for s in scenarios if s["id"] in wanted]
     if args.set:
         scenarios = [s for s in scenarios if s["set"] == args.set]
-    if args.injected_docs:
-        want = args.injected_docs == "only"
-        scenarios = [s for s in scenarios if has_document_injection(s) == want]
-    injected = rag_injected_docs(cfg)
-    if args.injected_docs and injected is not None and injected != (args.injected_docs == "only"):
-        raise SystemExit(f"--injected-docs {args.injected_docs}인데 rag의 주입 문서 파일이 "
-                         f"{'켜져' if injected else '꺼져'} 있습니다. 스택 설정(RAG_EXTRA_DOCS)을 맞춥니다")
     system, erp = make_factories(cfg)
     out = Path(args.out)
     rows_file = out.with_suffix(".rows.jsonl")
@@ -162,17 +139,12 @@ def cmd_run(args: argparse.Namespace) -> int:
                             model=cfg.get("model"), on_row=progress, done_rows=done,
                             max_runs=args.max_runs, started_at=started_at, health_check=health,
                             prior_cost_usd=prior_cost, pack_stage=cfg.get("packStage"),
-                            stack_commit=cfg.get("stackCommit"), injected_docs=injected)
+                            stack_commit=cfg.get("stackCommit"))
     if not cfg["erp"].get("reset", True):
         meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.reset: false)")
     if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):
         meta.notes.append("외부 요청 기록(gateway.externalLog)을 주지 않아 외부 기록의 표지 문자열은 보지 않았습니다")
     meta.notes.extend(cfg.get("notes", []))
-    if injected and any(not has_document_injection(s) for s in scenarios):
-        meta.notes.append("주입 문서 파일을 켠 스택에서 문서형 주입이 아닌 시나리오도 돌려, 주입 문서가 그 검색에 섞였을 수 "
-                          "있습니다(eval/protocol.md 7절)")
-    if injected is None and any(has_document_injection(s) for s in scenarios):
-        meta.notes.append("rag 주입 문서 파일이 켜져 있었는지 확인하지 못했습니다(설정 rag.container)")
     meta.retried_runs = count_retries(rows_file)
     if meta.retried_runs:
         meta.notes.append(f"실행 환경 문제(gateway·erp 연결 실패, 재시도 가능한 오류 뒤 모델 서버 응답 없음)로 끝나지 "
@@ -210,8 +182,6 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--set", choices=["dev", "normal", "confirm"], help="이 셋의 시나리오만")
     r.add_argument("--max-runs", type=int, help="이번에 새로 돌릴 회차 수 상한(나눠 돌리기)")
     r.add_argument("--resume", action="store_true", help="<out>.rows.jsonl의 끝난 회차를 건너뛰고 이어 돌림")
-    r.add_argument("--injected-docs", choices=["only", "exclude"],
-                   help="문서형 주입 시나리오만(only, 주입 파일을 켠 스택) 또는 그 밖의 시나리오만(exclude, 끈 스택)")
     r.add_argument("--allow-mixed", action="store_true",
                    help="앞선 회차와 하네스 커밋·스택 커밋·팩 단계가 달라도 이어 돌림(보고서에 커밋별 회차 수)")
     rep = sub.add_parser("report", help="실행 결과 JSON으로 보고서 다시 만들기")

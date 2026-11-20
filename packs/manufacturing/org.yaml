@@ -120,10 +120,6 @@ access_tags:
     name: 구매 규정
     grant:
       roles: [employee]
-  - id: it-policy
-    name: IT 운영 규정
-    grant:
-      roles: [employee]
   - id: rnd-confidential
     name: 연구 기밀
     grant:

@@ -190,12 +190,6 @@ def _common_section(rows: list[RunRow], conds: list[str]) -> list[str]:
     return out
 
 
-def _injected(rows: list[RunRow]) -> str:
-    label = {True: "켬", False: "끔", None: "확인 못 함"}
-    counts = Counter(r.injected_docs for r in rows)
-    return ", ".join(f"{label[k]} {n}회차" for k, n in sorted(counts.items(), key=lambda x: str(x[0]))) or "-"
-
-
 def _signatures(rows: list[RunRow]) -> str:
     def label(sig: tuple[str | None, str | None, int | None]) -> str:
         commit, stack, stage = sig
@@ -231,7 +225,6 @@ def render(rows: list[RunRow], meta: RunMeta, title: str = "평가 보고서") -
         ["모델(실행 기록)", ", ".join(f"{m} {n}회차" for m, n in sorted(seen.items())) or "-"],
         ["기기", meta.machine],
         ["회차별 실행 시스템", _signatures(rows)],
-        ["주입 문서 파일", _injected(rows)],
         ["실행", f"{meta.started_at} ~ {meta.finished_at}"],
         ["조건", ", ".join(f"{COND_LABEL[c]}(`{c}`)" for c in conds)],
         ["반복", f"{meta.repeats}회. 회차 번호 {meta.base_seed}+회차를 시드로 기록만 하고 대상 시스템에는 넘기지 않습니다"

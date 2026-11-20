@@ -18,7 +18,6 @@ public record Pack(
         List<UnitDef> units,
         List<RoleDef> roles,
         List<AccessTagDef> accessTags,
-        ErpRoles erpRoles,
         DelegationPolicy delegationPolicy,
         List<FormDef> forms,
         List<EmployeeDef> employees,
@@ -33,11 +32,6 @@ public record Pack(
 
     public record AccessTagDef(String id, String name, Grant grant) {}
 
-    /** org.yaml erp_roles: 코어가 권한 판단에 쓰는 역할 ID. 항목이 없으면 hr_staff·auditor입니다. */
-    public record ErpRoles(String hr, String auditor) {
-        public static final ErpRoles DEFAULT = new ErpRoles("hr_staff", "auditor");
-    }
-
     public record DelegationPolicy(int maxPeriodDays, List<String> registrableBy) {}
 
     public record FormDef(String id, String name, int stage, JsonNode fields, String amountField,
@@ -45,7 +39,7 @@ public record Pack(
 
     /** 양식 중 stage가 maxStage 이하인 것만 켠 팩. 나머지 설정과 고정 데이터는 그대로입니다. */
     public Pack withFormsUpTo(int maxStage) {
-        return new Pack(id, stage, timezone, grades, units, roles, accessTags, erpRoles, delegationPolicy,
+        return new Pack(id, stage, timezone, grades, units, roles, accessTags, delegationPolicy,
                 forms.stream().filter(f -> f.stage() <= maxStage).toList(), employees, rooms, balances);
     }
 

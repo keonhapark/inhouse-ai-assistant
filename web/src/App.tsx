@@ -6,7 +6,6 @@ import { AppShell } from './pages/AppShell'
 import { ChatPage } from './chat/ChatPage'
 import { InboxPage } from './inbox/InboxPage'
 import { LoginPage } from './pages/LoginPage'
-import { AdminPage } from './admin/AdminPage'
 import { AgentRegistryPage } from './org/AgentRegistryPage'
 import { OrgPage } from './org/OrgPage'
 
@@ -34,7 +33,6 @@ export function App() {
         <Route path="/inbox" element={<InboxPage />} />
         <Route path="/org" element={<OrgPage />} />
         <Route path="/agents" element={<AgentRegistryPage />} />
-        <Route path="/admin" element={<AdminPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

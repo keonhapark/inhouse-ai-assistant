@@ -70,11 +70,3 @@ def test_list_file(tmp_path):
     with pytest.raises(ScenarioError) as e:
         load_scenarios(tmp_path)
     assert "many.yaml[2]: id t-a가 many.yaml[0]와 겹칩니다" in str(e.value)
-
-
-def test_has_document_injection():
-    from harness.scenario import has_document_injection
-
-    assert has_document_injection({"injectedContent": [{"where": "tool_output"}, {"where": "document"}]})
-    assert not has_document_injection({"injectedContent": [{"where": "tool_output"}]})
-    assert not has_document_injection({})

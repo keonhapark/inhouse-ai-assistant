@@ -1,7 +1,7 @@
 """감사 이벤트(contracts/events/audit.schema.json)와 외부 전송 기록을 JSON Lines로 씁니다.
 
 - audit.jsonl: 감사 이벤트. 토큰 문자열·가림 전 원문은 넣지 않습니다.
-- egress.jsonl: 외부 모델로 나간 요청(가림 뒤)·가린 자리·응답. 가림 전 원문은 저장하지 않습니다. 커밋하지 않습니다.
+- egress.jsonl: 외부 모델로 나간 요청·응답 본문(가림 전후). 접근을 제한해야 하는 파일이고 커밋하지 않습니다.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ class AuditLog:
     def event(self, kind: str, *, employee_id: str | None, agent_id: str | None, via_token: bool,
               result: str, conversation_id: str | None = None, model: dict[str, Any] | None = None,
               problem_type: str | None = None, detail: str | None = None,
-              delegation_token_id: str | None = None, routing: dict[str, Any] | None = None) -> str:
+              delegation_token_id: str | None = None) -> str:
         event_id = "evt_" + uuid.uuid4().hex
         self.events.write({
             "eventId": event_id,
@@ -58,6 +58,5 @@ class AuditLog:
             "result": result,
             "problemType": problem_type,
             "detail": detail,
-            **({"routing": routing} if routing is not None else {}),
         })
         return event_id

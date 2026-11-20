@@ -33,8 +33,6 @@ ROUTES = [
     ("GET", "/api/notifications", None),
     ("GET", "/api/employees", None),
     ("GET", "/api/approval-forms", None),
-    ("GET", "/api/org/units", None),
-    ("GET", "/api/agent-registry", None),
     ("GET", "/api/audit-events", None),
 ]
 

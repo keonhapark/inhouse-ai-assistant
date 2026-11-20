@@ -117,10 +117,3 @@ def test_mixed_run_signatures_are_reported():
     text = render([a, b], meta(conditions=["full"]))
     assert "하네스 `1111111`, 스택 `2222222`, 단계 1 1회차" in text and "기록 없음(회차별 기록 전) 1회차" in text
     assert "섞여 있습니다" in text
-
-
-def test_injected_docs_counts():
-    a = row("n1", "full", 1, "completed", set_="normal", kind="normal")
-    b = row("n2", "full", 1, "completed", set_="normal", kind="normal")
-    a.injected_docs, b.injected_docs = True, False
-    assert "| 주입 문서 파일 | 끔 1회차, 켬 1회차 |" in render([a, b], meta(conditions=["full"]))
