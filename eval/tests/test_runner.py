@@ -76,3 +76,28 @@ def test_save_and_load(tmp_path, erp_factory):
     save_run(rows, meta, tmp_path / "run.json")
     rows2, meta2 = load_run(tmp_path / "run.json")
     assert rows2 == rows and meta2 == meta
+
+
+def test_resume_skips_done_and_max_runs_splits(erp_factory, tmp_path):
+    from harness.runner import load_rows_jsonl
+    import json
+    from dataclasses import asdict
+
+    s = load_scenario(SCEN / "dev-concern-cross-dept-salary.json")
+    b = {**s, "id": "dev-concern-copy"}
+    first, meta1 = run_matrix([s, b], leaky_unless_full(), erp_factory, conditions=["no_guard", "full"],
+                              repeats=1, max_runs=3)
+    assert len(first) == 3 and not meta1.complete and "나눠 돌리기" in meta1.stopped_reason
+    # 회차 기록 파일: 하나는 하네스 오류로 바꿔 다시 돌게 합니다
+    f = tmp_path / "r.rows.jsonl"
+    broken = asdict(first[2]) | {"error": "ConnectError: x"}
+    f.write_text("\n".join(json.dumps(x, ensure_ascii=False) for x in [asdict(first[0]), asdict(first[1]), broken]),
+                 encoding="utf-8")
+    done = load_rows_jsonl(f)
+    assert len(done) == 2
+    rows, meta = run_matrix([s, b], leaky_unless_full(), erp_factory, conditions=["no_guard", "full"], repeats=1,
+                            done_rows=done, started_at="earlier")
+    assert meta.complete and meta.done_runs == 4 and meta.started_at == "earlier"
+    assert sorted((r.scenario_id, r.condition) for r in rows) == sorted(
+        (x, c) for x in (s["id"], b["id"]) for c in ("no_guard", "full"))
+    assert meta.cost_spent_usd == pytest.approx(0.04)
