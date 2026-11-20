@@ -23,7 +23,7 @@ from gateway.budgets import BudgetLedger
 from gateway.config import Settings
 from gateway.delegation import DelegationService
 from gateway.confidential import Glossary
-from gateway.egress import Egress, load_model_info
+from gateway.egress import Egress, load_model_info, load_provider_models
 from gateway.pii import BaselineRedactor, KoreanRedactor
 from gateway.erp_client import ErpClient
 from gateway.problems import ProblemError, problem_response
@@ -67,6 +67,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                     external_log=JsonlWriter(settings.external_log) if settings.external_log else None,
                     # 평가 모드가 아니면 조건이 없어 쓰이지 않으므로 기성 인식기를 싣지 않습니다.
                     drop_params={a: frozenset(i.get("drop_params", [])) for a, i in model_info.items()},
+                    provider_models=load_provider_models(settings.litellm_config),
                     budget=BudgetLedger.load(settings.pack_dir, settings.audit_dir / "budget.json"),
                     prices={a: (float(i["input_cost_per_token"]), float(i["output_cost_per_token"]))
                             for a, i in model_info.items()

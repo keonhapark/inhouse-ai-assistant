@@ -294,7 +294,8 @@ def test_external_request_log_has_redacted_body(client, app, token_for, litellm,
     assert r.status_code == 200
     (rec,) = ext_log.read_all()
     Draft202012Validator(EXT_SCHEMA).validate(rec)
-    assert rec["conversationId"] == "conv-9" and rec["agentId"] == external_ok and rec["model"] == "external"
+    assert rec["conversationId"] == "conv-9" and rec["agentId"] == external_ok
+    assert rec["model"] == "anthropic/claude-haiku-5-5"            # 별칭이 아니라 실제 모델 이름(#203)
     assert rec["body"] == litellm.last_body()          # 실제 보낸 본문(가림 뒤) 그대로
     assert "010-1234-5678" not in json.dumps(rec, ensure_ascii=False)
 
@@ -711,3 +712,15 @@ def test_egress_headers_on_stream(client, app, token_for, litellm):
     r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
                     json={"model": "external", "messages": MSG, "stream": True})
     assert r.headers["x-egress-location"] == "external"
+
+
+def test_operational_egress_log_keeps_alias_and_provider_model(client, app, token_for, litellm):
+    from gateway.egress import load_provider_models
+
+    assert load_provider_models(ROOT / "gateway/litellm/config.yaml")["external"] == "anthropic/claude-haiku-5-5"
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": MSG})
+    rec = app.state.audit.egress.read_all()[-1]
+    assert rec["model"] == "external" and rec["providerModel"] == "anthropic/claude-haiku-5-5"
+    assert r.headers["x-egress-model"] == "external"            # 헤더는 별칭(#188)
