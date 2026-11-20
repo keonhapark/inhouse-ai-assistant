@@ -522,7 +522,9 @@ paths:
     get:
       tags: [audit]
       operationId: listAuditEvents
-      description: auditor 역할만. gateway·agent·MCP·rag·erp 감사 이벤트를 시각 순으로 합쳐 돌려줍니다.
+      description: |
+        auditor 역할만. gateway·agent·MCP·rag·erp 감사 이벤트를 시각 순으로 합쳐 돌려줍니다.
+        `order=desc`면 최근 것부터 돌려주고, `nextCursor`는 그 페이지 마지막 것보다 오래된 쪽을 가리킵니다.
       parameters:
         - {name: conversationId, in: query, schema: {type: string}}
         - {name: actorId, in: query, schema: {type: string}}
@@ -532,6 +534,7 @@ paths:
         - {name: until, in: query, schema: {type: string, format: date-time}}
         - {name: cursor, in: query, schema: {type: string}}
         - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 100}}
+        - {name: order, in: query, schema: {type: string, enum: [asc, desc], default: asc}, description: 시각 순서. 기본은 오래된 것부터}
       responses:
         "200":
           description: 감사 이벤트
