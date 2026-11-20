@@ -950,14 +950,11 @@ components:
                 properties:
                   tool: {type: string}
                   when:
-                    description: 팩 `risk_policy.overrides[].when`. wide_scope·always, 또는 도구 인자 `arg`가 `gt`보다 클 때
-                    oneOf:
-                      - {type: string, enum: [wide_scope, always]}
-                      - type: object
-                        required: [arg, gt]
-                        properties:
-                          arg: {type: string}
-                          gt: {type: number}
+                    type: string
+                    enum: [wide_scope, always, arg_gt]
+                    description: 팩 `risk_policy.overrides[].when`. 팩의 인자 조건 `{arg, gt}`는 `arg_gt`로 쓰고 `arg`·`gt`에 값을 둡니다
+                  arg: {type: string, description: when=arg_gt일 때 견줄 도구 인자 이름}
+                  gt: {type: number, description: when=arg_gt일 때 이 값보다 크면 맞음}
                   action: {$ref: "#/components/schemas/RiskAction"}
         routingKeywords:
           type: array
