@@ -500,3 +500,56 @@ def test_외부를_요청했어도_gateway가_로컬로_보냈으면_로컬로_�
     assert body["found"] is True and body["model"] == {"name": "local", "location": "local"}
     [event] = [e for e in events(audit) if e["kind"] == "rag.answered"]
     assert event["model"]["externalSent"] is False and event["model"]["location"] == "local"
+
+
+# ---------------------------------------------------------------- 구매 규정(#187)
+
+PURCHASE = ["public", "purchase-policy"]
+Q_PURCHASE = "500만 원 넘는 구매는 누가 결재해?"
+
+
+@pytest.fixture(scope="module")
+def stage2_index():
+    return build_index(HashEmbedder(), stage=2)
+
+
+def quote_doc(title):
+    """프롬프트에서 문서 제목이 title이고 결재선을 다룬 근거의 결재선 줄을 인용하는 답."""
+
+    def reply(messages):
+        user = messages[1]["content"]
+        for n in range(1, 21):
+            if f"[{n}] " not in user:
+                break
+            head, body = user.split(f"[{n}] ", 1)[1].split("\n", 1)
+            line = next((x[2:] for x in body.split("\n") if "초과" in x and "→" in x), None)
+            if f"문서: {title}" in head and line:
+                return json.dumps({"found": True, "answer": "500만 원을 넘으면 팀장과 본부장이 차례로 결재합니다.",
+                                   "citations": [{"ref": n, "quote": line}]}, ensure_ascii=False)
+        return json.dumps({"found": False, "answer": "", "citations": []})
+
+    return reply
+
+
+def test_구매_결재선_질문의_근거_후보에_구매_규정_결재선이_있다(stage2_index):
+    # hybrid(기본)는 1위. BM25만 쓰면 "넘는 구매는"이 글자 그대로 있는 제4조(견적)가 1위, 결재선은 2위입니다.
+    [top] = stage2_index.search(Q_PURCHASE, set(PURCHASE), "hybrid", top_k=1)
+    assert (top.chunk.doc_id, top.chunk.article) == ("gen-purchase-rule", "제3조(결재선)")
+    bm25 = [(h.chunk.doc_id, h.chunk.article) for h in stage2_index.search(Q_PURCHASE, set(PURCHASE), "bm25", 2)]
+    assert ("gen-purchase-rule", "제3조(결재선)") in bm25
+
+
+def test_구매_규정은_purchase_policy_범위가_없으면_찾지_않는다(stage2_index):
+    hits = stage2_index.search(Q_PURCHASE, {"public", "hr-policy", "finance-policy"}, "hybrid", top_k=20)
+    assert all(h.chunk.doc_id != "gen-purchase-rule" for h in hits)
+
+
+def test_등록부_예시_질문에_구매_규정을_근거로_답한다(stage2_index, tmp_path):
+    chat = FakeChat(quote_doc("구매 규정"))
+    app = create_app(stage2_index, TokenVerifier(key=PUBLIC_PEM), Answerer(stage2_index, chat),
+                     AuditLog(tmp_path / "audit.jsonl"))
+    body = ask(TestClient(app), Q_PURCHASE, token(PURCHASE)).json()
+    assert body["found"] is True
+    [cit] = body["citations"]
+    assert cit["docId"] == "gen-purchase-rule" and cit["verified"] is True
+    assert cit["quote"] == "- 합계 5,000,000원 초과: 팀장 → 본부장"

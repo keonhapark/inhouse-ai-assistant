@@ -20,6 +20,12 @@ def docs(pack):
     return {d.id: d for d in load_documents(pack, stage=1)}
 
 
+@pytest.fixture(scope="module")
+def all_docs(pack):
+    """모든 단계의 문서. 판이 여럿인 문서는 마지막 판이 남습니다."""
+    return {d.id: d for d in load_documents(pack)}
+
+
 def test_1단계_문서는_모두_본문이_있다(pack, docs):
     expected = {d["id"] for d in pack.documents if d["stage"] <= 1}
     assert set(docs) == expected
@@ -28,9 +34,14 @@ def test_1단계_문서는_모두_본문이_있다(pack, docs):
         assert all(s.text.strip() for s in doc.sections), doc.id
 
 
-def test_ACL_태그와_신뢰_등급은_docs_yaml을_따른다(pack, docs):
+def test_모든_단계의_문서에_본문이_있다(pack, all_docs):
+    assert set(all_docs) == {d["id"] for d in pack.documents}
+    assert all(all_docs[d].sections for d in all_docs)
+
+
+def test_ACL_태그와_신뢰_등급은_docs_yaml을_따른다(pack, all_docs):
     for entry in pack.documents:
-        doc = docs[entry["id"]]
+        doc = all_docs[entry["id"]]
         assert doc.acl_tags == tuple(entry["acl_tags"])
         assert doc.trust == entry["trust"]
 
@@ -62,9 +73,9 @@ def test_생성_문서에는_채우지_않은_자리표시자가_없다(docs):
                     assert "{{" not in part and "}}" not in part, (doc.id, s.label)
 
 
-def test_출처_유형과_라이선스는_고정본이_아니라_docs_yaml을_따른다(pack, docs):
+def test_출처_유형과_라이선스는_고정본이_아니라_docs_yaml을_따른다(pack, all_docs):
     for entry in pack.documents:
-        src = docs[entry["id"]].source
+        src = all_docs[entry["id"]].source
         assert src["type"] == entry["source"]["type"]
         assert src["license"] == entry["source"]["license"]
 
