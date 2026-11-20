@@ -212,10 +212,13 @@ class Answerer:
             ref = _ref(c.get("ref")) if isinstance(c, dict) else None
             quote = c.get("quote") if isinstance(c, dict) else None
             if ref is not None and 1 <= ref <= len(hits) and isinstance(quote, str):
-                cit = _citation(hits[ref - 1].chunk, quote)
-                if cit["verified"]:
-                    citations.append(cit)
-                    sources.append(hits[ref - 1].chunk)
+                # 모델이 문장은 바로 옮기고 근거 번호만 틀리는 일이 있어(실제 모델에서 확인), 가리킨 근거에 없으면
+                # 다른 후보에서 찾고 실제 출처로 고쳐 적습니다. 대조 기준(글자)은 그대로입니다.
+                order = [hits[ref - 1].chunk] + [h.chunk for i, h in enumerate(hits) if i != ref - 1]
+                source = next((ch for ch in order if quote_in(quote, ch.text)), None)
+                if source is not None:
+                    citations.append(_citation(source, quote))
+                    sources.append(source)
         tried = len(raw) if isinstance(raw, list) else 0
         verified = len(citations)
         answer = reply.get("answer")

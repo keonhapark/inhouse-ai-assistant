@@ -374,3 +374,17 @@ def test_gateway_응답_오류와_닿지_못함을_구분한다(handler, unreach
     with pytest.raises(LLMError) as e:
         GatewayChat("http://gw/v1", transport=httpx.MockTransport(handler)).complete([], "t")
     assert e.value.unreachable is unreachable
+
+
+def test_근거_번호가_틀려도_문장이_다른_후보에_있으면_실제_출처로_적는다(make_client):
+    def reply(messages):
+        right = json.loads(quote_first(messages, n_chars=40, ref=1))["citations"][0]
+        return json.dumps({"found": True, "answer": "답", "citations": [{"ref": 2, "quote": right["quote"]}]},
+                          ensure_ascii=False)
+
+    client, chat, _ = make_client(reply)
+    body = ask(client, "연차를 쓰려면 며칠 전에 신청해야 하나요", token(STAFF)).json()
+    assert body["found"] is True
+    prompt = chat.calls[0][0][1]["content"]
+    first_head = prompt.split("[1] ", 1)[1].split("\n", 1)[0]
+    assert f"조문: {body['citations'][0]['article']} /" in first_head
