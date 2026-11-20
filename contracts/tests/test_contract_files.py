@@ -101,6 +101,13 @@ def test_ops_examples_follow_schema() -> None:
         "usage": {"promptTokens": 120, "completionTokens": 30}, "costUsd": 0.000027,
         "messages": [{"role": "user", "content": "[전화번호]로 회의 안내 보내 줘"}],
         "redactions": [{"entity": "KR_PHONE", "placeholder": "[전화번호]", "messageIndex": 0, "start": 0, "end": 6}]})
+def _override(o: dict) -> dict:
+    """팩의 인자 조건 when {arg, gt}는 등록부에서 when=arg_gt와 arg·gt 필드로 씁니다."""
+    if isinstance(o["when"], dict):
+        return {"tool": o["tool"], "when": "arg_gt", **o["when"], "action": o["action"]}
+    return o
+
+
 def test_agent_registry_matches_pack() -> None:
     """팩 agents.yaml의 항목을 등록부 스키마로 옮길 수 있어야 합니다(gateway 구현과 같은 변환)."""
     tools = {t["name"]: t for t in load(CONTRACTS / "mcp/tools.json")["tools"]}
@@ -115,7 +122,7 @@ def test_agent_registry_matches_pack() -> None:
                 "allowedRisk": a["allowed_risk"], "docScopes": a.get("doc_scopes", []),
                 "modelPolicy": a["model_policy"],
                 "riskPolicy": {"read": rp["read"], "reversibleWrite": rp["reversible_write"],
-                               "irreversible": rp["irreversible"], "overrides": rp.get("overrides", [])},
+                               "irreversible": rp["irreversible"], "overrides": [_override(o) for o in rp.get("overrides", [])]},
                 "routingKeywords": a.get("routing", {}).get("keywords", []),
             }
             validate("openapi/gateway.yaml", "AgentRegistryEntry", entry)
