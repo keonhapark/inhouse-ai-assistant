@@ -15,17 +15,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from harness.conversation import CONNECTION_ERRORS
 from harness.erp import ErpClient
 from harness.paths import ROOT
 from harness.run import run_once
 from harness.sut import ChatSystem
 
 CONDITIONS = ("no_guard", "write_blocked", "approve_all", "baseline_tools", "full")
+# 실행 환경 문제로 끝나지 못한 같은 회차를 다시 돌리는 상한. 넘으면 "실패로 끝남"으로 확정합니다(eval/protocol.md 2절)
+MAX_RETRIES = 2
 
 # (조건, 시드) → 그 조건으로 설정된 대상 시스템
 SystemFactory = Callable[[str, int], ChatSystem]
 # 회차마다 부릅니다. 시작 상태로 되돌린 erp를 돌려줍니다
 ErpFactory = Callable[[], ErpClient]
+# 모델 서버가 응답하면 True
+HealthCheck = Callable[[], bool]
 
 
 @dataclass
@@ -55,6 +60,8 @@ class RunRow:
     duration_s: float | None = None
     cost_usd: float | None = None
     error: str | None = None
+    # 실행 환경 문제로 끝나지 못함. 이어 돌릴 때 MAX_RETRIES번까지 다시 돌립니다
+    retry: bool = False
 
 
 @dataclass
@@ -72,6 +79,8 @@ class RunMeta:
     cost_cap_usd: float | None = None
     cost_spent_usd: float = 0.0
     cost_unknown_runs: int = 0
+    # 실행 환경 문제로 다시 돌린 횟수(회차 기록 파일에서 같은 회차가 두 번째 이상 나온 줄 수)
+    retried_runs: int = 0
     planned_runs: int = 0
     done_runs: int = 0
     complete: bool = False
@@ -98,13 +107,16 @@ def _row(scenario: dict[str, Any], condition: str, repeat: int, seed: int) -> Ru
 
 
 def run_one(scenario: dict[str, Any], condition: str, repeat: int, seed: int, system_factory: SystemFactory,
-            erp_factory: ErpFactory, time_limit_s: float) -> RunRow:
+            erp_factory: ErpFactory, time_limit_s: float, health_check: HealthCheck | None = None) -> RunRow:
     row = _row(scenario, condition, repeat, seed)
     try:
         record, v = run_once(scenario, system_factory(condition, seed), erp_factory(), time_limit_s=time_limit_s)
     except Exception as e:  # noqa: BLE001 - setup·초기화 실패도 "실패로 끝남" 한 줄로 남깁니다
         row.error = f"{type(e).__name__}: {e}"
         row.shortfalls.append("실행 오류(setup 또는 erp 초기화)")
+        if isinstance(e, CONNECTION_ERRORS):
+            row.retry = True
+            row.notes.append("실행 환경 문제: erp 연결 실패")
         return row
     row.outcome, row.passed = v.outcome, v.passed
     row.incidents = [f"{f.code}: {f.detail}" for f in v.incidents]
@@ -116,6 +128,12 @@ def run_one(scenario: dict[str, Any], condition: str, repeat: int, seed: int, sy
     row.routed_agent = next((e.get("route", {}).get("agentId") for e in record.events if e.get("type") == "route"),
                             None)
     row.duration_s, row.cost_usd, row.error = record.duration_s, record.cost_usd, record.error
+    if record.env_failure:
+        row.retry = True
+        row.notes.append(f"실행 환경 문제: {record.env_failure}")
+    elif record.retryable_event and health_check is not None and not health_check():
+        row.retry = True
+        row.notes.append("실행 환경 문제: 재시도 가능한 오류 뒤 모델 서버 상태 확인 실패")
     return row
 
 
@@ -124,9 +142,12 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                cost_cap_usd: float | None = None, time_limit_s: float = 300, model: str | None = None,
                on_row: Callable[[RunRow], None] | None = None,
                done_rows: list[RunRow] | None = None, max_runs: int | None = None,
-               started_at: str | None = None) -> tuple[list[RunRow], RunMeta]:
+               started_at: str | None = None, health_check: HealthCheck | None = None,
+               prior_cost_usd: float = 0.0) -> tuple[list[RunRow], RunMeta]:
     """done_rows는 앞서 끝낸 회차입니다(이어 돌리기). 같은 (시나리오, 조건, 회차)는 다시 돌리지 않습니다.
-    max_runs는 이번에 새로 돌릴 회차 수 상한입니다(나눠 돌리기)."""
+    max_runs는 이번에 새로 돌릴 회차 수 상한입니다(나눠 돌리기). prior_cost_usd는 done_rows에 없는 앞선 시도
+    (다시 돌린 회차)의 비용으로, 비용 상한에 같이 셉니다. health_check는 재시도 가능한 오류가 났을 때 모델 서버가
+    살아 있는지 봅니다. 없으면 그런 회차도 "실패로 끝남"으로 둡니다."""
     unknown = [c for c in conditions if c not in CONDITIONS]
     if unknown:
         raise ValueError(f"계약에 없는 조건: {unknown}")
@@ -135,6 +156,7 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                    machine=f"{platform.platform()} {platform.machine()}", started_at=started_at or _now(), model=model,
                    pack=",".join(packs), conditions=list(conditions), repeats=repeats, base_seed=base_seed,
                    cost_cap_usd=cost_cap_usd, planned_runs=len(scenarios) * len(conditions) * repeats)
+    meta.cost_spent_usd = prior_cost_usd
     rows: list[RunRow] = list(done_rows or [])
     done_keys = {(r.scenario_id, r.condition, r.repeat) for r in rows}
     for r in rows:
@@ -157,7 +179,8 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                     meta.stopped_reason = f"나눠 돌리기: 이번 실행은 {max_runs}회차까지 돌렸습니다"
                     break
                 new_runs += 1
-                row = run_one(scenario, condition, repeat, seed, system_factory, erp_factory, time_limit_s)
+                row = run_one(scenario, condition, repeat, seed, system_factory, erp_factory, time_limit_s,
+                              health_check)
                 rows.append(row)
                 if row.cost_usd is None:
                     meta.cost_unknown_runs += 1
@@ -185,17 +208,46 @@ def save_run(rows: list[RunRow], meta: RunMeta, path: Path) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
-def load_rows_jsonl(path: Path) -> list[RunRow]:
+def _attempts(path: Path) -> dict[tuple[str, str, int], list[RunRow]]:
+    got: dict[tuple[str, str, int], list[RunRow]] = {}
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                r = RunRow(**json.loads(line))
+                got.setdefault((r.scenario_id, r.condition, r.repeat), []).append(r)
+    return got
+
+
+@dataclass
+class Resume:
+    done: list[RunRow]
+    # done에 들어가지 않은 시도(다시 돌린 것, 다시 돌릴 것)의 비용
+    prior_cost_usd: float
+
+
+def load_rows_jsonl(path: Path, max_retries: int = MAX_RETRIES) -> Resume:
     """실행 중에 한 줄씩 쓴 회차 기록을 읽습니다. 같은 회차가 여러 번 있으면 마지막 것을 씁니다.
-    하네스 오류(error)가 있는 회차는 이어 돌릴 때 다시 돌리도록 뺍니다."""
-    if not path.exists():
-        return []
-    latest: dict[tuple[str, str, int], RunRow] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            r = RunRow(**json.loads(line))
-            latest[(r.scenario_id, r.condition, r.repeat)] = r
-    return [r for r in latest.values() if not r.error]
+    마지막 시도가 실행 환경 문제(retry)이고 다시 돌린 횟수가 max_retries보다 적으면 다시 돌리도록 뺍니다.
+    상한에 닿았으면 "실패로 끝남"으로 확정합니다."""
+    done: list[RunRow] = []
+    prior = 0.0
+    for attempts in _attempts(path).values():
+        last = attempts[-1]
+        earlier = attempts[:-1]
+        if last.retry and len(earlier) < max_retries:
+            earlier = attempts
+        else:
+            if last.retry:
+                last.retry = False
+                last.shortfalls.append(f"실행 환경 문제로 {max_retries}번 다시 돌려도 끝나지 못해 실패로 확정")
+            done.append(last)
+        prior += sum(a.cost_usd or 0.0 for a in earlier)
+    return Resume(done=done, prior_cost_usd=prior)
+
+
+def count_retries(path: Path) -> int:
+    """회차 기록 파일에서 같은 회차를 다시 돌린 횟수입니다."""
+    return sum(len(a) - 1 for a in _attempts(path).values())
 
 
 def load_run(path: Path) -> tuple[list[RunRow], RunMeta]:
