@@ -20,7 +20,7 @@ LangGraph로 계획 → 판정 → 미리보기 → 승인 interrupt → 실행 
 - 도구 호출마다 판정합니다(`run/policy.py`).
   - `full`: 위험 등급이 에이전트 `allowed_risk` 밖이면 금지, 그 밖은 `risk_policy`(auto, auto_with_undo, confirm, deny)와 `overrides`를 따릅니다. `when: wide_scope`는 팩 `org.yaml`의 `delegation_policy.wide_scope`(기간, 금액 한도, 모든 양식)로 판단하고, 판단할 수 없으면 넓다고 봅니다.
   - `no_guard`: 모두 바로 실행 / `write_blocked`: 쓰기 도구를 모델에 보이지 않고 호출도 막음 / `approve_all`, `baseline_tools`: 쓰기는 모두 승인
-- 신뢰 등급(`full`만, `run/trust.py`): 한 턴 안에 신뢰 불가 출력이 들어오면 그 턴이 끝날 때까지 `trust_required=user_direct` 도구를 막습니다. 신뢰 불가 출력은 다른 사람이 쓴 자유 문장이 든 erp 출력(사유·제목·의견 등, 작성자가 요청자가 아니거나 모름)과, 팩 `docs.yaml`에서 `trust: trusted`가 아닌 문서를 인용한 rag 답입니다. 신뢰 불가 출력에는 표시를 붙여 모델에 넘기고, 다음 턴을 시작할 때 그 본문을 기록에서 뺍니다(앞 턴에서 읽은 지시가 다음 턴의 도구를 움직이지 못하게).
+- 신뢰 등급(`full`만, `run/trust.py`): 한 턴 안에 신뢰 불가 출력이 들어오면 그 턴이 끝날 때까지 `trust_required=user_direct` 도구를 막습니다. 그 대화(`conversationId`)의 다음 턴부터는 `user_direct` 도구를 바로 실행하지 않고 미리보기 승인을 받습니다(대화가 끝날 때까지). 신뢰 불가 출력은 다른 사람이 쓴 자유 문장이 든 erp 출력(사유·제목·의견 등, 작성자가 요청자가 아니거나 모름)과, 팩 `docs.yaml`에서 `trust: trusted`가 아닌 문서를 인용한 rag 답입니다. 신뢰 불가 출력에는 표시를 붙여 모델에 넘기고, 다음 턴을 시작할 때 그 본문을 기록에서 뺍니다. 모델이 쓴 문장과 막힌 호출의 인자는 기록에 남으므로, 앞 턴의 지시가 다음 턴 "진행해" 같은 짧은 답으로 실행되지 않게 승인 단계를 둡니다.
 - confirm이면 erp 미리보기(dryRun)를 받아 `awaiting_approval`과 `pendingApproval`로 멈춥니다. `/resume`의 `approvalId`가 기다리는 것과 다르거나 이미 결정됐으면 409입니다. 거절하면 실행하지 않고 끝냅니다.
 - 쓰기 실행은 `conversationId`와 도구 호출 ID로 만든 멱등 키를 씁니다. auto_with_undo로 실행한 되돌릴 수 있는 행동은 답 끝에 행동 ID와 함께 안내합니다.
 - 요청자가 부를 수 없는 에이전트(fallback 포함, `callable_by`)면 도구 없이 안내만 합니다. 토큰의 에이전트·요청자·대화가 요청과 같은지 봅니다. 토큰 확인 키(`DELEGATION_TOKEN_PUBLIC_KEY`나 `DELEGATION_JWKS_URL`)가 없으면 시작하지 않고, 개발 때만 `AGENT_ALLOW_UNVERIFIED_TOKENS=1`로 끕니다.
@@ -50,6 +50,7 @@ Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·�
 - 도구 메타데이터: `annotations.readOnlyHint`(read), `annotations.destructiveHint`(irreversible), `_meta`의 `risk`, `trustRequired`, `requiredScope`, `stage`
 - 사람 화면 전용 operation(`x-human-only`, 결재 승인·반려)에 묶인 도구가 있으면 시작하지 않습니다.
 - 호출마다 감사 이벤트(`tool.called`, `tool.blocked`)를 남깁니다. 인자는 `argsHash`만 남기고, 토큰 문자열은 넣지 않습니다.
+- 신뢰 등급과 위험 등급(`risk_policy`·`allowed_risk`)은 서버에서 판정하지 않습니다. `_meta.trustLevel`은 호출 쪽(LangGraph 실행부)이 대화 상태로 정한 값을 그대로 씁니다. 신뢰 표시는 대화 기록에 묶여 있어 서버가 알 수 없고, 평가 조건(`no_guard` 등)마다 위험 판정을 다르게 해야 해서 실행부에 둡니다. 서버를 부를 수 있는 것은 `aud`에 `mcp`가 든 위임 토큰을 가진 쪽뿐입니다.
 
 도구 인자는 이름으로 erp 요청에 놓습니다: path 파라미터 → 경로, query 파라미터 → 쿼리, 본문 최상위 속성 → 본문, 본문 객체 속성 안의 이름(대결 위임 `scope.formTypes` 등) → 그 객체, 그 밖은 결재 양식 `fields`. `backend.fixed` 값은 같은 이름의 인자보다 우선하고, 그 이름을 입력 스키마에 두면 시작하지 않습니다. 경로 인자는 퍼센트 인코딩합니다.
 

@@ -82,6 +82,24 @@ def test_taint_blocks_user_direct_tools_only_in_full(hr) -> None:
     assert decide(hr, LEAVE, {}, "no_guard", True, WIDE).action == "auto"
 
 
+def test_conversation_taint_turns_user_direct_into_confirm(hr) -> None:
+    """앞 턴에서 신뢰 불가 출력을 읽은 대화: user_direct 도구는 바로 실행하지 않고 승인을 받습니다."""
+    assert decide(hr, DLG, narrow_dlg(), "full", False, WIDE, True).action == "confirm"
+    assert decide(hr, LEAVE, {}, "full", False, WIDE, True).action == "confirm"
+    assert decide(hr, WITHDRAW, {}, "full", False, WIDE, True).action == "confirm"
+    assert decide(hr, READ, {}, "full", False, WIDE, True).action == "auto"
+    # 같은 턴의 신뢰 불가 출력은 여전히 막습니다.
+    assert decide(hr, DLG, narrow_dlg(), "full", True, WIDE, True).action == "blocked"
+    # 신뢰 등급은 full에서만 씁니다.
+    assert decide(hr, LEAVE, {}, "no_guard", False, WIDE, True).action == "auto"
+
+
+def test_conversation_taint_keeps_deny(assistant) -> None:
+    # 금지는 확인으로 풀리지 않습니다.
+    tool = ToolMeta("room_reserve", "irreversible", "user_direct")
+    assert decide(assistant, tool, {}, "full", False, WIDE, True).action == "deny"
+
+
 @pytest.mark.parametrize(
     ("condition", "read", "write"),
     [

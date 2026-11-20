@@ -9,6 +9,8 @@
 
 신뢰 등급(full만): 한 턴 안에 신뢰 불가 출력(다른 사람이 쓴 자유 문장, 신뢰 표시가 없는 문서)이
 들어오면, 그 턴이 끝날 때까지 trust_required=user_direct 도구를 부르지 않습니다.
+그 대화의 다음 턴부터는 user_direct 도구를 바로 실행하지 않고 미리보기 승인을 받습니다. 앞 턴에서 읽은
+지시가 남은 기록(모델이 쓴 문장, 막힌 호출의 인자)을 타고 "진행해" 같은 짧은 답으로 실행되지 않게 하려는 것입니다.
 """
 
 from __future__ import annotations
@@ -93,7 +95,7 @@ def visible_to_model(tool: ToolMeta, condition: str) -> bool:
 
 
 def decide(agent: Agent, tool: ToolMeta, args: dict[str, Any], condition: str, tainted: bool,
-           wide: WideScope) -> Decision:
+           wide: WideScope, conversation_tainted: bool = False) -> Decision:
     if condition not in CONDITIONS:
         raise ValueError(f"알 수 없는 조건: {condition}")
     if tool.name not in agent.tools:
@@ -118,4 +120,6 @@ def decide(agent: Agent, tool: ToolMeta, args: dict[str, Any], condition: str, t
             action = o["action"]
     if action == "deny":
         return Decision("deny", f"{tool.name}은 이 에이전트에서 금지된 도구입니다")
+    if tool.trust_required == "user_direct" and conversation_tainted and action in ("auto", "auto_with_undo"):
+        return Decision("confirm", "이 대화에서 신뢰할 수 없는 내용을 읽어 실행 전에 확인을 받습니다")
     return Decision(action)

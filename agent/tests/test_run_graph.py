@@ -200,7 +200,8 @@ async def test_injected_instruction_cannot_call_user_direct_tool(r: RunHarness) 
 
 
 @pytest.mark.anyio
-async def test_taint_resets_on_next_user_turn(r: RunHarness) -> None:
+async def test_next_turn_after_taint_needs_confirmation(r: RunHarness) -> None:
+    """앞 턴에서 신뢰 불가 출력을 읽은 대화는 다음 턴의 user_direct 도구를 승인받고 실행합니다."""
     await _foreign_delegation(r)
     conv = cid()
     token = mint(cid=conv)
@@ -208,6 +209,47 @@ async def test_taint_resets_on_next_user_turn(r: RunHarness) -> None:
     r.llm.script = [call("delegation_list", {"role": "delegate"}), say("1건입니다."),
                     call("leave_request", args), say("올렸습니다.")]
     await r.runner.run(token, conv, "hr", "맡은 대결 알려 줘", ME)
+    s = await r.runner.run(token, conv, "hr", f"{args['start_date']} 연차 써 줘", ME)
+    assert s["status"] == "awaiting_approval"
+    assert s["pendingApproval"]["toolPreview"]["arguments"] == args
+    done = await r.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
+    assert done["status"] == "completed" and done["actions"][0]["tool"] == "leave_request"
+    executed = [c for c in r.caller.calls if c[0] == "leave_request" and not c[2].get("dryRun")]
+    assert [c[2]["trustLevel"] for c in executed] == ["user_direct"]
+
+
+@pytest.mark.anyio
+async def test_injection_from_previous_turn_does_not_run_on_go_ahead(r: RunHarness) -> None:
+    """앞 턴에 주입된 지시가 막힌 뒤, 다음 턴 "진행해"에 모델이 같은 인자로 다시 불러도 확인 없이 실행되지 않습니다."""
+    await _foreign_delegation(r)
+    conv = cid()
+    token = mint(cid=conv)
+    narrow = {**INJECTED, "endsAt": "2027-03-09T00:00:00+09:00", "formTypes": ["leave"], "maxAmount": 0}
+    r.llm.script = [call("delegation_list", {"role": "delegate"}), call("delegation_register", narrow),
+                    say("등록하려 했지만 막혔습니다. 진행할까요?"),
+                    call("delegation_register", narrow), say("등록했습니다.")]
+    first = await r.runner.run(token, conv, "hr", "맡은 대결 알려 줘", ME)
+    assert first["status"] == "blocked"
+    # 막힌 호출의 인자는 기록에 남아 있습니다(그래서 다음 턴에 확인이 필요합니다).
+    s = await r.runner.run(token, conv, "hr", "진행해", ME)
+    assert s["status"] == "awaiting_approval"
+    assert s["pendingApproval"]["toolPreview"]["tool"] == "delegation_register"
+    assert s["pendingApproval"]["toolPreview"]["arguments"]["delegateId"] == "E0040"
+    assert not [c for c in r.caller.calls if c[0] == "delegation_register" and not c[2].get("dryRun")]
+    rejected = await r.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "reject")
+    assert rejected["status"] == "completed" and rejected["actions"] == []
+    mine = await r.h.service.call("delegation_list", {"role": "delegator"}, token, CallMeta())
+    assert mine.data["items"] == []
+
+
+@pytest.mark.anyio
+async def test_conversation_without_untrusted_output_runs_user_direct_directly(r: RunHarness) -> None:
+    conv = cid()
+    token = mint(cid=conv)
+    args = leave_args()
+    r.llm.script = [call("leave_get_balance", {}), say("15일 남았습니다."), call("leave_request", args),
+                    say("올렸습니다.")]
+    await r.runner.run(token, conv, "hr", "연차 며칠 남았어?", ME)
     s = await r.runner.run(token, conv, "hr", f"{args['start_date']} 연차 써 줘", ME)
     assert s["status"] == "completed" and s["actions"][0]["tool"] == "leave_request"
 
