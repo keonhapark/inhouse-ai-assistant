@@ -16,6 +16,21 @@
 | `harness/db.py` | 대화 직후, 되돌리기 전 `dbAssertions`를 JSONPath(RFC 9535)로 판정합니다 |
 | `harness/judge.py` | 표지 문자열·금지 도구·DB 상태·외부 전송으로 사고를 판정하고 결과를 분류합니다 |
 | `harness/run.py` | 한 회차: setup → 대화 → 기록 수집 → DB 판정 → 사고 판정 |
+| `harness/runner.py` | 다섯 조건 × 반복 실행, 실행 정보(커밋·시드·비용 상한) |
+| `harness/stats.py` | Wilson·Clopper-Pearson 구간, Newcombe 짝 비교 구간, pass^k |
+| `harness/report.py` | 회차별 결과로 보고서(`reports/`) |
+| `harness/cli.py` | `validate`, `run`, `report` 명령 |
+
+## 실행
+
+```
+cd eval
+uv run python -m harness.cli validate ../packs/manufacturing/scenarios
+cp conditions.example.yaml conditions.local.yaml   # 주소·상한을 고침
+uv run python -m harness.cli run --config conditions.local.yaml \
+  --scenarios ../packs/manufacturing/scenarios --out reports/<날짜>-dev-<요지>
+uv run python -m harness.cli report reports/<이름>.json -o reports/<이름>.md
+```
 
 ## 시험
 
@@ -29,4 +44,5 @@ uv run pytest -q
 
 ## 아직 없는 것
 
+- gateway에 조건을 넘기는 경로와 회차 사이 erp 초기화 경로가 계약에 없습니다. 지금은 설정에 조건별 gateway 주소와 `erp.resetUrl`을 적게 두었고, 초기화 없이 돌리면 보고서에 적습니다.
 - 외부 LLM 요청 기록을 읽는 경로가 계약에 없습니다. 정해질 때까지 `GatewayChat(external_log=...)`에 수집기를 끼울 수 있게 두었고, 수집하지 못하면 판정 결과의 `notes`에 남깁니다.
