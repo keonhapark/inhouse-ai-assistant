@@ -11,7 +11,7 @@ info:
     - 결재(`documentId`): erp 결재 문서. 팀장 승인함에서 승인·반려합니다. 에이전트는 결재 승인 도구가 없습니다.
 
     LLM 출구
-    - `POST /v1/chat/completions` 등 OpenAI 호환 엔드포인트는 LiteLLM 프록시가 그대로 노출하고, 이 문서에는 적지 않습니다
+    - `POST /v1/chat/completions` 등 OpenAI 호환 엔드포인트는 gateway가 받아 정책을 확인한 뒤 LiteLLM 프록시로 넘기며, 형식은 OpenAI 호환 그대로라 이 문서에는 적지 않습니다
       (https://docs.litellm.ai). rag·agent는 여기만 부릅니다. 요청에 `X-Delegation-Token`을 붙이면 gateway가 `agt` 클레임으로
       에이전트 모델 정책(local_only 등)을 강제하고, 가림·기밀 판정·외부 전송 기록을 남깁니다.
     - `POST /v1/chat/completions` 응답(스트림이 아닌 것)에는 실제로 보낸 별칭과 위치를 헤더로 붙입니다:
@@ -212,6 +212,7 @@ paths:
               schema: {$ref: "#/components/schemas/ConversationSummary"}
         "400": {$ref: "#/components/responses/Problem"}
         "403": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
 
   /conversations/{conversationId}:
     get:
@@ -250,6 +251,7 @@ paths:
             text/event-stream:
               schema: {$ref: "#/components/schemas/ChatEvent"}
         "404": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
         "409":
           description: 실행 승인을 기다리는 중이라 새 메시지를 받지 않음
           content:
