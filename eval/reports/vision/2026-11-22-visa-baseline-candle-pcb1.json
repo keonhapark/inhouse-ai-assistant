@@ -1,0 +1,885 @@
+{
+ "seed": 7,
+ "classes": {
+  "candle": {
+   "normal": 40,
+   "anomaly": 40,
+   "defectTypes": {
+    "chunk of wax missing": 6,
+    "foreign particals on candle": 4,
+    "damaged corner of packaging": 9,
+    "different colour spot": 9,
+    "wax melded out of the candle": 4,
+    "extra wax in candle": 3,
+    "weird candle wick": 5
+   },
+   "typeAccuracy": {
+    "n": 9,
+    "N": 20,
+    "rate": 0.45,
+    "low": 0.23057789677592588,
+    "high": 0.6847218669594517
+   },
+   "auroc": 0.925,
+   "threshold": 0.4289586550615364
+  },
+  "pcb1": {
+   "normal": 40,
+   "anomaly": 40,
+   "defectTypes": {
+    "melt": 17,
+    "missing": 9,
+    "bent": 8,
+    "scratch": 6
+   },
+   "typeAccuracy": {
+    "n": 10,
+    "N": 20,
+    "rate": 0.5,
+    "low": 0.27195784956079394,
+    "high": 0.7280421504392083
+   },
+   "auroc": 0.7175,
+   "threshold": 0.8714575423346368
+  }
+ },
+ "predictions": [
+  {
+   "file": "candle/candle-027.jpg",
+   "task": "defect_type",
+   "truth": "chunk of wax missing",
+   "pred": "chunk of wax missing"
+  },
+  {
+   "file": "candle/candle-019.jpg",
+   "task": "defect_type",
+   "truth": "damaged corner of packaging",
+   "pred": "damaged corner of packaging"
+  },
+  {
+   "file": "candle/candle-003.jpg",
+   "task": "defect_type",
+   "truth": "wax melded out of the candle",
+   "pred": "chunk of wax missing"
+  },
+  {
+   "file": "candle/candle-026.jpg",
+   "task": "defect_type",
+   "truth": "foreign particals on candle",
+   "pred": "chunk of wax missing"
+  },
+  {
+   "file": "candle/candle-038.jpg",
+   "task": "defect_type",
+   "truth": "weird candle wick",
+   "pred": "foreign particals on candle"
+  },
+  {
+   "file": "candle/candle-015.jpg",
+   "task": "defect_type",
+   "truth": "different colour spot",
+   "pred": "weird candle wick"
+  },
+  {
+   "file": "candle/candle-037.jpg",
+   "task": "defect_type",
+   "truth": "foreign particals on candle",
+   "pred": "chunk of wax missing"
+  },
+  {
+   "file": "candle/candle-004.jpg",
+   "task": "defect_type",
+   "truth": "damaged corner of packaging",
+   "pred": "damaged corner of packaging"
+  },
+  {
+   "file": "candle/candle-036.jpg",
+   "task": "defect_type",
+   "truth": "different colour spot",
+   "pred": "damaged corner of packaging"
+  },
+  {
+   "file": "candle/candle-006.jpg",
+   "task": "defect_type",
+   "truth": "damaged corner of packaging",
+   "pred": "chunk of wax missing"
+  },
+  {
+   "file": "candle/candle-031.jpg",
+   "task": "defect_type",
+   "truth": "different colour spot",
+   "pred": "different colour spot"
+  },
+  {
+   "file": "candle/candle-009.jpg",
+   "task": "defect_type",
+   "truth": "damaged corner of packaging",
+   "pred": "damaged corner of packaging"
+  },
+  {
+   "file": "candle/candle-012.jpg",
+   "task": "defect_type",
+   "truth": "damaged corner of packaging",
+   "pred": "weird candle wick"
+  },
+  {
+   "file": "candle/candle-005.jpg",
+   "task": "defect_type",
+   "truth": "different colour spot",
+   "pred": "different colour spot"
+  },
+  {
+   "file": "candle/candle-028.jpg",
+   "task": "defect_type",
+   "truth": "damaged corner of packaging",
+   "pred": "damaged corner of packaging"
+  },
+  {
+   "file": "candle/candle-008.jpg",
+   "task": "defect_type",
+   "truth": "extra wax in candle",
+   "pred": "different colour spot"
+  },
+  {
+   "file": "candle/candle-013.jpg",
+   "task": "defect_type",
+   "truth": "foreign particals on candle",
+   "pred": "chunk of wax missing"
+  },
+  {
+   "file": "candle/candle-010.jpg",
+   "task": "defect_type",
+   "truth": "different colour spot",
+   "pred": "different colour spot"
+  },
+  {
+   "file": "candle/candle-007.jpg",
+   "task": "defect_type",
+   "truth": "chunk of wax missing",
+   "pred": "chunk of wax missing"
+  },
+  {
+   "file": "candle/candle-020.jpg",
+   "task": "defect_type",
+   "truth": "weird candle wick",
+   "pred": "chunk of wax missing"
+  },
+  {
+   "file": "candle/candle-normal-036.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.19857405272470535,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-031.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.2782752790968055,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-022.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.21345248681164639,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-027.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.17845974942804613,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-012.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.18623771237871695,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-019.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.16855440695742016,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-018.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.3039807052966154,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-020.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.2671162663870569,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-015.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.22654335585269264,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-001.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.22896497381906566,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-032.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.18425608476730182,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-013.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.24980560086048534,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-030.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.18688013404127082,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-014.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.24280565901699813,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-016.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.2850812373530592,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-025.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.3451399530349375,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-007.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.2368673743881101,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-029.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.18173468819640362,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-011.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.3217092004225208,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-normal-002.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.22492519638712732,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-027.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.44853280434118875,
+   "pred": "anomaly"
+  },
+  {
+   "file": "candle/candle-019.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.33876871858541646,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-003.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.4650832186359295,
+   "pred": "anomaly"
+  },
+  {
+   "file": "candle/candle-026.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.3889514854413901,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-038.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.5244535990623898,
+   "pred": "anomaly"
+  },
+  {
+   "file": "candle/candle-015.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.3447306774796427,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-037.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.4089999896087351,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-004.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.5048683018278752,
+   "pred": "anomaly"
+  },
+  {
+   "file": "candle/candle-036.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.3481181663804925,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-006.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.44112475336357115,
+   "pred": "anomaly"
+  },
+  {
+   "file": "candle/candle-031.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.2524291656656044,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-009.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.3055400959844725,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-012.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.2688216160759333,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-005.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.34089531202270545,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-028.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.29836976923002445,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-008.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.3759294813273469,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-013.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.3854167664811556,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-010.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.22630729064613128,
+   "pred": "normal"
+  },
+  {
+   "file": "candle/candle-007.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.5092606191645299,
+   "pred": "anomaly"
+  },
+  {
+   "file": "candle/candle-020.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.4137341275247941,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-040.jpg",
+   "task": "defect_type",
+   "truth": "bent",
+   "pred": "bent"
+  },
+  {
+   "file": "pcb1/pcb1-011.jpg",
+   "task": "defect_type",
+   "truth": "scratch",
+   "pred": "scratch"
+  },
+  {
+   "file": "pcb1/pcb1-030.jpg",
+   "task": "defect_type",
+   "truth": "melt",
+   "pred": "melt"
+  },
+  {
+   "file": "pcb1/pcb1-002.jpg",
+   "task": "defect_type",
+   "truth": "scratch",
+   "pred": "melt"
+  },
+  {
+   "file": "pcb1/pcb1-023.jpg",
+   "task": "defect_type",
+   "truth": "melt",
+   "pred": "missing"
+  },
+  {
+   "file": "pcb1/pcb1-025.jpg",
+   "task": "defect_type",
+   "truth": "scratch",
+   "pred": "scratch"
+  },
+  {
+   "file": "pcb1/pcb1-019.jpg",
+   "task": "defect_type",
+   "truth": "bent",
+   "pred": "missing"
+  },
+  {
+   "file": "pcb1/pcb1-029.jpg",
+   "task": "defect_type",
+   "truth": "bent",
+   "pred": "missing"
+  },
+  {
+   "file": "pcb1/pcb1-037.jpg",
+   "task": "defect_type",
+   "truth": "melt",
+   "pred": "melt"
+  },
+  {
+   "file": "pcb1/pcb1-004.jpg",
+   "task": "defect_type",
+   "truth": "bent",
+   "pred": "missing"
+  },
+  {
+   "file": "pcb1/pcb1-005.jpg",
+   "task": "defect_type",
+   "truth": "missing",
+   "pred": "melt"
+  },
+  {
+   "file": "pcb1/pcb1-031.jpg",
+   "task": "defect_type",
+   "truth": "missing",
+   "pred": "missing"
+  },
+  {
+   "file": "pcb1/pcb1-018.jpg",
+   "task": "defect_type",
+   "truth": "missing",
+   "pred": "missing"
+  },
+  {
+   "file": "pcb1/pcb1-012.jpg",
+   "task": "defect_type",
+   "truth": "melt",
+   "pred": "missing"
+  },
+  {
+   "file": "pcb1/pcb1-009.jpg",
+   "task": "defect_type",
+   "truth": "melt",
+   "pred": "melt"
+  },
+  {
+   "file": "pcb1/pcb1-010.jpg",
+   "task": "defect_type",
+   "truth": "missing",
+   "pred": "missing"
+  },
+  {
+   "file": "pcb1/pcb1-006.jpg",
+   "task": "defect_type",
+   "truth": "melt",
+   "pred": "melt"
+  },
+  {
+   "file": "pcb1/pcb1-020.jpg",
+   "task": "defect_type",
+   "truth": "melt",
+   "pred": "missing"
+  },
+  {
+   "file": "pcb1/pcb1-022.jpg",
+   "task": "defect_type",
+   "truth": "scratch",
+   "pred": "bent"
+  },
+  {
+   "file": "pcb1/pcb1-016.jpg",
+   "task": "defect_type",
+   "truth": "bent",
+   "pred": "scratch"
+  },
+  {
+   "file": "pcb1/pcb1-normal-039.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.6122523122157353,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-006.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.5568983510833689,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-029.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.5535435010143904,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-002.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.7228939391868933,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-035.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.9906717133008499,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-normal-020.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.5708433128610882,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-007.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.45848549863304333,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-003.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 1.2792401167333307,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-normal-028.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.6472998503790938,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-021.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 1.6198971712887014,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-normal-019.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.612998394506114,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-024.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 1.05616805510865,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-normal-005.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.5965740702471329,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-036.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 1.1460344276825198,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-normal-001.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.800414486227477,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-038.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.6556299512212523,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-023.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.7086248853343482,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-004.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.5492833009987196,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-014.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.7041228552927086,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-normal-026.jpg",
+   "task": "anomaly",
+   "truth": "normal",
+   "score": 0.6015932460713524,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-040.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 1.0361652237286436,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-011.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.9821912106313492,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-030.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 1.3576342111908077,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-002.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.9435679359682658,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-023.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.8831225325467038,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-025.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.9183495079444979,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-019.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.6815124291635022,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-029.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.8041494285731897,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-037.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.865750938147218,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-004.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.7510082268684616,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-005.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.7049945788530138,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-031.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.6834245815290623,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-018.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 1.459135116470443,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-012.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 1.656799697397467,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-009.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.6270593790535354,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-010.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.7230789637279088,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-006.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 0.4484334898345868,
+   "pred": "normal"
+  },
+  {
+   "file": "pcb1/pcb1-020.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 1.599778019082748,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-022.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 1.0529816369507827,
+   "pred": "anomaly"
+  },
+  {
+   "file": "pcb1/pcb1-016.jpg",
+   "task": "anomaly",
+   "truth": "anomaly",
+   "score": 1.1325371792195011,
+   "pred": "anomaly"
+  }
+ ],
+ "summary": {
+  "typeAccuracy": {
+   "n": 19,
+   "N": 40,
+   "rate": 0.475,
+   "low": 0.31511970663496536,
+   "high": 0.6387198647359371
+  },
+  "typeMajority": {
+   "n": 9,
+   "N": 40,
+   "rate": 0.225,
+   "low": 0.10839663898405688,
+   "high": 0.3845116773034222
+  },
+  "detectionRecall": {
+   "n": 17,
+   "N": 40,
+   "rate": 0.425,
+   "low": 0.27042903126884266,
+   "high": 0.5910994195730359
+  },
+  "detectionFalsePositive": {
+   "n": 5,
+   "N": 40,
+   "rate": 0.125,
+   "low": 0.041859626138610065,
+   "high": 0.26803291736171975
+  },
+  "detectionAccuracy": {
+   "n": 52,
+   "N": 80,
+   "rate": 0.65,
+   "low": 0.5352031145206517,
+   "high": 0.7533280635274648
+  }
+ }
+}
