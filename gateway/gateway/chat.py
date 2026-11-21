@@ -302,7 +302,7 @@ class ChatService:
                 if c.condition:
                     body["condition"] = c.condition
                 if c.route_method:
-                    # fallback이면 agent가 그 대화를 로컬로만 실행합니다(#308: 로컬 장애 때 전사 비서로 넘어가 외부로 나가던 경로).
+                    # fallback이면 agent가 그 대화를 로컬로만 실행합니다(#308: 로컬 장애 때 외부 허용 fallback 에이전트로 넘어가 외부로 나가던 경로).
                     # 계약은 첫 턴만 넘겨도 된다고 하지만, agent가 다시 떠도 같게 매 턴 넘깁니다.
                     body["routeMethod"] = c.route_method
                 if attachments:
