@@ -1,8 +1,8 @@
 """확인 셋 실행 기록에서 표지 문자열을 가린 사본을 만듭니다(eval/protocol.md 7절).
 
 확인 셋 내용은 저장소에 넣지 않습니다. 그런데 사고 기록(`incidents`)에는 찾은 표지 문자열이 그대로 남습니다.
-이 스크립트는 `<이름>.json`·`<이름>.rows.jsonl`의 모든 문자열 값에서 표지를 `[표지 <sha256 앞 12자>]`로 바꾼
-사본을 씁니다. 가린 JSON의 `meta.notes`에는 원본 두 파일의 sha256을 적습니다. 원본은 저장소 밖에 둡니다.
+이 스크립트는 `<이름>.json`·`<이름>.rows.jsonl`의 모든 문자열 값에서 표지를 `[표지 <sha256 앞 12자>]`로 바꾸고,
+시나리오 판정 기준이 문장으로 남는 곳(dbAssertions 미달의 경로·값, 근거 문서 ID)도 가린 사본을 씁니다. 가린 JSON의 `meta.notes`에는 원본 두 파일의 sha256을 적습니다. 원본은 저장소 밖에 둡니다.
 
     uv run python tools/mask_markers.py --bundle <묶음 폴더> --run <원본 이름> --out reports/<이름> \\
         [--note "보고서 메모 한 줄"]...
@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from harness.scenario import load_scenarios  # noqa: E402
 
 MARKER_FILES = ("markers.json", "markers.yaml", "markers.yml")
+# 판정 기준이 문장으로 남는 곳(harness/judge.py): dbAssertions 미달("dbAssertions[0] <경로> <비교> <값>: ...")과
+# 근거 문서 미달("근거에 <문서 ID>가 없음"). 항목 번호만 남깁니다.
+CRITERIA = ((re.compile(r"dbAssertions\[(\d+)\] .*", re.S), r"dbAssertions[\1] 판정 기준 미달(기준 문장 가림)"),
+            (re.compile(r"근거에 .+가 없음$", re.S), "근거에 [가림]가 없음"))
+CRITERIA_LEFT = re.compile(r"dbAssertions\[\d+\] (?!판정 기준 미달\(기준 문장 가림\))|근거에 (?!\[가림\]가 없음)")
 
 
 def token(marker: str) -> str:
@@ -51,6 +57,8 @@ def collect_markers(bundle: Path) -> list[str]:
 def mask_text(text: str, markers: list[str]) -> str:
     for m in markers:
         text = text.replace(m, token(m))
+    for pattern, repl in CRITERIA:
+        text = pattern.sub(repl, text)
     return text
 
 
@@ -65,8 +73,9 @@ def mask_value(value: Any, markers: list[str]) -> Any:
 
 
 def leftovers(text: str, markers: list[str]) -> int:
-    """원문 그대로나 JSON 이스케이프된 꼴로 남은 표지 수."""
-    return sum(1 for m in markers if m in text or json.dumps(m)[1:-1] in text)
+    """원문 그대로나 JSON 이스케이프된 꼴로 남은 표지 수와 가리지 않은 판정 기준 문장 수."""
+    return (sum(1 for m in markers if m in text or json.dumps(m)[1:-1] in text)
+            + len(CRITERIA_LEFT.findall(text)))
 
 
 def mask_run(bundle: Path, run: Path, out: Path, notes: list[str]) -> dict[str, str]:
@@ -77,7 +86,8 @@ def mask_run(bundle: Path, run: Path, out: Path, notes: list[str]) -> dict[str, 
     hashes = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (src_json, src_rows)}
     data = mask_value(json.loads(src_json.read_text(encoding="utf-8")), markers)
     data["meta"]["notes"] = [*data["meta"].get("notes", []), *notes,
-                             "회차 기록(.json·.rows.jsonl)은 확인 셋 표지 문자열을 `[표지 <sha256 앞 12자>]`로 가린 사본입니다"
+                             "회차 기록(.json·.rows.jsonl)은 확인 셋 표지 문자열을 `[표지 <sha256 앞 12자>]`로, 판정 기준 "
+                             "문장(dbAssertions 미달, 근거 문서 ID)을 항목 번호만 남겨 가린 사본입니다"
                              "(eval/tools/mask_markers.py). 가리지 않은 원본은 저장소 밖에 둡니다: "
                              + ", ".join(f"{n} sha256 {h}" for n, h in hashes.items())]
     json_text = json.dumps(data, ensure_ascii=False, indent=1) + "\n"

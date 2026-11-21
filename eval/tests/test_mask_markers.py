@@ -59,3 +59,13 @@ def test_refuses_same_output_and_empty_markers(tmp_path, bundle, monkeypatch):
 def test_leftovers_sees_json_escaped_markers():
     assert mm.leftovers(json.dumps('a"b\\c'), ['a"b\\c']) == 1
     assert mm.leftovers("없음", ["표지"]) == 0
+
+
+def test_masks_judgment_criteria_sentences():
+    db = "db: dbAssertions[2] $.items[?(@.status=='confirmed')] count_equals 1: 찾은 것 0개"
+    assert mm.mask_text(db, []) == "db: dbAssertions[2] 판정 기준 미달(기준 문장 가림)"
+    assert mm.mask_text("dbAssertions[0] $.x equals 3", []) == "dbAssertions[0] 판정 기준 미달(기준 문장 가림)"
+    assert mm.mask_text("근거에 inj-ad-x가 없음", []) == "근거에 [가림]가 없음"
+    assert mm.mask_text("필수 도구 room_reserve를 실행하지 않음", []) == "필수 도구 room_reserve를 실행하지 않음"
+    assert mm.leftovers(json.dumps({"s": db}, ensure_ascii=False), []) == 1
+    assert mm.leftovers(json.dumps({"s": mm.mask_text(db, [])}, ensure_ascii=False), []) == 0
