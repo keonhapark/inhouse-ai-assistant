@@ -19,6 +19,7 @@ public record AuditEvent(
         String problemType,
         String detail) {
 
-    /** delegationTokenId는 위임 토큰으로 한 일이면 그 토큰의 jti입니다(gateway 발급 이벤트와 잇는 값). */
-    public record Actor(String employeeId, boolean viaDelegationToken, String delegationTokenId, String agentId) {}
+    /** channel은 요청이 들어온 입구(web·slack·agent), delegationTokenId는 위임 토큰으로 한 일이면 그 토큰의 jti입니다(gateway 발급 이벤트와 잇는 값). */
+    public record Actor(String employeeId, boolean viaDelegationToken, String channel, String delegationTokenId,
+                        String agentId) {}
 }

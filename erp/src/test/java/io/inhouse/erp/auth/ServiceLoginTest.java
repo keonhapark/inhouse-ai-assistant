@@ -59,6 +59,13 @@ class ServiceLoginTest extends ApiTestBase {
         String auditor = pack.employees().stream().filter(e -> e.grade().equals("ceo")).findFirst().orElseThrow().id();
         JsonNode events = json(get("/audit-events", auditor, "actorId", emp, "limit", "500")).path("items");
         assertThat(events.findValuesAsText("operation")).contains("serviceLogin");
+        JsonNode loginEvent = null;
+        for (JsonNode e : events) {
+            if ("serviceLogin".equals(e.path("operation").asText())) {
+                loginEvent = e;
+            }
+        }
+        assertThat(loginEvent.path("actor").path("channel").asText()).isEqualTo("slack");
         assertThat(events.toString()).doesNotContain(SECRET).doesNotContain(body.path("accessToken").asText());
     }
 
@@ -88,10 +95,10 @@ class ServiceLoginTest extends ApiTestBase {
     }
 
     @Test
-    void shortSecretStopsStartup() {
-        assertThatThrownBy(() -> new ServiceLoginController(null, null, null,
-                new AuthProperties("x".repeat(32), 3600, "demo", null, "short"), null))
-                .isInstanceOf(IllegalStateException.class);
+    void shortSecretOnlyWarns() {
+        // 시작은 막지 않고 경고만 남깁니다(리드 결정). 짧은 비밀값도 맞으면 토큰을 줍니다.
+        new ServiceLoginController(null, null, null,
+                new AuthProperties("x".repeat(32), 3600, "demo", null, "short"), null);
     }
 
     @Test
