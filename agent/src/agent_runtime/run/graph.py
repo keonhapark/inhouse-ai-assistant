@@ -43,6 +43,7 @@ class RunGraphState(TypedDict, total=False):
     pending: dict[str, Any] | None
     tainted: bool
     conversation_tainted: bool
+    force_local: bool  # 라우터 fallback으로 연 대화(#308). TURN_RESET에 넣지 않아 대화 끝까지 남습니다
     actions: list[dict[str, Any]]
     undo_notes: list[str]
     citations: list[dict[str, Any]]
@@ -140,7 +141,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
                     *state.get("messages", [])]
         try:
             msg = await asyncio.to_thread(deps.llm.chat, messages, [openai_tool(t) for t in visible] or None,
-                                          {"X-Delegation-Token": ctx.token}, model_policy_for(ctx.agent, condition))
+                                          {"X-Delegation-Token": ctx.token}, model_policy_for(ctx.agent, condition, state.get("force_local", False)))
         except LLMError as e:
             return Command(update={"final": f"모델을 부르지 못했습니다({e}).", "status": "failed", "steps": steps},
                            goto="finish")

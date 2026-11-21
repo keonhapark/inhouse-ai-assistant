@@ -54,6 +54,10 @@ Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·�
 
 도구 인자는 이름으로 erp 요청에 놓습니다: path 파라미터 → 경로, query 파라미터 → 쿼리, 본문 최상위 속성 → 본문, 본문 객체 속성 안의 이름(대결 위임 `scope.formTypes` 등) → 그 객체, 그 밖은 결재 양식 `fields`. `backend.fixed` 값은 같은 이름의 인자보다 우선하고, 그 이름을 입력 스키마에 두면 시작하지 않습니다. 경로 인자는 퍼센트 인코딩합니다.
 
+## 라우터 fallback 대화의 모델
+
+`/run`의 `routeMethod`가 `fallback`이면(라우터가 LLM 오류·해석 실패·고르지 못함·확신도 낮음으로 부서를 고르지 못함) 그 대화는 끝까지 fallback 에이전트의 모델 정책과 관계없이 로컬 별칭으로 실행합니다(#308). 어느 부서 일인지 모르는 요청이 외부 모델로 가지 않게 하려는 것입니다. 로컬도 실패하면 오류로 끝나고 외부로 가지 않습니다. 장치를 끄는 조건(`no_guard`, `baseline_tools`)은 `contracts/eval/conditions.md`대로 모두 외부입니다.
+
 ## 첨부 영수증
 
 `/run`의 `attachments`(jpeg·png data URL, 최대 3장)는 `expense_request` 도구가 있는 에이전트만 읽습니다(`run/receipt.py`). 그 밖의 에이전트는 "읽지 않았습니다"라는 안내만 붙입니다.

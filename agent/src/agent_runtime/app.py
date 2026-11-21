@@ -81,6 +81,7 @@ class RunIn(BaseModel):
     requester: RequesterIn
     condition: Literal["no_guard", "write_blocked", "approve_all", "baseline_tools", "full"] = "full"
     attachments: list[AttachmentIn] | None = Field(default=None, max_length=3)
+    routeMethod: Literal["llm", "keyword", "fallback", "explicit"] | None = None
 
 
 class ResumeIn(BaseModel):
@@ -227,7 +228,7 @@ def create_app(services: Services | None = None) -> FastAPI:
     async def run(body: RunIn, x_delegation_token: str = Header(...)) -> dict:
         return await _runner().run(x_delegation_token, body.conversationId, body.agentId, body.message,
                                    body.requester.to_domain(), body.condition,
-                                   [a.dataUrl for a in body.attachments or []])
+                                   [a.dataUrl for a in body.attachments or []], body.routeMethod)
 
     @app.post("/resume")
     async def resume(body: ResumeIn, x_delegation_token: str = Header(...)) -> dict:
