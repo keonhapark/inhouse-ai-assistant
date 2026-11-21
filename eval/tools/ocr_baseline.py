@@ -5,7 +5,9 @@
 
 엔진:
 - `tesseract`: `tesseract` 명령(한국어 학습 데이터 `kor`)을 부릅니다. 설치는 따로 합니다(Apache-2.0).
-- `rapidocr`: `rapidocr_onnxruntime` 패키지(Apache-2.0, PaddleOCR 모델의 ONNX)를 씁니다. `--rec-model`로 한국어 인식 모델을 줍니다.
+- `rapidocr`: `rapidocr` 패키지(Apache-2.0, PaddleOCR 모델의 ONNX, onnxruntime)의 한국어 인식 모델(기본 PP-OCRv5 mobile).
+  저장소 밖 가상환경에 설치합니다: `uv venv ~/.cache/iaa-ocr-venv && uv pip install --python ~/.cache/iaa-ocr-venv/bin/python
+  rapidocr onnxruntime pillow pyyaml httpx jsonschema python-jsonpath`, 실행은 그 파이썬으로 합니다.
 - `oracle`: OCR을 건너뛰고 생성기가 그린 줄 텍스트를 그대로 씁니다. OCR이 완벽할 때 정규식이 낼 수 있는 상한입니다.
 
 묶음 폴더에는 `tools/make_receipts.py`가 만든 그림과 `truth.jsonl`이 있어야 합니다. 결과는 `<이름>.rows.jsonl`(항목마다
@@ -41,23 +43,26 @@ def tesseract_engine(lang: str = "kor") -> Engine:
     return run
 
 
-def rapidocr_engine(rec_model: str | None = None) -> Engine:
-    from rapidocr_onnxruntime import RapidOCR  # 선택 의존성
+def rapidocr_engine(version: str = "PPOCRV5", model: str = "MOBILE") -> Engine:
+    """RapidOCR(`rapidocr` 패키지, Apache-2.0)의 한국어 인식 모델. 모델은 처음 부를 때 내려받습니다."""
+    from rapidocr import LangRec, ModelType, OCRVersion, RapidOCR  # 선택 의존성(저장소 밖 가상환경)
 
-    ocr = RapidOCR(**({"rec_model_path": rec_model} if rec_model else {}))
+    ocr = RapidOCR(params={"Rec.lang_type": LangRec.KOREAN, "Rec.ocr_version": getattr(OCRVersion, version),
+                           "Rec.model_type": getattr(ModelType, model)})
 
     def run(image: Path, truth: dict[str, Any]) -> list[str]:
-        result, _ = ocr(str(image))
-        boxes = sorted(result or [], key=lambda b: (round(b[0][0][1] / 20), b[0][0][0]))  # 위→아래, 왼→오
+        r = ocr(str(image))
+        boxes = sorted(zip(r.boxes if r.boxes is not None else [], r.txts or ()),
+                       key=lambda b: (float(b[0][0][1]), float(b[0][0][0])))
         lines: list[str] = []
-        last_row = None
-        for box, text, _conf in boxes:
-            row = round(box[0][1] / 20)
-            if row == last_row and lines:
+        last_y = None
+        for box, text in boxes:  # 위→아래로, 윗변 높이가 가까우면(20px 안) 같은 줄로 붙입니다
+            y = float(box[0][1])
+            if last_y is not None and abs(y - last_y) < 20 and lines:
                 lines[-1] += " " + text
             else:
                 lines.append(text)
-            last_row = row
+                last_y = y
         return lines
     return run
 
@@ -107,11 +112,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--images", required=True, type=Path)
     ap.add_argument("--engine", choices=["tesseract", "rapidocr", "oracle"], required=True)
     ap.add_argument("--lang", default="kor", help="tesseract 언어")
-    ap.add_argument("--rec-model", help="rapidocr 인식 모델 경로(한국어)")
+    ap.add_argument("--rapidocr-version", default="PPOCRV5", help="rapidocr 인식 모델 판(PPOCRV4·PPOCRV5)")
+    ap.add_argument("--rapidocr-model", default="MOBILE", help="rapidocr 인식 모델 크기(MOBILE·SERVER)")
     ap.add_argument("--out", required=True, type=Path, help="결과 이름(확장자 없이)")
     ap.add_argument("--note", action="append", default=[])
     args = ap.parse_args(argv)
-    engine = {"tesseract": lambda: tesseract_engine(args.lang), "rapidocr": lambda: rapidocr_engine(args.rec_model),
+    engine = {"tesseract": lambda: tesseract_engine(args.lang), "rapidocr": lambda: rapidocr_engine(args.rapidocr_version, args.rapidocr_model),
               "oracle": oracle_engine}[args.engine]()
     rows, truths = run_baseline(args.images, engine)
     summary = summarize(_scores(rows), truths)
