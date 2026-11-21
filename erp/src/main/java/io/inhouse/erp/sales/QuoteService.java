@@ -111,22 +111,32 @@ public class QuoteService {
         return view(visible(employeeId, quotes.findById(id).orElse(null)));
     }
 
-    public WriteOutcome create(ErpPrincipal p, CreateRequest req) {
-        requireFeature();
-        if (!org.isSalesRep(p.employeeId())) {
+    /** 견적 작성은 영업 역할만. 본문 검사(422)보다 먼저 봅니다. */
+    public void requireSalesRep(String employeeId) {
+        if (!org.isSalesRep(employeeId)) {
             throw ApiException.forbidden("영업 역할만 견적을 씁니다");
         }
+    }
+
+    public WriteOutcome create(ErpPrincipal p, CreateRequest req) {
+        requireFeature();
+        requireSalesRep(p.employeeId());
         Pack.CustomerDef customer = pack.customer(req.customerId())
                 .orElseThrow(() -> ApiException.validation("customerId", "unknown"));
         List<Line> lines = new ArrayList<>();
-        for (int i = 0; i < req.lines().size(); i++) {
-            LineRequest l = req.lines().get(i);
-            Pack.ItemDef item = pack.item(l.itemCode())
-                    .orElseThrow(() -> ApiException.validation("lines/" + lines.size() + "/itemCode", "unknown"));
-            lines.add(new Line(item.code(), item.name(), l.quantity(), item.unitPrice(),
-                    Math.multiplyExact(l.quantity(), item.unitPrice())));
+        long total;
+        try {
+            for (int i = 0; i < req.lines().size(); i++) {
+                LineRequest l = req.lines().get(i);
+                Pack.ItemDef item = pack.item(l.itemCode())
+                        .orElseThrow(() -> ApiException.validation("lines/" + lines.size() + "/itemCode", "unknown"));
+                lines.add(new Line(item.code(), item.name(), l.quantity(), item.unitPrice(),
+                        Math.multiplyExact(l.quantity(), item.unitPrice())));
+            }
+            total = lines.stream().mapToLong(Line::amount).reduce(0L, Math::addExact);
+        } catch (ArithmeticException e) {
+            throw ApiException.validation("lines", "금액이 너무 큽니다");
         }
-        long total = lines.stream().mapToLong(Line::amount).reduce(0L, Math::addExact);
         LocalDate today = LocalDate.now(clock.withZone(zone));
         LocalDate valid = req.validUntil() == null ? today.plusDays(DEFAULT_VALID_DAYS) : req.validUntil();
         if (valid.isBefore(today)) {

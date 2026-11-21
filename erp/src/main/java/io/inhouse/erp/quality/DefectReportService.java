@@ -145,6 +145,9 @@ public class DefectReportService {
 
     /** 팩 고정 불량 보고서를 없는 것만 넣습니다(평가 초기화 뒤에도). */
     public int seed(List<Pack.DefectReportDef> defs) {
+        if (!pack.hasFeature(FEATURE)) {
+            return 0;
+        }
         int added = 0;
         for (Pack.DefectReportDef f : defs) {
             if (reports.existsById(f.id())) {

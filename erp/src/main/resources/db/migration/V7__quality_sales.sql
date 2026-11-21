@@ -14,10 +14,11 @@ create table defect_report (
     version      int           not null default 0,
     confirmed_by varchar(32)   references employee (id),
     created_at   timestamptz   not null,
-    updated_at   timestamptz   not null
+    updated_at   timestamptz   not null,
+    check (status <> 'confirmed' or confirmed_by is not null)
 );
-create index defect_report_created_by on defect_report (created_by, created_at desc);
-create index defect_report_created on defect_report (created_at desc);
+create index defect_report_created_by on defect_report (created_by, created_at desc, id desc);
+create index defect_report_created on defect_report (created_at desc, id desc);
 
 create table quote (
     id            varchar(32)  primary key,
@@ -32,7 +33,8 @@ create table quote (
     version       int          not null default 0,
     issued_by     varchar(32)  references employee (id),
     created_at    timestamptz  not null,
-    updated_at    timestamptz  not null
+    updated_at    timestamptz  not null,
+    check (status <> 'issued' or issued_by is not null)
 );
-create index quote_created_by on quote (created_by, created_at desc);
-create index quote_created on quote (created_at desc);
+create index quote_created_by on quote (created_by, created_at desc, id desc);
+create index quote_created on quote (created_at desc, id desc);

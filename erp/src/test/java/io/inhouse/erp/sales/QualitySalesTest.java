@@ -103,4 +103,16 @@ class QualitySalesTest extends ApiTestBase {
         assertThat(problem(post("/sales/quotes", members("sales").get(0), Map.of("customerId", "cus_0002",
                 "lines", List.of(Map.of("itemCode", "NUT-M8", "quantity", 1, "unitPrice", 1)))))).isEqualTo("validation");
     }
+
+    @Test
+    void lineErrorsNameTheLineAndRoleComesBeforeBodyChecks() throws Exception {
+        MockHttpServletResponse r = post("/sales/quotes", members("sales").get(0), Map.of("customerId", "cus_0002",
+                "lines", List.of(Map.of("itemCode", "NUT-M8", "quantity", 1), Map.of("itemCode", "NUT-M8", "quantity", 0))));
+        assertThat(json(r).path("errors").findValuesAsText("field")).containsExactly("lines/1/quantity");
+        r = post("/sales/quotes", members("sales").get(0), Map.of("customerId", "cus_0002", "lines", List.of("x")));
+        assertThat(json(r).path("errors").findValuesAsText("field")).containsExactly("lines/0");
+        // 영업 역할이 아니면 본문이 틀려도 403
+        r = post("/sales/quotes", members("hr").get(0), Map.of("lines", "x"));
+        assertThat(r.getStatus()).isEqualTo(403);
+    }
 }

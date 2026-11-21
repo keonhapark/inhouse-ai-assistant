@@ -64,6 +64,7 @@ public class QuoteController {
                                          @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                          @RequestBody(required = false) JsonNode body, HttpServletRequest http) {
         quotes.requireFeature();
+        quotes.requireSalesRep(p.employeeId());
         Bodies.check(body, Set.of("customerId", "lines", "validUntil", "note"), Set.of("customerId", "lines"));
         JsonNode raw = body.get("lines");
         if (!raw.isArray() || raw.isEmpty() || raw.size() > MAX_LINES) {
@@ -71,12 +72,17 @@ public class QuoteController {
         }
         List<QuoteService.LineRequest> lines = new ArrayList<>();
         for (JsonNode l : raw) {
-            Bodies.check(l, Set.of("itemCode", "quantity"), Set.of("itemCode", "quantity"));
-            int qty = Bodies.integer(l, "quantity");
-            if (qty < 1 || qty > 1_000_000) {
-                throw ApiException.validation("lines/" + lines.size() + "/quantity", "1~1000000");
+            String at = "lines/" + lines.size();
+            try {
+                Bodies.check(l, Set.of("itemCode", "quantity"), Set.of("itemCode", "quantity"));
+                int qty = Bodies.integer(l, "quantity");
+                if (qty < 1 || qty > 1_000_000) {
+                    throw ApiException.validation("quantity", "1~1000000");
+                }
+                lines.add(new QuoteService.LineRequest(Bodies.text(l, "itemCode", 32), qty));
+            } catch (ApiException e) {
+                throw prefixed(at, e);
             }
-            lines.add(new QuoteService.LineRequest(Bodies.text(l, "itemCode", 32), qty));
         }
         LocalDate valid = null;
         String v = Bodies.text(body, "validUntil", 10);
@@ -91,6 +97,14 @@ public class QuoteController {
                 valid, Bodies.text(body, "note", 500));
         WriteRequest w = WriteRequest.of(p, "createQuote", RESOURCE, http.getRequestURI(), body, dryRun, key);
         return writes.run(w, () -> quotes.create(p, req));
+    }
+
+    /** 줄 안 오류의 필드 이름에 lines/{i}/를 붙입니다(줄이 객체가 아니면 lines/{i}). */
+    private static ApiException prefixed(String at, ApiException e) {
+        List<ApiException.FieldError> errors = e.errors().isEmpty()
+                ? List.of(new ApiException.FieldError(at, "object with itemCode, quantity required"))
+                : e.errors().stream().map(f -> new ApiException.FieldError(at + "/" + f.field(), f.message())).toList();
+        return new ApiException(e.status(), e.code(), at + ": " + e.detail(), errors);
     }
 
     @PostMapping("/sales/quotes/{quoteId}/issue")

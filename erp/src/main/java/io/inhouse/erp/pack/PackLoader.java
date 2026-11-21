@@ -79,8 +79,7 @@ public final class PackLoader {
                         b.path("annual_used").asDouble())),
                 list(tickets.path("tickets"), PackLoader::ticket),
                 set(pack.path("requires_erp_features")),
-                list(items.path("items"), i -> new Pack.ItemDef(i.path("code").asText(), i.path("name").asText(),
-                        i.path("unit").asText(), i.path("unit_price").asLong(), i.path("stock").asInt())),
+                list(items.path("items"), PackLoader::item),
                 list(customers.path("customers"), c -> new Pack.CustomerDef(c.path("id").asText(),
                         c.path("name").asText(), c.path("contact_name").asText(), c.path("contact_email").asText(),
                         c.path("contact_phone").asText())),
@@ -89,6 +88,18 @@ public final class PackLoader {
                         d.path("severity").asText(), d.path("quantity").asInt(), textOrNull(d, "location"),
                         textOrNull(d, "lot_no"), d.path("description").asText(), d.path("status").asText(),
                         textOrNull(d, "confirmed_by"), OffsetDateTime.parse(d.path("created_at").asText()))));
+    }
+
+    /** 단가·재고가 0 이상 정수가 아니면 시작을 멈춥니다(견적 합계를 잘못 내지 않게). */
+    private static Pack.ItemDef item(JsonNode i) {
+        JsonNode price = i.path("unit_price");
+        JsonNode stock = i.path("stock");
+        if (!price.isIntegralNumber() || price.asLong() < 0 || !stock.isIntegralNumber() || stock.asInt() < 0) {
+            throw new IllegalStateException("fixtures/items.json " + i.path("code").asText()
+                    + ": unit_price·stock은 0 이상 정수여야 합니다");
+        }
+        return new Pack.ItemDef(i.path("code").asText(), i.path("name").asText(), i.path("unit").asText(),
+                price.asLong(), stock.asInt());
     }
 
     private static JsonNode optional(Path dir, String rel) {
