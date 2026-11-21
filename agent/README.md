@@ -67,6 +67,7 @@ Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·�
 - 여러 장은 함께 읽고, 전체가 90초를 넘으면 모두 읽지 못한 것으로 봅니다(gateway의 agent 호출 시간 제한 120초보다 짧게). data URL 한 장은 7,000,100자까지 받습니다(5MB의 base64 길이)
 - 하나라도 읽으면 그 대화는 끝까지 에이전트 모델 정책과 관계없이 로컬 별칭으로 실행합니다(#413, 읽은 글자가 외부 모델에 실리지 않게, 장치를 끄는 평가 조건은 `contracts/eval/conditions.md`대로)
 - 하나라도 읽으면 그 턴을 신뢰 불가로 두되 `draft_tool`만 예외(`taint_exempt`)로 미리보기 승인을 받은 뒤 실행합니다. 같은 턴의 다른 `user_direct` 도구(결재 회수 등)는 막습니다(결정 0004 덧붙임, #312). 다음 턴부터는 대화 표시(`conversation_tainted`)로 모든 `user_direct` 도구가 승인을 받습니다
+- 그 턴의 미리보기(`pendingApproval.toolPreview`)에는 `fromAttachments: true`를 붙입니다(#394). 인자 일부가 이미지에서 읽은 신뢰 불가 값일 수 있다는 표시이고, 첨부가 없는 턴은 false입니다
 - 이미지 본문은 그래프 상태·감사·로그에 넣지 않습니다. 읽지 못하면(gateway 오류, JSON 아님) 표시 없이 사용자에게 값을 묻도록 안내합니다
 
 ## 평가 경로(도구 호출 측정)
