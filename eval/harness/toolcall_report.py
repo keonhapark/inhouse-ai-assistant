@@ -44,6 +44,8 @@ def summarize(rows: list[dict[str, Any]], repeats: int) -> dict[str, Any]:
         "accuracy": rate(scored),
         "passK": {"k": repeats, **proportion(x, n)},
         "byCategory": by("category"), "byTool": by("target_tool"), "byStage": by("stage"),
+        # 외부 별칭을 요청해도 local_only 에이전트는 gateway가 로컬로 보내므로 위치별로 따로 봅니다
+        "byLocation": by("location"),
         "outcomes": dict(Counter(r["outcome"] for r in rows)),
         "schemaValid": proportion(sum(bool(r["schema_valid"]) for r in calls), len(calls)),
         "asked": proportion(sum(bool(r["asked"]) for r in scored), len(scored)),
@@ -70,7 +72,8 @@ def render(rows: list[dict[str, Any]], meta: dict[str, Any], title: str = "도�
     out += ["", f"- 지어낸 필수 인자(정답에 없고 발화에 없는 값): {s['fabricated']}개",
             f"- 지연(모델 호출): p50 {s['latencyMs']['p50'] or 0:.0f}ms, p95 {s['latencyMs']['p95'] or 0:.0f}ms",
             f"- 모델 위치: " + ", ".join(f"{k} {v}회차" for k, v in sorted(s["locations"].items()))]
-    for name, key in (("유형별", "byCategory"), ("단계별", "byStage"), ("도구별(targetTool)", "byTool")):
+    for name, key in (("모델 위치별", "byLocation"), ("유형별", "byCategory"), ("단계별", "byStage"),
+                      ("도구별(targetTool)", "byTool")):
         out += ["", f"## {name}", ""]
         out += table(["구분", "맞음"], [[str(x["key"]), rate_text(x["rate"])] for x in s[key]])
     out += ["", "## 결과 분포(회차 단위)", ""]
