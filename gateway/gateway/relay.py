@@ -17,6 +17,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
 from gateway.erp_client import ErpClient, as_problem
+from gateway.slack_login import check_service_login
 from gateway.problems import ProblemError
 
 FORWARD_HEADERS = ("idempotency-key",)
@@ -35,6 +36,7 @@ def bearer(request: Request) -> str:
     token = auth[7:].strip()
     if is_delegation_token(token):
         raise ProblemError(403, "delegation-token-not-allowed", "사람용 경로는 위임 토큰으로 부를 수 없습니다")
+    check_service_login(token, request.method, request.url.path)  # 슬랙 토큰은 허용 목록만(#273)
     return token
 
 

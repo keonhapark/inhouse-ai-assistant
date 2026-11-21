@@ -121,6 +121,16 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   등록부에 실어, `/api/agents`에 보이지 않는 에이전트는 대화를 만들 수 없고(403) 위임 토큰도 발급하지 않습니다(404).
 - 사람용 경로(`/api/*`의 로그인 뒤 경로)는 직원 JWT만 받습니다. Bearer 값이 위임 토큰(`iss: gateway` 또는 `agt` 클레임)이면
   403 `delegation-token-not-allowed`입니다(#159). 위임 토큰은 agent → MCP → erp와 LLM 출구(`X-Delegation-Token`)에만 씁니다.
+- 슬랙 로그인 `POST /api/auth/slack`(`gateway/slack_login.py`, #273): 슬랙 브리지만 부릅니다. 헤더 `X-Slack-Bridge-Secret`이
+  `SLACK_BRIDGE_SECRET`과 맞고(상수 시간 비교, 틀리면 401) `slackUserId`가 매핑 파일(`SLACK_USERS_FILE`, 기본
+  `infra/slack/slack-users.json`, 커밋하지 않음. 형식은 `infra/slack/slack-users.example.json`)에 있으면 erp
+  `POST /auth/service-login`(`ERP_SERVICE_LOGIN_SECRET`)으로 받은 직원 JWT(15분, `amr: [slack]`)를 돌려줍니다. 매핑에 없거나
+  매핑된 직원이 erp에 없으면 403, `SLACK_BRIDGE_SECRET`이 없으면 404, erp가 서비스 비밀값을 거절하면 gateway 설정 문제로 보고 502입니다.
+  감사 `auth.login`에 `출처 slack`과 결과를 남기고 비밀값·토큰은 남기지 않습니다. `ERP_SERVICE_LOGIN_SECRET`이 없거나 비면
+  erp를 부르지 않고 502입니다. 이 토큰(`amr`에 slack, 배열이든 문자열이든)은 허용 목록(`SLACK_ALLOWED`)의 경로만 부를 수
+  있습니다: 내 정보, 알림, 대화 만들기·조회·메시지, 실행 승인, 되돌리기. 그 밖(대결, 결재함, 감사, 운영 등)은 `relay.bearer`가
+  403 `service-login-not-allowed`로 막습니다. 막을 경로 대신 허용할 경로를 적어, 새 사람 화면 경로가 생겨도 슬랙 토큰에는
+  닫혀 있습니다(브리지 비밀값이 새도 팀장 슬랙 ID로 대결을 등록해 승인 권한을 넘기는 우회를 막음).
 - 토큰 위생: 모든 로그 레코드에서 JWT 모양과 `Bearer <값>`을 가립니다(`gateway/redact.py`). 발급 기록은 `jti`만 남깁니다.
 
 ## 실행
@@ -142,7 +152,8 @@ DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
 환경 변수: `ERP_BASE_URL`, `PACK_DIR`(기본 `packs/manufacturing`), `CONTRACTS_DIR`(기본 `contracts`),
 `DELEGATION_TOKEN_PRIVATE_KEY`(없으면 임시 키를 만들고 경고를 남깁니다), `LITELLM_BASE_URL`(기본 `http://localhost:4000`),
 `LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
-`AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`.
+`AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`,
+`SLACK_BRIDGE_SECRET`, `SLACK_USERS_FILE`, `ERP_SERVICE_LOGIN_SECRET`.
 상대 경로는 저장소 루트 기준입니다. LiteLLM은 1.108.1로 고정합니다(배포 뒤 2주가 지난 판).
 
 ## 시험

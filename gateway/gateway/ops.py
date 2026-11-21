@@ -108,7 +108,8 @@ def _uncursor(cursor: str) -> tuple[datetime, str]:
 
 
 async def require_auditor(erp: ErpClient, request: Request) -> None:
-    me = await erp.get_json("/me", bearer(request))
+    token = bearer(request)
+    me = await erp.get_json("/me", token)
     if AUDITOR_ROLE not in me.get("roles", []):
         raise ProblemError(403, "forbidden", "감사 조회 역할만 봅니다")
 
