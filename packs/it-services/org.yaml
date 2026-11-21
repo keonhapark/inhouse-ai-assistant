@@ -1,0 +1,136 @@
+# 조직도, 직급, 역할, 문서 접근 태그(가상 SI·운영 회사)
+# 직급 id는 erp 결재선 단계(team_leader·division_head·ceo)와 맞추고 이름만 IT 서비스 회사 말로 씁니다.
+grades:
+  - id: staff
+    name: 컨설턴트
+    rank: 1
+  - id: team_leader
+    name: 팀장(PM)
+    rank: 2
+  - id: division_head
+    name: 사업부장
+    rank: 3
+  - id: ceo
+    name: 대표이사
+    rank: 4
+
+units:
+  - id: sol-ceo
+    name: 대표이사실
+    kind: division
+  - id: si-div
+    name: SI사업부
+    kind: division
+    parent: sol-ceo
+  - id: si-public
+    name: 공공구축팀
+    kind: team
+    parent: si-div
+  - id: si-enterprise
+    name: 기업구축팀
+    kind: team
+    parent: si-div
+  - id: ito-div
+    name: 운영사업부
+    kind: division
+    parent: sol-ceo
+  - id: ito-ops
+    name: 시스템운영팀
+    kind: team
+    parent: ito-div
+  - id: ito-desk
+    name: 서비스데스크팀
+    kind: team
+    parent: ito-div
+  - id: biz-div
+    name: 경영지원본부
+    kind: division
+    parent: sol-ceo
+  - id: pmo
+    name: 사업관리팀(PMO)
+    kind: team
+    parent: biz-div
+  - id: people-ops
+    name: 인사총무팀
+    kind: team
+    parent: biz-div
+
+# 역할은 직급과 별개로 붙는 권한 묶음입니다.
+roles:
+  - id: employee
+    name: 직원
+    grant: all
+  - id: hr_staff
+    name: 인사 담당
+    grant:
+      units: [people-ops]
+  - id: project_staff
+    name: 프로젝트 수행
+    grant:
+      units: [si-public, si-enterprise, pmo]
+  - id: account_manager
+    name: 고객사 담당
+    grant:
+      units: [pmo]
+      grades: [team_leader, division_head]
+  - id: service_desk
+    name: 운영 티켓 담당
+    grant:
+      units: [ito-ops, ito-desk]
+  - id: auditor
+    name: 감사 조회
+    grant:
+      units: [pmo]
+      grades: [ceo]
+
+# erp 코어가 권한 판단에 쓰는 역할(코어는 역할 이름을 모르고 이것을 읽습니다).
+# 고객사 연락처는 고객사 담당만 봅니다(sales_rep). 품질 기능은 쓰지 않습니다.
+erp_roles:
+  hr: hr_staff
+  auditor: auditor
+  ticket_handler: service_desk
+  sales_rep: account_manager
+
+# 문서 접근 태그. rag와 erp가 같은 태그를 씁니다(docs.yaml의 acl_tags).
+access_tags:
+  - id: public
+    name: 전사 공개
+    grant:
+      roles: [employee]
+  - id: hr-policy
+    name: 인사 규정
+    grant:
+      roles: [employee]
+  - id: hr-restricted
+    name: 인사 제한
+    grant:
+      roles: [hr_staff]
+  - id: project-standards
+    name: 프로젝트 수행 기준
+    grant:
+      roles: [project_staff]
+  - id: ops-runbook
+    name: 운영 절차서
+    grant:
+      roles: [service_desk]
+  - id: customer-contracts
+    name: 고객사 계약
+    grant:
+      roles: [account_manager]
+
+# 결재선에서 쓰는 결재자 해석 규칙
+approver_resolution:
+  team_leader: 요청자 팀의 팀장(PM). 요청자가 팀장이면 상위 사업부장
+  division_head: 요청자 사업부의 사업부장. 요청자가 사업부장이거나 사업부가 없으면 대표이사
+  ceo: 대표이사
+
+# 결재 대결 규칙(제조 팩과 같은 틀)
+delegation_policy:
+  max_period_days: 30
+  registrable_by: [self, hr_staff]
+  allow_redelegation: false
+  allow_self_approval: false
+  scope_units: [form_type, max_amount]
+  wide_scope:
+    period_days_over: 7
+    max_amount_over: 1000000

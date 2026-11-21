@@ -1,0 +1,96 @@
+# 에이전트 등록부(가상 SI·운영 회사). 입구 라우터는 요청을 여기 있는 에이전트 하나에 한 번만 넘깁니다.
+# 도구 이름은 contracts/mcp/tools.json이나 이 팩 양식 도구(forms.yaml tool)에 있어야 합니다(CI 검사).
+fallback_agent: assistant
+
+agents:
+  - id: assistant
+    name: 전사 비서
+    version: 0.1.0
+    stage: 1
+    owner_unit: people-ops
+    description: 공통 규정 질의, 회의실, 휴가, 일반 안내를 맡고 맞는 부서 에이전트를 안내합니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - hr_get_my_profile
+      - org_search_employees
+      - leave_get_balance
+      - leave_request
+      - approval_list_mine
+      - approval_get
+      - approval_withdraw
+      - room_list_availability
+      - room_list_my_reservations
+      - room_reserve
+      - room_cancel_reservation
+      - policy_search
+    allowed_risk: [read, reversible_write, irreversible]
+    doc_scopes: [public, hr-policy]
+    model_policy:
+      mode: external_allowed
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: confirm
+    routing:
+      keywords: [휴가, 연차, 회의실, 예약, 안내, 어디, 누구]
+      examples:
+        - 다음 주 금요일 연차 쓸게
+        - 내일 오후 2시에 5명 들어갈 회의실 잡아 줘
+
+  - id: project
+    name: 프로젝트 지원
+    version: 0.1.0
+    stage: 3
+    owner_unit: pmo
+    description: 내가 올린 공수 보고의 진행 확인과 회수, 고객사 조회, 프로젝트 수행 기준 질의를 맡습니다. 공수 보고 올리기는 팩 양식 도구(forms.yaml effort_report)를 agent가 읽게 되면(#397) 더합니다.
+    callable_by:
+      roles: [project_staff]
+    tools:
+      - approval_list_mine
+      - approval_get
+      - approval_withdraw
+      - customer_search
+      - policy_search
+    allowed_risk: [read, reversible_write, irreversible]
+    doc_scopes: [public, project-standards]
+    model_policy:
+      mode: local_only
+      reason: 고객사 프로젝트 정보는 외부 LLM으로 보내지 않습니다.
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: confirm
+    routing:
+      keywords: [공수, 투입, 프로젝트, 고객사, 산출물, PM]
+      examples:
+        - 지난주 올린 공수 보고 결재됐어?
+        - 고객사 담당자 연락처 찾아 줘
+
+  - id: itsm
+    name: 서비스데스크
+    version: 0.1.0
+    stage: 2
+    owner_unit: ito-desk
+    description: 장애·요청 티켓 조회와 작성, 댓글, 운영 절차 질의를 맡습니다. 티켓 상태 변경은 사람 화면에서 합니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - ticket_list
+      - ticket_get
+      - ticket_create
+      - ticket_comment
+      - policy_search
+    allowed_risk: [read, reversible_write]
+    doc_scopes: [public, ops-runbook]
+    model_policy:
+      mode: external_allowed
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: deny
+    routing:
+      keywords: [장애, 티켓, 접속, 오류, 권한 요청, 계정, 서버]
+      examples:
+        - 고객사 포털 접속이 안 된다는 티켓 올려 줘
+        - 내가 올린 티켓 처리됐어?

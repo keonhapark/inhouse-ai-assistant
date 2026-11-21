@@ -71,8 +71,8 @@ def test_packs_pass_checks(capsys) -> None:
     assert check_packs_main() == 0, capsys.readouterr().out
 
 
-def test_fixtures_are_reproducible(tmp_path: Path) -> None:
-    gen = PACKS / "manufacturing/fixtures/generate.py"
+@pytest.mark.parametrize("gen", sorted(PACKS.glob("*/fixtures/generate.py")), ids=lambda p: p.parts[-3])
+def test_fixtures_are_reproducible(gen: Path) -> None:
     before = {p.name: p.read_bytes() for p in gen.parent.glob("*.json")}
     subprocess.run([sys.executable, str(gen)], check=True, capture_output=True)
     after = {p.name: p.read_bytes() for p in gen.parent.glob("*.json")}
