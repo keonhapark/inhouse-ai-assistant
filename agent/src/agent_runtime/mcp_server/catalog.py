@@ -1,4 +1,4 @@
-"""MCP 도구 목록(contracts/mcp/tools.json)과 erp·rag OpenAPI에서 도구별 호출 방법을 만듭니다.
+"""MCP 도구 목록(contracts/mcp/tools.json)과 erp·rag·incident OpenAPI에서 도구별 호출 방법을 만듭니다.
 
 도구 이름·설명·입력 스키마는 tools.json 그대로 내놓습니다. 노출 범위는 팩이 정합니다:
 팩 단계 이하이고, 켜진 에이전트 중 하나라도 등록부에 그 도구를 적었을 때만 노출합니다.
@@ -25,13 +25,16 @@ import yaml
 from agent_runtime.registry import Registry
 
 
+Service = Literal["erp", "rag", "incident"]
+SERVICES: tuple[str, ...] = ("erp", "rag", "incident")
+
 class CatalogError(ValueError):
     pass
 
 
 @dataclass(frozen=True)
 class Operation:
-    service: Literal["erp", "rag"]
+    service: Service
     operation_id: str
     method: str
     path: str
@@ -121,7 +124,7 @@ class Catalog:
     @classmethod
     def load(cls, tools_file: Path, openapi_dir: Path, registry: Registry) -> Catalog:
         doc = json.loads(tools_file.read_text("utf-8"))
-        specs = {s: _read_spec(openapi_dir / f"{s}.yaml") for s in ("erp", "rag")}
+        specs: dict[str, dict[str, Any]] = {}
         exposed = {name for a in registry.agents for name in a.tools}
         tools = []
         for t in doc["tools"]:
@@ -133,7 +136,12 @@ class Catalog:
             clash = set(backend.get("fixed", {})) & set(t["inputSchema"].get("properties", {}))
             if clash:
                 raise CatalogError(f"{t['name']}: 고정값 이름을 입력 스키마에 둘 수 없습니다: {', '.join(sorted(clash))}")
-            op = _operation(specs[backend["service"]], backend["service"], backend["operationId"])
+            service = backend["service"]
+            if service not in SERVICES:
+                raise CatalogError(f"{t['name']}: 모르는 백엔드 서비스입니다: {service}")
+            if service not in specs:
+                specs[service] = _read_spec(openapi_dir / f"{service}.yaml")
+            op = _operation(specs[service], service, backend["operationId"])
             if op.human_only:
                 raise CatalogError(f"{t['name']}: 사람 화면 전용 operation({op.operation_id})은 도구로 노출하지 않습니다")
             tools.append(Tool(
@@ -158,7 +166,7 @@ def _read_spec(path: Path) -> dict[str, Any]:
         return yaml.safe_load(f)
 
 
-def _operation(spec: dict[str, Any], service: Literal["erp", "rag"], operation_id: str) -> Operation:
+def _operation(spec: dict[str, Any], service: Service, operation_id: str) -> Operation:
     base = _base_path(spec)
     for path, item in spec["paths"].items():
         for method, op in item.items():

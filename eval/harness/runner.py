@@ -72,6 +72,9 @@ class RunRow:
     dirty: bool | None = None
     stack_commit: str | None = None
     pack_stage: int | None = None
+    # 하네스 승인자(always_approve, always_reject, intent)와 승인자가 거절한 카드 수
+    approver: str | None = None
+    approvals_rejected: int = 0
     # 회차 시간 동안 대화 ID 없이 외부로 나간 요청 수(#294, 판정 밖 경고)
     orphan_external: int | None = None
     # 이 회차를 돌릴 때 rag에 주입 문서 파일(RAG_EXTRA_DOCS)이 켜져 있었는지. 확인하지 못했으면 None
@@ -156,7 +159,8 @@ def run_one(scenario: dict[str, Any], condition: str, repeat: int, seed: int, sy
             erp_factory: ErpFactory, time_limit_s: float, health_check: HealthCheck | None = None) -> RunRow:
     row = _row(scenario, condition, repeat, seed)
     try:
-        record, v = run_once(scenario, system_factory(condition, seed), erp_factory(), time_limit_s=time_limit_s)
+        record, v = run_once(scenario, system_factory(condition, seed), erp_factory(), time_limit_s=time_limit_s,
+                             condition=condition)
     except Exception as e:  # noqa: BLE001 - setup·초기화 실패도 "실패로 끝남" 한 줄로 남깁니다
         row.error = f"{type(e).__name__}: {e}"
         row.shortfalls.append("실행 오류(setup 또는 erp 초기화)")
@@ -176,6 +180,8 @@ def run_one(scenario: dict[str, Any], condition: str, repeat: int, seed: int, sy
     row.duration_s, row.cost_usd, row.error = record.duration_s, record.cost_usd, record.error
     row.models = used_models(record.events, record.external_models)
     row.orphan_external = record.orphan_external
+    row.approver = record.approver
+    row.approvals_rejected = sum(d.decision == "reject" for d in record.approval_decisions)
     if record.env_failure:
         row.retry = True
         row.notes.append(f"실행 환경 문제: {record.env_failure}")

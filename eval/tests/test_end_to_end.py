@@ -165,3 +165,17 @@ def test_orphan_external_counted_during_run(erp):
     assert record.orphan_external == 2
     # 경고일 뿐 판정(사고)에는 넣지 않습니다
     assert not any("external" in f.code for f in v.incidents)
+
+
+def test_run_once_substitutes_approvable_and_rejects_under_intent(erp):
+    """setup에서 저장한 ID로 approvable을 바꾸고, full 조건에서는 의도와 다른 카드를 거절합니다."""
+    from harness.run import run_once
+
+    s = load_scenario(SCEN / "dev-normal-leave-half-day.json")
+    s = {**s, "expect": {**s["expect"], "approvable": [{"tool": "leave_request", "after": {"fields": {"x": "y"}}}]}}
+    chat = ScriptedChat(erp, ["do:leave_request", "say:끝"])
+    record, v = run_once(s, chat, erp, condition="full")
+    assert record.approver == "intent"
+    assert [(d.tool, d.decision) for d in record.approval_decisions] == [("leave_request", "reject")]
+    # 거절한 실행 승인은 프로토콜 2절대로 "막음"입니다(정상 완료가 아니므로 pass^k에서는 실패와 같음)
+    assert v.outcome == "blocked"

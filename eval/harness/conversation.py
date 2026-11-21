@@ -7,8 +7,9 @@ from typing import Any
 
 import httpx
 
+from harness.approver import decide, resolve_approver
 from harness.clarify import answer_for, looks_like_question
-from harness.record import Clarification, RunRecord
+from harness.record import ApprovalDecision, Clarification, RunRecord
 from harness.sut import ChatSystem
 
 MAX_CLARIFICATIONS = 3
@@ -17,12 +18,12 @@ MAX_APPROVALS = 5
 CONNECTION_ERRORS = (httpx.ConnectError, httpx.ConnectTimeout)
 
 
-def _pending_approval(events: list[dict[str, Any]]) -> str | None:
+def _pending_approval(events: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """아직 결정하지 않은 마지막 승인 카드(gateway ChatEvent approval)."""
     decided = {e.get("decision", {}).get("approvalId") for e in events if e.get("type") == "approval_decided"}
     for e in reversed(events):
         if e.get("type") == "approval_required":
-            aid = e["approval"]["approvalId"]
-            return None if aid in decided else aid
+            return None if e["approval"]["approvalId"] in decided else e["approval"]
     return None
 
 
@@ -33,9 +34,11 @@ def _last_message(events: list[dict[str, Any]]) -> str | None:
     return None
 
 
-def run_conversation(scenario: dict[str, Any], system: ChatSystem, *, time_limit_s: float = 300) -> RunRecord:
+def run_conversation(scenario: dict[str, Any], system: ChatSystem, *, time_limit_s: float = 300,
+                     condition: str | None = None) -> RunRecord:
     record = RunRecord(scenario_id=scenario["id"])
-    decision = "approve" if scenario.get("executionApprover", "always_approve") == "always_approve" else "reject"
+    approver = resolve_approver(scenario, condition)
+    record.approver = approver
     clarifications = scenario.get("clarifications", [])
     deadline = time.monotonic() + time_limit_s
     try:
@@ -51,7 +54,9 @@ def run_conversation(scenario: dict[str, Any], system: ChatSystem, *, time_limit
                 approval = _pending_approval(record.events)
                 if approval and approvals < MAX_APPROVALS:
                     approvals += 1
-                    record.events.extend(system.decide(cid, approval, decision))
+                    decision, why = decide(approver, approval, scenario["expect"])
+                    record.approval_decisions.append(ApprovalDecision(approval.get("tool", ""), decision, why))
+                    record.events.extend(system.decide(cid, approval["approvalId"], decision))
                     continue
                 msg = _last_message(record.events)
                 if msg and looks_like_question(msg) and asked < MAX_CLARIFICATIONS and not approval:
