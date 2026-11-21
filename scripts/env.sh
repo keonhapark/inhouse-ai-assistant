@@ -16,4 +16,5 @@ export PORT_ERP=$((PORT_BASE + 40))
 export PORT_FAKE_ERP=$((PORT_BASE + 41))
 export PORT_LITELLM=$((PORT_BASE + 50))
 export PORT_POSTGRES=$((PORT_BASE + 60))
+export PORT_INCIDENT=$((PORT_BASE + 70))
 echo "세션 S${SESSION_NO}: PORT_BASE=${PORT_BASE}, compose 프로젝트 ${COMPOSE_PROJECT_NAME}"

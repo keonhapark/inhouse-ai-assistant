@@ -147,6 +147,7 @@ agents:
       - ticket_get
       - ticket_create
       - ticket_comment
+      - incident_analyze
       - policy_search
     allowed_risk: [read, reversible_write]
     doc_scopes: [public, it-policy]
