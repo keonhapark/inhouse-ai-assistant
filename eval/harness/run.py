@@ -17,12 +17,15 @@ from harness.sut import ChatSystem
 
 
 def run_once(scenario: dict[str, Any], system: ChatSystem, erp: ErpClient, *,
-             time_limit_s: float = 300) -> tuple[RunRecord, Verdict]:
+             time_limit_s: float = 300, condition: str | None = None) -> tuple[RunRecord, Verdict]:
     variables = run_setup(scenario, erp)
-    scenario = {**scenario, "turns": substitute(scenario["turns"], variables)}
+    expect = dict(scenario["expect"])
+    if "approvable" in expect:
+        expect["approvable"] = substitute(expect["approvable"], variables)
+    scenario = {**scenario, "turns": substitute(scenario["turns"], variables), "expect": expect}
     started = time.monotonic()
     since = datetime.now(timezone.utc)
-    record = run_conversation(scenario, system, time_limit_s=time_limit_s)
+    record = run_conversation(scenario, system, time_limit_s=time_limit_s, condition=condition)
     record.duration_s = time.monotonic() - started
     orphans = getattr(system, "orphan_external", None)
     if orphans is not None:

@@ -235,7 +235,8 @@ def common_summary(rows: list[RunRow], conds: list[str]) -> dict[str, Any]:
         rs = [r for r in rows if r.condition == c]
         out["approvals"].append({"condition": c, "requested": sum(r.approvals_requested for r in rs),
                                  "missedRisks": sum(r.missed_risks for r in rs),
-                                 "unnecessary": sum(r.unnecessary_approvals for r in rs)})
+                                 "unnecessary": sum(r.unnecessary_approvals for r in rs),
+                                 "rejectedByApprover": sum(r.approvals_rejected for r in rs)})
         for route in ("local", "external", "mixed", "none"):
             rr = [r for r in rs if r.route == route]
             if rr:
@@ -250,9 +251,9 @@ def common_summary(rows: list[RunRow], conds: list[str]) -> dict[str, Any]:
 def _common_section(rows: list[RunRow], conds: list[str]) -> list[str]:
     s = common_summary(rows, conds)
     out = ["", "### 승인 요청(회차 합계)", ""]
-    out += table(["조건", "승인 요청", "놓친 위험", "불필요한 승인"],
-                 [[COND_LABEL[x["condition"]], str(x["requested"]), str(x["missedRisks"]), str(x["unnecessary"])]
-                  for x in s["approvals"]])
+    out += table(["조건", "승인 요청", "놓친 위험", "불필요한 승인", "승인자 거절"],
+                 [[COND_LABEL[x["condition"]], str(x["requested"]), str(x["missedRisks"]), str(x["unnecessary"]),
+                   str(x["rejectedByApprover"])] for x in s["approvals"]])
     out += ["", "### 경로별 결과(회차 단위)", ""]
     out += table(["조건", "경로", *[lab for _, lab in OUTCOMES]],
                  [[COND_LABEL[x["condition"]], x["route"], *[str(x[o]) for o, _ in OUTCOMES]] for x in s["routes"]])
@@ -280,6 +281,15 @@ def summarize(rows: list[RunRow], meta: RunMeta) -> dict[str, Any]:
                      "normal": normal_summary(normal, conds, meta.repeats) if normal else None,
                      "common": common_summary(sub, conds)})
     return {"passK": meta.repeats, "sets": sets}
+
+
+def _approvers(rows: list[RunRow], conds: list[str]) -> str:
+    parts = []
+    for c in conds:
+        got = Counter(r.approver or "기록 없음" for r in rows if r.condition == c)
+        if got:
+            parts.append(f"{COND_LABEL[c]} " + ", ".join(f"{a} {n}회차" for a, n in sorted(got.items())))
+    return "; ".join(parts) or "-"
 
 
 def _injected(rows: list[RunRow]) -> str:
@@ -323,6 +333,7 @@ def render(rows: list[RunRow], meta: RunMeta, title: str = "평가 보고서") -
         ["모델(실행 기록)", ", ".join(f"{m} {n}회차" for m, n in sorted(seen.items())) or "-"],
         ["기기", meta.machine],
         ["회차별 실행 시스템", _signatures(rows)],
+        ["하네스 승인자", _approvers(rows, conds)],
         ["주입 문서 파일", _injected(rows)],
         ["실행", f"{meta.started_at} ~ {meta.finished_at}"],
         ["조건", ", ".join(f"{COND_LABEL[c]}(`{c}`)" for c in conds)],
