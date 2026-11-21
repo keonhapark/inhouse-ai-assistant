@@ -95,3 +95,21 @@ def test_IT_운영_문서_템플릿을_채운다(pack, doc_id):
     assert [s["label"] for s in sections] == [f"제{n}조" for n in range(1, 8)]
     text = "".join(s["text"] for s in sections)
     assert "{{" not in text and "IT 관리자" in text
+
+
+@pytest.mark.parametrize("doc_id", ["gen-quality-rule", "gen-rnd-guide", "gen-sales-rule"])
+def test_3단계_생성_문서_템플릿을_채운다(pack, doc_id):
+    from rag.generate import render_document
+
+    sections = render_document(doc_id, pack)
+    assert [s["label"] for s in sections] == [f"제{n}조" for n in range(1, 8)]
+    text = "".join(s["text"] for s in sections)
+    assert "{{" not in text and "본부장" in text
+
+
+def test_영업_규정의_할인_승인자는_팩의_직급_이름을_쓴다(pack):
+    from rag.generate import render_document
+
+    sections = {s["label"]: s for s in render_document("gen-sales-rule", pack)}
+    assert "10퍼센트 초과 20퍼센트 이하: 본부장의 승인을 받습니다." in sections["제4조"]["text"]
+    assert "합계가 50,000,000원을 넘는" in sections["제4조"]["text"]

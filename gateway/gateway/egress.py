@@ -321,6 +321,16 @@ class Egress:
             if swapped != body["model"]:
                 note = f"평가 별칭 바꿔 끼움: {body['model']} 대신 {swapped}"
                 body = {**body, "model": swapped}
+        if self.registry.pack_local_only and self.locations.get(body["model"]) == "external":
+            # 팩 단위 외부 LLM 금지(#384, 망분리 흉내). 평가 조건·에이전트 정책·별칭 바꿔 끼우기보다 앞서 봅니다.
+            # 위임 토큰 호출은 에이전트가 팩 항목을 몰라도 대화가 깨지지 않게 로컬로 돌리고,
+            # 토큰 없는 호출(도구 호출 측정 등)은 측정이 몰래 로컬로 바뀌지 않게 거절합니다.
+            local = self._local_for(caller) if caller.agent is not None else None
+            if local is None:
+                request.state.model = {"name": body["model"]}
+                raise ProblemError(403, "model-policy", "모델 정책에 맞지 않습니다", "이 팩은 외부 LLM을 쓰지 않습니다")
+            note = (f"{note}; " if note else "") + f"팩 외부 LLM 금지: {body['model']} 대신 {local}"
+            body = {**body, "model": local}
         model = self._model(request, body["model"])
         location = model["location"]
 
