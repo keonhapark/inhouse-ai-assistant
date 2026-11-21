@@ -75,7 +75,8 @@ class FakeLiteLLM:
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
         body = json.loads(request.content)
-        mode = self.external_mode if body.get("model") == "external" and self.external_mode != "ok" else self.mode
+        external = str(body.get("model", "")).startswith("external")   # external, external-sonnet
+        mode = self.external_mode if external and self.external_mode != "ok" else self.mode
         if mode == "timeout":
             raise httpx.ReadTimeout("slow", request=request)
         if mode == "down":

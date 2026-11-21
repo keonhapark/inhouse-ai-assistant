@@ -37,6 +37,16 @@ model_list:
       vision: true
       supports_response_format: true
 
+  - model_name: local-exaone                         # 평가 전용(모델 교체 회귀 #107·#346). 기본 경로에서는 쓰지 않습니다
+    litellm_params:
+      # EXAONE 4.0 1.2B 공식 GGUF Q4_K_M(812MB, Ollama가 Hugging Face에서 받음). 라이선스: EXAONE AI Model License
+      # Agreement 1.2 - NC(비상업, 연구·교육 사용). 가중치는 커밋하지 않고 평가 측정에만 씁니다.
+      model: ollama_chat/hf.co/LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF:Q4_K_M
+      api_base: os.environ/OLLAMA_BASE_URL
+      num_ctx: 8192
+    model_info:
+      location: local
+
   - model_name: local-embed                          # rag 벡터 검색용 임베딩. 로컬만
     litellm_params:
       model: ollama/bge-m3
@@ -57,6 +67,16 @@ model_list:
       # 단가(USD/토큰, 프롬프트 100K 이하). LiteLLM 가격표와 같고, 비용 머리글이 없는 스트림의 비용 계산에 gateway가 씁니다.
       input_cost_per_token: 0.0000001
       output_cost_per_token: 0.0000005
+
+  - model_name: external-sonnet                      # 평가 전용(모델 교체 회귀 #107·#346). 기본 경로에서는 쓰지 않습니다
+    litellm_params:
+      model: anthropic/claude-sonnet-5-5             # $2 / $10 per MTok, 문맥 1M
+      api_key: os.environ/ANTHROPIC_API_KEY
+    model_info:
+      location: external
+      drop_params: [temperature, top_p]              # Sonnet 5.5도 기본값이 아닌 샘플링 값을 400으로 거절합니다
+      input_cost_per_token: 0.000002
+      output_cost_per_token: 0.00001
 
 litellm_settings:
   request_timeout: 60
