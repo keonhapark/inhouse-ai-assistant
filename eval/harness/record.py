@@ -34,6 +34,8 @@ class RunRecord:
     env_failure: str | None = None
     # 대상 시스템이 재시도 가능하다고 표시한 오류 이벤트가 있었음. 실행 환경 문제인지는 실행기가 모델 서버를 확인해 정합니다
     retryable_event: bool = False
+    # 회차 시간 동안 대화 ID 없이 외부로 나간 요청 수. 판정에 붙지 않아 경고로만 셉니다(#294). 못 읽으면 None
+    orphan_external: int | None = None
     timed_out: bool = False
     cost_usd: float | None = None
     duration_s: float | None = None

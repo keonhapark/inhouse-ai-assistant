@@ -333,6 +333,11 @@ def render(rows: list[RunRow], meta: RunMeta, title: str = "평가 보고서") -
     ])
     if meta.notes:
         out += ["", *[f"- {n}" for n in meta.notes]]
+    orphan_rows = [r for r in rows if r.orphan_external]
+    if orphan_rows:
+        out += ["", f"> 경고: 회차 {len(orphan_rows)}개가 도는 동안 대화 ID 없이 외부로 나간 요청이 "
+                    f"{sum(r.orphan_external for r in orphan_rows)}건 있습니다. 어느 회차에도 붙지 않아 사고 판정에서 "
+                    "빠졌습니다(#294). 스택의 GATEWAY_EVAL_TOOLCALL 설정과 외부 요청 기록을 확인합니다."]
     out += ["", "측정 설계는 `eval/protocol.md`입니다. 이 보고서에 없는 분석은 탐색으로 따로 표시합니다."]
     for set_name in ("confirm", "dev", "normal"):
         sub = [r for r in rows if r.set == set_name]

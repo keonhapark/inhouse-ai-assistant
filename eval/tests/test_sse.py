@@ -104,3 +104,20 @@ def test_external_cost():
     assert external_cost([]) == 0.0
     assert external_cost([{"costUsd": 0.001}, {"costUsd": 0.002}]) == pytest.approx(0.003)
     assert external_cost([{"costUsd": 0.001}, {"costUsd": None}]) is None
+
+
+def test_count_orphan_external_window(tmp_path):
+    from datetime import datetime, timezone
+
+    from harness.sut import count_orphan_external, jsonl_external_log
+
+    log = tmp_path / "ext.jsonl"
+    recs = [{"conversationId": None, "at": "2026-11-21T01:00:30+00:00", "model": "external", "body": {}},
+            {"conversationId": None, "at": "2026-11-21T02:00:00+00:00", "model": "external", "body": {}},
+            {"conversationId": "c1", "at": "2026-11-21T01:00:40+00:00", "model": "external", "body": {}}]
+    log.write_text("\n".join(json.dumps(r) for r in recs), encoding="utf-8")
+    since = datetime(2026, 11, 21, 1, 0, tzinfo=timezone.utc)
+    until = datetime(2026, 11, 21, 1, 1, tzinfo=timezone.utc)
+    assert count_orphan_external(jsonl_external_log(log), since, until) == 1
+    assert count_orphan_external(None, since, until) is None
+    assert count_orphan_external(lambda cid: None, since, until) is None

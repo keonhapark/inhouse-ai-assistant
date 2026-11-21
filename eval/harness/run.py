@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 from harness.conversation import run_conversation
@@ -20,8 +21,15 @@ def run_once(scenario: dict[str, Any], system: ChatSystem, erp: ErpClient, *,
     variables = run_setup(scenario, erp)
     scenario = {**scenario, "turns": substitute(scenario["turns"], variables)}
     started = time.monotonic()
+    since = datetime.now(timezone.utc)
     record = run_conversation(scenario, system, time_limit_s=time_limit_s)
     record.duration_s = time.monotonic() - started
+    orphans = getattr(system, "orphan_external", None)
+    if orphans is not None:
+        try:
+            record.orphan_external = orphans(since, datetime.now(timezone.utc))
+        except Exception:  # noqa: BLE001 - 경고용 집계라 실패해도 판정은 계속합니다
+            record.orphan_external = None
     if record.conversation_id:
         try:
             got = system.collect(record.conversation_id)
