@@ -1,0 +1,18 @@
+# 팩 추가 때 코어 변경 줄 수(tools/core_lines.py, #483)에 넣는 팩 폴더 밖 관련 커밋.
+# 처음 그 기능이 필요했던 팩에 넣습니다. 후보는 `uv run python tools/core_lines.py --suggest <팩>`로 찾고, 고른 이유를 적습니다.
+finance:
+  extra:
+    - commit: 0c0874c
+      pr: 392
+      reason: 팩 단위 외부 LLM 금지(pack.yaml model_policy_override)를 gateway 출구에서 강제합니다(#384). 금융 팩 망분리 흉내에 필요했고, 다음 팩부터 설정만으로 씁니다.
+    - commit: 7250c93
+      pr: 410
+      reason: 팩 양식 도구(#397)를 위임 토큰 tools·scopes 계산에 넣습니다. 금융 팩 loan_request가 생기면 gateway가 시작하지 못하던 문제를 고쳤고, 다음 팩부터 재사용합니다.
+    - commit: 750910d
+      pr: 416
+      reason: 팩 양식 도구(#397)를 agent MCP 카탈로그와 평가 경로에 붙입니다. 금융 팩 여신 품의 도구에 필요했고, IT 서비스 팩 공수 보고 도구가 그대로 재사용합니다.
+    - commit: f82da84
+      pr: 433
+      reason: 금융 팩 문서 다섯 건의 rag 템플릿입니다. 템플릿은 팩 내용으로 세고, 같은 PR의 rag 시험만 코어 시험입니다.
+it-services:
+  extra: []
