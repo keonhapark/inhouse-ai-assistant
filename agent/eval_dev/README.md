@@ -85,7 +85,7 @@ CUDA_VISIBLE_DEVICES= ~/.cache/iaa-laya-venv/bin/python eval_dev/router_compare.
 | Laya 설명+예시(`…-laya-cpu-desc_examples.jsonl`) | 45 | 21 | 0 | 24 | 15 | 0 | 39 | 0 | 0.30초 / 0.45초 |
 
 - llm은 반복 간 결과가 다른 문장이 4/105이고, Laya·keyword는 반복마다 같습니다
-- llm 오분류는 대부분 전사 비서 ↔ 인사(`assistant->hr` 22, `hr->assistant` 4)입니다. `local_only` 요청을 외부 허용 에이전트로 보낸 4건 중 3건은 확신도가 높아 애매로 잡히지 않습니다
+- llm 오분류는 대부분 `assistant` ↔ `hr`(`assistant->hr` 22, `hr->assistant` 4)입니다. `local_only` 요청을 외부 허용 에이전트로 보낸 4건 중 3건은 확신도가 높아 애매로 잡히지 않습니다
 - Laya는 선택지 구성에 따라 크게 달랐습니다. 설명+예시(LLM 라우터와 같은 정보)에서는 거의 모두 재무로 골랐고(선택지 한도 `head_max_len`을 1024로 올려도 같음), 이 구성의 유출 0은 재무로만 보낸 결과입니다. 구성은 40문장 표본으로 먼저 견줘 보고 정해, 셋을 모두 남깁니다
 - "대리 결재" 변형은 모든 방법에서 원문보다 정답이 줄었습니다
 - 판단과 보고는 eval이 합니다(#303). Jev는 외부 전송이라 사용자 확인 뒤에 돌립니다
