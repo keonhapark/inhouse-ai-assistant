@@ -14,6 +14,41 @@ from typing import Any
 import yaml
 
 
+FORM_SCOPE_PREFIX = "approval:request:"
+
+
+def _strip_x(node: Any) -> Any:
+    if isinstance(node, dict):
+        return {k: _strip_x(v) for k, v in node.items() if not str(k).startswith("x-")}
+    if isinstance(node, list):
+        return [_strip_x(v) for v in node]
+    return node
+
+
+def form_tools(forms_doc: dict[str, Any]) -> list[dict[str, Any]]:
+    """팩 양식 도구(#397·#403): forms.yaml 양식의 `tool`에서 tools.json 형식의 도구를 만듭니다.
+
+    규칙은 contracts/mcp/README.md '팩 양식 도구'와 참조 구현 contracts/tools/pack_tools.py와 같습니다(시험이 둘을 견줍니다).
+    agent MCP 카탈로그도 같은 규칙으로 같은 도구를 만들어, 위임 토큰의 tools·scopes와 실제 도구가 맞습니다.
+    """
+    out = []
+    for f in forms_doc.get("forms", []):
+        t = f.get("tool")
+        if not t:
+            continue
+        out.append({
+            "name": t["name"],
+            "description": t["description"],
+            "inputSchema": _strip_x(f["fields"]),
+            "risk": t.get("risk", "reversible_write"),
+            "trust_required": t.get("trust_required", "user_direct"),
+            "required_scope": f"{FORM_SCOPE_PREFIX}{f['id']}",
+            "backend": {"service": "erp", "operationId": "createApprovalDocument", "fixed": {"formId": f["id"]}},
+            "stage": t.get("stage", f["stage"]),
+        })
+    return out
+
+
 PACK_LOCAL_REASON = "팩 단위 외부 LLM 금지(pack.yaml model_policy_override)"
 
 
@@ -69,6 +104,7 @@ class Registry:
         self.tool_meta = {t["name"]: t for t in tools_doc["tools"]}
         human_only = {s["id"] for s in scopes_doc["scopes"] if s.get("human_only")}
         # 평가 조건 no_guard·baseline_tools의 공용 계정 범위: 사람 전용을 뺀 모든 scope, 팩의 모든 문서 태그
+        # 양식별 범위(approval:request:<양식>)는 scopes.json의 approval:request가 덮으므로 공용 계정 범위는 그대로입니다
         self.wide_scopes = tuple(s["id"] for s in scopes_doc["scopes"] if not s.get("human_only"))
         self.all_access_tags = tuple(access_tags)
         tool_scope = {t["name"]: t["required_scope"] for t in tools_doc["tools"]}
@@ -104,9 +140,15 @@ class Registry:
         org = read(pack_dir / "org.yaml")
         pack = read(pack_dir / "pack.yaml")
         stage = stage if stage is not None else pack.get("stage")
+        shared = read(contracts_dir / "mcp/tools.json")
+        forms = read(pack_dir / "forms.yaml") if (pack_dir / "forms.yaml").exists() else {}
+        pack_tools = form_tools(forms)
+        clash = {t["name"] for t in shared["tools"]} & {t["name"] for t in pack_tools}
+        if clash:
+            raise ValueError(f"팩 양식 도구 이름이 공용 tools.json과 겹칩니다: {sorted(clash)}")
         return cls(
             read(pack_dir / "agents.yaml"),
-            read(contracts_dir / "mcp/tools.json"),
+            {**shared, "tools": shared["tools"] + pack_tools},
             read(contracts_dir / "auth/scopes.json"),
             tuple(t["id"] for t in org.get("access_tags", [])),
             stage,
