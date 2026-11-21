@@ -7,6 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param jwtTtlSeconds        직원 JWT 유효 시간
  * @param demoPassword         데모 로그인 비밀번호(모든 직원 공통)
  * @param delegationPublicKey  gateway 위임 토큰(ES256) 공개 키 PEM 파일 경로. 비어 있으면 위임 토큰을 받지 않습니다
+ * @param serviceLoginSecret   gateway 서비스 로그인(POST /auth/service-login) 비밀값. 비어 있으면 그 경로가 꺼집니다(404)
  */
 @ConfigurationProperties(prefix = "erp")
-public record AuthProperties(String jwtSecret, long jwtTtlSeconds, String demoPassword, String delegationPublicKey) {}
+public record AuthProperties(String jwtSecret, long jwtTtlSeconds, String demoPassword, String delegationPublicKey,
+                             String serviceLoginSecret) {}

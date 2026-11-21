@@ -45,6 +45,8 @@ public class TokenService {
     static final String ISSUER = "erp";
     static final String GATEWAY = "gateway";
     static final String AUDIENCE = "erp";
+    public static final long SERVICE_LOGIN_TTL_SECONDS = 900;
+    static final String SERVICE_LOGIN_AMR = "slack";
 
     private final byte[] secret;
     private final long ttlSeconds;
@@ -75,11 +77,23 @@ public class TokenService {
     }
 
     public String issue(String employeeId) {
+        return issue(employeeId, ttlSeconds, null);
+    }
+
+    /** 서비스 로그인 토큰: 짧게, amr에 출처(slack)를 넣습니다. */
+    public String issueServiceLogin(String employeeId) {
+        return issue(employeeId, SERVICE_LOGIN_TTL_SECONDS, List.of(SERVICE_LOGIN_AMR));
+    }
+
+    private String issue(String employeeId, long ttl, List<String> amr) {
         Instant now = clock.instant();
-        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+        JWTClaimsSet.Builder b = new JWTClaimsSet.Builder()
                 .issuer(ISSUER).audience(AUDIENCE).subject(employeeId)
-                .issueTime(Date.from(now)).expirationTime(Date.from(now.plusSeconds(ttlSeconds)))
-                .build();
+                .issueTime(Date.from(now)).expirationTime(Date.from(now.plusSeconds(ttl)));
+        if (amr != null) {
+            b.claim("amr", amr);
+        }
+        JWTClaimsSet claims = b.build();
         try {
             SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
             jwt.sign(new MACSigner(secret));
@@ -101,7 +115,10 @@ public class TokenService {
         try {
             if (JWSAlgorithm.HS256.equals(alg)) {
                 JWTClaimsSet c = verified(jwt, new MACVerifier(secret), ISSUER);
-                return ErpPrincipal.employee(knownEmployee(c.getSubject()));
+                List<String> amr = c.getStringListClaim("amr");
+                String emp = knownEmployee(c.getSubject());
+                return amr != null && amr.contains(SERVICE_LOGIN_AMR) ? ErpPrincipal.serviceLogin(emp)
+                        : ErpPrincipal.employee(emp);
             }
             if (JWSAlgorithm.ES256.equals(alg) && delegationVerifier != null) {
                 JWTClaimsSet c = verified(jwt, delegationVerifier, GATEWAY);
@@ -113,7 +130,7 @@ public class TokenService {
                     throw unauthorized("위임 토큰의 필수 클레임(agt, cid, scopes, iat, jti)이 없습니다");
                 }
                 return new ErpPrincipal(knownEmployee(c.getSubject()), true, c.getJWTID(), agent, conversation,
-                        Set.copyOf(new HashSet<>(scopes)));
+                        Set.copyOf(new HashSet<>(scopes)), false);
             }
         } catch (JOSEException | ParseException e) {
             throw unauthorized("토큰을 확인하지 못했습니다");

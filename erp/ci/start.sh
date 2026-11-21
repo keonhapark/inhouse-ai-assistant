@@ -2,7 +2,7 @@
 # erp를 띄우고 건강해질 때까지 기다립니다(docs/workflow.md 6절). CI의 행동 계약 시험이 씁니다.
 # PostgreSQL은 도커 컨테이너로 띄우고, erp는 bootJar로 실행합니다.
 # 환경 변수: ERP_PORT(기본 8040), ERP_PG_PORT(기본 55432), PACK_DIR(기본 packs/manufacturing),
-#           ERP_JWT_SECRET, ERP_DEMO_PASSWORD, DELEGATION_TOKEN_PUBLIC_KEY
+#           ERP_JWT_SECRET, ERP_DEMO_PASSWORD, DELEGATION_TOKEN_PUBLIC_KEY, ERP_SERVICE_LOGIN_SECRET
 # 끄기: bash erp/ci/stop.sh
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -28,6 +28,8 @@ export SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:${ERP_PG_PORT}/erp"
 export SPRING_DATASOURCE_USERNAME=iaa
 export SPRING_DATASOURCE_PASSWORD="$pg_password"
 export PACK_DIR="${PACK_DIR:-$root/packs/manufacturing}"
+# 행동 계약 시험의 서비스 로그인 비밀값(contracts/tests/conftest.py 기본값과 같음). 시험 전용 값입니다.
+export ERP_SERVICE_LOGIN_SECRET="${ERP_SERVICE_LOGIN_SECRET:-test-only-service-login-secret}"
 log="$root/erp/build/erp-${ERP_PORT}.log"
 nohup java -jar "$jar" > "$log" 2>&1 &
 echo $! > "$root/erp/build/erp-${ERP_PORT}.pid"

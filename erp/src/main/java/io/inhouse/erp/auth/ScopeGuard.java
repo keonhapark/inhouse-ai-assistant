@@ -22,10 +22,17 @@ public class ScopeGuard implements HandlerInterceptor {
             return true;
         }
         ErpPrincipal p = current();
-        if (p == null || !p.viaDelegationToken() || hm.hasMethodAnnotation(PublicEndpoint.class)) {
+        if (p == null || hm.hasMethodAnnotation(PublicEndpoint.class)) {
             return true;
         }
         RequiredScope rs = hm.getMethodAnnotation(RequiredScope.class);
+        if (p.viaServiceLogin() && rs != null && rs.humanOnly()) {
+            throw new ApiException(403, "service-login-not-allowed", "서비스 로그인(슬랙) 토큰으로 부를 수 없는 기능입니다")
+                    .auditedOnReads();
+        }
+        if (!p.viaDelegationToken()) {
+            return true;
+        }
         if (rs == null) {
             // scope 표시가 빠진 경로는 위임 토큰으로 열지 않습니다(실패 시 닫힘).
             throw new ApiException(403, "forbidden", "scope가 정해지지 않은 경로입니다").auditedOnReads();
