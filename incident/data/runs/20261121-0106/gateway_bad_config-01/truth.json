@@ -1,0 +1,37 @@
+{
+  "incidentId": "gateway_bad_config-01",
+  "runId": "20261121-0106",
+  "fault": "gateway_bad_config",
+  "title": "gateway 잘못된 LLM 키 배포",
+  "rootService": "gateway",
+  "kind": "bad_config",
+  "window": {
+    "start": "2026-11-21T01:09:29.064989+09:00",
+    "end": "2026-11-21T01:12:31.332872+09:00"
+  },
+  "injectedAt": "2026-11-21T01:09:49.070306+09:00",
+  "recoverStartedAt": "2026-11-21T01:11:23.850728+09:00",
+  "recoveredAt": "2026-11-21T01:11:30.584168+09:00",
+  "ticket": {
+    "id": "tkt_446882636fd7",
+    "requesterId": "E0036",
+    "title": "AI 비서 답변 실패",
+    "description": "어떤 질문을 해도 답변 생성에 실패했다고 나옵니다.",
+    "createdAt": "2026-11-21T01:12:31.389972966+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 241,
+    "logs/erp.log": 1090,
+    "logs/rag.log": 37,
+    "logs/agent.log": 59,
+    "logs/litellm.log": 64,
+    "logs/gateway.log": 23,
+    "audit/gateway_egress.jsonl": 4,
+    "audit/gateway_audit.jsonl": 18,
+    "audit/agent.jsonl": 7,
+    "audit/rag.jsonl": 1,
+    "audit/erp.jsonl": 2
+  },
+  "trafficErrors": 5,
+  "trafficTotal": 1042
+}
