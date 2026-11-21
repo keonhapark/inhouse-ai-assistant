@@ -315,6 +315,23 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
     return g.compile(checkpointer=checkpointer or InMemorySaver())
 
 
+PRIOR_TURNS_KEEP = 6
+PRIOR_TOOL_MAX_CHARS = 1500
+
+
+def _is_user_turn(m: dict[str, Any]) -> bool:
+    """사용자 발화(첨부 이미지 안내 메시지는 발화에 딸린 것이라 빼고 셉니다)."""
+    content = str(m.get("content", ""))
+    return m.get("role") == "user" and not content.startswith(UNTRUSTED_NOTE) and not content.startswith("[첨부")
+
+
+def _keep_recent_turns(messages: list[dict[str, Any]], keep: int) -> list[dict[str, Any]]:
+    starts = [i for i, m in enumerate(messages) if _is_user_turn(m)]
+    if len(starts) <= keep:
+        return messages
+    return messages[starts[-keep]:]
+
+
 def prepare_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """새 턴을 시작하기 전에 이전 기록을 고칩니다.
 
@@ -322,12 +339,18 @@ def prepare_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
       것입니다. 모델이 쓴 문장과 막힌 호출의 인자는 남으므로, 그 대화의 user_direct 도구는 다음 턴부터
       승인을 받습니다(conversation_tainted, policy.decide).
     - 응답이 없는 도구 호출(중간에 끊긴 턴)에는 건너뜀 응답을 채웁니다.
+    - 입력이 길어지지 않게(#423) 최근 PRIOR_TURNS_KEEP개 사용자 턴만 남기고, 이전 턴의 긴 도구 출력은
+      PRIOR_TOOL_MAX_CHARS자로 줄입니다. 남기는 범위는 사용자 발화에서 시작해 도구 호출과 응답 짝이 깨지지 않습니다.
     """
+    messages = _keep_recent_turns(messages, PRIOR_TURNS_KEEP)
     out: list[dict[str, Any]] = []
     answered = {m.get("tool_call_id") for m in messages if m.get("role") == "tool"}
     for m in messages:
         if m.get("role") == "tool" and str(m.get("content", "")).startswith(UNTRUSTED_NOTE):
             m = {**m, "content": f"{UNTRUSTED_NOTE} (이전 턴의 출력이라 본문을 뺐습니다)"}
+        elif m.get("role") == "tool" and len(str(m.get("content", ""))) > PRIOR_TOOL_MAX_CHARS:
+            text = str(m["content"])
+            m = {**m, "content": f"{text[:PRIOR_TOOL_MAX_CHARS]}…(이전 턴 출력이라 줄였습니다. 전체 {len(text)}자)"}
         out.append(m)
         if m.get("role") == "assistant":
             for c in m.get("tool_calls") or []:
