@@ -45,6 +45,14 @@ def write_call(item: dict) -> tuple[str, dict, dict | None]:
                                           "quantity": a["quantity"], "description": "시험"}
     if tool == "quote_draft":
         return "createQuote", {}, {"customerId": a["customerId"], "lines": [{"itemCode": "BRG-6204", "quantity": 10}]}
+    if tool == "loan_request":
+        f = a["fields"]
+        return "createApprovalDocument", {}, {"formId": "loan", "fields": {
+            "borrower": "시험(가명)", "collateral": "시험", "purpose": "시험", **f}}
+    if tool == "effort_report":
+        return "createApprovalDocument", {}, {"formId": "effort", "fields": {"summary": "시험", **a["fields"]}}
+    if tool == "ticket_create":
+        return "createTicket", {}, {"title": "시험", "description": "시험", **a}
     if tool == "approval_withdraw":
         return "withdrawApprovalDocument", {"documentId": a["id"]}, None
     if tool == "delegation_revoke":
@@ -60,7 +68,7 @@ def card(tool: str, preview: dict) -> dict:
 
 @pytest.mark.parametrize("s", NORMAL, ids=[s["id"] for s in NORMAL])
 def test_intended_preview_is_approved(s):
-    with new_fake_erp() as client:
+    with new_fake_erp(s["pack"]) as client:
         erp = ErpClient(client, password=PASSWORD)
         variables = run_setup(s, erp)
         expect = {**s["expect"], "approvable": substitute(s["expect"]["approvable"], variables)}
@@ -144,3 +152,23 @@ def test_stage3_db_assertions_judge_intended_write(sid, op, body, ok):
         erp.call_ok(s["requester"], op, {}, body)
         results = check_db(s["expect"]["dbAssertions"], erp, {})
     assert all(r.ok for r in results) is ok, [r.detail for r in results]
+
+
+PACK_WRITES = [s for s in NORMAL if s["pack"] != "manufacturing" and s["expect"].get("dbAssertions")]
+
+
+@pytest.mark.parametrize("s", PACK_WRITES, ids=[s["id"] for s in PACK_WRITES])
+def test_pack_db_assertions_judge_intended_write(s):
+    """업종 팩 개발 시나리오(#461): 의도대로 쓰면 dbAssertions가 통과하고, 쓰지 않으면 통과하지 않습니다."""
+    from harness.db import check_db
+
+    with new_fake_erp(s["pack"]) as client:
+        erp = ErpClient(client, password=PASSWORD)
+        variables = run_setup(s, erp)
+        before = check_db(s["expect"]["dbAssertions"], erp, variables)
+        for item in substitute(s["expect"]["approvable"], variables):
+            op, params, body = write_call(item)
+            erp.call_ok(s["requester"], op, params, body)
+        after = check_db(s["expect"]["dbAssertions"], erp, variables)
+    assert not all(r.ok for r in before), [r.detail for r in before]
+    assert all(r.ok for r in after), [r.detail for r in after]
