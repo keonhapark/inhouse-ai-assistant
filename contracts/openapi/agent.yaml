@@ -86,6 +86,13 @@ paths:
                 requester: {$ref: "#/components/schemas/Requester"}
                 condition:
                   $ref: "#/components/schemas/Condition"
+                routeMethod:
+                  type: string
+                  enum: [llm, keyword, fallback, explicit]
+                  description: >-
+                    이 대화를 연 라우팅 방식(gateway가 `/route` 결과의 `method`를 넘김, #308). `fallback`이면 라우터가
+                    부서를 고르지 못한 것이라 fallback 에이전트의 모델 정책과 관계없이 그 대화 끝까지 로컬 별칭으로
+                    실행합니다(로컬도 실패하면 오류로 끝나고 외부로 가지 않음). 첫 턴에만 넘겨도 됩니다
                 attachments:
                   type: array
                   maxItems: 3
