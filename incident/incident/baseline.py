@@ -82,7 +82,7 @@ def template_changes(lines: list[Line], before: Window, during: Window) -> list[
     level: dict[tuple[str, int], str] = {}
     example: dict[tuple[str, int], str] = {}
     for line in lines:
-        if line.level == "heartbeat" or (line.at not in before and line.at not in during):
+        if line.level in ("heartbeat", "noise") or (line.at not in before and line.at not in during):
             continue
         r = m.add_log_message(f"{line.service} {mask(line.text)}")
         key = (line.service, r["cluster_id"])

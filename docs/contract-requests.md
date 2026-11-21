@@ -10,3 +10,5 @@
 | 2026-11-21 | erp | #409 | 새 팩 `packs/it-services`(SI·운영 조직, 전사 비서·프로젝트 지원·서비스데스크 에이전트, 휴가·공수 보고 양식, 고객사·티켓 고정 데이터). 코어 변경 0줄 | 4단계 업종 팩(#115) | pack/ PR |
 | 2026-11-22 | gateway | #436 | gateway.yaml `X-Eval-Model-Override`에 `external=external-exaone`(K-EXAONE 2.5 API) 추가 | 모델 교체 회귀의 외부 교체 모델을 K-EXAONE 2.5로(사용자 결정) | contract/gateway-exaone-override PR, 구현 gateway #436 |
 | 2026-11-22 | review | #169 | gateway.yaml `bearer` 설명에 사람용 경로 공통 오류(401 `unauthorized`, 403 `service-login-not-allowed`)를 더함. 설명만, 구현 그대로 | 계약이 구현의 401·슬랙 토큰 403을 적지 않음(#169 검수 코멘트) | contract/gateway-auth-errors PR |
+| 2026-11-22 | gateway | #458 | gateway.yaml postMessage `attachments` 설명: 메타데이터를 지운 뒤 넘김, 읽을 수 없는 이미지 422·픽셀 상한 413, 메타 크기·해시는 지운 이미지 기준 | 첨부 이미지 EXIF 제거(기획서 2단계 영수증) | contract/gateway-attachment-exif PR, 구현 gateway #458 |
+| 2026-11-22 | gateway | #465 | gateway.yaml LLM 출구 머리말에 의미 캐시 응답 머리글 `X-Cache: hit|miss`(켠 경우만)와 적중 조건 | 권한 범위를 키에 넣은 의미 캐시(기획서 2단계) | contract/gateway-semantic-cache PR, 구현 gateway #465 |

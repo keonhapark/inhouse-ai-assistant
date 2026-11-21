@@ -30,7 +30,7 @@ from gateway.audit import AuditLog
 from gateway.delegation import DelegationService, load_requester
 from gateway.egress import ModelUsage
 from gateway.erp_client import ErpClient
-from gateway.vision import inspect_data_url
+from gateway.vision import clean_data_url
 from gateway.problems import ProblemError
 from gateway.registry import Registry, Requester, grant_matches
 from gateway.relay import bearer
@@ -54,18 +54,22 @@ MAX_ATTACHMENTS = 3  # contracts/openapi/gateway.yaml postMessage attachments ma
 def check_attachments(value: Any) -> tuple[list[dict[str, str]], list[dict[str, Any]]]:
     """대화 첨부(#288)를 LLM 출구 이미지 입력(#261)과 같은 규칙으로 확인합니다(413·415·422).
 
-    (agent에 넘길 본문 그대로, 대화 기록에 남길 메타(AttachmentMeta, #395))를 돌려줍니다. 메타에는 이미지 본문이 없습니다.
+    (agent에 넘길 본문, 대화 기록에 남길 메타(AttachmentMeta, #395))를 돌려줍니다. agent에 넘길 이미지는 다시 인코딩해
+    EXIF 같은 메타데이터를 지운 것이고(#458), 메타의 크기·해시도 그 이미지 기준입니다(출구 감사의 해시와 같음).
+    메타에는 이미지 본문이 없습니다.
     """
     if not isinstance(value, list) or not 1 <= len(value) <= MAX_ATTACHMENTS:
         raise ProblemError(422, "validation", f"attachments는 1~{MAX_ATTACHMENTS}개 배열이어야 합니다")
+    clean: list[dict[str, str]] = []
     metas: list[dict[str, Any]] = []
     for i, a in enumerate(value, 1):
         if not isinstance(a, dict) or set(a) != {"kind", "dataUrl"} or a["kind"] != "image" \
                 or not isinstance(a["dataUrl"], str):
             raise ProblemError(422, "validation", "첨부는 {kind: image, dataUrl}만 받습니다", f"{i}번째 첨부")
-        info = inspect_data_url(a["dataUrl"], i)
+        url, info = clean_data_url(a["dataUrl"], i)
+        clean.append({"kind": "image", "dataUrl": url})
         metas.append({"kind": "image", "mediaType": info.mime, "bytes": info.size, "sha256": info.sha256})
-    return value, metas
+    return clean, metas
 
 
 def now() -> datetime:

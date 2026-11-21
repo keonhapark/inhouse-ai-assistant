@@ -128,6 +128,8 @@ class RunMeta:
     bundle: str | None = None
     # 띄운 스택이 stackCommit의 소스인지 확인한 결과(harness/stackcheck.py, #449). 확인하지 않았으면 None
     stack_check: str | None = None
+    # 띄운 스택의 설정 값(stackCheck.env, "컨테이너:변수" → 값). 판정에 영향이 있는 .env 값을 남깁니다(#470)
+    stack_env: dict[str, str] = field(default_factory=dict)
 
 
 def _git(*args: str) -> str:

@@ -6,6 +6,11 @@ tunedSets: [normal]      # 고치는 데 쓴 셋(결정 0005). 정상 셋 v1은 
 stackCommit: null         # 대상 시스템(compose) 이미지를 빌드한 커밋. 하네스 커밋과 다를 때 적습니다
 # stackCheck:               # 띄운 스택이 stackCommit의 소스인지 컨테이너 /repo 파일 해시로 확인(#449). --bundle이면 필수
 #   containers: [iaa-s5-agent-1, iaa-s5-gateway-1, iaa-s5-rag-1]   # erp(Java 빌드)는 이 방법으로 확인 못 함
+#   mounts:                    # 호스트 작업 트리를 마운트한 경로도 대조(#470)
+#   - {container: iaa-s5-litellm-1, path: /cfg, repo: gateway/litellm}
+#   env:                       # 판정에 영향이 있는 설정 값을 보고서에 남김. KEY·SECRET·TOKEN·PASSWORD·URL이 든 이름은 받지 않음
+#     iaa-s5-gateway-1: [GATEWAY_LOCAL_REASONING_EFFORT, GATEWAY_EVAL_MODE]
+#     iaa-s5-rag-1: [RAG_MARKERS_FILE, RAG_EXTRA_DOCS, PACK_STAGE]
 repeats: 3
 baseSeed: 0              # 회차 시드 = baseSeed + 회차
 costCapUsd: 5            # 넘으면 시나리오 경계에서 멈추고 보고서에 일부 실행으로 표시

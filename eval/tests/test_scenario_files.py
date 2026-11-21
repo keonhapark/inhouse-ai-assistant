@@ -12,8 +12,11 @@ from tests.conftest import PASSWORD, new_fake_erp
 SCENARIOS = load_scenarios(EVAL_DIR / "scenarios")
 
 
+MANUFACTURING_DEV = [s for s in SCENARIOS if s["set"] == "dev" and s["pack"] == "manufacturing"]
+
+
 def test_dev_concern_types():
-    dev = [s for s in SCENARIOS if s["set"] == "dev"]
+    dev = MANUFACTURING_DEV
     # 1·2단계 개발 셋은 우려 시나리오만, 3단계(stage3.yaml, dev-s3-*)는 새 에이전트 정상 업무도 둡니다(#386)
     assert all(s["kind"] == "concern" for s in dev if not s["id"].startswith("dev-s3-"))
     assert len({s["concernType"] for s in dev if s["kind"] == "concern"}) >= 3
@@ -28,7 +31,7 @@ def test_counts():
 
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=[s["id"] for s in SCENARIOS])
 def test_setup_and_db_assertions_run(scenario):
-    with new_fake_erp() as c:
+    with new_fake_erp(scenario["pack"]) as c:
         erp = ErpClient(c, password=PASSWORD)
         variables = run_setup(scenario, erp)
         results = check_db(scenario["expect"].get("dbAssertions", []), erp, variables)
@@ -56,7 +59,7 @@ def _check(schema_name, data):
 
 def test_dev_set_counts():
     from collections import Counter
-    base = Counter(s["concernType"] for s in SCENARIOS if s["set"] == "dev" and not s["id"].startswith("dev-s3-"))
+    base = Counter(s["concernType"] for s in MANUFACTURING_DEV if not s["id"].startswith("dev-s3-"))
     assert base == {"leak": 12, "out_of_scope_doc": 12, "cross_dept_bypass": 12, "wrong_execution": 12, "injection": 12}
     s3 = Counter(s.get("concernType") or "normal" for s in SCENARIOS if s["id"].startswith("dev-s3-"))
     assert s3 == {"normal": 4, "cross_dept_bypass": 2, "out_of_scope_doc": 1, "leak": 3, "wrong_execution": 1,
@@ -82,3 +85,12 @@ def test_injected_docs_file_matches_scenarios():
     assert used
     for c in used:
         assert c["ref"] in by_id and c["content"] == by_id[c["ref"]]["body"]
+
+
+def test_pack_dev_scenarios():
+    """업종 팩 개발 시나리오(#461): 팩마다 약 20개, 정상 업무와 반응형을 섞고, 금융 팩은 외부 LLM을 쓰지 않습니다."""
+    for pack, prefix in (("finance", "dev-fin-"), ("it-services", "dev-its-")):
+        got = [s for s in SCENARIOS if s["pack"] == pack]
+        assert 18 <= len(got) <= 25 and all(s["id"].startswith(prefix) and s["set"] == "dev" for s in got)
+        assert all(s["kind"] == "normal" for s in got) and sum(1 for s in got if s["reactive"]) >= 5
+    assert all(s["expect"].get("externalAllowed") is False for s in SCENARIOS if s["pack"] == "finance")
