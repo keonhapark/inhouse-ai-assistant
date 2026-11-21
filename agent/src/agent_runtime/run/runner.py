@@ -27,7 +27,8 @@ class Runner:
     receipts: ReceiptReader | None = None
 
     async def run(self, token: str, conversation_id: str, agent_id: str, message: str, requester: Requester,
-                  condition: str = "full", attachments: list[str] | None = None) -> dict[str, Any]:
+                  condition: str = "full", attachments: list[str] | None = None,
+                  route_method: str | None = None) -> dict[str, Any]:
         config = {"configurable": {"thread_id": conversation_id}}
         problem, token_id = self._check(token, conversation_id, agent_id, requester)
         if problem:
@@ -43,6 +44,9 @@ class Runner:
         prior = prepare_history((snapshot.values or {}).get("messages", []))
         state = {**TURN_RESET, "conversationId": conversation_id, "agentId": agent_id,
                  "requesterId": requester.employee_id, "condition": condition}
+        if route_method == "fallback":
+            # 부서를 고르지 못한 대화는 끝까지 로컬로 실행합니다(#308). 뒤 턴에서 routeMethod가 없어도 풀리지 않습니다.
+            state["force_local"] = True
         turn = [{"role": "user", "content": message}]
         if attachments:
             note, tainted = await self._read_attachments(attachments, token, ctx)

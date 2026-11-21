@@ -96,13 +96,17 @@ def _override_matches(when: Any, args: dict[str, Any], wide: WideScope) -> bool:
     return False
 
 
-def model_policy_for(agent: Agent, condition: str) -> str:
+def model_policy_for(agent: Agent, condition: str, force_local: bool = False) -> str:
     """출구 별칭을 고를 때 쓸 모델 정책(contracts/eval/conditions.md "출구 별칭 선택").
 
     에이전트 정책의 로컬 강제는 이 프로젝트의 장치라 no_guard·baseline_tools에서는 모두 외부를 씁니다.
+    force_local은 라우터가 부서를 고르지 못해 fallback으로 연 대화입니다(#308). 그 요청이 어느 부서 일인지
+    모르므로 fallback 에이전트 정책과 관계없이 로컬로 실행합니다.
     """
     if condition in ("no_guard", "baseline_tools"):
         return "external_allowed"
+    if force_local:
+        return "local_only"
     return agent.model_policy
 
 
