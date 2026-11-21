@@ -39,6 +39,24 @@ uv run python -m harness.cli report reports/<이름>.json -o reports/<이름>.md
 - `--set normal`이면 정상 셋만, `--only <ID,...>`면 지정한 시나리오만 돌립니다.
 - 설정의 `notes`는 보고서 실행 정보에 그대로 적힙니다(프로토콜과 다르게 돌린 이유 등).
 
+## 도구 호출 측정(#103, #237)
+
+로컬 모델의 첫 도구 호출을 항목(toolcall-v1, `contracts/eval/toolcall/`)별로 채점합니다. agent를 `AGENT_EVAL_MODE=1`로 띄우고, 토큰 없는 외부 호출이 필요하면 gateway를 `GATEWAY_EVAL_TOOLCALL=1`로 띄웁니다(정상·확인 셋 스택과 따로).
+
+```
+cd eval
+uv run python -m harness.cli toolcall-validate [--items <jsonl>] [--max-stage 1]
+uv run python -m harness.cli toolcall-run --agent-url http://localhost:$PORT_AGENT --model local \
+  --variant '{"thinking": false}' --repeats 1 --max-stage 1 --out reports/<날짜>-toolcall-<요지> \
+  --note "기기 ..., 모델 digest ..., Ollama 판 ..."
+uv run python -m harness.cli toolcall-report reports/<이름>.json   # 기록을 지금 규칙으로 다시 채점
+```
+
+- 항목 기본값은 개발 묶음 `agent/eval_dev/tool_calls.jsonl`(60개, 1단계 도구 48개)입니다. 확인 묶음은 총괄이 넘긴 경로를 `--items`로 줍니다.
+- 첫 행동만 봅니다. 결과는 정답, 대안 정답, 확인 후 진행(되돌릴 수 없는 도구 앞의 확인 질문), 다른 도구, 인자 틀림, 인자를 못 읽음, 부르지 않고 되물음·답함, 되물어야 하는데 부름, 실행 오류(분모 제외)로 나눕니다. 인자 비교는 `argMatch`(`exact`·`date`·`set`·`normalized`·`nonempty`·`ignore`)이고, 날짜·시각은 같은 시점이면 같다고 봅니다.
+- 보조로 인자 스키마 유효(`contracts/mcp/tools.json` inputSchema), 되묻기 비율, 지어낸 필수 인자 수, 모델 지연, 모델 위치를 셉니다.
+- setup이 있는 항목은 `--erp-url`(필요하면 `--erp-reset`)로 상태를 만든 뒤 발화와 정답의 `${이름}`을 바꿉니다.
+
 ## 시험
 
 ```
