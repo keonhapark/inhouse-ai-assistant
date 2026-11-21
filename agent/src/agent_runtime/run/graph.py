@@ -46,7 +46,7 @@ class RunGraphState(TypedDict, total=False):
     conversation_tainted: bool
     attachments_read: bool  # 이 턴에 첨부 이미지에서 값을 읽음(미리보기 fromAttachments, #394). 턴마다 비움
     taint_exempt: list[str]  # 이 턴의 신뢰 불가 표시(tainted)에서 뺄 도구. 영수증 턴의 expense_request(결정 0004 덧붙임)
-    force_local: bool  # 라우터 fallback으로 연 대화(#308). TURN_RESET에 넣지 않아 대화 끝까지 남습니다
+    force_local: bool  # 라우터 fallback 대화(#308)·이미지를 읽은 대화(#413). TURN_RESET에 넣지 않아 대화 끝까지 남습니다
     actions: list[dict[str, Any]]
     undo_notes: list[str]
     citations: list[dict[str, Any]]
