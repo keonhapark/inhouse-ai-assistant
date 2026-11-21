@@ -31,3 +31,4 @@
 | 2026-11-21 | gateway | #289 | gateway `GET /audit-events` 선택 파라미터 `order`(asc|desc, 기본 asc) | #276 관리자 콘솔에서 최근 감사 이벤트 보기 | contract/gateway-audit-order PR |
 | 2026-11-21 | agent | #286 | agent.yaml `Attachment`, `/run` `attachments`; gateway.yaml 대화 메시지 `attachments`(413·415) | #281 영수증 이미지를 대화로 받아 로컬 비전으로 읽음 | contract/agent-attachments PR. gateway 전달 구현은 gateway 이슈 |
 | 2026-11-21 | agent | #309 | agent.yaml `/run` 선택 필드 `routeMethod`(llm·keyword·fallback·explicit) | #308 fallback 대화가 전사 비서 정책(external)으로 외부에 나감. fallback이면 대화 끝까지 로컬 | contract/agent-route-method PR. gateway 전달은 gateway 이슈 |
+| 2026-11-21 | gateway | #273 | gateway `POST /auth/slack`(헤더 `X-Slack-Bridge-Secret`, 본문 `{slackUserId}`, 응답 erp `LoginResponse`, 401·403·404), erp `POST /auth/service-login`(#291)을 부름 | #102 슬랙 입구 | contract/gateway-slack PR |
