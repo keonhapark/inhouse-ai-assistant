@@ -26,6 +26,7 @@ from agent_runtime.llm import ChatClient, LLMError
 from agent_runtime.registry import Agent
 from agent_runtime.run.policy import WideScope, decide, model_policy_for, visible_to_model
 from agent_runtime.run.tools import ToolCaller, ToolOutcome, ToolSpec, openai_tool
+from agent_runtime.run.args import normalize_args, optional_args
 from agent_runtime.run.trust import output_trusted
 
 MAX_PLAN_STEPS = 6
@@ -58,7 +59,8 @@ class RunGraphState(TypedDict, total=False):
 
 # conversation_tainted는 턴마다 풀지 않습니다(대화가 끝날 때까지 남음).
 TURN_RESET: RunGraphState = {
-    "queue": [], "current": None, "pending": None, "tainted": False, "taint_exempt": [], "attachments_read": False, "actions": [], "undo_notes": [],
+    "queue": [], "current": None, "pending": None, "tainted": False, "taint_exempt": [], "attachments_read": False,
+    "actions": [], "undo_notes": [],
     "citations": [], "blocked": [], "final": "", "status": "", "steps": 0,
 }
 
@@ -89,7 +91,7 @@ class Deps:
 
 
 def system_prompt(agent: Agent, condition: str, today: datetime, has_tools: bool,
-                  tool_names: Collection[str] = ()) -> str:
+                  tool_names: Collection[str] = (), optional: dict[str, list[str]] | None = None) -> str:
     lines = [
         f"당신은 사내 AI 비서의 '{agent.name}' 에이전트입니다. 맡은 일: {agent.description}",
         f"오늘은 {today:%Y-%m-%d}({WEEKDAYS[today.weekday()]})입니다. 시간대는 한국 표준시(+09:00)입니다.",
@@ -104,7 +106,14 @@ def system_prompt(agent: Agent, condition: str, today: datetime, has_tools: bool
             "시스템이 미리보기로 따로 받습니다.",
             "도구의 필수 값이 빠졌을 때만 그 값을 묻습니다. 선택 값은 묻지 않습니다.",
             "빠진 값이 조회 도구(직원 찾기, 내 결재·예약·위임 목록 등)로 찾을 수 있는 것이면 묻지 않고 먼저 조회합니다.",
+            # #426: '어제'·'다음 주 금요일'을 풀지 못해 날짜 형식 검사에 막혔습니다.
+            "날짜 인자는 오늘을 기준으로 YYYY-MM-DD로 풀어 씁니다(예: 어제, 다음 주 금요일).",
         ]
+        if optional:
+            # #421·#426: 선택 항목(사업자번호 등)을 필수처럼 묻거나 빈 값으로 채우지 않게 도구별로 적습니다.
+            items = "; ".join(f"{name}: {', '.join(args)}" for name, args in optional.items() if args)
+            if items:
+                lines.append(f"다음 선택 항목은 요청에 없으면 묻지 않고 비워 둡니다(빈 문자열로 채우지 않음) — {items}")
         if "leave_request" in tool_names:
             lines.append("휴가·반차 날짜가 하루만 있으면 시작일과 종료일을 같은 날로 봅니다.")
         if "policy_search" in tool_names:
@@ -124,6 +133,12 @@ def asks_user(text: str) -> bool:
     """마지막 답이 되묻기 모양인지(eval/protocol.md 2절과 같은 기준: "?", "~까요", "~나요", "~주세요" 등)."""
     tail = text.rstrip().rstrip(".!。 ").rstrip()
     return bool(tail) and tail.endswith(QUESTION_ENDINGS)
+
+
+def write_optional(specs: list[ToolSpec]) -> dict[str, list[str]]:
+    """쓰기 도구별 선택 항목 이름(프롬프트용, #421). 읽기 도구는 길어지지 않게 뺍니다."""
+    return {t.name: optional_args(t.input_schema) for t in specs
+            if t.meta.risk != "read" and optional_args(t.input_schema)}
 
 
 def llm_failure_message(e: LLMError) -> str:
@@ -165,7 +180,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         condition = state["condition"]
         visible = [t for t in ctx.tools if visible_to_model(t.meta, condition)]
         messages = [{"role": "system", "content": system_prompt(ctx.agent, condition, now(), bool(visible),
-                                                                   [t.name for t in visible])},
+                                                                   [t.name for t in visible], write_optional(visible))},
                     *state.get("messages", [])]
         policy = model_policy_for(ctx.agent, condition, state.get("force_local", False))
         extra = ({"reasoning_effort": deps.plan_reasoning_effort}
@@ -197,6 +212,8 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
             msg = tool_message(call, {"error": "invalid_arguments", "detail": "인자가 JSON 객체가 아닙니다"})
             return after_tool(state, {"messages": [*state["messages"], msg]})
         spec = ctx.spec(name)
+        if spec is not None:
+            args = normalize_args(args, spec.input_schema)
         if spec is None or not visible_to_model(spec.meta, state["condition"]):
             d_action, reason, undo_note = "blocked", f"{name}은 이 대화에서 쓸 수 없는 도구입니다", False
         else:
