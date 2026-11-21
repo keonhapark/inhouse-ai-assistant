@@ -120,6 +120,7 @@ services:
     environment:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      K_EXAONE_API_KEY: ${K_EXAONE_API_KEY:-}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?LITELLM_MASTER_KEY를 .env에 넣습니다}
     volumes:
       - ../gateway/litellm:/cfg:ro
