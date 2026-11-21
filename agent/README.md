@@ -40,7 +40,7 @@ LangGraph로 계획 → 판정 → 미리보기 → 승인 interrupt → 실행 
 
 ## MCP 서버
 
-Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·설명·입력 스키마는 `tools.json` 그대로이고, 팩 단계 이하이면서 켜진 에이전트의 등록부에 있는 도구만 노출합니다.
+Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·설명·입력 스키마는 `tools.json` 그대로이고, 팩 단계 이하이면서 켜진 에이전트의 등록부에 있는 도구만 노출합니다. 팩 `forms.yaml` 양식의 `tool`로 정한 상신 도구(#397, 규칙은 `contracts/mcp/README.md` '팩 양식 도구')도 공용 도구 뒤에 같은 방식으로 붙입니다. 공용 도구와 이름이 겹치면 시작하지 않습니다.
 
 - 위임 토큰은 HTTP 헤더 `X-Delegation-Token`으로만 받습니다. ES256 서명(gateway 공개 키), `iss=gateway`, `aud`에 `mcp`, 만료를 확인합니다.
 - 토큰이 맞으면 `tools/list`는 그 토큰으로 부를 수 있는 도구만 돌려줍니다. 토큰이 없으면 노출된 도구 전부를 설명용으로 돌려줍니다.

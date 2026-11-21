@@ -161,7 +161,8 @@ def services_from_env() -> Services:
                                       "llm": LlmSlotFiller(chat, load_slot_tools(contracts / "mcp" / "tools.json"))}
     evaluator = None
     if os.environ.get("AGENT_EVAL_MODE") == "1":
-        evaluator = EvalToolCaller(registry, chat, load_tools(contracts / "mcp" / "tools.json"),
+        tools = load_tools(contracts / "mcp" / "tools.json", registry.form_tools)
+        evaluator = EvalToolCaller(registry, chat, tools,
                                    load_examples(Path(os.environ.get("AGENT_EVAL_FEWSHOT", "eval_dev/tool_calls.jsonl"))))
     return Services(registry, Router(registry, chat, min_conf), log, runner, fillers, load_rooms(Path(pack_dir)),
                     evaluator)

@@ -124,6 +124,12 @@ class Catalog:
     @classmethod
     def load(cls, tools_file: Path, openapi_dir: Path, registry: Registry) -> Catalog:
         doc = json.loads(tools_file.read_text("utf-8"))
+        public = {t["name"] for t in doc["tools"]}
+        clash = sorted(public & {t["name"] for t in registry.form_tools})
+        if clash:
+            raise CatalogError(f"팩 양식 도구가 공용 tools.json 도구와 이름이 겹칩니다: {', '.join(clash)}")
+        # 팩 양식 도구(#397)는 공용 도구 뒤에 같은 방식으로 붙입니다.
+        doc = {**doc, "tools": [*doc["tools"], *registry.form_tools]}
         specs: dict[str, dict[str, Any]] = {}
         exposed = {name for a in registry.agents for name in a.tools}
         tools = []
@@ -157,7 +163,7 @@ class Catalog:
             ))
         missing = exposed - {t["name"] for t in doc["tools"]}
         if missing:
-            raise CatalogError(f"등록부에 있지만 tools.json에 없는 도구: {', '.join(sorted(missing))}")
+            raise CatalogError(f"등록부에 있지만 tools.json·팩 양식 도구에 없는 도구: {', '.join(sorted(missing))}")
         return cls(doc["version"], tuple(tools))
 
 

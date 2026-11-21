@@ -11,6 +11,8 @@ from typing import Any
 
 import yaml
 
+from agent_runtime.pack_tools import form_tools
+
 
 @dataclass(frozen=True)
 class Requester:
@@ -63,6 +65,8 @@ class Registry:
     pack_stage: int
     fallback_agent_id: str
     agents: tuple[Agent, ...]
+    # 팩 forms.yaml 양식의 tool로 만든 상신 도구(#397, tools.json 형식). 단계와 관계없이 모두 들고, 노출은 에이전트가 정함
+    form_tools: tuple[dict[str, Any], ...] = ()
 
     @property
     def fallback(self) -> Agent:
@@ -94,11 +98,13 @@ class Registry:
             raise RegistryError(f"{pack_dir}: 에이전트 id가 겹칩니다: {', '.join(dup)}")
         if not enabled:
             raise RegistryError(f"{pack_dir}: 단계 {pack_stage}에서 켜진 에이전트가 없습니다")
+        forms = _read_yaml(pack_dir / "forms.yaml") if (pack_dir / "forms.yaml").is_file() else None
         reg = cls(
             pack_id=pack["id"],
             pack_stage=pack_stage,
             fallback_agent_id=fallback_id,
             agents=enabled,
+            form_tools=form_tools(forms),
         )
         if not reg.has(reg.fallback_agent_id):
             raise RegistryError(f"{pack_dir}: fallback_agent '{reg.fallback_agent_id}'가 켜진 에이전트에 없습니다")
