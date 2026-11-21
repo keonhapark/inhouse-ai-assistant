@@ -758,3 +758,26 @@ def test_service_login_token_cannot_use_human_only(api: Api, org: Org) -> None:
     assert problem_code(r) == "service-login-not-allowed"
     # 사람 전용이 아닌 일은 직원 JWT와 같이 됩니다(본인 결재함 조회)
     assert api.req("GET", "/approval-documents", token=token, params={"box": "inbox"}).status_code == 200
+
+
+def test_audit_channel_marks_slack_web_and_agent(api: Api, org: Org) -> None:
+    emp = org.members("finance")[2]
+    auditor = next(e["id"] for e in org.all if e["grade"] == "ceo")
+    slack = _service_login(api, emp).json()["accessToken"]
+    r = api.req("POST", "/room-reservations", token=slack, json={"roomId": "room-b", **dict(zip(
+        ("startsAt", "endsAt"), future_slot())), "title": "슬랙으로 예약"})
+    assert r.status_code == 201, r.text
+    api.req("POST", "/approval-documents/apd_none/approve", token=slack, json={"version": 1})
+    agent = api.delegation_token(emp, ["room:read"])
+    api.req("POST", "/room-reservations", token=agent, json={"roomId": "room-b", "startsAt": "x", "endsAt": "y",
+                                                             "title": "scope 없음"})
+    events = api.get("/audit-events", auditor, params={"actorId": emp, "limit": 500}).json()["items"]
+    for e in events:
+        validate_file("events/audit.schema.json", e)
+    write = next(e for e in events if e["actionId"] == r.json()["actionId"])
+    assert write["actor"]["channel"] == "slack"
+    login = [e for e in events if e["operation"] == "serviceLogin"]
+    assert login and login[-1]["actor"]["channel"] == "slack"
+    if any(e["kind"] == "erp.denied" for e in events):  # 앞단 거절 감사는 erp(#166)만 남깁니다
+        assert {e["actor"]["channel"] for e in events if e["kind"] == "erp.denied"} <= {"slack", "agent"}
+

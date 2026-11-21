@@ -1,4 +1,5 @@
 
+| 2026-11-21 | erp | #291 | audit.schema actor 선택 필드 `channel`(web·slack·agent), erp가 채움(gateway 몫은 이슈) | 슬랙 토큰 쓰기·거절이 사람 화면과 구별되지 않음(보안 리뷰) | 직접 PR |
 | 2026-11-21 | erp | #291 | erp `POST /auth/service-login`(헤더 `X-Service-Login-Secret`, 본문 `{employeeId}`, 15분 직원 JWT `amr: [slack]`, 401·404·422), ProblemCode `service-login-not-allowed`(사람 전용 기능 403) | #273 슬랙 로그인 A안 | 직접 PR |
 모듈 세션이 계약(`contracts/`)이나 팩(`packs/`)을 바꿔야 할 때 한 줄 적고 `contract` 라벨 이슈를 엽니다. 프로젝트 리드가 `contract/*` PR로 반영하고 결과를 적습니다.
 

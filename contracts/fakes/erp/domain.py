@@ -101,6 +101,12 @@ class Principal:
     agent_id: str | None = None
     conversation_id: str | None = None
     scopes: frozenset[str] = frozenset()
+    via_service_login: bool = False
+
+    @property
+    def channel(self) -> str:
+        """감사 이벤트 actor.channel: 위임 토큰이면 agent, 서비스 로그인(amr slack)이면 slack, 그 밖에는 web."""
+        return "agent" if self.via_delegation_token else "slack" if self.via_service_login else "web"
 
 
 @dataclass
@@ -412,7 +418,7 @@ class State(TicketsMixin):
         self.audit.append({
             "eventId": new_id("evt"), "occurredAt": iso(now()), "source": "erp", "kind": kind,
             "actor": {"employeeId": p.employee_id, "viaDelegationToken": p.via_delegation_token,
-                      "agentId": p.agent_id},
+                      "channel": p.channel, "agentId": p.agent_id},
             "onBehalfOf": on_behalf_of, "delegationId": delegation_id,
             "conversationId": p.conversation_id, "actionId": action_id, "undoOf": undo_of,
             "operation": operation, "result": result,
