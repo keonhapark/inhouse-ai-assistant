@@ -122,6 +122,8 @@ class RunMeta:
     model_override: str | None = None
     # 보고서에 남길 모델 설정(승인자·기기·reasoning_effort 등, 이름=값). 설정 modelSettings
     model_settings: dict[str, str] = field(default_factory=dict)
+    # 확인 셋 묶음 해시 확인 결과(run --bundle, contracts/eval/confirm-sets.md). 예: "confirm-v1 `<해시>` = 계약 표(...)"
+    bundle: str | None = None
 
 
 def _git(*args: str) -> str:

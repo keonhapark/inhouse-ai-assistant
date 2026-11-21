@@ -226,3 +226,10 @@ def test_model_override_and_settings_in_report():
                              model_settings={"승인자": "intent", "local 계획 호출 reasoning_effort": "none"}))
     assert "| 모델 교체(X-Eval-Model-Override) | `external=external-sonnet` |" in text
     assert "| 모델 설정 | 승인자 intent; local 계획 호출 reasoning_effort none |" in text
+
+
+def test_bundle_row_in_report():
+    rows = normal_rows()
+    assert "| 확인 셋 묶음 | - |" in render(rows, meta())
+    assert "| 확인 셋 묶음 | confirm-v1 `abc` = 계약 표(파일 3개, 끝 줄바꿈 있음) |" in render(
+        rows, meta(bundle="confirm-v1 `abc` = 계약 표(파일 3개, 끝 줄바꿈 있음)"))

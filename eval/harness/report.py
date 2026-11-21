@@ -344,6 +344,7 @@ def render(rows: list[RunRow], meta: RunMeta, title: str = "평가 보고서") -
         ["팩", pack], ["모델(설정)", meta.model or "-"],
         ["모델 교체(X-Eval-Model-Override)", f"`{meta.model_override}`" if meta.model_override else "없음(기본 별칭)"],
         ["모델 설정", "; ".join(f"{k} {v}" for k, v in meta.model_settings.items()) or "-"],
+        ["확인 셋 묶음", meta.bundle or "-"],
         ["모델(실행 기록)", ", ".join(f"{m} {n}회차" for m, n in sorted(seen.items())) or "-"],
         ["기기", meta.machine],
         ["회차별 실행 시스템", _signatures(rows)],

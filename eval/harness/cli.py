@@ -123,8 +123,28 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def check_bundle(path: str, name: str | None = None) -> str:
+    """묶음 해시가 계약 표와 맞는지 보고, 맞지 않으면 멈춥니다. 맞으면 보고서에 적을 한 줄을 돌려줍니다."""
+    from harness.bundle import BundleError, check, describe
+
+    try:
+        c = check(Path(path), name)
+    except (BundleError, OSError, KeyError, ValueError) as e:
+        raise SystemExit(f"묶음을 읽지 못했습니다: {e}") from e
+    if not c.ok:
+        raise SystemExit(f"묶음 해시가 계약과 맞지 않습니다: {describe(c)}"
+                         + (f". 다른 파일: {', '.join(c.mismatched_files[:5])}" if c.mismatched_files else ""))
+    return describe(c)
+
+
+def cmd_bundle_check(args: argparse.Namespace) -> int:
+    print(check_bundle(args.dir, args.name))
+    return 0
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     cfg = load_config(Path(args.config))
+    bundle = check_bundle(args.bundle, args.bundle_name) if args.bundle else None
     scenarios = load_scenarios(Path(args.scenarios))
     if args.only:
         wanted = set(args.only.split(","))
@@ -149,6 +169,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         if out.with_suffix(".json").exists():
             prior_meta = load_run(out.with_suffix(".json"))[1]
             started_at = prior_meta.started_at
+            if prior_meta.bundle != bundle:
+                raise SystemExit(f"앞선 회차의 묶음({prior_meta.bundle})이 지금 묶음({bundle})과 다릅니다")
             if prior_meta.model_override != cfg["gateway"].get("modelOverride"):
                 raise SystemExit(f"앞선 회차의 모델 교체 값({prior_meta.model_override})이 지금 설정"
                                  f"({cfg['gateway'].get('modelOverride')})과 다릅니다. 다른 출력 이름으로 돌립니다")
@@ -182,6 +204,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     meta.notes.extend(cfg.get("notes", []))
     meta.tuned_sets = list(cfg.get("tunedSets", []))
     meta.model_override = cfg["gateway"].get("modelOverride")
+    meta.bundle = bundle
     meta.model_settings = {str(k): str(v) for k, v in (cfg.get("modelSettings") or {}).items()}
     if injected and any(not has_document_injection(s) for s in scenarios):
         meta.notes.append("주입 문서 파일을 켠 스택에서 문서형 주입이 아닌 시나리오도 돌려, 주입 문서가 그 검색에 섞였을 수 "
@@ -342,6 +365,8 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--only", help="쉼표로 나눈 시나리오 ID만(시험 실행용)")
     r.add_argument("--set", choices=["dev", "normal", "confirm"], help="이 셋의 시나리오만")
     r.add_argument("--max-runs", type=int, help="이번에 새로 돌릴 회차 수 상한(나눠 돌리기)")
+    r.add_argument("--bundle", help="확인 셋 묶음 폴더(manifest 포함). 해시가 contracts/eval/confirm-sets.md와 다르면 멈춤")
+    r.add_argument("--bundle-name", help="계약 표의 묶음 이름(manifest에 name이 없을 때)")
     r.add_argument("--resume", action="store_true", help="<out>.rows.jsonl의 끝난 회차를 건너뛰고 이어 돌림")
     r.add_argument("--injected-docs", choices=["only", "exclude"],
                    help="문서형 주입 시나리오만(only, 주입 파일을 켠 스택) 또는 그 밖의 시나리오만(exclude, 끈 스택)")
@@ -371,6 +396,9 @@ def main(argv: list[str] | None = None) -> int:
     tp = sub.add_parser("toolcall-report", help="도구 호출 기록을 지금 규칙으로 다시 채점")
     tp.add_argument("run")
     tp.add_argument("--items", default=str(DEV_TOOLCALL))
+    bc = sub.add_parser("bundle-check", help="확인 셋 묶음 해시를 계약 표(contracts/eval/confirm-sets.md)와 대조")
+    bc.add_argument("dir")
+    bc.add_argument("--name", help="계약 표의 묶음 이름(manifest에 name이 없을 때)")
     vr = sub.add_parser("vision-run", help="이미지 읽기 측정(도면·불량 사진, images/truth.jsonl)")
     vr.add_argument("--gateway-url", required=True)
     vr.add_argument("--out", required=True)
@@ -382,7 +410,7 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     return {"validate": cmd_validate, "run": cmd_run, "report": cmd_report, "toolcall-validate": cmd_toolcall_validate,
             "toolcall-run": cmd_toolcall_run, "toolcall-report": cmd_toolcall_report,
-            "vision-run": cmd_vision_run}[args.cmd](args)
+            "vision-run": cmd_vision_run, "bundle-check": cmd_bundle_check}[args.cmd](args)
 
 
 if __name__ == "__main__":
