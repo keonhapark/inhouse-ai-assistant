@@ -230,7 +230,7 @@ def _report_head(args: argparse.Namespace) -> dict[str, Any]:
 
     return {
         "measuredAt": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "machine": f"{platform.system()} {platform.machine()}",
+        "machine": f"{platform.system()} {platform.machine()}" + (f", {os.environ['BENCH_DEVICE']}" if os.environ.get("BENCH_DEVICE") else ""),
         "embedder": args.embedder if args.embedder == "hash" else f"{args.embed_model} via {args.base_url}",
         "corpus": corpus_state(),
     }
