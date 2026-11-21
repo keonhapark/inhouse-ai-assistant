@@ -188,7 +188,7 @@ paths:
                 message: {type: string}
                 agentId: {type: string}
                 requester: {$ref: "#/components/schemas/Requester"}
-                today: {type: string, format: date, description: 기준 날짜(재현을 위해 필수, Asia/Seoul)}
+                today: {type: string, format: date, description: "기준 날짜(재현을 위해 필수, Asia/Seoul)"}
                 model:
                   type: string
                   description: >-
@@ -255,7 +255,7 @@ components:
       additionalProperties: false
       properties:
         tool: {type: [string, "null"], description: 첫 도구 호출의 도구 이름. 부르지 않았으면 null(모르는 이름도 그대로)}
-        arguments: {type: [object, "null"], description: 인자를 JSON 객체로 읽었으면 그 값, 못 읽었으면 null}
+        arguments: {type: [object, "null"], description: "인자를 JSON 객체로 읽었으면 그 값, 못 읽었으면 null"}
         rawArguments: {type: [string, "null"], description: 모델이 낸 인자 문자열 그대로}
         content: {type: string, description: 모델이 쓴 문장(되묻기 판정용). 감사·로그에 넣지 않습니다}
         asked: {type: boolean, description: 도구를 부르지 않고 되묻는 모양으로 답함(eval/protocol.md 2절과 같은 기준)}
