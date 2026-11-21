@@ -48,3 +48,14 @@ def test_counts_core_lines_in_pack_commits(tmp_path):
     assert rows[1].core_code == {"agent": 2} and rows[1].core_tests == {"agent": 1} and rows[1].pack == 1
     md = cl.render(["bank"], rows, "HEAD")
     assert "코어 코드 합계: 2줄(목표 0)" in md and "- `agent/runtime.py`" in md
+
+
+def test_extra_commit_must_be_in_ref(monkeypatch):
+    import pytest
+
+    monkeypatch.setattr(cl, "pack_commits", lambda pack, ref, cwd=cl.ROOT: ["x"])
+    head = subprocess.run(["git", "-C", str(cl.ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    first = subprocess.run(["git", "-C", str(cl.ROOT), "rev-list", "--max-parents=0", "HEAD"], capture_output=True,
+                           text=True).stdout.split()[0]
+    with pytest.raises(SystemExit, match="이력에 없습니다"):
+        cl.main(["--pack", "p", "--ref", first, "--extra", head])

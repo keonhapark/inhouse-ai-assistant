@@ -109,7 +109,12 @@ def main(argv: list[str] | None = None) -> int:
     shas: list[str] = []
     for p in args.pack:
         shas += [s for s in pack_commits(p, args.ref) if s not in shas]
-    shas += [git("rev-parse", s).strip() for s in args.extra if git("rev-parse", s).strip() not in shas]
+    for extra in args.extra:
+        sha = git("rev-parse", extra).strip()
+        if subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", sha, args.ref]).returncode != 0:
+            raise SystemExit(f"--extra {extra}가 {args.ref} 이력에 없습니다(작업 브랜치 커밋이 아니라 병합된 커밋을 줍니다)")
+        if sha not in shas:
+            shas.append(sha)
     if not shas:
         raise SystemExit(f"{args.ref}에 packs/{'·'.join(args.pack)}를 바꾼 커밋이 없습니다")
     sys.stdout.write(render(args.pack, [count_commit(s) for s in shas], args.ref))
