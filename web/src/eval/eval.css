@@ -1,0 +1,170 @@
+.eval h2 {
+  margin: var(--sp-16) 0 var(--sp-8);
+  font-size: var(--fs-20);
+}
+
+.eval h3 {
+  margin: var(--sp-16) 0 var(--sp-8);
+  font-size: var(--fs-16);
+}
+
+.eval h4 {
+  margin: var(--sp-12) 0 var(--sp-4);
+  font-size: var(--fs-14);
+}
+
+.eval p {
+  margin: 0 0 var(--sp-8);
+}
+
+.eval__set,
+.eval__meta,
+.eval__scenarios {
+  display: grid;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.eval__set {
+  padding-top: var(--sp-8);
+  border-top: 1px solid var(--border);
+}
+
+.eval__dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: var(--sp-8) var(--sp-16);
+  margin: 0;
+}
+
+.eval__dl dt {
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+}
+
+.eval__dl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.eval__dl .badge {
+  margin-left: var(--sp-8);
+}
+
+.eval__notes ul {
+  margin: var(--sp-8) 0 0;
+  padding-left: var(--sp-16);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+}
+
+.eval__notes li + li {
+  margin-top: var(--sp-4);
+}
+
+.eval__findings {
+  margin: var(--sp-8) 0;
+  padding-left: var(--sp-16);
+}
+
+.eval__findings li + li {
+  margin-top: var(--sp-8);
+}
+
+/* 비율·차이와 95% 구간: 회색 막대 위 구간 선과 점(강조색 하나). 값은 옆 글자로 읽습니다. */
+.ci {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ci__track {
+  position: relative;
+  display: inline-block;
+  width: 96px;
+  /* 0%·100%의 점이 막대 밖으로 나가지 않게 양쪽에 점 반지름만큼 둡니다 */
+  margin: 0 4px;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--bg);
+  flex: none;
+}
+
+.ci__range {
+  position: absolute;
+  top: 4px;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+
+.ci__dot {
+  position: absolute;
+  top: 1px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-sizing: content-box;
+  transform: translateY(-1px);
+}
+
+.ci__zero {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 100%;
+  background: var(--text-muted);
+}
+
+.eval__runs {
+  min-width: 720px;
+}
+
+.eval__badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+}
+
+.eval__miss .badge {
+  border-style: dashed;
+}
+
+.eval__detail td {
+  background: var(--bg);
+}
+
+.eval__run-list {
+  display: grid;
+  gap: var(--sp-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-12);
+}
+
+.eval__line {
+  margin-left: var(--sp-12);
+  overflow-wrap: anywhere;
+}
+
+.eval .admin__field,
+.eval select {
+  max-width: 100%;
+}
+
+.eval__findings .ci {
+  flex-wrap: wrap;
+  white-space: normal;
+}
+
+.eval__runs tr.is-open th,
+.eval__runs tr.is-open td {
+  background: var(--bg);
+}
