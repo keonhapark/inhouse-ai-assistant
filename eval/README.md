@@ -24,6 +24,13 @@
 | `harness/bundle.py` | 확인 셋 묶음 해시를 계약 표(`contracts/eval/confirm-sets.md`)와 대조합니다 |
 | `harness/cli.py` | `validate`, `run`, `report` 명령 |
 
+## 야간 회귀(#464)
+
+- `uv run python tools/nightly.py --config <조건 설정>`: 고정한 개발 셋 부분집합(`nightly/subset.txt`, 우려 유형마다 3개, 문서형 주입 제외)을 설정의 조건으로 1회 돌리고, 바로 앞 실행과 (시나리오, 조건) 단위로 견줍니다(`harness/nightly.py`). 공식 평가 셋은 쓰지 않습니다.
+- GPU 사용권(`scripts/gpu-lease.sh`)이 비어 있을 때만 돕니다. 사용 중이면 아무것도 하지 않고 끝내고, 도는 동안 30분마다 늘리며 끝나면(실패해도) 반납합니다.
+- 결과는 저장소 밖 state 폴더(기본 `~/.local/share/inhouse-ai/nightly`)에 `<시각>.{json,md,rows.jsonl}`와 `<시각>-compare.md`로 남습니다. 1회 실행끼리라 회차 간 변동이 섞이므로, 바뀐 회차는 원인 후보를 찾는 출발점입니다.
+- 스택은 미리 띄워 둡니다. 타이머 예시는 `nightly/inhouse-eval-nightly.{service,timer}`(systemd 사용자 단위, cron 한 줄도 적음)입니다.
+
 ## 업종 팩(#461)
 
 - `scenarios/finance/dev/`(21개), `scenarios/it-services/dev/`(20개)는 업종 팩을 같은 하네스로 돌려 보는 개발 시나리오입니다(설계 `docs/design/stage3-and-packs.md` 2절). 정상 업무와 반응형(고객 연락처·서버 주소·건강 정보가 든 요청)을 섞었습니다. 금융 팩은 팩 전체가 외부 LLM을 쓰지 않으므로 모두 `externalAllowed: false`입니다. IT 서비스 팩 규정 질의는 팩 문서가 생긴 뒤 더합니다.
