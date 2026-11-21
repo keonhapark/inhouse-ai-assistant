@@ -34,6 +34,7 @@ npm run gen:api  # 계약이 바뀌면 src/api/schema.d.ts를 다시 만듭니�
 | `src/inbox/` | 팀장 승인함(탭 4개, 결재선, 승인·반려)과 대결 설정(대리인 찾기, 양식 범위, 미리보기 → 등록, 해지) |
 | `src/org/` | 조직도(부서 나무, 상위 경로, 구성원과 부서장, 담당 에이전트)와 에이전트 등록부(담당 부서, 위험 등급별 실행, 도구, 모델 정책). `/org`, `/agents` |
 | `src/admin/` | 관리자 콘솔(auditor만). 기간 필터, 운영 지표(합계, 에이전트별, 차단 이유, 입구 라우팅, 비용 상한), 외부 전송 기록(가린 자리 표시), 감사 로그(필터, 더 보기). `/admin` |
+| `src/eval/` | 평가 리포트(auditor만). eval 하네스의 보고서 JSON(`contracts/eval/report.schema.json`)을 gateway `/eval/reports`로 받아 실행 조건, 셋별 지표(비율과 95% 구간 막대, 짝 차이와 판정), 승인 요청·경로·비용, 시나리오별 회차 결과를 보여 줍니다. 통계는 보고서 summary 값을 그대로 씁니다. `/eval` |
 | `src/chat/` | 직원 채팅. SSE 읽기(`sse.ts`), ChatEvent를 화면 상태로 바꾸는 리듀서(`thread.ts`), 미리보기·행동·근거 부품 |
 | `src/mocks/` | gateway 계약 모의 서버(MSW)와 지어낸 직원 데이터 |
 | `Dockerfile`, `nginx/` | 정적 파일과 `/api` 프록시, `GET /health` |
@@ -168,6 +169,16 @@ GATEWAY_EXTERNAL_LOG=/audit/gateway/external.jsonl docker compose -f infra/compo
 # http://localhost:8600 에서 E0007로 대화 몇 건 → E0057로 로그인 → 관리
 ```
 
+
+| 평가 리포트: 실행 조건과 보호 지표 | 다크 모드 |
+|---|---|
+| ![평가 리포트](docs/images/eval-report-light.png) | ![평가 리포트 다크](docs/images/eval-report-dark.png) |
+
+| 정상 셋 지표(구간 막대, 짝 차이 판정) | 시나리오별 결과(기대와 다른 회차만) |
+|---|---|
+| ![정상 셋](docs/images/eval-normal-light.png) | ![시나리오별 결과](docs/images/eval-scenarios-light.png) |
+
+평가 리포트의 모의 데이터(`src/mocks/fixtures/eval-normal-stage1.json`)는 실제 1단계 보고서(`eval/reports/2026-11-20-normal-stage1.json`)에 하네스의 통계 함수(`eval/harness/report.py`·`stats.py`)로 summary를 붙인 것입니다. 하네스가 summary를 직접 쓰는 것(#328)과 gateway 경로(#332) 전이라 모의 서버 화면입니다. 막대는 0~100%(차이는 -100~+100%p, 가운데 선이 0) 위에 구간을 선으로, 비율을 점으로 그리고 값은 옆 글자로 읽게 했습니다.
 
 | 로그인 오류 | 디자인 부품 |
 |---|---|

@@ -54,6 +54,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/slack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description 슬랙 브리지만 부르는 로그인(#273). 헤더 `X-Slack-Bridge-Secret`이 gateway 설정(`SLACK_BRIDGE_SECRET`)과 맞고
+         *     `slackUserId`가 매핑(로컬 설정 파일, 워크스페이스마다 다름)에 있으면, erp `POST /auth/service-login`으로 그 직원의
+         *     짧은 직원 JWT(`amr: [slack]`)를 받아 돌려줍니다. 이 토큰으로는 사람 전용 기능(결재 승인·반려, 감사 조회 등)을 부를 수 없습니다(403).
+         *     비밀값이 틀리거나 없으면 401, 매핑에 없는 슬랙 사용자면 403, `SLACK_BRIDGE_SECRET`이 설정되지 않았으면 404입니다.
+         *     비밀값과 토큰은 로그·감사에 남기지 않습니다.
+         */
+        post: operations["slackLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -363,7 +386,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description auditor 역할만. gateway·agent·MCP·rag·erp 감사 이벤트를 시각 순으로 합쳐 돌려줍니다. */
+        /**
+         * @description auditor 역할만. gateway·agent·MCP·rag·erp 감사 이벤트를 시각 순으로 합쳐 돌려줍니다.
+         *     `order=desc`면 최근 것부터 돌려주고, `nextCursor`는 그 페이지 마지막 것보다 오래된 쪽을 가리킵니다.
+         */
         get: operations["listAuditEvents"];
         put?: never;
         post?: never;
@@ -410,6 +436,43 @@ export interface paths {
          *     화면은 `redactions`의 위치로 가린 자리를 표시합니다.
          */
         get: operations["listEgressRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/eval/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description auditor 역할만(관리자 콘솔 평가 리포트, 위임 토큰 403). 저장소 eval/reports의 보고서 JSON 목록을 최근 것부터 돌려줍니다.
+         *     gateway는 그 폴더를 읽기 전용으로 마운트해 읽기만 합니다(평가를 돌리지 않음). reportId는 파일 이름에서 .json을 뺀 것입니다.
+         */
+        get: operations["listEvalReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/eval/reports/{reportId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description auditor 역할만. 보고서 JSON 한 개를 그대로 돌려줍니다(contracts/eval/report.schema.json). 없으면 404. */
+        get: operations["getEvalReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -690,6 +753,26 @@ export interface components {
          * @enum {string}
          */
         RiskAction: "auto" | "auto_with_undo" | "confirm" | "deny";
+        /** @description 보고서 목록 한 줄. 본문 meta에서 뽑은 값입니다 */
+        EvalReportSummary: {
+            /** @description 파일 이름에서 .json을 뺀 것(예: 2026-11-20-normal-stage1) */
+            reportId: string;
+            /** @description 같은 이름 md의 첫 제목. 없으면 null */
+            title?: string | null;
+            /** Format: date-time */
+            startedAt: string;
+            finishedAt?: string | null;
+            /** @description 회차에 나온 셋(normal */
+            sets?: string[];
+            conditions: string[];
+            repeats?: number;
+            packStage?: number | null;
+            doneRuns?: number;
+            plannedRuns?: number;
+            complete: boolean;
+            /** @description 본문에 summary가 있는지(#328 전 보고서는 false) */
+            hasSummary: boolean;
+        };
         EmployeeSummary: {
             id: string;
             name: string;
@@ -795,6 +878,12 @@ export interface components {
             /** @description 인용 대조로 quote가 원문에 있는지 확인했는지 */
             verified: boolean;
             edition?: components["schemas"]["Edition"];
+        };
+        Attachment: {
+            /** @enum {string} */
+            kind: "image";
+            /** @description jpeg·png data URL. 한 장의 디코딩 크기 상한은 5MB입니다(gateway 이미지 입력과 같은 제한) */
+            dataUrl: string;
         };
         ActionResult: {
             actionId: string;
@@ -959,6 +1048,485 @@ export interface components {
             problemType?: string | null;
             detail?: string | null;
         };
+        nullableString: string | null;
+        /** @description n/N과 Clopper-Pearson 양측 95% 구간. N이 0이면 rate·low·high는 null */
+        proportion: {
+            n: number;
+            N: number;
+            rate?: number | null;
+            low?: number | null;
+            high?: number | null;
+        };
+        count: {
+            n: number;
+            N: number;
+        };
+        /** @description 같은 시나리오끼리 짝지은 비율 차이(a − b)와 Newcombe 1998 method 10 95% 구간(eval/harness/stats.py newcombe_paired) */
+        pairedDiff: {
+            /** @description 평가 조건(contracts/eval/conditions.md) */
+            a: string;
+            /** @description 평가 조건(contracts/eval/conditions.md) */
+            b: string;
+            pairs: number;
+            pA?: number;
+            pB?: number;
+            diff: number;
+            low: number;
+            high: number;
+        };
+        outcomeCounts: {
+            incident: number;
+            blocked: number;
+            completed: number;
+            failed: number;
+        };
+        concernSummary: {
+            /** @description 이 프로젝트(full) 유형별 사고: 시나리오 단위 비율과 회차 단위 n/N. full을 돌리지 않았으면 null */
+            full?: {
+                /** @description 우려 유형(leak, out_of_scope_doc, cross_dept_bypass, wrong_execution, injection). null이면 합계 */
+                concernType: string | null;
+                scenarios: components["schemas"]["proportion"];
+                runs: components["schemas"]["count"];
+            }[] | null;
+            /** @description 조건별 사고(시나리오 단위 n/N), 유형별과 합계 */
+            byCondition: {
+                /** @description 우려 유형(leak, out_of_scope_doc, cross_dept_bypass, wrong_execution, injection). null이면 합계 */
+                concernType: string | null;
+                cells: {
+                    /** @description 평가 조건(contracts/eval/conditions.md) */
+                    condition: string;
+                    n: number;
+                    N: number;
+                }[];
+            }[];
+            /** @description 사고율 차이(full − 비교 조건), 유형별과 합계 */
+            comparisons?: {
+                /** @description 우려 유형(leak, out_of_scope_doc, cross_dept_bypass, wrong_execution, injection). null이면 합계 */
+                concernType: string | null;
+                diffs: components["schemas"]["pairedDiff"][];
+            }[];
+            /** @description 작성자별 사고(시나리오 단위). 확인 셋에만 */
+            byAuthor?: {
+                author: string;
+                cells: {
+                    /** @description 평가 조건(contracts/eval/conditions.md) */
+                    condition: string;
+                    n: number;
+                    N: number;
+                }[];
+            }[];
+            /** @description 조건별 결과 분포(회차 단위)와 실행 후 되돌림·막힌 금지 도구 시도 */
+            outcomes: (components["schemas"]["outcomeCounts"] & {
+                /** @description 평가 조건(contracts/eval/conditions.md) */
+                condition: string;
+                executedThenUndone?: number;
+                forbiddenAttempts?: number;
+            })[];
+        };
+        normalSummary: {
+            /** @description 보호 지표 pass^k(시나리오 단위), 일반·반응형·전체 */
+            passK: {
+                /** @enum {unknown} */
+                group: "general" | "reactive" | "all";
+                cells: {
+                    /** @description 평가 조건(contracts/eval/conditions.md) */
+                    condition: string;
+                    rate: components["schemas"]["proportion"];
+                }[];
+            }[];
+            /** @description 처리한 업무 수(pass^k 시나리오 수) 비교 */
+            fullVsWriteBlocked?: {
+                full: number;
+                writeBlocked: number;
+            } | null;
+            /** @description pass^k 차이(full − no_guard)와 판정. 구간 하한이 -10%p보다 위면 mostly_not_blocked */
+            fullVsNoGuard?: {
+                diff: components["schemas"]["pairedDiff"];
+                /** @enum {unknown} */
+                verdict: "mostly_not_blocked" | "undetermined";
+            } | null;
+            /** @description 정답 에이전트로 넘긴 비율(회차 단위) */
+            router: {
+                /** @description 평가 조건(contracts/eval/conditions.md) */
+                condition: string;
+                rate: components["schemas"]["proportion"];
+            }[];
+        };
+        commonSummary: {
+            /** @description 승인 요청(회차 합계) */
+            approvals: {
+                /** @description 평가 조건(contracts/eval/conditions.md) */
+                condition: string;
+                requested: number;
+                missedRisks: number;
+                unnecessary: number;
+            }[];
+            /** @description 경로별 결과(회차 단위). 회차가 있는 경로만 */
+            routes: (components["schemas"]["outcomeCounts"] & {
+                /** @description 평가 조건(contracts/eval/conditions.md) */
+                condition: string;
+                /** @enum {unknown} */
+                route: "local" | "external" | "mixed" | "none";
+            })[];
+            /** @description 비용과 지연(회차 단위) */
+            costLatency: {
+                /** @description 평가 조건(contracts/eval/conditions.md) */
+                condition: string;
+                p50S?: number | null;
+                p95S?: number | null;
+                costUsd?: number | null;
+                costUnknown: number;
+            }[];
+        };
+        setSummary: {
+            set: string;
+            /** @description 주 결과인지(확인 셋). 개발 셋 등은 false */
+            main?: boolean;
+            /** @description 우려 시나리오가 없으면 null */
+            concern?: null | components["schemas"]["concernSummary"];
+            /** @description 정상 시나리오가 없으면 null */
+            normal?: null | components["schemas"]["normalSummary"];
+            common: components["schemas"]["commonSummary"];
+        };
+        /** @description 실행 조건과 진행 상태 */
+        meta: {
+            /** @description 보고서를 쓴 하네스 커밋(git HEAD) */
+            commit: string;
+            /** @description 커밋하지 않은 변경이 있었는지 */
+            dirty: boolean;
+            /** @description 하네스를 돌린 기기(platform) */
+            machine: string;
+            /** Format: date-time */
+            started_at: string;
+            /** @description 끝난 시각. 끝나지 않았으면 빈 문자열 */
+            finished_at?: string;
+            /** @description 설정에 적은 모델 설명 */
+            model?: components["schemas"]["nullableString"];
+            pack?: components["schemas"]["nullableString"];
+            /** @description packs/<id>/pack.yaml의 version("id 버전") */
+            pack_version?: components["schemas"]["nullableString"];
+            /** @description 대상 시스템을 띄운 팩 단계 */
+            pack_stage?: number | null;
+            /** @description 평가 조건(contracts/eval/conditions.md) */
+            conditions: string[];
+            repeats: number;
+            base_seed?: number;
+            cost_cap_usd?: number | null;
+            cost_spent_usd?: number;
+            cost_unknown_runs?: number;
+            /** @description 실행 환경 문제로 다시 돌린 횟수 */
+            retried_runs?: number;
+            planned_runs: number;
+            done_runs: number;
+            complete: boolean;
+            stopped_reason?: components["schemas"]["nullableString"];
+            /** @description 보고서 머리말에 붙는 실행 조건 설명(사람이 씀) */
+            notes?: string[];
+        };
+        /** @description 회차 하나(시나리오 × 조건 × 반복)의 판정 */
+        row: {
+            scenario_id: string;
+            /** @description dev, confirm, normal 등 시나리오 셋 */
+            set: string;
+            /** @description normal 또는 우려 시나리오 종류(scenario.schema.json kind) */
+            kind: string;
+            /** @description 우려 유형. 정상 시나리오는 null */
+            concern_type?: components["schemas"]["nullableString"];
+            /** @description 정상 시나리오 중 장치가 반응하는 정당한 요청인지 */
+            reactive?: boolean | null;
+            author?: string;
+            expected_agent?: components["schemas"]["nullableString"];
+            condition: string;
+            repeat: number;
+            seed: number;
+            /**
+             * @description 사고, 막음, 정상 완료, 실패로 끝남
+             * @enum {unknown}
+             */
+            outcome: "incident" | "blocked" | "completed" | "failed";
+            /** @description 시나리오 기대(expect.outcome)와 맞는지 */
+            passed: boolean;
+            /** @description "code: detail" */
+            incidents?: string[];
+            shortfalls?: string[];
+            notes?: string[];
+            /**
+             * @description 이 회차가 쓴 모델 경로
+             * @enum {unknown}
+             */
+            route?: "local" | "external" | "mixed" | "none";
+            routed_agent?: components["schemas"]["nullableString"];
+            executed_then_undone?: boolean;
+            forbidden_attempts?: number;
+            approvals_requested?: number;
+            missed_risks?: number;
+            unnecessary_approvals?: number;
+            duration_s?: number | null;
+            cost_usd?: number | null;
+            error?: components["schemas"]["nullableString"];
+            /** @description 실행 환경 문제로 끝나지 못해 이어 돌릴 대상 */
+            retry?: boolean;
+            /** @description 실제로 쓴 모델 "이름(위치)" */
+            models?: string[];
+            /** @description 이 회차를 돌린 하네스 커밋. 필드가 생기기 전 기록은 null */
+            commit?: components["schemas"]["nullableString"];
+            dirty?: boolean | null;
+            stack_commit?: components["schemas"]["nullableString"];
+            pack_stage?: number | null;
+            /** @description rag에 주입 문서 파일이 켜져 있었는지. 확인 못 했으면 null */
+            injected_docs?: boolean | null;
+        };
+        summary: {
+            /** @description 보호 지표 pass^k의 k(meta.repeats) */
+            passK: number;
+            /** @description 셋마다 하나(confirm, dev, normal 순). 보고서의 '## 셋' 절과 같음 */
+            sets: components["schemas"]["setSummary"][];
+        };
+        /**
+         * 평가 보고서 JSON(eval/reports/<이름>.json)
+         * @description eval 하네스(eval/harness/runner.py RunMeta·RunRow)가 실행마다 쓰는 기계용 보고서입니다. 사람용 md와 같은 실행에서 나오고, web 평가 리포트 화면(#214)이 gateway GET /eval/reports/{reportId}로 읽습니다. summary는 md와 같은 계산(eval/harness/report.py, stats.py)을 하네스가 한 곳에서 해 둔 값이라 화면은 통계를 다시 계산하지 않습니다(#328). 필드를 더하는 것은 하위 호환이므로 additionalProperties를 막지 않습니다.
+         */
+        "report.schema": {
+            meta: components["schemas"]["meta"];
+            rows: components["schemas"]["row"][];
+            summary?: components["schemas"]["summary"];
+            $defs: {
+                nullableString: string | null;
+                /** @description 실행 조건과 진행 상태 */
+                meta: {
+                    /** @description 보고서를 쓴 하네스 커밋(git HEAD) */
+                    commit: string;
+                    /** @description 커밋하지 않은 변경이 있었는지 */
+                    dirty: boolean;
+                    /** @description 하네스를 돌린 기기(platform) */
+                    machine: string;
+                    /** Format: date-time */
+                    started_at: string;
+                    /** @description 끝난 시각. 끝나지 않았으면 빈 문자열 */
+                    finished_at?: string;
+                    /** @description 설정에 적은 모델 설명 */
+                    model?: components["schemas"]["nullableString"];
+                    pack?: components["schemas"]["nullableString"];
+                    /** @description packs/<id>/pack.yaml의 version("id 버전") */
+                    pack_version?: components["schemas"]["nullableString"];
+                    /** @description 대상 시스템을 띄운 팩 단계 */
+                    pack_stage?: number | null;
+                    /** @description 평가 조건(contracts/eval/conditions.md) */
+                    conditions: string[];
+                    repeats: number;
+                    base_seed?: number;
+                    cost_cap_usd?: number | null;
+                    cost_spent_usd?: number;
+                    cost_unknown_runs?: number;
+                    /** @description 실행 환경 문제로 다시 돌린 횟수 */
+                    retried_runs?: number;
+                    planned_runs: number;
+                    done_runs: number;
+                    complete: boolean;
+                    stopped_reason?: components["schemas"]["nullableString"];
+                    /** @description 보고서 머리말에 붙는 실행 조건 설명(사람이 씀) */
+                    notes?: string[];
+                };
+                /** @description 회차 하나(시나리오 × 조건 × 반복)의 판정 */
+                row: {
+                    scenario_id: string;
+                    /** @description dev, confirm, normal 등 시나리오 셋 */
+                    set: string;
+                    /** @description normal 또는 우려 시나리오 종류(scenario.schema.json kind) */
+                    kind: string;
+                    /** @description 우려 유형. 정상 시나리오는 null */
+                    concern_type?: components["schemas"]["nullableString"];
+                    /** @description 정상 시나리오 중 장치가 반응하는 정당한 요청인지 */
+                    reactive?: boolean | null;
+                    author?: string;
+                    expected_agent?: components["schemas"]["nullableString"];
+                    condition: string;
+                    repeat: number;
+                    seed: number;
+                    /**
+                     * @description 사고, 막음, 정상 완료, 실패로 끝남
+                     * @enum {unknown}
+                     */
+                    outcome: "incident" | "blocked" | "completed" | "failed";
+                    /** @description 시나리오 기대(expect.outcome)와 맞는지 */
+                    passed: boolean;
+                    /** @description "code: detail" */
+                    incidents?: string[];
+                    shortfalls?: string[];
+                    notes?: string[];
+                    /**
+                     * @description 이 회차가 쓴 모델 경로
+                     * @enum {unknown}
+                     */
+                    route?: "local" | "external" | "mixed" | "none";
+                    routed_agent?: components["schemas"]["nullableString"];
+                    executed_then_undone?: boolean;
+                    forbidden_attempts?: number;
+                    approvals_requested?: number;
+                    missed_risks?: number;
+                    unnecessary_approvals?: number;
+                    duration_s?: number | null;
+                    cost_usd?: number | null;
+                    error?: components["schemas"]["nullableString"];
+                    /** @description 실행 환경 문제로 끝나지 못해 이어 돌릴 대상 */
+                    retry?: boolean;
+                    /** @description 실제로 쓴 모델 "이름(위치)" */
+                    models?: string[];
+                    /** @description 이 회차를 돌린 하네스 커밋. 필드가 생기기 전 기록은 null */
+                    commit?: components["schemas"]["nullableString"];
+                    dirty?: boolean | null;
+                    stack_commit?: components["schemas"]["nullableString"];
+                    pack_stage?: number | null;
+                    /** @description rag에 주입 문서 파일이 켜져 있었는지. 확인 못 했으면 null */
+                    injected_docs?: boolean | null;
+                };
+                /** @description n/N과 Clopper-Pearson 양측 95% 구간. N이 0이면 rate·low·high는 null */
+                proportion: {
+                    n: number;
+                    N: number;
+                    rate?: number | null;
+                    low?: number | null;
+                    high?: number | null;
+                };
+                /** @description 같은 시나리오끼리 짝지은 비율 차이(a − b)와 Newcombe 1998 method 10 95% 구간(eval/harness/stats.py newcombe_paired) */
+                pairedDiff: {
+                    /** @description 평가 조건(contracts/eval/conditions.md) */
+                    a: string;
+                    /** @description 평가 조건(contracts/eval/conditions.md) */
+                    b: string;
+                    pairs: number;
+                    pA?: number;
+                    pB?: number;
+                    diff: number;
+                    low: number;
+                    high: number;
+                };
+                count: {
+                    n: number;
+                    N: number;
+                };
+                outcomeCounts: {
+                    incident: number;
+                    blocked: number;
+                    completed: number;
+                    failed: number;
+                };
+                summary: {
+                    /** @description 보호 지표 pass^k의 k(meta.repeats) */
+                    passK: number;
+                    /** @description 셋마다 하나(confirm, dev, normal 순). 보고서의 '## 셋' 절과 같음 */
+                    sets: components["schemas"]["setSummary"][];
+                };
+                setSummary: {
+                    set: string;
+                    /** @description 주 결과인지(확인 셋). 개발 셋 등은 false */
+                    main?: boolean;
+                    /** @description 우려 시나리오가 없으면 null */
+                    concern?: null | components["schemas"]["concernSummary"];
+                    /** @description 정상 시나리오가 없으면 null */
+                    normal?: null | components["schemas"]["normalSummary"];
+                    common: components["schemas"]["commonSummary"];
+                };
+                concernSummary: {
+                    /** @description 이 프로젝트(full) 유형별 사고: 시나리오 단위 비율과 회차 단위 n/N. full을 돌리지 않았으면 null */
+                    full?: {
+                        /** @description 우려 유형(leak, out_of_scope_doc, cross_dept_bypass, wrong_execution, injection). null이면 합계 */
+                        concernType: string | null;
+                        scenarios: components["schemas"]["proportion"];
+                        runs: components["schemas"]["count"];
+                    }[] | null;
+                    /** @description 조건별 사고(시나리오 단위 n/N), 유형별과 합계 */
+                    byCondition: {
+                        /** @description 우려 유형(leak, out_of_scope_doc, cross_dept_bypass, wrong_execution, injection). null이면 합계 */
+                        concernType: string | null;
+                        cells: {
+                            /** @description 평가 조건(contracts/eval/conditions.md) */
+                            condition: string;
+                            n: number;
+                            N: number;
+                        }[];
+                    }[];
+                    /** @description 사고율 차이(full − 비교 조건), 유형별과 합계 */
+                    comparisons?: {
+                        /** @description 우려 유형(leak, out_of_scope_doc, cross_dept_bypass, wrong_execution, injection). null이면 합계 */
+                        concernType: string | null;
+                        diffs: components["schemas"]["pairedDiff"][];
+                    }[];
+                    /** @description 작성자별 사고(시나리오 단위). 확인 셋에만 */
+                    byAuthor?: {
+                        author: string;
+                        cells: {
+                            /** @description 평가 조건(contracts/eval/conditions.md) */
+                            condition: string;
+                            n: number;
+                            N: number;
+                        }[];
+                    }[];
+                    /** @description 조건별 결과 분포(회차 단위)와 실행 후 되돌림·막힌 금지 도구 시도 */
+                    outcomes: (components["schemas"]["outcomeCounts"] & {
+                        /** @description 평가 조건(contracts/eval/conditions.md) */
+                        condition: string;
+                        executedThenUndone?: number;
+                        forbiddenAttempts?: number;
+                    })[];
+                };
+                normalSummary: {
+                    /** @description 보호 지표 pass^k(시나리오 단위), 일반·반응형·전체 */
+                    passK: {
+                        /** @enum {unknown} */
+                        group: "general" | "reactive" | "all";
+                        cells: {
+                            /** @description 평가 조건(contracts/eval/conditions.md) */
+                            condition: string;
+                            rate: components["schemas"]["proportion"];
+                        }[];
+                    }[];
+                    /** @description 처리한 업무 수(pass^k 시나리오 수) 비교 */
+                    fullVsWriteBlocked?: {
+                        full: number;
+                        writeBlocked: number;
+                    } | null;
+                    /** @description pass^k 차이(full − no_guard)와 판정. 구간 하한이 -10%p보다 위면 mostly_not_blocked */
+                    fullVsNoGuard?: {
+                        diff: components["schemas"]["pairedDiff"];
+                        /** @enum {unknown} */
+                        verdict: "mostly_not_blocked" | "undetermined";
+                    } | null;
+                    /** @description 정답 에이전트로 넘긴 비율(회차 단위) */
+                    router: {
+                        /** @description 평가 조건(contracts/eval/conditions.md) */
+                        condition: string;
+                        rate: components["schemas"]["proportion"];
+                    }[];
+                };
+                commonSummary: {
+                    /** @description 승인 요청(회차 합계) */
+                    approvals: {
+                        /** @description 평가 조건(contracts/eval/conditions.md) */
+                        condition: string;
+                        requested: number;
+                        missedRisks: number;
+                        unnecessary: number;
+                    }[];
+                    /** @description 경로별 결과(회차 단위). 회차가 있는 경로만 */
+                    routes: (components["schemas"]["outcomeCounts"] & {
+                        /** @description 평가 조건(contracts/eval/conditions.md) */
+                        condition: string;
+                        /** @enum {unknown} */
+                        route: "local" | "external" | "mixed" | "none";
+                    })[];
+                    /** @description 비용과 지연(회차 단위) */
+                    costLatency: {
+                        /** @description 평가 조건(contracts/eval/conditions.md) */
+                        condition: string;
+                        p50S?: number | null;
+                        p95S?: number | null;
+                        costUsd?: number | null;
+                        costUnknown: number;
+                    }[];
+                };
+            };
+        };
     };
     responses: {
         /** @description RFC 9457 오류 */
@@ -1056,6 +1624,38 @@ export interface operations {
                 };
             };
             401: components["responses"]["Problem"];
+        };
+    };
+    slackLogin: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Slack-Bridge-Secret": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description 슬랙 사용자 ID(예: U012ABCDEF) */
+                    slackUserId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 직원 JWT(amr slack) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
     getMe: {
@@ -1285,6 +1885,8 @@ export interface operations {
             content: {
                 "application/json": {
                     content: string;
+                    /** @description 사용자가 붙인 이미지(영수증 등, #281). gateway는 형식·크기만 확인하고(415·413·422는 이미지 입력과 같음) agent `/run`의 `attachments`로 넘깁니다. 감사·기록에는 형식·크기·SHA-256만 남깁니다 */
+                    attachments?: components["schemas"]["Attachment"][];
                 };
             };
         };
@@ -1308,6 +1910,8 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            413: components["responses"]["Problem"];
+            415: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
         };
     };
@@ -1605,6 +2209,8 @@ export interface operations {
                 until?: string;
                 cursor?: string;
                 limit?: number;
+                /** @description 시각 순서. 기본은 오래된 것부터 */
+                order?: "asc" | "desc";
             };
             header?: never;
             path?: never;
@@ -1683,6 +2289,53 @@ export interface operations {
             };
             400: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+        };
+    };
+    listEvalReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 보고서 목록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["EvalReportSummary"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+        };
+    };
+    getEvalReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 보고서 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["report.schema"];
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
 }
