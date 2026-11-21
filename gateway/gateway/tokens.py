@@ -27,7 +27,7 @@ from gateway.registry import AgentEntry, Requester
 
 log = logging.getLogger(__name__)
 
-AUDIENCE = ["erp", "rag", "mcp"]
+AUDIENCE = ["erp", "rag", "mcp", "incident"]  # contracts/auth/delegation-token.schema.json(incident: #352)
 
 
 def _b64(n: int) -> str:

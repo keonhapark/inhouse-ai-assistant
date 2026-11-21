@@ -20,7 +20,7 @@ def test_claims_follow_contract_schema(login, issue, staff_no):
     c = issued.claims
     assert c["exp"] - c["iat"] == 600
     assert c["agt"] == "hr" and c["cid"] == "conv-42"
-    assert set(c["aud"]) == {"erp", "rag", "mcp"}
+    assert set(c["aud"]) == {"erp", "rag", "mcp", "incident"}   # incident: 장애 원인 분석(#352)
 
 
 def test_scopes_are_agent_tool_scopes_without_human_only(app, login, issue, staff_no):
@@ -103,3 +103,22 @@ def test_expired_token_is_rejected(issuer, app, login, staff_no):
     old = issuer.issue(who, app.state.registry.get("hr"), "c", now=1_000_000)
     with pytest.raises(jwt.ExpiredSignatureError):
         jwt.decode(old.token, issuer.public_pem(), algorithms=["ES256"], audience="erp")
+
+
+def test_incident_tool_scope_enters_token_scopes():
+    """incident_analyze 도구를 가진 에이전트의 토큰 범위에 incident:read가 들어갑니다(#352, 계약 #354)."""
+    from gateway.registry import Registry
+    from gateway.tokens import DelegationTokenIssuer
+
+    from .conftest import ROOT as R
+
+    tools = json.loads((R / "contracts/mcp/tools.json").read_text(encoding="utf-8"))
+    scopes = json.loads((R / "contracts/auth/scopes.json").read_text(encoding="utf-8"))
+    agent = {"id": "ops", "name": "운영", "callable_by": "all", "tools": ["incident_analyze"], "doc_scopes": [],
+             "model_policy": {"mode": "local_only"}}
+    reg = Registry({"agents": [agent]}, tools, scopes)
+    assert reg.get("ops").scopes == ("incident:read",)
+    from gateway.registry import Requester
+    issued = DelegationTokenIssuer.ephemeral().issue(Requester("E1", "u", "staff", ("employee",), ()), reg.get("ops"), "c")
+    Draft202012Validator(SCHEMA).validate(issued.claims)
+    assert issued.claims["scopes"] == ["incident:read"] and "incident" in issued.claims["aud"]
