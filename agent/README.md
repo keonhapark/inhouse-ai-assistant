@@ -60,7 +60,7 @@ Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·�
 
 ## 첨부 이미지 읽기
 
-`/run`의 `attachments`(jpeg·png data URL, 최대 3장)는 팩 `agents.yaml`에 `image_reading`이 있는 에이전트만 읽습니다(`run/image_reading.py`). 무엇을 읽을지(`purpose`, `fields`: 이름·종류 string·integer·date·string_list·설명·`pattern`·`enum`·`max_length`)와 같은 턴에 초안을 만들 수 있는 도구(`draft_tool`)를 팩에서 정합니다. 항목이 없는 에이전트와 요청자가 부를 수 없어 도구가 없는 대화는 "읽지 않았습니다"라는 안내만 붙입니다. 제조 팩은 재무(영수증, `draft_tool: expense_request`)와 연구소(도면, 초안 도구 없음)에 있습니다.
+`/run`의 `attachments`(jpeg·png data URL, 최대 3장)는 팩 `agents.yaml`에 `image_reading`이 있는 에이전트만 읽습니다(`run/image_reading.py`). 무엇을 읽을지(`purpose`, `fields`: 이름·종류 string·integer·date·string_list·설명·`pattern`·`enum`·`max_length`)와 같은 턴에 초안을 만들 수 있는 도구(`draft_tool`)를 팩에서 정합니다. 항목이 없는 에이전트와 요청자가 부를 수 없어 도구가 없는 대화는 "읽지 않았습니다"라는 안내만 붙입니다. 제조 팩은 `finance`(영수증, `draft_tool: expense_request`)와 `rnd`(도면, 초안 도구 없음)에 있습니다.
 
 - 이미지는 위임 토큰을 붙여 gateway에 `image_url`로 보내고, gateway는 이미지가 든 요청을 로컬 비전 별칭으로만 보냅니다. 답은 항목으로 만든 JSON 스키마로 받고, 형식이 맞는 값만 남깁니다(그 밖은 null). 정수는 양수만, 날짜는 실제 날짜만, 문자열은 보이지 않는 문자·방향 제어 문자를 지우고 `max_length`(기본 100자)로 자르며 `pattern`·`enum`이 있으면 맞아야 하고, 목록은 20개까지입니다
 - 읽은 값은 사용자 발화와 따로, `[신뢰할 수 없는 내용…]` 표시로 시작하는 메시지로 둡니다. 비어 있는 값은 사용자에게 묻도록 안내합니다. 다음 턴에도 도구 인자를 채우려면 값이 필요해 기록에서 지우지 않습니다(그 대화는 승인 전 실행이 없음)
