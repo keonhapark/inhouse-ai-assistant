@@ -47,7 +47,11 @@
           "type": "array",
           "items": {"enum": ["org", "approval_documents", "delegations", "leave", "rooms", "doc_access", "expense", "purchase", "tickets"]}
         },
-        "stage": {"type": "integer", "minimum": 1}
+        "stage": {"type": "integer", "minimum": 1},
+        "model_policy_override": {
+          "enum": ["local_only"],
+          "description": "선택. local_only면 팩 전체에서 외부 LLM을 쓰지 않습니다(망분리 흉내, #114·#384). gateway가 출구에서 강제하며, 에이전트 model_policy·평가 조건(no_guard·baseline_tools 포함)·평가 별칭 바꿔 끼우기와 관계없이 외부로 보내지 않습니다. 없으면 에이전트별 model_policy대로입니다"
+        }
       }
     },
 
