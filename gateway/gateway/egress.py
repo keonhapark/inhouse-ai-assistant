@@ -74,6 +74,7 @@ LOCAL_ONLY_FIELDS = frozenset({"think"})
 EVAL_TOOLCALL_PURPOSE = "eval-toolcall"
 # 외부 장애로 보고 로컬로 폴백하는 오류(시간 초과, 연결 실패, LiteLLM 5xx). 미지원(400)·정책 거절은 폴백하지 않습니다.
 FALLBACK_CODES = frozenset({"llm-timeout", "llm-unavailable", "llm-upstream-error"})
+EMBED_TIMEOUT_SECONDS = 2.0  # 의미 캐시 임베딩(#465)
 EMBEDDING_FIELDS = frozenset({"model", "input", "encoding_format", "dimensions"})
 
 
@@ -442,7 +443,9 @@ class Egress:
 
     async def embed_text(self, text: str) -> list[float]:
         """의미 캐시용 임베딩(로컬 임베딩 별칭). gateway 내부 호출이라 감사 이벤트를 남기지 않습니다."""
-        r = await self._http.post("/v1/embeddings", json={"model": self.embed_alias, "input": text})
+        # 임베딩이 멈춰도 모든 요청이 LLM 시간 제한만큼 기다리지 않게 짧게 끊고 캐시 없이 갑니다.
+        r = await self._http.post("/v1/embeddings", json={"model": self.embed_alias, "input": text},
+                                  timeout=httpx.Timeout(EMBED_TIMEOUT_SECONDS))
         r.raise_for_status()
         return [float(x) for x in r.json()["data"][0]["embedding"]]
 
