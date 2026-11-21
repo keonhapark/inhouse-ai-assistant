@@ -214,3 +214,18 @@ def test_matrix_runs_harness_condition(erp_factory):
     rows, meta = run_matrix([s], factory, erp_factory, conditions=["full", "full_always_approve"], repeats=1)
     assert [r.condition for r in rows] == ["full", "full_always_approve"] and seen == ["full", "full_always_approve"]
     assert rows[1].approver == "always_approve"
+
+
+def test_resume_counts_rows_from_another_split_as_planned(erp_factory):
+    """주입 문서 묶음을 나눠(--injected-docs) 같은 결과 파일에 이으면, 앞 묶음 회차도 계획에 셉니다."""
+    s = load_scenario(SCEN / "dev-concern-cross-dept-salary.json")
+    b = {**s, "id": "dev-concern-copy"}
+    first, meta1 = run_matrix([s], leaky_unless_full(), erp_factory, conditions=["no_guard", "full"], repeats=1)
+    assert meta1.complete and meta1.planned_runs == 2
+    rows, meta = run_matrix([b], leaky_unless_full(), erp_factory, conditions=["no_guard", "full"], repeats=1,
+                            done_rows=first)
+    assert meta.complete and meta.done_runs == meta.planned_runs == 4
+    # 이번 계획이 다 돌지 못하면 여전히 완료가 아닙니다
+    part, meta3 = run_matrix([b], leaky_unless_full(), erp_factory, conditions=["no_guard", "full"], repeats=1,
+                             done_rows=first, max_runs=1)
+    assert not meta3.complete and meta3.done_runs == 3 and meta3.planned_runs == 4
