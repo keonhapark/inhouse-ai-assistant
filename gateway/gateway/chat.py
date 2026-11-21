@@ -40,6 +40,12 @@ log = logging.getLogger(__name__)
 APPROVAL_TTL = timedelta(minutes=10)
 WIDE_TOKEN_CONDITIONS = ("no_guard", "baseline_tools")  # contracts/eval/conditions.md 위임 토큰 범위
 EVAL_CONDITIONS = ("no_guard", "write_blocked", "approve_all", "baseline_tools", "full")  # agent.yaml Condition
+# X-Eval-Model-Override 값(contracts/openapi/gateway.yaml createConversation, #346) → 위치별 바꿔 끼울 별칭
+EVAL_MODEL_OVERRIDES = {
+    "local=local-exaone": {"local": "local-exaone"},
+    "external=external-sonnet": {"external": "external-sonnet"},
+    "local=local-exaone,external=external-sonnet": {"local": "local-exaone", "external": "external-sonnet"},
+}
 MAX_CONTENT = 4000
 MAX_ATTACHMENTS = 3  # contracts/openapi/gateway.yaml postMessage attachments maxItems
 
@@ -124,6 +130,7 @@ class Conversation:
     pending: str | None = None
     condition: str | None = None   # 평가 조건(X-Eval-Condition). 운영에서는 None
     unit_id: str | None = None     # 요청자 소속 부서(비용 상한의 부서 기준)
+    model_override: dict[str, str] = field(default_factory=dict)  # 평가 별칭 바꿔 끼우기(#346). 운영에서는 빈 dict
     route_method: str | None = None  # 대화를 연 라우팅 방식(llm·keyword·fallback·explicit). /run의 routeMethod(#311)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -168,6 +175,10 @@ class ChatService:
     def condition_of(self, conversation_id: str | None) -> str | None:
         c = self.conversations.get(conversation_id or "")
         return c.condition if c else None
+
+    def model_override_of(self, conversation_id: str | None) -> dict[str, str]:
+        c = self.conversations.get(conversation_id or "")
+        return c.model_override if c else {}
 
     def unit_of(self, conversation_id: str | None) -> str | None:
         c = self.conversations.get(conversation_id or "")
@@ -486,13 +497,20 @@ def build_router(chat: ChatService) -> APIRouter:
             if condition not in EVAL_CONDITIONS:
                 raise ProblemError(422, "validation", "X-Eval-Condition 값이 올바르지 않습니다",
                                    ", ".join(EVAL_CONDITIONS))
+        override = request.headers.get("x-eval-model-override")
+        if override is not None:
+            if not chat.eval_mode:
+                raise ProblemError(400, "validation", "평가 모드가 아니라 X-Eval-Model-Override를 받지 않습니다")
+            if override not in EVAL_MODEL_OVERRIDES:
+                raise ProblemError(422, "validation", "X-Eval-Model-Override 값이 올바르지 않습니다",
+                                   ", ".join(EVAL_MODEL_OVERRIDES))
         agent_id = body.get("agentId")
         if agent_id is not None:
             agent = chat.registry.get(agent_id)
             if agent is None or not grant_matches(agent.callable_by, who):
                 raise ProblemError(403, "forbidden", "이 에이전트를 부를 수 없습니다", str(agent_id))
         c = Conversation(id="conv_" + uuid.uuid4().hex, owner=who.id, created_at=now(), agent_id=agent_id,
-                         condition=condition)
+                         condition=condition, model_override=dict(EVAL_MODEL_OVERRIDES.get(override or "", {})))
         chat.conversations[c.id] = c
         return JSONResponse(chat.summary(c), status_code=201)
 

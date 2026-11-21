@@ -229,6 +229,8 @@ class Egress:
         self.prices = prices or {}  # 별칭 → (입력, 출력) USD/토큰. 비용 머리글이 없을 때(스트림) 씁니다
         self.no_response_format = no_response_format  # model_info.supports_response_format: false인 별칭
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
+        # 평가 대화의 별칭 바꿔 끼우기(X-Eval-Model-Override, #346): cid → {"local": 별칭, "external": 별칭}
+        self.override_of: Callable[[str | None], dict[str, str]] = lambda _cid: {}
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._http = httpx.AsyncClient(base_url=base_url, transport=transport, headers=headers,
                                        timeout=httpx.Timeout(timeout, connect=5.0))
@@ -314,6 +316,11 @@ class Egress:
             note = (f"이미지 {len(images)}장({', '.join(i.describe() for i in images)}): "
                     f"요청 별칭 {body['model']} 대신 {self.vision_alias}")
             body = {**body, "model": self.vision_alias}
+        else:
+            swapped = self._swap(caller, body["model"])
+            if swapped != body["model"]:
+                note = f"평가 별칭 바꿔 끼움: {body['model']} 대신 {swapped}"
+                body = {**body, "model": swapped}
         model = self._model(request, body["model"])
         location = model["location"]
 
@@ -340,8 +347,9 @@ class Egress:
             if over is not None:
                 # 상한을 넘었으면 이 요청부터 로컬로 내립니다(가림 전 본문, 로컬은 사내에서 돎).
                 note = (f"비용 상한 초과({over.kind} {over.id} ${over.spent:.6g}/${over.limit:.6g})로 로컬 모델로 내림")
-                model.update(name=self.local_alias, location="local")
-                sent = {**sent, "model": self.local_alias}
+                local = self._local_for(caller)
+                model.update(name=local, location="local")
+                sent = {**sent, "model": local}
         if model["location"] == "external":
             if has_inline_image(sent):
                 # 글 속 data URL은 가림(pii.py)이 건드리지 않아 그대로 나가고 기록에도 남습니다(#261).
@@ -368,14 +376,31 @@ class Egress:
         try:
             return await self._dispatch(caller, model, before, sent, note=note)
         except ProblemError as e:
-            fallback = self._fallback_body(model, before, e)
+            fallback = self._fallback_body(model, before, e, self._local_for(caller))
             if fallback is None:
                 raise
             # 외부 장애는 위에서 알림·감사(error)를 남겼습니다. 같은 요청을 로컬 별칭으로 한 번 다시 보냅니다.
-            local = {"name": self.local_alias, "location": "local", "externalSent": False, "redactions": 0}
+            local = {"name": self._local_for(caller), "location": "local", "externalSent": False, "redactions": 0}
             request.state.model = local
             note = (f"{note}; " if note else "") + f"외부 장애({e.code})로 로컬 폴백"
             return await self._dispatch(caller, local, before, fallback, note=note)
+
+    def _swap(self, caller: Caller, alias: str) -> str:
+        """평가 대화의 별칭 바꿔 끼우기. 위치가 같은 별칭으로만 바꿉니다(정책·가림이 그대로 적용되게).
+
+        로컬 업무 별칭(이미지 전용 별칭이 아닌 로컬 별칭)은 local 대상으로, 외부 별칭은 external 대상으로 바꿉니다.
+        토큰 없는 호출(입구 라우터 등)은 대화가 없어 바꾸지 않습니다.
+        """
+        override = self.override_of(caller.conversation_id) if caller.conversation_id else {}
+        location = self.locations.get(alias)
+        if not override or location is None or alias == self.vision_alias:
+            return alias
+        target = override.get(location)
+        return target if target and self.locations.get(target) == location else alias
+
+    def _local_for(self, caller: Caller) -> str | None:
+        """기밀 판정·비용 상한·외부 장애로 로컬로 돌릴 때 쓸 별칭(평가 대화면 바꿔 끼운 것)."""
+        return self._swap(caller, self.local_alias) if self.local_alias else None
 
     async def _dispatch(self, caller: Caller, model: dict, before: dict, sent: dict,
                         note: str | None = None) -> Response:
@@ -383,17 +408,17 @@ class Egress:
             return await self._stream(caller, model, before, sent, note)
         return await self._once(caller, model, before, sent, note)
 
-    def _fallback_body(self, model: dict, before: dict, e: ProblemError) -> dict | None:
+    def _fallback_body(self, model: dict, before: dict, e: ProblemError, local: str | None) -> dict | None:
         """외부 장애(시간 초과·연결 실패·5xx)면 로컬로 보낼 본문을, 폴백할 수 없으면 None을 돌려줍니다.
 
         로컬 모델은 사내에서 돌므로 가림 전 본문(토큰 모양만 가린 것)을 보냅니다. 로컬이 지원하지 않는
         response_format 요청은 폴백하지 않고 원래 오류를 돌려줍니다.
         """
-        if model["location"] != "external" or e.code not in FALLBACK_CODES or self.local_alias is None:
+        if model["location"] != "external" or e.code not in FALLBACK_CODES or local is None:
             return None
-        if "response_format" in before and self.local_alias in self.no_response_format:
+        if "response_format" in before and local in self.no_response_format:
             return None
-        return {**before, "model": self.local_alias}
+        return {**before, "model": local}
 
     async def _handle_embeddings(self, request: Request) -> Response:
         """`POST /v1/embeddings`. 로컬 별칭만 받습니다(문서 원문을 외부로 보내지 않음). 가림은 하지 않습니다."""
@@ -439,8 +464,9 @@ class Egress:
             self._audit(caller, model, "denied", "urn:problem:confidential", detail)
             raise ProblemError(403, "confidential", "사내 기밀이 들어 있어 보낼 수 없습니다", verdict.reason)
         self._audit(caller, model, "ok", detail=f"{found}: 로컬 모델로 돌림", kind="llm.redacted")
-        model.update(name=self.local_alias, location="local")
-        return {**body, "model": self.local_alias}
+        local = self._local_for(caller)
+        model.update(name=local, location="local")
+        return {**body, "model": local}
 
     def _mark_sent(self, caller: Caller, model: dict, sent: dict, sent_out: bool = True) -> None:
         """요청이 나갔는지 표시하고 차례별 사용 모델에 더합니다. 외부 요청 기록은 응답을 받은 뒤(_egress·_fail) 씁니다."""

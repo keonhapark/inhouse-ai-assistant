@@ -97,6 +97,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                                  usage=egress.usage)
     egress.condition_of = app.state.chat.condition_of
     egress.unit_of = app.state.chat.unit_of
+    egress.override_of = app.state.chat.model_override_of
     app.state.audit = audit
     app.state.alerter = alerter
     app.state.egress = egress
