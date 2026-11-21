@@ -53,7 +53,10 @@ class Runner:
             # 사용자 발화와 섞지 않고 따로 둡니다.
             turn.append({"role": "user", "content": note})
             if tainted:
-                # 영수증 글자는 신뢰할 수 없는 내용입니다. 같은 턴이라도 막지 않고 user_direct 도구는 승인을 받습니다(결정 0004).
+                # 영수증 글자는 신뢰할 수 없는 내용입니다(결정 0004 덧붙임). 같은 턴에는 expense_request만 막지 않고
+                # 미리보기 승인으로 보내고, 다른 user_direct 도구는 막습니다. 다음 턴부터는 모두 승인을 받습니다.
+                state["tainted"] = True
+                state["taint_exempt"] = [RECEIPT_TOOL]
                 state["conversation_tainted"] = True
         state["messages"] = [*prior, *turn]
         try:

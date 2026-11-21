@@ -36,7 +36,7 @@ def test_erp_write_operations_follow_common_rules() -> None:
     scopes = {s["id"] for s in load(CONTRACTS / "auth/scopes.json")["scopes"]}
     ops = openapi_operations(load(CONTRACTS / "openapi/erp.yaml"))
     for op_id, op in ops.items():
-        if op_id in ("health", "login", "evalReset"):
+        if op.get("security") == []:  # 공개 경로(건강 확인, 로그인, 서비스 로그인, 평가 초기화)
             continue
         assert op.get("x-required-scope") in scopes, op_id
         if op.get("x-write"):

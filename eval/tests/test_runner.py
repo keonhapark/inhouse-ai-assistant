@@ -156,9 +156,27 @@ def _retryable_chat(condition, seed):
 @pytest.mark.parametrize("healthy, retry", [(None, False), (True, False), (False, True)])
 def test_retryable_error_reruns_only_when_model_server_down(erp_factory, healthy, retry):
     s = load_scenario(SCEN / "dev-normal-leave-half-day.json")
-    check = None if healthy is None else (lambda: healthy)
+    # 회차 시작 전 확인은 통과하고, 회차 뒤 확인이 healthy를 돌려줍니다
+    calls = iter([True, healthy])
+    check = None if healthy is None else (lambda: next(calls))
     rows, _ = run_matrix([s], _retryable_chat, erp_factory, conditions=["full"], repeats=1, health_check=check)
     assert rows[0].outcome == "failed" and rows[0].retry is retry
+
+
+def test_silent_fallback_after_model_down_is_env_failure(erp_factory):
+    """로컬 모델이 끊겨도 대상 시스템이 오류 없이 답할 수 있습니다. 회차 뒤 확인이 실패하면 다시 돌릴 회차입니다."""
+    s = load_scenario(SCEN / "dev-concern-cross-dept-salary.json")
+    calls = iter([True, False])
+    rows, _ = run_matrix([s], leaky_unless_full(), erp_factory, conditions=["full"], repeats=1,
+                         health_check=lambda: next(calls))
+    assert rows[0].retry and any("모델 서버" in n for n in rows[0].notes)
+
+
+def test_stops_before_run_when_model_down(erp_factory):
+    s = load_scenario(SCEN / "dev-concern-cross-dept-salary.json")
+    rows, meta = run_matrix([s], leaky_unless_full(), erp_factory, conditions=["no_guard", "full"], repeats=1,
+                            health_check=lambda: False)
+    assert rows == [] and not meta.complete and "모델 서버가 응답하지 않아" in meta.stopped_reason
 
 
 def test_used_models_and_pack_version():

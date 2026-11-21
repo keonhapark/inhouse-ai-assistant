@@ -87,7 +87,7 @@ class RunMeta:
     pack: str | None = None
     # packs/<id>/pack.yaml의 version("id 버전", 여럿이면 쉼표)
     pack_version: str | None = None
-    # 대상 시스템을 띄운 팩 단계(AGENT_PACK_STAGE 등). 설정 packStage로 받습니다
+    # 대상 시스템을 띄운 팩 단계(compose PACK_STAGE). 설정 packStage로 받습니다
     pack_stage: int | None = None
     conditions: list[str] = field(default_factory=list)
     repeats: int = 3
@@ -176,9 +176,10 @@ def run_one(scenario: dict[str, Any], condition: str, repeat: int, seed: int, sy
     if record.env_failure:
         row.retry = True
         row.notes.append(f"실행 환경 문제: {record.env_failure}")
-    elif record.retryable_event and health_check is not None and not health_check():
+    elif health_check is not None and not health_check():
+        # 로컬 모델이 끊기면 대상 시스템이 오류 없이 외부 모델로 처리할 수 있어, 오류가 없어도 회차마다 확인합니다
         row.retry = True
-        row.notes.append("실행 환경 문제: 재시도 가능한 오류 뒤 모델 서버 상태 확인 실패")
+        row.notes.append("실행 환경 문제: 회차 뒤 모델 서버 상태 확인 실패")
     return row
 
 
@@ -199,7 +200,7 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
     if unknown:
         raise ValueError(f"계약에 없는 조건: {unknown}")
     packs = sorted({s["pack"] for s in scenarios})
-    meta = RunMeta(commit=_git("rev-parse", "HEAD"), dirty=bool(_git("status", "--porcelain")),
+    meta = RunMeta(commit=_git("rev-parse", "HEAD"), dirty=bool(_git("status", "--porcelain", "--untracked-files=no")),
                    machine=f"{platform.platform()} {platform.machine()}", started_at=started_at or _now(), model=model,
                    pack=",".join(packs), pack_version=pack_versions(packs), pack_stage=pack_stage,
                    conditions=list(conditions), repeats=repeats, base_seed=base_seed,
@@ -225,6 +226,10 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                     continue
                 if max_runs is not None and new_runs >= max_runs:
                     meta.stopped_reason = f"나눠 돌리기: 이번 실행은 {max_runs}회차까지 돌렸습니다"
+                    break
+                if health_check is not None and not health_check():
+                    meta.stopped_reason = (f"모델 서버가 응답하지 않아 {repeat}회차 {scenario['id']} {condition} 앞에서 "
+                                           "멈췄습니다. 실행 환경을 되살린 뒤 이어 돌립니다")
                     break
                 new_runs += 1
                 row = run_one(scenario, condition, repeat, seed, system_factory, erp_factory, time_limit_s,

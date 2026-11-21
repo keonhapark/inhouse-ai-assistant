@@ -60,28 +60,33 @@ def inspect_images(body: dict[str, Any]) -> list[ImageInfo]:
     for i, url in enumerate(_image_urls(body), 1):
         if not isinstance(url, str):
             raise ProblemError(422, "validation", "image_url은 {url: 문자열} 모양이어야 합니다", f"{i}번째 이미지")
-        m = _DATA_URL.fullmatch(url)
-        if m is None:
-            raise ProblemError(422, "validation", "이미지는 base64 data URL만 받습니다", f"{i}번째 이미지")
-        mime = m["mime"].lower()
-        if mime not in _MAGIC:
-            raise ProblemError(415, "unsupported-media-type", "이미지는 jpeg·png만 받습니다", f"{i}번째 이미지: {mime}")
-        # 디코딩 전에 크기를 어림해 큰 본문을 메모리에 풀지 않습니다(base64 4글자 = 3바이트)
-        if len(m["data"]) * 3 // 4 > MAX_IMAGE_BYTES + 3:
-            raise ProblemError(413, "payload-too-large", f"이미지 한 장은 {MAX_IMAGE_BYTES // (1024 * 1024)}MB까지 받습니다",
-                               f"{i}번째 이미지")
-        try:
-            data = base64.b64decode(m["data"], validate=True)
-        except (binascii.Error, ValueError):
-            raise ProblemError(422, "validation", "이미지 base64가 올바르지 않습니다", f"{i}번째 이미지")
-        if len(data) > MAX_IMAGE_BYTES:
-            raise ProblemError(413, "payload-too-large", f"이미지 한 장은 {MAX_IMAGE_BYTES // (1024 * 1024)}MB까지 받습니다",
-                               f"{i}번째 이미지: {len(data)}B")
-        if not data.startswith(_MAGIC[mime]):
-            raise ProblemError(415, "unsupported-media-type", "이미지 내용이 선언한 형식과 맞지 않습니다",
-                               f"{i}번째 이미지: {mime}")
-        out.append(ImageInfo(mime, len(data), hashlib.sha256(data).hexdigest()))
+        out.append(inspect_data_url(url, i))
     return out
+
+
+def inspect_data_url(url: str, i: int = 1) -> ImageInfo:
+    """data URL 한 장을 확인합니다(jpeg·png, 5MB). 대화 첨부(#288)도 같은 규칙을 씁니다."""
+    m = _DATA_URL.fullmatch(url)
+    if m is None:
+        raise ProblemError(422, "validation", "이미지는 base64 data URL만 받습니다", f"{i}번째 이미지")
+    mime = m["mime"].lower()
+    if mime not in _MAGIC:
+        raise ProblemError(415, "unsupported-media-type", "이미지는 jpeg·png만 받습니다", f"{i}번째 이미지: {mime}")
+    # 디코딩 전에 크기를 어림해 큰 본문을 메모리에 풀지 않습니다(base64 4글자 = 3바이트)
+    if len(m["data"]) * 3 // 4 > MAX_IMAGE_BYTES + 3:
+        raise ProblemError(413, "payload-too-large", f"이미지 한 장은 {MAX_IMAGE_BYTES // (1024 * 1024)}MB까지 받습니다",
+                           f"{i}번째 이미지")
+    try:
+        data = base64.b64decode(m["data"], validate=True)
+    except (binascii.Error, ValueError):
+        raise ProblemError(422, "validation", "이미지 base64가 올바르지 않습니다", f"{i}번째 이미지")
+    if len(data) > MAX_IMAGE_BYTES:
+        raise ProblemError(413, "payload-too-large", f"이미지 한 장은 {MAX_IMAGE_BYTES // (1024 * 1024)}MB까지 받습니다",
+                           f"{i}번째 이미지: {len(data)}B")
+    if not data.startswith(_MAGIC[mime]):
+        raise ProblemError(415, "unsupported-media-type", "이미지 내용이 선언한 형식과 맞지 않습니다",
+                           f"{i}번째 이미지: {mime}")
+    return ImageInfo(mime, len(data), hashlib.sha256(data).hexdigest())
 
 
 def has_inline_image(body: dict[str, Any]) -> bool:

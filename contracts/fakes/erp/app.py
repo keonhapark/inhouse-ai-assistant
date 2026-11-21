@@ -2,13 +2,14 @@
 
 실행(contracts/에서): uv run uvicorn fakes.erp.app:app --port 8041
 환경 변수: PACK_DIR(기본 packs/manufacturing), ERP_JWT_SECRET, ERP_DEMO_PASSWORD,
-DELEGATION_TOKEN_PUBLIC_KEY(위임 토큰 검증용 PEM 경로)
+DELEGATION_TOKEN_PUBLIC_KEY(위임 토큰 검증용 PEM 경로), ERP_SERVICE_LOGIN_SECRET(없으면 서비스 로그인 경로 꺼짐)
 """
 
 from __future__ import annotations
 
 import copy
 import hashlib
+import hmac
 import json
 import os
 import threading
@@ -50,11 +51,16 @@ def body_hash(op: str, path: str, body: Any) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
+SERVICE_LOGIN_TTL = 900
+
+
 def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
-               demo_password: str | None = None, delegation_public_key: str | None = None) -> FastAPI:
+               demo_password: str | None = None, delegation_public_key: str | None = None,
+               service_login_secret: str | None = None) -> FastAPI:
     pack_dir = pack_dir or Path(os.environ.get("PACK_DIR", ROOT / "packs/manufacturing"))
     secret = jwt_secret or os.environ.get("ERP_JWT_SECRET") or DEFAULT_SECRET
     password = demo_password or os.environ.get("ERP_DEMO_PASSWORD") or "demo"
+    service_secret = service_login_secret or os.environ.get("ERP_SERVICE_LOGIN_SECRET") or None
     if delegation_public_key is None and os.environ.get("DELEGATION_TOKEN_PUBLIC_KEY"):
         p = Path(os.environ["DELEGATION_TOKEN_PUBLIC_KEY"])
         if not p.is_absolute():
@@ -90,6 +96,8 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
                 raise ProblemError(401, "unauthorized", str(e))
             if claims.get("sub") not in st.employees:
                 raise ProblemError(401, "unauthorized")
+            if human_only and "slack" in (claims.get("amr") or []):
+                raise ProblemError(403, "service-login-not-allowed")
             return Principal(employee_id=claims["sub"])
         if alg == "ES256" and delegation_public_key:
             try:
@@ -185,6 +193,27 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
             st.record_audit(Principal(emp["id"]), "auth.login", "login", "ok")
         return {"accessToken": token, "tokenType": "Bearer", "expiresIn": 3600,
                 "employee": st.employee_full(emp["id"])}
+
+    @app.post("/api/v1/auth/service-login")
+    async def service_login(request: Request) -> dict:
+        if not service_secret:
+            raise ProblemError(404, "not-found", "없는 경로입니다")
+        given = request.headers.get("x-service-login-secret", "")
+        if not hmac.compare_digest(given.encode(), service_secret.encode()):
+            raise ProblemError(401, "unauthorized", "서비스 비밀값이 틀렸습니다")
+        body = await json_body(request)
+        if not isinstance(body, dict) or set(body) != {"employeeId"} or not isinstance(body["employeeId"], str):
+            raise ProblemError(422, "validation", "employeeId만 받습니다", [{"field": "employeeId", "message": "required"}])
+        emp_id = body["employeeId"]
+        if emp_id not in st.employees:
+            raise ProblemError(422, "validation", "없는 직원입니다", [{"field": "employeeId", "message": "unknown"}])
+        t = int(time.time())
+        token = jwt.encode({"sub": emp_id, "aud": "erp", "iss": "erp", "iat": t, "exp": t + SERVICE_LOGIN_TTL,
+                            "amr": ["slack"]}, secret, algorithm="HS256")
+        with lock:
+            st.record_audit(Principal(emp_id), "auth.login", "serviceLogin", "ok")
+        return {"accessToken": token, "tokenType": "Bearer", "expiresIn": SERVICE_LOGIN_TTL,
+                "employee": st.employee_full(emp_id)}
 
     @app.get("/api/v1/me")
     def me(request: Request) -> dict:
