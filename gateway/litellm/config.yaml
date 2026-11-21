@@ -78,6 +78,18 @@ model_list:
       input_cost_per_token: 0.000002
       output_cost_per_token: 0.00001
 
+  - model_name: external-exaone                      # 평가 전용(모델 교체 회귀 #107, 외부 교체 #436). 기본 경로에서는 쓰지 않습니다
+    litellm_params:
+      # LG AI연구원 K-EXAONE 2.5 API(OpenAI 호환, https://docs.exaone.ai/en/docs/k-exaone-2.5). 문맥 524,288.
+      # 생각 단계는 끌 수 없고 reasoning_effort는 low·high·max(기본 max)입니다. 생각은 message.reasoning_content로 따로 옵니다.
+      # LiteLLM 1.108.1이 reasoning_effort·temperature·top_p·tools·max_tokens를 그대로 넘기는 것은 가짜 서버로 확인했습니다(#436).
+      model: openai/k-exaone_v2.5
+      api_base: https://api.exaone.ai/v1
+      api_key: os.environ/K_EXAONE_API_KEY
+    model_info:
+      location: external
+      # 단가는 공식 문서에 없어 적지 않습니다. 비용 머리글이 없으면 비용 상한에 더해지지 않습니다.
+
 litellm_settings:
   request_timeout: 60
   num_retries: 0          # 재시도는 gateway가 정하지 않고 호출하는 쪽이 정합니다
