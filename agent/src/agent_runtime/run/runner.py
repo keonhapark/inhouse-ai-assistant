@@ -10,7 +10,7 @@ from langgraph.types import Command
 from agent_runtime.mcp_server.tokens import TokenError, TokenVerifier
 from agent_runtime.registry import Agent, Registry, Requester
 from agent_runtime.run.graph import TURN_RESET, UNTRUSTED_NOTE, RunContext, prepare_history
-from agent_runtime.run.receipt import RECEIPT_TOOL, ReceiptReader, attachment_note
+from agent_runtime.run.image_reading import ImageReader, ImageSpec, attachment_note
 from agent_runtime.run.tools import ToolCaller
 
 
@@ -24,7 +24,7 @@ class Runner:
     graph: Any
     caller: ToolCaller
     verifier: TokenVerifier | None = None
-    receipts: ReceiptReader | None = None
+    images: ImageReader | None = None
 
     async def run(self, token: str, conversation_id: str, agent_id: str, message: str, requester: Requester,
                   condition: str = "full", attachments: list[str] | None = None,
@@ -49,14 +49,14 @@ class Runner:
             state["force_local"] = True
         turn = [{"role": "user", "content": message}]
         if attachments:
-            note, tainted = await self._read_attachments(attachments, token, ctx)
+            note, tainted, draft_tool = await self._read_attachments(attachments, token, agent, requester, ctx)
             # 사용자 발화와 섞지 않고 따로 둡니다.
             turn.append({"role": "user", "content": note})
             if tainted:
-                # 영수증 글자는 신뢰할 수 없는 내용입니다(결정 0004 덧붙임). 같은 턴에는 expense_request만 막지 않고
-                # 미리보기 승인으로 보내고, 다른 user_direct 도구는 막습니다. 다음 턴부터는 모두 승인을 받습니다.
+                # 이미지 글자는 신뢰할 수 없는 내용입니다(결정 0004 덧붙임). 같은 턴에는 팩 image_reading.draft_tool만
+                # 막지 않고 미리보기 승인으로 보내고, 다른 user_direct 도구는 막습니다. 다음 턴부터는 모두 승인을 받습니다.
                 state["tainted"] = True
-                state["taint_exempt"] = [RECEIPT_TOOL]
+                state["taint_exempt"] = [draft_tool] if draft_tool else []
                 state["conversation_tainted"] = True
         state["messages"] = [*prior, *turn]
         try:
@@ -89,12 +89,18 @@ class Runner:
             return _failed(conversation_id, agent_id, f"실행 중 오류({type(e).__name__})")
         return self._view(conversation_id, agent_id, await self.graph.aget_state(config))
 
-    async def _read_attachments(self, data_urls: list[str], token: str, ctx: RunContext) -> tuple[str, bool]:
-        """(사용자 메시지에 붙일 글, 읽은 값이 있는지). 이미지 본문은 상태에 넣지 않습니다."""
-        if self.receipts is None or ctx.spec(RECEIPT_TOOL) is None:
-            return f"[첨부 이미지 {len(data_urls)}장은 이 에이전트에서 읽지 않았습니다]", False
-        results = await self.receipts.read_all(data_urls, token)
-        return attachment_note(results, UNTRUSTED_NOTE), any(r is not None for r in results)
+    async def _read_attachments(self, data_urls: list[str], token: str, agent: Agent, requester: Requester,
+                                ctx: RunContext) -> tuple[str, bool, str | None]:
+        """(사용자 발화 뒤에 둘 글, 읽은 값이 있는지, 같은 턴 예외 도구). 이미지 본문은 상태에 넣지 않습니다.
+
+        팩에 image_reading이 없는 에이전트, 요청자가 부를 수 없어 도구가 없는 대화는 읽지 않습니다.
+        """
+        spec = ImageSpec.from_agent(agent)
+        if self.images is None or spec is None or not agent.callable_for(requester):
+            return f"[첨부 이미지 {len(data_urls)}장은 이 에이전트에서 읽지 않았습니다]", False, None
+        results = await self.images.read_all(data_urls, token, spec)
+        draft = spec.draft_tool if spec.draft_tool and ctx.spec(spec.draft_tool) else None
+        return attachment_note(results, spec, UNTRUSTED_NOTE), any(r is not None for r in results), draft
 
     def _check(self, token: str, conversation_id: str, agent_id: str, requester: Requester,
                check_callable: bool = True) -> tuple[str | None, str | None]:

@@ -205,6 +205,23 @@ def test_eval_report_summary_example() -> None:
         validate_file("eval/report.schema.json", {**report, "summary": bad})
 
 
+def test_chat_attachment_examples_follow_schema() -> None:
+    """대화 기록의 첨부 메타(본문 없음)와 미리보기 카드의 fromAttachments(#385)."""
+    approval = {"type": "approval_required", "conversationId": "c1", "seq": 2, "approval": {
+        "approvalId": "ap1", "tool": "expense_request", "risk": "reversible_write", "fromAttachments": True,
+        "preview": {"dryRun": True, "operation": "createExpenseRequest", "summary": "경비 정산", "changes": [], "undoable": True}}}
+    validate("openapi/gateway.yaml", "ChatEvent", approval)
+    conv = {"conversationId": "c1", "status": "active", "createdAt": "2026-11-21T10:00:00+09:00", "events": [
+        {"type": "user_message", "content": "영수증", "at": "2026-11-21T10:00:00+09:00",
+         "attachments": [{"kind": "image", "mediaType": "image/png", "bytes": 15360, "sha256": "a" * 64}]},
+        approval]}
+    validate("openapi/gateway.yaml", "Conversation", conv)
+    bad = {**conv, "events": [{**conv["events"][0], "attachments": [{"kind": "image", "mediaType": "image/gif",
+                                                                      "bytes": 1, "sha256": "a" * 64}]}]}
+    with pytest.raises(AssertionError):
+        validate("openapi/gateway.yaml", "Conversation", bad)
+
+
 def test_no_human_only_operation_is_a_tool() -> None:
     ops = openapi_operations(load(CONTRACTS / "openapi/erp.yaml"))
     for t in load(CONTRACTS / "mcp/tools.json")["tools"]:
@@ -335,3 +352,45 @@ def test_fake_erp_hides_quality_and_sales_without_features(tmp_path) -> None:
         assert c.get("/sales/quotes", headers=h).status_code == 404
         assert c.get("/customers", headers=h).status_code == 404
         assert c.get("/items", headers=h).status_code == 200
+
+
+def test_pack_model_policy_override_is_local_only_or_absent(tmp_path: Path) -> None:
+    import shutil
+
+    import yaml
+
+    from tools import check_packs
+
+    for value, ok in (("local_only", True), ("external_allowed", False)):
+        pack = tmp_path / value / "manufacturing"
+        shutil.copytree(PACKS / "manufacturing", pack)
+        doc = yaml.safe_load((pack / "pack.yaml").read_text(encoding="utf-8"))
+        doc["model_policy_override"] = value
+        (pack / "pack.yaml").write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+        errors = check_packs.check_pack(pack)
+        assert (not errors) is ok, errors
+
+
+def test_pack_image_reading_is_checked(tmp_path) -> None:
+    """선택 항목 agents.yaml image_reading(#382): 초안 도구·항목 이름·정규식·pattern 쓰임을 검사합니다."""
+    import shutil
+
+    import yaml
+
+    from tools.check_packs import check_pack
+
+    pack = tmp_path / "manufacturing"
+    shutil.copytree(PACKS / "manufacturing", pack)
+    path = pack / "agents.yaml"
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    rnd = next(a for a in doc["agents"] if a["id"] == "rnd")
+    rnd["image_reading"]["draft_tool"] = "expense_request"
+    rnd["image_reading"]["fields"] += [{"name": "part_no", "type": "string", "description": "중복"},
+                                      {"name": "bad", "type": "string", "description": "x", "pattern": "["},
+                                      {"name": "count", "type": "integer", "description": "x", "enum": ["1"]}]
+    path.write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+    errs = " ".join(check_pack(pack))
+    assert "draft_tool" in errs and "중복 'part_no'" in errs and "bad 정규식" in errs and "count: pattern·enum" in errs
+    rnd["image_reading"] = {"purpose": "도면", "fields": [{"name": "Part", "type": "string", "description": "x"}]}
+    path.write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+    assert check_pack(pack)  # 항목 이름 형식(스키마)

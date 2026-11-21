@@ -36,7 +36,7 @@ from agent_runtime.mcp_server.tokens import TokenVerifier
 from agent_runtime.router import Router
 from agent_runtime.run.graph import Deps, build_graph
 from agent_runtime.run.policy import WideScope
-from agent_runtime.run.receipt import ReceiptReader
+from agent_runtime.run.image_reading import ImageReader
 from agent_runtime.run.runner import Conflict, Runner
 from agent_runtime.run.tools import McpToolCaller
 from agent_runtime.run.trust import trusted_docs
@@ -155,7 +155,7 @@ def services_from_env() -> Services:
     verifier: TokenVerifier | None = None
     if os.environ.get("AGENT_ALLOW_UNVERIFIED_TOKENS") != "1":
         verifier = TokenVerifier.from_env()
-    runner = Runner(registry, build_graph(deps), deps.caller, verifier, ReceiptReader(chat))
+    runner = Runner(registry, build_graph(deps), deps.caller, verifier, ImageReader(chat))
     contracts = Path(os.environ.get("CONTRACTS_DIR", "../contracts"))
     fillers: dict[str, SlotFiller] = {"rule": RuleSlotFiller(),
                                       "llm": LlmSlotFiller(chat, load_slot_tools(contracts / "mcp" / "tools.json"))}

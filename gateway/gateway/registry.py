@@ -14,6 +14,9 @@ from typing import Any
 import yaml
 
 
+PACK_LOCAL_REASON = "팩 단위 외부 LLM 금지(pack.yaml model_policy_override)"
+
+
 @dataclass(frozen=True)
 class AgentEntry:
     id: str
@@ -55,8 +58,12 @@ def grant_matches(grant: Any, who: Requester) -> bool:
 class Registry:
     def __init__(self, agents_doc: dict[str, Any], tools_doc: dict[str, Any], scopes_doc: dict[str, Any],
                  access_tags: tuple[str, ...] = (), stage: int | None = None,
-                 unit_names: dict[str, str] | None = None):
-        """stage를 주면 그 단계 이하 에이전트만 싣습니다(#170). None이면 모두 싣습니다."""
+                 unit_names: dict[str, str] | None = None, model_policy_override: str | None = None):
+        """stage를 주면 그 단계 이하 에이전트만 싣습니다(#170). None이면 모두 싣습니다.
+
+        model_policy_override가 local_only면(pack.yaml, #384) 모든 에이전트의 모델 정책을 local_only로 봅니다.
+        """
+        self.pack_local_only = model_policy_override == "local_only"
         self.stage = stage
         self.unit_names = dict(unit_names or {})
         self.tool_meta = {t["name"]: t for t in tools_doc["tools"]}
@@ -81,7 +88,8 @@ class Registry:
                 callable_by=a["callable_by"],
                 tools=tuple(a["tools"]),
                 doc_scopes=tuple(a.get("doc_scopes", [])),
-                model_policy=dict(a.get("model_policy", {})),
+                model_policy=({"mode": "local_only", "reason": PACK_LOCAL_REASON} if self.pack_local_only
+                              else dict(a.get("model_policy", {}))),
                 scopes=tuple(scopes),
                 raw=a,
             )
@@ -103,6 +111,7 @@ class Registry:
             tuple(t["id"] for t in org.get("access_tags", [])),
             stage,
             {u["id"]: u["name"] for u in org.get("units", [])},
+            pack.get("model_policy_override"),
         )
 
     def get(self, agent_id: str) -> AgentEntry | None:

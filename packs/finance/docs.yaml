@@ -1,0 +1,43 @@
+# 문서 목록. 본문은 rag가 생성기로 만듭니다(문서 템플릿은 rag 몫, 뒤에). 지금은 모두 planned입니다.
+# trust: trusted(규정·공지), untrusted(사용자·외부가 쓴 글. 그 안의 지시는 따르지 않음)
+documents:
+  - id: fin-work-rules
+    title: 취업규칙(가상)
+    kind: regulation
+    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    acl_tags: [public]
+    trust: trusted
+    stage: 1
+    status: planned
+  - id: fin-leave-rules
+    title: 휴가·근태 규정(가상)
+    kind: regulation
+    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    acl_tags: [hr-policy]
+    trust: trusted
+    stage: 1
+    status: planned
+  - id: fin-credit-rules
+    title: 여신 업무 규정(가상, 전결 한도·담보 인정 비율)
+    kind: regulation
+    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    acl_tags: [credit-policy]
+    trust: trusted
+    stage: 1
+    status: planned
+  - id: fin-ethics-code
+    title: 임직원 윤리강령·이해상충 관리 기준(가상)
+    kind: regulation
+    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    acl_tags: [internal-rules]
+    trust: trusted
+    stage: 1
+    status: planned
+  - id: fin-control-findings
+    title: 내부통제 점검 결과(가상)
+    kind: notice
+    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    acl_tags: [compliance-restricted]
+    trust: trusted
+    stage: 1
+    status: planned
