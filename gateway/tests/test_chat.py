@@ -27,6 +27,7 @@ class FakeAgent:
         self.calls: list[tuple[str, dict, str | None]] = []
         self.route_to = "assistant"
         self.route_method = "keyword"
+        self.preview_extra: dict = {}       # toolPreview에 더할 필드(예: fromAttachments)
         self.down = False
         self.waiting: dict[str, str] = {}   # approvalId -> conversationId
         self.broken_resume = False          # True면 /resume이 계약에 맞지 않는 RunState를 돌려줌
@@ -54,7 +55,8 @@ class FakeAgent:
                     "conversationId": body["conversationId"], "agentId": agent_id, "status": "awaiting_approval",
                     "messages": [{"role": "assistant", "content": "이대로 예약할까요?"}],
                     "pendingApproval": {"approvalId": ap, "toolPreview": {
-                        "tool": "room_reserve", "risk": "reversible_write", "arguments": {}, "preview": PREVIEW}}})
+                        "tool": "room_reserve", "risk": "reversible_write", "arguments": {}, "preview": PREVIEW,
+                        **self.preview_extra}}})
             if "막아" in body["message"]:
                 return self._ok("RunState", {"conversationId": body["conversationId"], "agentId": agent_id,
                                              "status": "blocked", "messages": [], "blockedReason": "신뢰 등급 위반"})

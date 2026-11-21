@@ -82,6 +82,9 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - 메시지의 `attachments`(이미지, 최대 3장, #288)는 LLM 출구 이미지 입력(#261)과 같은 규칙(jpeg·png data URL, 한 장 5MB,
     413·415·422)으로 확인한 뒤 그 턴의 agent `/run`에 그대로 넘깁니다. 라우터(`/route`)에는 넘기지 않고, 대화 기록에도 남기지
     않습니다. agent가 이미지를 읽을 때는 출구가 `local-vision`으로만 보내고 감사에 형식·크기·SHA-256을 남깁니다.
+    대화 기록(`GET /api/conversations/{id}`)의 `user_message`에는 첨부 메타(`attachments[]`: kind, mediaType, bytes, sha256,
+    #395)만 남기고 본문은 남기지 않습니다. agent `ToolPreview.fromAttachments`는 실행 승인 카드(`approval.fromAttachments`)로
+    그대로 넘깁니다(agent가 보내지 않으면 넣지 않음).
   - `POST /v1/embeddings`: 로컬 별칭(`local-embed` → Ollama `bge-m3`, 1024차원)만 받습니다. 외부 별칭은 403입니다.
   - `reasoning_effort`는 그대로 넘깁니다. LiteLLM 1.108.1은 Ollama에 `none`이면 `think: false`, `low`·`high`면 `think: true`로
     바꿔 보냅니다(단계는 구분되지 않음). Ollama 전용 `think`는 외부로 보낼 때 뺍니다(Anthropic이 400으로 거절함).
