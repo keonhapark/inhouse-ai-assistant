@@ -30,6 +30,7 @@ from gateway.audit import AuditLog
 from gateway.delegation import DelegationService, load_requester
 from gateway.egress import ModelUsage
 from gateway.erp_client import ErpClient
+from gateway.vision import inspect_data_url
 from gateway.problems import ProblemError
 from gateway.registry import Registry, Requester, grant_matches
 from gateway.relay import bearer
@@ -40,6 +41,19 @@ APPROVAL_TTL = timedelta(minutes=10)
 WIDE_TOKEN_CONDITIONS = ("no_guard", "baseline_tools")  # contracts/eval/conditions.md 위임 토큰 범위
 EVAL_CONDITIONS = ("no_guard", "write_blocked", "approve_all", "baseline_tools", "full")  # agent.yaml Condition
 MAX_CONTENT = 4000
+MAX_ATTACHMENTS = 3  # contracts/openapi/gateway.yaml postMessage attachments maxItems
+
+
+def check_attachments(value: Any) -> list[dict[str, str]]:
+    """대화 첨부(#288)를 LLM 출구 이미지 입력(#261)과 같은 규칙으로 확인합니다(413·415·422). 본문은 그대로 돌려줍니다."""
+    if not isinstance(value, list) or not 1 <= len(value) <= MAX_ATTACHMENTS:
+        raise ProblemError(422, "validation", f"attachments는 1~{MAX_ATTACHMENTS}개 배열이어야 합니다")
+    for i, a in enumerate(value, 1):
+        if not isinstance(a, dict) or set(a) != {"kind", "dataUrl"} or a["kind"] != "image" \
+                or not isinstance(a["dataUrl"], str):
+            raise ProblemError(422, "validation", "첨부는 {kind: image, dataUrl}만 받습니다", f"{i}번째 첨부")
+        inspect_data_url(a["dataUrl"], i)
+    return value
 
 
 def now() -> datetime:
@@ -226,7 +240,8 @@ class ChatService:
                                        "retryable": True})
 
     # ---------- 메시지 ----------
-    async def message_events(self, c: Conversation, who: Requester, content: str) -> AsyncIterator[dict[str, Any]]:
+    async def message_events(self, c: Conversation, who: Requester, content: str,
+                             attachments: list[dict[str, str]] | None = None) -> AsyncIterator[dict[str, Any]]:
         async with c.lock:
             if c.status == "awaiting_approval":
                 ap = self.approvals.get(c.pending or "")
@@ -285,6 +300,9 @@ class ChatService:
                         "requester": agent_requester(who)}
                 if c.condition:
                     body["condition"] = c.condition
+                if attachments:
+                    # 이 턴의 첨부만 넘깁니다. 대화 기록(c.events)에는 남기지 않습니다(화면 복원은 글만)
+                    body["attachments"] = attachments
                 self.usage.begin(c.id)
                 state = await self.agent.run(token, body)
             except AgentUnavailable:
@@ -484,11 +502,13 @@ def build_router(chat: ChatService) -> APIRouter:
         c = chat.owned(conversation_id, who)
         body = await json_body(request)
         content = body.get("content")
-        if not isinstance(content, str) or not content.strip() or len(content) > MAX_CONTENT or set(body) - {"content"}:
+        if not isinstance(content, str) or not content.strip() or len(content) > MAX_CONTENT \
+                or set(body) - {"content", "attachments"}:
             raise ProblemError(422, "validation", f"content는 1~{MAX_CONTENT}자 문자열이어야 합니다")
+        attachments = check_attachments(body["attachments"]) if "attachments" in body else None
         if c.status == "awaiting_approval" and not chat.expired_pending(c):
             raise ProblemError(409, "invalid-state", "실행 승인을 기다리는 중입니다")
-        return stream(c, chat.message_events(c, who, content))
+        return stream(c, chat.message_events(c, who, content, attachments))
 
     @api.post("/execution-approvals/{approval_id}")
     async def decide(request: Request, approval_id: str) -> StreamingResponse:
