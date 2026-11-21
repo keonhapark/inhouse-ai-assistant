@@ -45,6 +45,7 @@ EVAL_MODEL_OVERRIDES = {
     "local=local-exaone": {"local": "local-exaone"},
     "external=external-sonnet": {"external": "external-sonnet"},
     "local=local-exaone,external=external-sonnet": {"local": "local-exaone", "external": "external-sonnet"},
+    "external=external-exaone": {"external": "external-exaone"},   # K-EXAONE 2.5 API(#436)
 }
 MAX_CONTENT = 4000
 MAX_ATTACHMENTS = 3  # contracts/openapi/gateway.yaml postMessage attachments maxItems

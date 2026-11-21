@@ -24,9 +24,12 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     `claude-sonnet-5-5`, $2 / $10 per MTok, 기본값이 아닌 `temperature`·`top_p`는 뺌)과 `local-exaone`(EXAONE 4.0 1.2B 공식
     GGUF Q4_K_M, Ollama가 `hf.co/LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF:Q4_K_M`으로 받음, 812MB). EXAONE 라이선스는
     "EXAONE AI Model License Agreement 1.2 - NC"(비상업, 연구·교육 사용)라 평가 측정에만 쓰고 가중치는 커밋하지 않습니다.
+    `external-exaone`(#436)은 LG AI연구원 K-EXAONE 2.5 API(`k-exaone_v2.5`, OpenAI 호환 `https://api.exaone.ai/v1`)이고
+    키는 LiteLLM 환경 변수 `K_EXAONE_API_KEY`에서 읽습니다. 생각 단계는 끌 수 없고 `reasoning_effort`는 `low`·`high`·`max`
+    (기본 `max`)입니다. 단가는 공식 문서에 없어 적지 않았습니다. 다른 외부 별칭과 같이 가림·기밀 판정·외부 기록을 거칩니다.
     평가 대화는 `POST /api/conversations`의 `X-Eval-Model-Override`(평가 모드에서만)로 그 대화의 출구 별칭을 바꿔 끼웁니다:
     `local=local-exaone`은 로컬 업무 별칭(`local`·`local-gguf`, 기밀 판정·비용 상한·외부 장애 폴백의 로컬 포함),
-    `external=external-sonnet`은 `external`. 같은 위치의 별칭으로만 바꿔 모델 정책·가림·기밀 판정은 그대로이고, 이미지
+    `external=external-sonnet`·`external=external-exaone`은 `external`. 같은 위치의 별칭으로만 바꿔 모델 정책·가림·기밀 판정은 그대로이고, 이미지
     (`local-vision`)와 토큰 없는 호출(입구 라우터)은 바꾸지 않습니다. 감사 detail에 `평가 별칭 바꿔 끼움: A 대신 B`를 남깁니다.
   - `X-Delegation-Token`이 있으면 서명·만료를 확인하고 `agt`의 `model_policy`를 따릅니다. `local_only` 에이전트와
     토큰 없는 호출은 `external`을 쓰면 403 `model-policy`이고, 밖으로 아무것도 나가지 않습니다.

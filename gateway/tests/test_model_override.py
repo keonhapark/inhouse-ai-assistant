@@ -31,6 +31,18 @@ def test_config_has_eval_aliases_and_keeps_defaults():
     assert models["local"] == "ollama_chat/qwen3.5:9b" and models["external"] == "anthropic/claude-haiku-5-5"
 
 
+def test_config_has_k_exaone_alias():
+    """K-EXAONE 2.5 API(#436). OpenAI 호환 엔드포인트로 보내고 키는 환경 변수에서만 읽습니다."""
+    import yaml
+
+    cfg = ROOT / "gateway/litellm/config.yaml"
+    entry = next(m for m in yaml.safe_load(cfg.read_text(encoding="utf-8"))["model_list"]
+                 if m["model_name"] == "external-exaone")
+    assert entry["model_info"]["location"] == "external"
+    assert entry["litellm_params"] == {"model": "openai/k-exaone_v2.5", "api_base": "https://api.exaone.ai/v1",
+                                       "api_key": "os.environ/K_EXAONE_API_KEY"}
+
+
 @pytest.fixture
 def ec(settings, fake_erp, issuer):
     """채팅으로 대화를 만들고, 그 대화의 위임 토큰으로 출구를 부릅니다."""
@@ -66,6 +78,8 @@ def _token(c, staff_no, cid, agent_id):
     (BOTH, "external", "external-sonnet"),
     ("local=local-exaone", "external", "external"),
     ("external=external-sonnet", "local", "local"),
+    ("external=external-exaone", "external", "external-exaone"),
+    ("external=external-exaone", "local", "local"),
     (None, "external", "external"),
 ])
 def test_override_swaps_aliases_for_that_conversation(ec, staff_no, override, requested, sent):

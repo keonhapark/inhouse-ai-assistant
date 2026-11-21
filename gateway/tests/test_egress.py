@@ -36,7 +36,8 @@ def _audit(app) -> list[dict]:
 def test_litellm_config_aliases_have_location():
     locs = load_model_locations(ROOT / "gateway/litellm/config.yaml")
     assert locs == {"local": "local", "local-gguf": "local", "local-vision": "local", "local-exaone": "local",
-                    "local-embed": "local", "external": "external", "external-sonnet": "external"}
+                    "local-embed": "local", "external": "external", "external-sonnet": "external",
+                    "external-exaone": "external"}
 
 
 def test_local_only_agent_cannot_use_external(client, app, token_for, litellm):
