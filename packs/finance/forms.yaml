@@ -1,0 +1,52 @@
+# 결재 양식. erp의 결재 문서 엔진이 이 정의를 그대로 씁니다.
+forms:
+  - id: leave
+    name: 휴가 신청
+    stage: 1
+    fields:
+      type: object
+      required: [leave_type, start_date, end_date, reason]
+      additionalProperties: false
+      properties:
+        leave_type:
+          title: 종류
+          type: string
+          enum: [annual, half_am, half_pm, sick, special]
+          x-labels: {annual: 연차, half_am: 오전 반차, half_pm: 오후 반차, sick: 병가, special: 경조사}
+        start_date: {title: 시작일, type: string, format: date}
+        end_date: {title: 종료일, type: string, format: date}
+        reason: {title: 사유, type: string, maxLength: 200}
+    effects:
+      on_final_approval: deduct_leave_balance
+      on_withdraw_after_approval: restore_leave_balance
+    approval_line:
+      - when: {}
+        steps: [team_leader]
+
+  - id: loan
+    name: 여신 품의
+    stage: 1
+    fields:
+      type: object
+      required: [borrower, product, amount, term_months, collateral, purpose]
+      additionalProperties: false
+      properties:
+        borrower: {title: 차주(가명), type: string, maxLength: 60}
+        product:
+          title: 상품
+          type: string
+          enum: [business_operating, business_facility, household_secured, household_unsecured]
+          x-labels: {business_operating: 기업 운전자금, business_facility: 기업 시설자금, household_secured: 가계 담보대출, household_unsecured: 가계 신용대출}
+        amount: {title: 금액, type: integer, minimum: 1}
+        term_months: {title: 기간(개월), type: integer, minimum: 1, maximum: 360}
+        collateral: {title: 담보, type: string, maxLength: 200}
+        purpose: {title: 자금 용도, type: string, maxLength: 200}
+    amount_field: amount
+    # 위에서부터 처음 맞는 규칙 하나. 전결 한도: 1억 이하 부점장, 10억 이하 본부장까지, 그 위는 은행장까지
+    approval_line:
+      - when: {amount_lte: 100000000}
+        steps: [team_leader]
+      - when: {amount_lte: 1000000000}
+        steps: [team_leader, division_head]
+      - when: {amount_gt: 1000000000}
+        steps: [team_leader, division_head, ceo]

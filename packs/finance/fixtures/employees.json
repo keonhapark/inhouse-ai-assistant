@@ -1,0 +1,275 @@
+{
+  "seed": 20261121,
+  "employees": [
+    {
+      "id": "E0001",
+      "employee_no": "E0001",
+      "name": "김순자",
+      "unit_id": "bank-ceo",
+      "grade": "ceo",
+      "email": "e0001@example.invalid",
+      "hired_on": "2006-01-31"
+    },
+    {
+      "id": "E0002",
+      "employee_no": "E0002",
+      "name": "이민준",
+      "unit_id": "credit-div",
+      "grade": "division_head",
+      "email": "e0002@example.invalid",
+      "hired_on": "2013-01-19"
+    },
+    {
+      "id": "E0003",
+      "employee_no": "E0003",
+      "name": "김하은",
+      "unit_id": "admin-div",
+      "grade": "division_head",
+      "email": "e0003@example.invalid",
+      "hired_on": "2007-11-20"
+    },
+    {
+      "id": "E0004",
+      "employee_no": "E0004",
+      "name": "이하은",
+      "unit_id": "branch-div",
+      "grade": "division_head",
+      "email": "e0004@example.invalid",
+      "hired_on": "2019-03-18"
+    },
+    {
+      "id": "E0005",
+      "employee_no": "E0005",
+      "name": "김우진",
+      "unit_id": "credit-review",
+      "grade": "team_leader",
+      "email": "e0005@example.invalid",
+      "hired_on": "2023-03-05"
+    },
+    {
+      "id": "E0006",
+      "employee_no": "E0006",
+      "name": "이시우",
+      "unit_id": "credit-review",
+      "grade": "staff",
+      "email": "e0006@example.invalid",
+      "hired_on": "2014-11-06"
+    },
+    {
+      "id": "E0007",
+      "employee_no": "E0007",
+      "name": "김정순",
+      "unit_id": "credit-review",
+      "grade": "staff",
+      "email": "e0007@example.invalid",
+      "hired_on": "2016-10-19"
+    },
+    {
+      "id": "E0008",
+      "employee_no": "E0008",
+      "name": "박준호",
+      "unit_id": "credit-review",
+      "grade": "staff",
+      "email": "e0008@example.invalid",
+      "hired_on": "2022-08-01"
+    },
+    {
+      "id": "E0009",
+      "employee_no": "E0009",
+      "name": "이예원",
+      "unit_id": "credit-mgmt",
+      "grade": "team_leader",
+      "email": "e0009@example.invalid",
+      "hired_on": "2007-12-20"
+    },
+    {
+      "id": "E0010",
+      "employee_no": "E0010",
+      "name": "유수민",
+      "unit_id": "credit-mgmt",
+      "grade": "staff",
+      "email": "e0010@example.invalid",
+      "hired_on": "2022-07-28"
+    },
+    {
+      "id": "E0011",
+      "employee_no": "E0011",
+      "name": "김진우",
+      "unit_id": "credit-mgmt",
+      "grade": "staff",
+      "email": "e0011@example.invalid",
+      "hired_on": "2021-08-25"
+    },
+    {
+      "id": "E0012",
+      "employee_no": "E0012",
+      "name": "최옥순",
+      "unit_id": "compliance",
+      "grade": "team_leader",
+      "email": "e0012@example.invalid",
+      "hired_on": "2015-09-29"
+    },
+    {
+      "id": "E0013",
+      "employee_no": "E0013",
+      "name": "김지연",
+      "unit_id": "compliance",
+      "grade": "staff",
+      "email": "e0013@example.invalid",
+      "hired_on": "2021-03-29"
+    },
+    {
+      "id": "E0014",
+      "employee_no": "E0014",
+      "name": "김광수",
+      "unit_id": "compliance",
+      "grade": "staff",
+      "email": "e0014@example.invalid",
+      "hired_on": "2018-10-06"
+    },
+    {
+      "id": "E0015",
+      "employee_no": "E0015",
+      "name": "손지우",
+      "unit_id": "people",
+      "grade": "team_leader",
+      "email": "e0015@example.invalid",
+      "hired_on": "2008-05-03"
+    },
+    {
+      "id": "E0016",
+      "employee_no": "E0016",
+      "name": "조정희",
+      "unit_id": "people",
+      "grade": "staff",
+      "email": "e0016@example.invalid",
+      "hired_on": "2026-05-07"
+    },
+    {
+      "id": "E0017",
+      "employee_no": "E0017",
+      "name": "윤영식",
+      "unit_id": "people",
+      "grade": "staff",
+      "email": "e0017@example.invalid",
+      "hired_on": "2020-05-02"
+    },
+    {
+      "id": "E0018",
+      "employee_no": "E0018",
+      "name": "한명숙",
+      "unit_id": "it-dept",
+      "grade": "team_leader",
+      "email": "e0018@example.invalid",
+      "hired_on": "2010-02-11"
+    },
+    {
+      "id": "E0019",
+      "employee_no": "E0019",
+      "name": "김은지",
+      "unit_id": "it-dept",
+      "grade": "staff",
+      "email": "e0019@example.invalid",
+      "hired_on": "2009-05-18"
+    },
+    {
+      "id": "E0020",
+      "employee_no": "E0020",
+      "name": "이현지",
+      "unit_id": "it-dept",
+      "grade": "staff",
+      "email": "e0020@example.invalid",
+      "hired_on": "2021-10-16"
+    },
+    {
+      "id": "E0021",
+      "employee_no": "E0021",
+      "name": "최우진",
+      "unit_id": "branch-east",
+      "grade": "team_leader",
+      "email": "e0021@example.invalid",
+      "hired_on": "2011-07-12"
+    },
+    {
+      "id": "E0022",
+      "employee_no": "E0022",
+      "name": "박영진",
+      "unit_id": "branch-east",
+      "grade": "staff",
+      "email": "e0022@example.invalid",
+      "hired_on": "2025-09-14"
+    },
+    {
+      "id": "E0023",
+      "employee_no": "E0023",
+      "name": "양재호",
+      "unit_id": "branch-east",
+      "grade": "staff",
+      "email": "e0023@example.invalid",
+      "hired_on": "2017-09-17"
+    },
+    {
+      "id": "E0024",
+      "employee_no": "E0024",
+      "name": "민주원",
+      "unit_id": "branch-west",
+      "grade": "team_leader",
+      "email": "e0024@example.invalid",
+      "hired_on": "2010-03-14"
+    },
+    {
+      "id": "E0025",
+      "employee_no": "E0025",
+      "name": "고명숙",
+      "unit_id": "branch-west",
+      "grade": "staff",
+      "email": "e0025@example.invalid",
+      "hired_on": "2021-08-15"
+    },
+    {
+      "id": "E0026",
+      "employee_no": "E0026",
+      "name": "박성호",
+      "unit_id": "branch-west",
+      "grade": "staff",
+      "email": "e0026@example.invalid",
+      "hired_on": "2025-01-25"
+    },
+    {
+      "id": "E0027",
+      "employee_no": "E0027",
+      "name": "황서윤",
+      "unit_id": "branch-north",
+      "grade": "team_leader",
+      "email": "e0027@example.invalid",
+      "hired_on": "2012-01-31"
+    },
+    {
+      "id": "E0028",
+      "employee_no": "E0028",
+      "name": "정영희",
+      "unit_id": "branch-north",
+      "grade": "staff",
+      "email": "e0028@example.invalid",
+      "hired_on": "2025-01-10"
+    },
+    {
+      "id": "E0029",
+      "employee_no": "E0029",
+      "name": "이미영",
+      "unit_id": "branch-north",
+      "grade": "staff",
+      "email": "e0029@example.invalid",
+      "hired_on": "2018-08-16"
+    },
+    {
+      "id": "E0030",
+      "employee_no": "E0030",
+      "name": "김지은",
+      "unit_id": "branch-north",
+      "grade": "staff",
+      "email": "e0030@example.invalid",
+      "hired_on": "2010-11-16"
+    }
+  ]
+}

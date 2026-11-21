@@ -1,0 +1,88 @@
+# 에이전트 등록부(가상 지방 은행). 입구 라우터는 요청을 여기 있는 에이전트 하나에 한 번만 넘깁니다.
+# 도구 이름은 contracts/mcp/tools.json에 있어야 합니다(CI 검사).
+# pack.yaml의 model_policy_override: local_only로 모든 에이전트가 외부 LLM을 쓰지 않습니다(망분리 흉내).
+# 전사 비서는 제조 팩과 같은 설정(external_allowed)을 그대로 가져와도 팩 항목이 출구에서 막는다는 것을 보이려고 남겨 둡니다.
+fallback_agent: assistant
+
+agents:
+  - id: assistant
+    name: 전사 비서
+    version: 0.1.0
+    stage: 1
+    owner_unit: people
+    description: 공통 규정 질의, 회의실, 일반 안내를 맡고 맞는 부서 에이전트를 안내합니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - org_search_employees
+      - room_list_availability
+      - room_list_my_reservations
+      - room_reserve
+      - room_cancel_reservation
+      - policy_search
+    allowed_risk: [read, reversible_write]
+    doc_scopes: [public]
+    model_policy:
+      mode: external_allowed
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: deny
+    routing:
+      keywords: [회의실, 예약, 안내, 어디, 누구]
+      examples:
+        - 내일 오후 3시에 6명 들어갈 회의실 잡아 줘
+        - 본점 총무 담당자가 누구야?
+
+  - id: credit
+    name: 여신 지원
+    version: 0.1.0
+    stage: 1
+    owner_unit: credit-review
+    description: 여신 규정 질의, 내가 올린 여신 품의의 진행 확인과 회수를 맡습니다. 품의 올리기는 도구가 생기면 더합니다.
+    callable_by:
+      roles: [credit_officer]
+    tools:
+      - approval_list_mine
+      - approval_get
+      - approval_withdraw
+      - policy_search
+    allowed_risk: [read, irreversible]
+    doc_scopes: [public, credit-policy]
+    model_policy:
+      mode: local_only
+      reason: 고객 신용정보는 외부 LLM으로 보내지 않습니다.
+    risk_policy:
+      read: auto
+      reversible_write: confirm
+      irreversible: confirm
+    routing:
+      keywords: [여신, 대출, 품의, 담보, 신용, 한도, 심사]
+      examples:
+        - 내가 올린 여신 품의 어디까지 갔어?
+        - 담보 인정 비율 규정 알려 줘
+
+  - id: control
+    name: 내부통제
+    version: 0.1.0
+    stage: 1
+    owner_unit: compliance
+    description: 내부 규정·윤리 기준 질의를 맡습니다. 감사 조회는 사람 화면 전용이라 다루지 않습니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - policy_search
+    allowed_risk: [read]
+    doc_scopes: [public, internal-rules, compliance-restricted]
+    model_policy:
+      mode: local_only
+      reason: 내부통제 자료는 외부 LLM으로 보내지 않습니다.
+    risk_policy:
+      read: auto
+      reversible_write: deny
+      irreversible: deny
+    routing:
+      keywords: [내부통제, 윤리, 이해상충, 신고, 준법, 내부 규정]
+      examples:
+        - 고객한테 선물 받아도 되는 금액 기준이 있어?
+        - 이해상충 신고는 어떻게 해?
