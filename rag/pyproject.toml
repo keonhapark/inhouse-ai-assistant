@@ -23,6 +23,9 @@ fetch = [
     "olefile==0.47",
     "pypdf==7.1.1",
 ]
+ocr = [
+    "rapidocr-onnxruntime==1.4.4",
+]
 
 [tool.uv]
 package = false
