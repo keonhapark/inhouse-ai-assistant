@@ -80,7 +80,7 @@ def test_score_and_summary():
     assert not score(None, truth).all_correct
     out = summarize([s, bad], [truth, {**truth, "id": "r1"}])
     assert out["allFields"]["n"] == 1 and out["fields"]["amount"]["n"] == 1 and set(out["fields"]) == set(FIELDS)
-    assert out["groups"]["distortion:heavy"]["of"] == 2
+    assert out["groups"]["distortion:heavy"]["N"] == 2
     rows = score_rows({"r1": good}, [truth, {**truth, "id": "r2"}])
     assert [r["allCorrect"] for r in rows] == [True, False]
 

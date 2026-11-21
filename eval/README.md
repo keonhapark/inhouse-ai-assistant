@@ -97,6 +97,7 @@ uv run python tools/make_receipts.py --truth-only --out receipts/dev-truth.jsonl
 - 정답은 시드만으로 정해지고 글꼴과 관계없습니다. 개발 묶음 정답(`receipts/dev-truth.jsonl`, 시드 `DEV_SEED`)만 커밋하고, 그림은 저장소 밖에 만듭니다. 확인 묶음은 다른 시드를 실행 때만 주며, 스크립트는 개발 시드와 저장소 안 경로를 거부합니다.
 - 한글을 그리려면 라이선스가 분명한 한글 글꼴(예: Noto Sans KR, SIL OFL)을 `--font`로 줍니다. 글꼴은 저장소에 넣지 않고, 쓴 글꼴 파일의 SHA-256을 묶음의 `manifest.json`에 남깁니다.
 - 채점(`harness/receipts.py`): 금액·날짜·가맹점·사업자번호 필드 완전 일치. 비교 전에 표기만 정규화합니다. 금액은 통화 기호·쉼표·공백·천 단위 마침표를 지우고 만·천 단위를 읽고, 날짜는 ISO로 바꿉니다. 사업자번호는 숫자 10자리, 가맹점은 NFKC·공백 제거·법인 표기 통일로 맞춥니다. 그 밖의 차이는 틀림이고, 읽지 못한 필드도 틀림입니다. 필드별·전체 완전 일치(Clopper-Pearson 95%)와 레이아웃·왜곡 정도별 전체 일치를 냅니다.
+- 전통 기준선(#463): `uv run python tools/ocr_baseline.py --images <묶음 폴더> --engine tesseract|rapidocr|oracle --out <결과 이름>`. OCR 엔진이 낸 줄에서 정규식(`harness/receipt_baseline.py`)으로 네 필드를 뽑아 같은 채점기로 셉니다. `oracle`은 OCR 없이 생성기의 줄 텍스트를 써서 정규식만의 상한을 봅니다(개발 묶음 40/40). OCR 엔진(tesseract `kor`, rapidocr 한국어 모델)은 따로 설치합니다.
 
 ## 시험
 

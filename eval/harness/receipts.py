@@ -19,7 +19,6 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from harness.stats import clopper_pearson
 
 FIELDS = ("amount", "date", "merchant", "bizNo")
 _UNITS = {"억": 100_000_000, "만": 10_000, "천": 1_000, "백": 100}
@@ -134,12 +133,9 @@ def load_truth(path: Path) -> list[dict[str, Any]]:
 
 def summarize(scores: list[ReceiptScore], truths: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """필드별·전체 완전 일치(Clopper-Pearson 95%)와, 정답을 주면 레이아웃·왜곡별 전체 완전 일치."""
+    from harness.report import proportion as rate  # 보고서와 같은 형식(n, N, rate, low, high)
+
     n = len(scores)
-
-    def rate(k: int, m: int) -> dict[str, Any]:
-        ci = clopper_pearson(k, m)
-        return {"n": k, "of": m, "rate": (k / m) if m else None, "ci95": [ci.low, ci.high]}
-
     out = {"items": n, "allFields": rate(sum(s.all_correct for s in scores), n),
            "fields": {f: rate(sum(getattr(s, f) for s in scores), n) for f in FIELDS}}
     if truths:
