@@ -11,6 +11,8 @@
 6. 외부로 나간 요청은 가림 뒤 본문·가린 자리·응답을 egress.jsonl에(가림 전 원문은 저장하지 않음), 모든 요청은 감사 이벤트 llm.request로 남깁니다.
    이미지(`image_url`)가 든 요청은 2·3단계 전에 형식·크기를 확인하고(gateway/vision.py), 요청한 별칭·정책과 관계없이
    로컬 비전 별칭(model_info.vision)으로만 보냅니다. 감사에는 이미지 본문 대신 형식·크기·해시를 남깁니다(#261).
+   외부 별칭 요청을 로컬로 돌린 호출(이미지·팩 금지·기밀 판정·비용 상한·외부 장애 폴백)에 reasoning_effort·think가 없으면
+   reasoning_effort를 채워 생각 단계를 끕니다(#427, 기본 none). 외부 모델용 시간 제한 안에 로컬이 길게 생각하다 끊기지 않게 합니다.
 7. 시간 초과(504)·연결 실패(502)·LiteLLM 5xx(502)는 실패 알림을 보냅니다.
 """
 
@@ -208,8 +210,11 @@ class Egress:
                  unit_of: Callable[[str | None], str | None] = lambda _cid: None,
                  prices: dict[str, tuple[float, float]] | None = None,
                  provider_models: dict[str, str] | None = None,
-                 vision_alias: str | None = None, eval_toolcall: bool = False):
+                 vision_alias: str | None = None, eval_toolcall: bool = False,
+                 local_reasoning_effort: str | None = None):
         self.locations = locations
+        # 외부 별칭 요청을 로컬로 돌릴 때 채울 reasoning_effort(#427). None이면 채우지 않습니다.
+        self.local_reasoning_effort = local_reasoning_effort
         # GATEWAY_EVAL_TOOLCALL=1: 토큰 없는 외부 호출을 받습니다(#268, 도구 호출 측정의 외부 기준). 측정 데이터는 지어낸 것입니다.
         # GATEWAY_EVAL_MODE와 따로 둡니다(#294): 정상·확인 셋 실행에서 열리면 대화 밖 외부 전송이 판정에서 빠집니다.
         self.eval_toolcall = eval_toolcall
@@ -307,6 +312,7 @@ class Egress:
     async def _handle(self, request: Request) -> Response:
         caller = self._caller(request)
         body = await self._body(request)
+        requested = self.locations.get(body["model"])  # 요청한 별칭의 위치. 로컬로 돌렸는지 가를 때 씁니다(#427)
         images = inspect_images(body)
         note = None
         if images:
@@ -377,6 +383,8 @@ class Egress:
                 detail = ", ".join(f"{k}={v}" for k, v in sorted(counts.items()))
                 self._audit(caller, model, "ok", detail=detail, kind="llm.redacted")
 
+        if requested == "external" and model["location"] == "local":
+            sent, note = self._quiet_local(model["name"], sent, note)
         drop = self.drop_params.get(model["name"], frozenset())
         if drop & set(sent):
             sent = {k: v for k, v in sent.items() if k not in drop}
@@ -393,7 +401,21 @@ class Egress:
             local = {"name": self._local_for(caller), "location": "local", "externalSent": False, "redactions": 0}
             request.state.model = local
             note = (f"{note}; " if note else "") + f"외부 장애({e.code})로 로컬 폴백"
+            fallback, note = self._quiet_local(local["name"], fallback, note)
             return await self._dispatch(caller, local, before, fallback, note=note)
+
+    def _quiet_local(self, alias: str, sent: dict, note: str | None) -> tuple[dict, str | None]:
+        """외부 별칭 요청을 로컬로 돌린 본문에 reasoning_effort를 채우고 감사 detail에 적습니다(#427).
+
+        호출한 쪽은 외부 모델을 기대해 생각 단계를 정하지 않았을 수 있고, 로컬 qwen3.5:9b는 생각 모드가 기본이라 길게 생각하다
+        시간 제한(LLM_TIMEOUT_SECONDS)을 넘깁니다. 호출한 쪽이 reasoning_effort나 think를 정했거나 이 별칭이 reasoning_effort를
+        빼는 별칭(model_info.drop_params)이면 그대로 둡니다.
+        """
+        effort = self.local_reasoning_effort
+        if (effort is None or "reasoning_effort" in sent or "think" in sent
+                or "reasoning_effort" in self.drop_params.get(alias, frozenset())):
+            return sent, note
+        return {**sent, "reasoning_effort": effort}, (f"{note}; " if note else "") + f"생각 단계 끔(reasoning_effort={effort})"
 
     def _swap(self, caller: Caller, alias: str) -> str:
         """평가 대화의 별칭 바꿔 끼우기. 위치가 같은 별칭으로만 바꿉니다(정책·가림이 그대로 적용되게).
