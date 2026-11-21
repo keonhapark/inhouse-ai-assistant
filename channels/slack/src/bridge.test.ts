@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Bridge, jwtExp, MESSAGES } from './bridge.js'
+import { Bridge, jwtExp, MESSAGES, toPlainText } from './bridge.js'
 import { GatewayError, RATE_LIMITED, UNAVAILABLE, type ChatEvent, type Gateway } from './gateway.js'
 import { ACTION } from './render.js'
 import { ev, fakeGateway, fakeSlack, flat } from './test-util.js'
@@ -387,5 +387,24 @@ describe('결재 알림', () => {
     release()
     await first
     expect(calls).toBe(1)
+  })
+})
+
+describe('toPlainText', () => {
+  it('슬랙 서식 기호와 이스케이프를 풀어 일반 글로 넘깁니다', () => {
+    expect(toPlainText('*2026-11-20 가온식당에서 42,000원 썼어*')).toBe('2026-11-20 가온식당에서 42,000원 썼어')
+    expect(toPlainText('_목적_은 ~점심~ 접대')).toBe('_목적_은 점심 접대')
+    expect(toPlainText('목적은 _접대_ 야')).toBe('목적은 접대 야')
+    expect(toPlainText('3*4 와 a_b_c 는 그대로')).toBe('3*4 와 a_b_c 는 그대로')
+    expect(toPlainText('규정 <https://x.example/a|여비 규정> 봐 줘')).toBe('규정 여비 규정(https://x.example/a) 봐 줘')
+    expect(toPlainText('메일 <mailto:a@example.com|a@example.com> &amp; &lt;b&gt;')).toBe('메일 a@example.com & <b>')
+    expect(toPlainText('`어제 점심 4만 2천 원 정산`')).toBe('어제 점심 4만 2천 원 정산')
+    expect(toPlainText('```\n여러 줄\n```')).toBe('여러 줄')
+  })
+
+  it('굵게 쓴 메시지도 서식 없이 gateway로 보냅니다', async () => {
+    const { bridge, calls } = setup()
+    await bridge.onMessage(dm('U1', '*2026-11-20 점심 42,000원 정산*', '1'))
+    expect(calls.find((c) => c.startsWith('send'))).toMatch(/ 2026-11-20 점심 42,000원 정산$/)
   })
 })

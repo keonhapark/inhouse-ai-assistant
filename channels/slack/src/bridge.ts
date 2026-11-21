@@ -109,7 +109,7 @@ export class Bridge {
     this.seenEvents.set(eventKey, this.now())
 
     try {
-      const content = this.stripMention(m.text ?? '')
+      const content = toPlainText(this.stripMention(m.text ?? ''))
       // 채널 멘션은 스레드에 안내만 남기고 DM에서 새 대화로 답합니다.
       let channel = m.channel
       let threadTs = m.thread_ts ?? m.ts
@@ -365,4 +365,31 @@ export function jwtExp(token: string): number | null {
   } catch {
     return null
   }
+}
+
+/**
+ * 슬랙 메시지 글(mrkdwn)을 모델에 넘길 일반 글로 바꿉니다. 사용자가 굵게·기울임·취소선을 쓰거나 링크를 붙이면
+ * 슬랙은 `*굵게*`, 백틱 코드, `<https://x|이름>`, `&amp;`처럼 보냅니다. 그대로 넘기면 모델이 기호를 값에 섞습니다
+ * (예: 날짜 `*2026-11-20`이 도구 입력 검증에서 거절됨).
+ */
+export function toPlainText(text: string): string {
+  return (
+    text
+      // 링크: <url|이름> → 이름(url), <url> → url, <mailto:a|a> → a
+      .replace(/<mailto:([^|>]+)(?:\|[^>]*)?>/g, '$1')
+      .replace(/<((?:https?|ftp):[^|>]+)\|([^>]+)>/g, '$2($1)')
+      .replace(/<((?:https?|ftp):[^>]+)>/g, '$1')
+      // 코드 서식: ```여러 줄``` 과 `한 줄`의 백틱만 지웁니다
+      .replace(/```([\s\S]*?)```/g, '$1')
+      .replace(/`([^`\n]+)`/g, '$1')
+      // 굵게·기울임·취소선: 단어 경계에 붙은 짝 기호만 지웁니다(곱셈 3*4 같은 글은 두기)
+      .replace(/(^|[\s(])\*(?!\s)([^*\n]+?)(?<!\s)\*(?=$|[\s).,!?:;])/g, '$1$2')
+      .replace(/(^|[\s(])_(?!\s)([^_\n]+?)(?<!\s)_(?=$|[\s).,!?:;])/g, '$1$2')
+      .replace(/(^|[\s(])~(?!\s)([^~\n]+?)(?<!\s)~(?=$|[\s).,!?:;])/g, '$1$2')
+      // 슬랙이 바꿔 보낸 제어 문자를 되돌립니다(&amp;는 마지막에)
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .trim()
+  )
 }
