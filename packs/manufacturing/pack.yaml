@@ -16,4 +16,6 @@ requires_erp_features:
   - rooms
   - doc_access
   - tickets
+  - quality
+  - sales
 stage: 2

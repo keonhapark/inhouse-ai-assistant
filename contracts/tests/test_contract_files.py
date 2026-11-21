@@ -313,3 +313,25 @@ def test_fake_erp_treats_blank_service_login_secret_as_unset() -> None:
         with TestClient(app, base_url="http://fake/api/v1") as c:
             r = c.post("/auth/service-login", headers={"X-Service-Login-Secret": blank}, json={"employeeId": "E0010"})
             assert r.status_code == 404, r.text
+
+
+def test_fake_erp_hides_quality_and_sales_without_features(tmp_path) -> None:
+    """팩 requires_erp_features에 quality·sales가 없으면 그 기능 경로는 404입니다(품목은 그대로)."""
+    import re
+    import shutil
+
+    from fastapi.testclient import TestClient
+
+    from fakes.erp.app import create_app
+
+    pack = tmp_path / "manufacturing"
+    shutil.copytree(PACKS / "manufacturing", pack)
+    y = pack / "pack.yaml"
+    y.write_text(re.sub(r"(?m)^  - (quality|sales)\n", "", y.read_text(encoding="utf-8")), encoding="utf-8")
+    with TestClient(create_app(pack), base_url="http://fake/api/v1") as c:
+        tok = c.post("/auth/login", json={"employeeNo": "E0022", "password": "demo"}).json()["accessToken"]
+        h = {"Authorization": f"Bearer {tok}"}
+        assert c.get("/quality/defect-reports", headers=h).status_code == 404
+        assert c.get("/sales/quotes", headers=h).status_code == 404
+        assert c.get("/customers", headers=h).status_code == 404
+        assert c.get("/items", headers=h).status_code == 200

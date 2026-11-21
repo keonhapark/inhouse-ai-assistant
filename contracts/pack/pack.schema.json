@@ -45,7 +45,7 @@
         "locale": {"type": "string"},
         "requires_erp_features": {
           "type": "array",
-          "items": {"enum": ["org", "approval_documents", "delegations", "leave", "rooms", "doc_access", "expense", "purchase", "tickets"]}
+          "items": {"enum": ["org", "approval_documents", "delegations", "leave", "rooms", "doc_access", "expense", "purchase", "tickets", "quality", "sales"]}
         },
         "stage": {"type": "integer", "minimum": 1}
       }
@@ -119,12 +119,14 @@
         },
         "erp_roles": {
           "type": "object",
-          "description": "erp 코어가 권한 판단에 쓰는 역할 ID. 없으면 hr: hr_staff, auditor: auditor, ticket_handler: it_admin입니다",
+          "description": "erp 코어가 권한 판단에 쓰는 역할 ID. 없으면 hr: hr_staff, auditor: auditor, ticket_handler: it_admin, quality_reviewer: quality_staff, sales_rep: sales_staff입니다",
           "additionalProperties": false,
           "properties": {
             "hr": {"$ref": "#/$defs/id", "description": "인사 담당. 직원 상세 전체 필드, 다른 사람의 연차 잔여"},
             "auditor": {"$ref": "#/$defs/id", "description": "감사 조회(GET /audit-events)"},
-            "ticket_handler": {"$ref": "#/$defs/id", "description": "IT 티켓 담당. 전체 티켓 조회, 상태 변경. 없으면 it_admin"}
+            "ticket_handler": {"$ref": "#/$defs/id", "description": "IT 티켓 담당. 전체 티켓 조회, 상태 변경. 없으면 it_admin"},
+            "quality_reviewer": {"$ref": "#/$defs/id", "description": "품질 확인. 전체 불량 보고서 조회, 확정. 없으면 quality_staff"},
+            "sales_rep": {"$ref": "#/$defs/id", "description": "영업. 견적 작성·전체 조회·발행, 고객사 연락처. 없으면 sales_staff"}
           }
         },
         "delegation_policy": {
@@ -435,6 +437,82 @@
               "name": {"type": "string"},
               "floor": {"type": "integer"},
               "capacity": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    },
+    "fixtures_items": {
+      "type": "object",
+      "description": "선택 파일 fixtures/items.json. 품목·단가·재고(견적, 불량 보고서, 구매 재고 조회)",
+      "required": ["items"],
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["code", "name", "unit", "unit_price", "stock"],
+            "additionalProperties": false,
+            "properties": {
+              "code": {"type": "string", "pattern": "^[A-Z0-9][A-Z0-9-]{1,31}$"},
+              "name": {"type": "string", "minLength": 1, "maxLength": 100},
+              "unit": {"type": "string", "minLength": 1, "maxLength": 10},
+              "unit_price": {"type": "integer", "minimum": 0},
+              "stock": {"type": "integer", "minimum": 0}
+            }
+          }
+        }
+      }
+    },
+    "fixtures_customers": {
+      "type": "object",
+      "description": "선택 파일 fixtures/customers.json. 지어낸 고객사(담당자 이름·연락처도 지어낸 값)",
+      "required": ["customers"],
+      "additionalProperties": false,
+      "properties": {
+        "customers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "contact_name", "contact_email", "contact_phone"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"type": "string", "pattern": "^cus_[a-z0-9]+$"},
+              "name": {"type": "string", "minLength": 1, "maxLength": 100},
+              "contact_name": {"type": "string"},
+              "contact_email": {"type": "string", "pattern": "@example\\.(com|org|net)$"},
+              "contact_phone": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "fixtures_defect_reports": {
+      "type": "object",
+      "description": "선택 파일 fixtures/defect_reports.json. 지어낸 불량 보고서(평가 초기화 때 이 상태로 돌아감)",
+      "required": ["defect_reports"],
+      "additionalProperties": false,
+      "properties": {
+        "defect_reports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "created_by", "item_code", "defect_type", "severity", "quantity", "description", "status", "created_at"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"type": "string", "pattern": "^dfr_[a-z0-9]+$"},
+              "created_by": {"type": "string"},
+              "item_code": {"type": "string"},
+              "defect_type": {"type": "string", "minLength": 1, "maxLength": 50},
+              "severity": {"enum": ["minor", "major", "critical"]},
+              "quantity": {"type": "integer", "minimum": 1},
+              "location": {"type": "string", "maxLength": 100},
+              "lot_no": {"type": "string", "maxLength": 50},
+              "description": {"type": "string", "minLength": 1, "maxLength": 1000},
+              "status": {"enum": ["draft", "confirmed", "cancelled"]},
+              "confirmed_by": {"type": "string"},
+              "created_at": {"type": "string", "format": "date-time"}
             }
           }
         }

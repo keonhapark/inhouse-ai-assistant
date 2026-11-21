@@ -781,3 +781,82 @@ def test_audit_channel_marks_slack_web_and_agent(api: Api, org: Org) -> None:
     if any(e["kind"] == "erp.denied" for e in events):  # 앞단 거절 감사는 erp(#166)만 남깁니다
         assert {e["actor"]["channel"] for e in events if e["kind"] == "erp.denied"} <= {"slack", "agent"}
 
+
+
+# ---------- 품질·영업·품목 ----------
+
+def test_items_and_customer_contacts(api: Api, org: Org) -> None:
+    sales, other = org.members("sales")[4], org.members("quality")[3]
+    items = api.get("/items", other, params={"q": "BRG"}).json()["items"]
+    assert items and all("BRG" in i["code"] for i in items)
+    for i in items:
+        validate(ERP, "Item", i)
+    for who, has_contact in ((sales, True), (other, False)):
+        cs = api.get("/customers", who).json()["items"]
+        assert cs
+        for c in cs:
+            validate(ERP, "Customer", c)
+            assert (c["contact"] is not None) == has_contact
+
+
+def test_defect_report_draft_and_human_confirm(api: Api, org: Org) -> None:
+    writer, reviewer, outsider = org.members("production-control")[5], org.members("quality")[4], org.members("sales")[5]
+    body = {"itemCode": "BRG-6204", "defectType": "외경 긁힘", "severity": "major", "quantity": 12,
+            "description": "연삭 뒤 긁힘"}
+    r = api.post("/quality/defect-reports", writer, json={**body, "itemCode": "NOPE-1"})
+    assert r.status_code == 422 and problem_code(r) == "validation"
+    r = api.post("/quality/defect-reports", writer, json=body)
+    assert r.status_code == 201, r.text
+    d = r.json()["resource"]
+    validate(ERP, "DefectReport", d)
+    assert (d["status"], d["itemName"], d["createdBy"]) == ("draft", "깊은 홈 볼 베어링 6204", writer)
+    assert api.get(f"/quality/defect-reports/{d['id']}", outsider).status_code == 404
+    r = api.get("/quality/defect-reports", outsider, params={"box": "all"})
+    assert r.status_code == 403 and problem_code(r) == "forbidden"
+    assert d["id"] in [x["id"] for x in api.get("/quality/defect-reports", reviewer, params={"box": "all", "limit": 100}).json()["items"]]
+    path = f"/quality/defect-reports/{d['id']}/confirm"
+    r = api.req("POST", path, token=api.delegation_token(reviewer, ["quality:confirm"]), json={"version": 0})
+    assert r.status_code == 403 and problem_code(r) == "delegation-token-not-allowed"
+    r = api.post(path, writer, json={"version": 0})
+    assert r.status_code == 403 and problem_code(r) == "forbidden"
+    r = api.post(path, reviewer, json={"version": 5})
+    assert r.status_code == 409 and problem_code(r) == "version-conflict"
+    r = api.post(path, reviewer, json={"version": 0})
+    assert r.status_code == 201, r.text
+    assert (r.json()["resource"]["status"], r.json()["resource"]["confirmedBy"]) == ("confirmed", reviewer)
+    u = api.post(f"/actions/{api.post('/quality/defect-reports', writer, json=body).json()['actionId']}/undo", writer)
+    assert u.status_code == 201  # 확정 전 초안은 되돌림(취소)
+    assert api.get(f"/quality/defect-reports/{d['id']}", reviewer).json()["status"] == "confirmed"
+    fixed = api.get("/quality/defect-reports/dfr_0002", reviewer).json()
+    validate(ERP, "DefectReport", fixed)
+
+
+def test_quote_totals_are_computed_and_issue_is_human_only(api: Api, org: Org) -> None:
+    rep, other = org.members("sales")[6], org.members("hr")[1]
+    body = {"customerId": "cus_0001", "lines": [{"itemCode": "BRG-6204", "quantity": 100},
+                                                 {"itemCode": "SFT-2040", "quantity": 3}], "note": "분기 단가"}
+    r = api.post("/sales/quotes", other, json=body)
+    assert r.status_code == 403 and problem_code(r) == "forbidden"
+    r = api.post("/sales/quotes", rep, json={**body, "customerId": "cus_none"})
+    assert r.status_code == 422
+    r = api.post("/sales/quotes", rep, params={"dryRun": "true"}, key=None, json=body)
+    assert r.status_code == 200, r.text
+    r = api.post("/sales/quotes", rep, json=body)
+    assert r.status_code == 201, r.text
+    q = r.json()["resource"]
+    validate(ERP, "Quote", q)
+    assert [ln["amount"] for ln in q["lines"]] == [100 * 4200, 3 * 38000]
+    assert q["totalAmount"] == 100 * 4200 + 3 * 38000 and q["status"] == "draft"
+    assert api.get(f"/sales/quotes/{q['id']}", other).status_code == 404
+    path = f"/sales/quotes/{q['id']}/issue"
+    r = api.req("POST", path, token=api.delegation_token(rep, ["sales:issue"]), json={"version": 0})
+    assert r.status_code == 403 and problem_code(r) == "delegation-token-not-allowed"
+    r = api.post(path, rep, json={"version": 0})
+    assert r.status_code == 201, r.text
+    assert r.json()["resource"]["status"] == "issued"
+    r = api.post(path, rep, json={"version": 1})
+    assert r.status_code == 409 and problem_code(r) == "invalid-state"
+    # 초안은 되돌리면 취소
+    act = api.post("/sales/quotes", rep, json=body).json()
+    assert api.post(f"/actions/{act['actionId']}/undo", rep).status_code == 201
+    assert api.get(f"/sales/quotes/{act['resource']['id']}", rep).json()["status"] == "cancelled"

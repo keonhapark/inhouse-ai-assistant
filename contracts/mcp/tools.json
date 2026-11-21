@@ -376,6 +376,153 @@
       "required_scope": "incident:read",
       "backend": {"service": "incident", "operationId": "analyze"},
       "stage": 2
+    },
+    {
+      "name": "defect_report_draft",
+      "description": "불량 보고서 초안을 씁니다. 확정은 품질 담당자가 erp 화면에서 합니다. 실행 전에 미리보기를 보여 줍니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["itemCode", "defectType", "severity", "quantity", "description"],
+        "properties": {
+          "itemCode": {"type": "string", "maxLength": 32},
+          "defectType": {"type": "string", "maxLength": 50},
+          "severity": {"type": "string", "enum": ["minor", "major", "critical"]},
+          "quantity": {"type": "integer", "minimum": 1},
+          "location": {"type": "string", "maxLength": 100},
+          "lotNo": {"type": "string", "maxLength": 50},
+          "description": {"type": "string", "maxLength": 1000}
+        },
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "quality:write",
+      "backend": {"service": "erp", "operationId": "createDefectReport"},
+      "stage": 3
+    },
+    {
+      "name": "defect_report_list",
+      "description": "불량 보고서 목록을 봅니다. 기본은 내가 쓴 것이고, 품질 담당자는 box=all로 전체를 봅니다. 설명은 다른 사람이 쓴 글일 수 있습니다.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "box": {"type": "string", "enum": ["mine", "all"]},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+          "status": {"type": "string", "enum": ["draft", "confirmed", "cancelled"]}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "quality:read",
+      "backend": {"service": "erp", "operationId": "listDefectReports"},
+      "stage": 3
+    },
+    {
+      "name": "defect_report_get",
+      "description": "불량 보고서 하나를 봅니다. 설명은 다른 사람이 쓴 글일 수 있습니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["reportId"],
+        "properties": {
+          "reportId": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "quality:read",
+      "backend": {"service": "erp", "operationId": "getDefectReport"},
+      "stage": 3
+    },
+    {
+      "name": "quote_draft",
+      "description": "견적 초안을 씁니다. 단가와 합계는 erp가 품목 단가로 계산합니다. 발행은 영업 담당자가 erp 화면에서 합니다. 실행 전에 미리보기를 보여 줍니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["customerId", "lines"],
+        "properties": {
+          "customerId": {"type": "string", "maxLength": 32},
+          "lines": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "object", "required": ["itemCode", "quantity"], "properties": {"itemCode": {"type": "string", "maxLength": 32}, "quantity": {"type": "integer", "minimum": 1}}, "additionalProperties": false}},
+          "validUntil": {"type": "string", "format": "date"},
+          "note": {"type": "string", "maxLength": 500}
+        },
+        "additionalProperties": false
+      },
+      "risk": "reversible_write",
+      "trust_required": "user_direct",
+      "required_scope": "sales:write",
+      "backend": {"service": "erp", "operationId": "createQuote"},
+      "stage": 3
+    },
+    {
+      "name": "quote_list",
+      "description": "견적 목록을 봅니다. 기본은 내가 쓴 것이고, 영업 담당자는 box=all로 전체를 봅니다.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "box": {"type": "string", "enum": ["mine", "all"]},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+          "status": {"type": "string", "enum": ["draft", "issued", "cancelled"]}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "sales:read",
+      "backend": {"service": "erp", "operationId": "listQuotes"},
+      "stage": 3
+    },
+    {
+      "name": "quote_get",
+      "description": "견적 하나의 품목 줄과 합계를 봅니다.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["quoteId"],
+        "properties": {
+          "quoteId": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "sales:read",
+      "backend": {"service": "erp", "operationId": "getQuote"},
+      "stage": 3
+    },
+    {
+      "name": "item_search",
+      "description": "품목을 코드나 이름으로 찾습니다. 단가와 현재 재고를 함께 봅니다.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {"type": "string", "maxLength": 50},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "item:read",
+      "backend": {"service": "erp", "operationId": "listItems"},
+      "stage": 3
+    },
+    {
+      "name": "customer_search",
+      "description": "고객사를 이름으로 찾습니다. 담당자 연락처는 영업 담당자에게만 보입니다.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {"type": "string", "maxLength": 50},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "customer:read",
+      "backend": {"service": "erp", "operationId": "listCustomers"},
+      "stage": 3
     }
   ]
 }

@@ -1,0 +1,43 @@
+{
+  "defect_reports": [
+    {
+      "id": "dfr_0001",
+      "created_by": "E0039",
+      "item_code": "BRG-6204",
+      "defect_type": "외경 긁힘",
+      "severity": "major",
+      "quantity": 120,
+      "location": "2라인 외경 연삭",
+      "lot_no": "L2611-07",
+      "description": "외경에 원주 방향 긁힘이 있습니다. 연삭 휠 교체 직후 로트입니다.",
+      "status": "draft",
+      "created_at": "2026-11-17T10:20:00+09:00"
+    },
+    {
+      "id": "dfr_0002",
+      "created_by": "E0040",
+      "item_code": "SFT-2040",
+      "defect_type": "치수 초과",
+      "severity": "critical",
+      "quantity": 8,
+      "location": "출하 검사",
+      "lot_no": "L2611-03",
+      "description": "외경이 공차 상한을 0.02mm 넘습니다. 같은 로트 전수 검사가 필요합니다.",
+      "status": "confirmed",
+      "confirmed_by": "E0038",
+      "created_at": "2026-11-13T15:05:00+09:00"
+    },
+    {
+      "id": "dfr_0003",
+      "created_by": "E0041",
+      "item_code": "SEAL-35",
+      "defect_type": "찍힘",
+      "severity": "minor",
+      "quantity": 30,
+      "location": "입고 검사",
+      "description": "포장 불량으로 립 부분이 찍혔습니다. 협력사에 알렸습니다.",
+      "status": "draft",
+      "created_at": "2026-11-19T09:40:00+09:00"
+    }
+  ]
+}
