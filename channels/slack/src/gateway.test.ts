@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GatewayError, httpGateway, UNAVAILABLE } from './gateway.js'
+import { GatewayError, httpGateway, MISCONFIGURED, RATE_LIMITED, UNAVAILABLE } from './gateway.js'
 
 type Seen = { url: string; init: RequestInit }
 function fakeFetch(respond: (url: string, init: RequestInit) => Response) {
@@ -71,5 +71,20 @@ describe('httpGateway', () => {
     const { f, seen } = fakeFetch(() => Response.json({ actionId: 'u', undoOf: 'a' }, { status: 201 }))
     await httpGateway({ baseUrl: 'http://gw/api', bridgeSecret: 's', fetch: f }).undo('t', 'a', 'slack-undo-a')
     expect((seen[0].init.headers as Record<string, string>)['Idempotency-Key']).toBe('slack-undo-a')
+  })
+
+  it('429는 Retry-After를 읽고, 로그인 401·404는 설정 문제 문구로 바꿉니다', async () => {
+    const limited = httpGateway({
+      baseUrl: 'http://gw/api',
+      bridgeSecret: 's',
+      fetch: fakeFetch(() => new Response(JSON.stringify({ title: 'Too Many Requests' }), { status: 429, headers: { 'Retry-After': '7' } })).f,
+    })
+    await expect(limited.login('U1')).rejects.toMatchObject({ status: 429, retryAfter: 7, message: RATE_LIMITED })
+    for (const status of [401, 404]) {
+      const gw = httpGateway({ baseUrl: 'http://gw/api', bridgeSecret: 'wrong', fetch: fakeFetch(() => problem(status, 'invalid bridge secret')).f })
+      const err = (await gw.login('U1').catch((e: unknown) => e)) as GatewayError
+      expect(err).toMatchObject({ status, message: MISCONFIGURED })
+      expect(err.internal).toContain('invalid bridge secret')
+    }
   })
 })

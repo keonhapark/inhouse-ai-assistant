@@ -14,12 +14,16 @@ export class GatewayError extends Error {
     message: string,
     readonly status: number,
     readonly internal?: string,
+    /** 429면 Retry-After(초) */
+    readonly retryAfter?: number,
   ) {
     super(message)
   }
 }
 
 export const UNAVAILABLE = '사내 비서 서버가 응답하지 않습니다. 잠시 뒤 다시 시도해 주세요.'
+export const RATE_LIMITED = '요청이 많아 잠시 막혔습니다. 잠시 뒤 다시 시도해 주세요.'
+export const MISCONFIGURED = '슬랙 연결 설정이 맞지 않아 처리하지 못했습니다. 관리자에게 알려 주세요.'
 
 /** 브리지가 gateway에 바라는 것. 시험에서는 가짜로 바꿉니다. */
 export interface Gateway {
@@ -80,6 +84,8 @@ export function httpGateway({ baseUrl, bridgeSecret, fetch: f = fetch }: Options
         return { token: body.accessToken, expiresIn: body.expiresIn }
       } catch (e) {
         if (e instanceof GatewayError && e.status === 403) return null
+        // 비밀값이 틀림(401)이나 gateway에 슬랙 로그인이 설정되지 않음(404)은 브리지 설정 문제입니다. 원문은 로그에만 둡니다.
+        if (e instanceof GatewayError && (e.status === 401 || e.status === 404)) throw new GatewayError(MISCONFIGURED, e.status, e.internal)
         throw e
       }
     },
@@ -113,5 +119,9 @@ async function problem(res: Response): Promise<GatewayError> {
   }
   const internal = [res.status, body.title, body.detail].filter(Boolean).join(' ')
   if (res.status >= 500) return new GatewayError(UNAVAILABLE, res.status, internal)
+  if (res.status === 429) {
+    const after = Number(res.headers.get('Retry-After'))
+    return new GatewayError(RATE_LIMITED, 429, internal, Number.isFinite(after) && after > 0 ? after : undefined)
+  }
   return new GatewayError(body.title || `요청이 거절됐습니다(${res.status}).`, res.status, internal)
 }
