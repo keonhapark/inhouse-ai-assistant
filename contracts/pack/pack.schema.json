@@ -300,6 +300,19 @@
                   "on_withdraw_after_approval": {"enum": ["restore_leave_balance"]}
                 }
               },
+              "tool": {
+                "type": "object",
+                "description": "이 양식을 올리는 상신 도구를 팩이 정합니다(#397). 공용 contracts/mcp/tools.json을 바꾸지 않고 새 팩의 양식 도구를 더하려는 것입니다. 만드는 규칙은 contracts/mcp/README.md '팩 양식 도구'입니다(입력 스키마=fields, required_scope=approval:request:<양식 id>, backend erp createApprovalDocument + formId)",
+                "required": ["name", "description"],
+                "additionalProperties": false,
+                "properties": {
+                  "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$", "description": "도구 이름. 공용 tools.json·다른 양식 도구와 겹치면 안 됨"},
+                  "description": {"type": "string"},
+                  "risk": {"enum": ["reversible_write", "irreversible"], "default": "reversible_write"},
+                  "trust_required": {"enum": ["any", "user_direct"], "default": "user_direct"},
+                  "stage": {"type": "integer", "minimum": 1, "description": "없으면 양식 stage"}
+                }
+              },
               "approval_line": {
                 "type": "array",
                 "minItems": 1,
