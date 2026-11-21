@@ -9,3 +9,4 @@
 | 2026-11-21 | agent | #413 | contracts/eval/conditions.md 장치 행 '첨부 이미지를 읽은 대화의 로컬 실행'(full·write_blocked·approve_all 켬) | 외부 허용 에이전트가 이미지에서 읽은 글자를 외부 모델에 실음(우려 19) | contract/agent-image-local PR |
 | 2026-11-21 | erp | #409 | 새 팩 `packs/it-services`(SI·운영 조직, 전사 비서·프로젝트 지원·서비스데스크 에이전트, 휴가·공수 보고 양식, 고객사·티켓 고정 데이터). 코어 변경 0줄 | 4단계 업종 팩(#115) | pack/ PR |
 | 2026-11-22 | gateway | #436 | gateway.yaml `X-Eval-Model-Override`에 `external=external-exaone`(K-EXAONE 2.5 API) 추가 | 모델 교체 회귀의 외부 교체 모델을 K-EXAONE 2.5로(사용자 결정) | contract/gateway-exaone-override PR, 구현 gateway #436 |
+| 2026-11-22 | review | #169 | gateway.yaml `bearer` 설명에 사람용 경로 공통 오류(401 `unauthorized`, 403 `service-login-not-allowed`)를 더함. 설명만, 구현 그대로 | 계약이 구현의 401·슬랙 토큰 403을 적지 않음(#169 검수 코멘트) | contract/gateway-auth-errors PR |
