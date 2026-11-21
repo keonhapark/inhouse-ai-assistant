@@ -72,7 +72,7 @@ async def test_defect_photo_draft_needs_approval_then_undoable(r3: RunHarness) -
     assert note.startswith(UNTRUSTED_NOTE) and "균열" in note
     # 사진을 읽은 턴: 초안 도구만 막지 않고 미리보기 승인(결정 0004 덧붙임)
     assert s["status"] == "awaiting_approval" and s["pendingApproval"]["toolPreview"]["tool"] == "defect_report_draft"
-    assert r3.llm.requests[0]["model_policy"] == "external_allowed"  # 사진 자체는 gateway가 로컬 비전으로
+    assert r3.llm.requests[0]["model_policy"] == "local_only"  # 읽은 값이 실린 대화는 끝까지 로컬(#413)
     done = await r3.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
     assert done["status"] == "completed" and done["actions"][0]["tool"] == "defect_report_draft"
     assert done["actions"][0]["undoable"] is True
@@ -101,3 +101,33 @@ async def test_non_sales_staff_gets_no_sales_tools(r3: RunHarness) -> None:
     r3.llm.script = [say("영업 담당자만 쓸 수 있습니다.")]
     await _run(r3, "sales", STAFF, "견적 목록 보여 줘")
     assert r3.llm.requests[0]["tools"] is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(("condition", "policy"), [("full", "local_only"), ("approve_all", "local_only"),
+                                                   ("no_guard", "external_allowed")])
+async def test_image_read_conversation_stays_local(r3: RunHarness, condition: str, policy: str) -> None:
+    """#413: 외부 허용 에이전트도 이미지를 읽은 대화는 끝까지 로컬(장치를 끄는 조건은 conditions.md대로 외부)."""
+    r3.runner.images = StubReader({"item_code": "HSG-A100", "defect_type": "균열", "location": "모서리",
+                                   "severity": "major"})
+    r3.llm.script = [say("몇 개 나왔나요?"), say("알겠습니다.")]
+    conv = f"cnv_{uuid.uuid4().hex[:8]}"
+    token = mint(employee=STAFF.employee_id, agent="quality", cid=conv)
+    await r3.runner.run(token, conv, "quality", "이 사진 불량 보고서 써 줘", STAFF, condition, [IMAGE])
+    await r3.runner.run(token, conv, "quality", "3개요", STAFF, condition)  # 뒤 턴(첨부 없음)도
+    assert [q["model_policy"] for q in r3.llm.requests] == [policy, policy]
+
+
+@pytest.mark.anyio
+async def test_unread_image_does_not_force_local(r3: RunHarness) -> None:
+    r3.runner.images = StubReader(None)
+    r3.llm.script = [say("사진을 읽지 못했습니다.")]
+    await _run(r3, "quality", STAFF, "이 사진 불량 보고서 써 줘", [IMAGE])
+    assert r3.llm.requests[0]["model_policy"] == "external_allowed"
+
+
+@pytest.mark.anyio
+async def test_quality_without_image_uses_external(r3: RunHarness) -> None:
+    r3.llm.script = [say("네.")]
+    await _run(r3, "quality", STAFF, "지난주 불량 보고서 보여 줘")
+    assert r3.llm.requests[0]["model_policy"] == "external_allowed"

@@ -58,6 +58,9 @@ class Runner:
                 state["tainted"] = True
                 state["taint_exempt"] = [draft_tool] if draft_tool else []
                 state["conversation_tainted"] = True
+                # 이미지에서 읽은 글자가 대화에 실렸으므로 에이전트 정책과 관계없이 끝까지 로컬로 실행합니다
+                # (#413, 기획서 우려 19 "OCR 텍스트를 외부로 보내는 것은 기본 꺼 둠", #308과 같은 장치).
+                state["force_local"] = True
         state["messages"] = [*prior, *turn]
         try:
             await self.graph.ainvoke(state, config, context=ctx)
