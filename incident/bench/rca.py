@@ -5,7 +5,9 @@
 - 신고 시각: 주입 45초 뒤(직원이 증상을 겪고 신고한 때로 정함). 분석 구간은 그 직전 45초, 기준 구간은 묶음 시작부터
   분석 구간 앞까지입니다(묶음의 주입 전 평소 구간이 20~45초). 정답(주입 시각)은 신고 시각을 정하는 데만 씁니다.
 - 과거 티켓: 같은 묶음 모음의 다른 장애 티켓과 정답 원인(한 건씩 빼고 나머지를 과거로 씀, leave-one-out).
-- 방법: logs(템플릿 변화만), logs+tickets(유사 티켓 표 더함), llm(같은 진단 텍스트를 로컬 모델에), ticket-only-llm(티켓만 모델에).
+- 방법: logs(템플릿 변화만), logs+tickets(유사 티켓 표 더함), llm(같은 진단 텍스트를 로컬 모델에), ticket-only-llm(티켓만 모델에),
+  nsigma·baro(RCAEval 계열 통계 기준선의 로그 부분, incident/rcaeval_stats.py). 같은 묶음·같은 구간·같은 잡음 처리로 잽니다.
+- 세션 스택의 LiteLLM 401 잡음(외부 키 없음)은 기본으로 뺍니다. --keep-keyless-noise로 빼기 전과 비교합니다.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from typing import Any
 
 import httpx
 
+from incident import rcaeval_stats
 from incident.baseline import PastTicket, rank
 from incident.llm import analyze, diagnostics
 from incident.logs import read_bundle
@@ -61,6 +64,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--runs", nargs="+", type=Path, required=True)
     ap.add_argument("--llm", help="gateway 주소(예: http://localhost:8110). 없으면 LLM 방법은 건너뜁니다")
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--rcaeval-bin", type=int, default=rcaeval_stats.BIN_SECONDS,
+                    help="nsigma·baro 칸 크기(초). RCAEval 기본 15")
+    ap.add_argument("--keep-keyless-noise", action="store_true", help="LiteLLM 401 잡음을 빼지 않습니다(비교용)")
     args = ap.parse_args(argv)
 
     bundles = load(args.runs)
@@ -72,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         at = datetime.fromisoformat(truth["injectedAt"]) + REPORT_DELAY
         history = [PastTicket(t["ticket"]["id"], ticket_text(t), t["rootService"], t["kind"])
                    for b, t in bundles if b != bundle]
-        lines = read_bundle(bundle)
+        lines = read_bundle(bundle, keyless_noise=not args.keep_keyless_noise)
         text = ticket_text(truth)
         row: dict[str, Any] = {"incidentId": f"{truth['runId']}/{truth['incidentId']}", "truth": truth["rootService"]}
         t0 = time.monotonic()
@@ -84,6 +90,12 @@ def main(argv: list[str] | None = None) -> int:
         both = rank(lines, at, WINDOW, text, history, since=since)
         row["logs+tickets"] = {"ranking": [s for s, _ in both.ranking[:3]],
                                "ms": round((time.monotonic() - t0) * 1000)}
+        upto = [x for x in lines if since <= x.at < at]
+        for m in rcaeval_stats.SCALERS:
+            t0 = time.monotonic()
+            r = rcaeval_stats.rank(upto, at - WINDOW, m, args.rcaeval_bin)
+            row[m] = {"ranking": r.ranking[:3], "ms": round((time.monotonic() - t0) * 1000),
+                      "topColumns": r.columns[:3]}
         if args.llm:
             row["llm"] = llm_row(args.llm, diagnostics(both, text))
             row["ticket-only-llm"] = llm_row(args.llm, f"[신고 티켓]\n{text}")
@@ -91,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         print(row["incidentId"], row["truth"], {k: v["ranking"] for k, v in row.items() if isinstance(v, dict)},
               flush=True)
 
-    methods = [m for m in ("logs", "logs+tickets", "llm", "ticket-only-llm") if all(m in r for r in rows)]
+    methods = [m for m in ("logs", "logs+tickets", "nsigma", "baro", "llm", "ticket-only-llm") if all(m in r for r in rows)]
     summary = {}
     for m in methods:
         n = len(rows)
@@ -106,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps({"runs": [str(r) for r in args.runs], "reportDelayS": 45, "windowS": 45,
+                                        "keylessNoise": "kept" if args.keep_keyless_noise else "removed",
+                                        "rcaevalBinS": args.rcaeval_bin,
                                         "summary": summary, "rows": rows}, ensure_ascii=False, indent=2) + "\n",
                             encoding="utf-8")
     return 0
