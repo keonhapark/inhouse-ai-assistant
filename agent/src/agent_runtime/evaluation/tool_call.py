@@ -148,7 +148,7 @@ class EvalToolCaller:
 
     def _prompt(self, agent: Agent, today: date, names: list[str], message: str, variant: Variant) -> str:
         now = datetime.fromisoformat(f"{today.isoformat()}T09:00:00{KST_OFFSET}")
-        text = system_prompt(agent, "full", now, bool(names))
+        text = system_prompt(agent, "full", now, bool(names), names)
         if variant.few_shot:
             lines = few_shot_lines(self.examples, names, message)
             if lines:
