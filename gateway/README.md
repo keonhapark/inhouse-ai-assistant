@@ -27,6 +27,11 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     (`local-vision`)와 토큰 없는 호출(입구 라우터)은 바꾸지 않습니다. 감사 detail에 `평가 별칭 바꿔 끼움: A 대신 B`를 남깁니다.
   - `X-Delegation-Token`이 있으면 서명·만료를 확인하고 `agt`의 `model_policy`를 따릅니다. `local_only` 에이전트와
     토큰 없는 호출은 `external`을 쓰면 403 `model-policy`이고, 밖으로 아무것도 나가지 않습니다.
+  - 팩 단위 외부 LLM 금지(#384): `pack.yaml`에 `model_policy_override: local_only`가 있으면(망분리 흉내) 모든 에이전트의
+    모델 정책을 local_only로 보고(`/api/agents`·`/api/agent-registry`에도 그렇게 나옴), 출구는 평가 조건(`no_guard`·
+    `baseline_tools` 포함)·평가 별칭 바꿔 끼우기보다 먼저 외부 별칭을 막습니다. 위임 토큰 호출은 로컬 별칭(평가 대화면 바꿔 끼운
+    로컬)으로 돌리고 감사 detail에 `팩 외부 LLM 금지: A 대신 B`를 남깁니다. 에이전트가 팩 항목을 몰라 외부를 요청해도 대화가
+    깨지지 않게 하려는 것입니다. 토큰 없는 외부 호출(도구 호출 측정 등)은 측정이 몰래 로컬로 바뀌지 않게 403입니다.
     예외: `GATEWAY_EVAL_TOOLCALL=1`인 스택(도구 호출 측정 #103 전용)에서는 토큰 없는 외부 호출도 가림·기밀 판정·외부 기록을
     거쳐 보내고 감사 detail에 `purpose=eval-toolcall`을 적습니다. `GATEWAY_EVAL_MODE`와 따로 둡니다(#294): 정상·확인 셋
     실행에서 열리면 대화 밖 외부 전송이 평가 판정에서 빠지기 때문입니다.
