@@ -130,8 +130,12 @@ def _override(o: dict) -> dict:
 
 def test_agent_registry_matches_pack() -> None:
     """팩 agents.yaml의 항목을 등록부 스키마로 옮길 수 있어야 합니다(gateway 구현과 같은 변환)."""
-    tools = {t["name"]: t for t in load(CONTRACTS / "mcp/tools.json")["tools"]}
+    from tools.pack_tools import form_tools
+
+    public = {t["name"]: t for t in load(CONTRACTS / "mcp/tools.json")["tools"]}
     for pack in sorted(p for p in PACKS.iterdir() if (p / "agents.yaml").exists()):
+        # 팩 양식 도구(#397)도 등록부에 같은 방식으로 들어갑니다.
+        tools = {**{t["name"]: t for t in form_tools(load(pack / "forms.yaml"))}, **public}
         for a in load(pack / "agents.yaml")["agents"]:
             rp = a["risk_policy"]
             entry = {
@@ -394,3 +398,35 @@ def test_pack_image_reading_is_checked(tmp_path) -> None:
     rnd["image_reading"] = {"purpose": "도면", "fields": [{"name": "Part", "type": "string", "description": "x"}]}
     path.write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
     assert check_pack(pack)  # 항목 이름 형식(스키마)
+
+
+def test_pack_form_tools(tmp_path) -> None:
+    """팩 양식 도구(#397): 양식 fields로 상신 도구를 만들고, 공용 도구와 겹치면 잡습니다."""
+    import shutil
+
+    import yaml
+
+    from tools.check_packs import check_pack
+    from tools.pack_tools import form_tools
+
+    [loan] = form_tools(load(PACKS / "finance" / "forms.yaml"))
+    assert loan["name"] == "loan_request" and loan["required_scope"] == "approval:request:loan"
+    assert loan["backend"] == {"service": "erp", "operationId": "createApprovalDocument", "fixed": {"formId": "loan"}}
+    assert (loan["risk"], loan["trust_required"], loan["stage"]) == ("reversible_write", "user_direct", 1)
+    assert "x-labels" not in json.dumps(loan["inputSchema"])  # x- 키는 뺌
+    assert loan["inputSchema"]["properties"]["product"]["enum"][0] == "business_operating"
+    validate_file("mcp/tools.schema.json", {"version": "0", "tools": [loan]})
+    assert form_tools(load(PACKS / "manufacturing" / "forms.yaml")) == []  # 제조 팩은 공용 도구 그대로
+
+    pack = tmp_path / "finance"
+    shutil.copytree(PACKS / "finance", pack)
+    path = pack / "forms.yaml"
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    leave = next(f for f in doc["forms"] if f["id"] == "leave")
+    leave["tool"] = {"name": "leave_request", "description": "공용 도구와 겹침"}
+    path.write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+    errs = " ".join(check_pack(pack))
+    assert "공용 tools.json 도구와 이름이 겹칩니다" in errs and "이미 올리는 양식" in errs
+    leave["tool"] = {"name": "loan_request", "description": "다른 양식 도구와 겹침"}
+    path.write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+    assert any("양식 도구 이름 중복" in e for e in check_pack(pack))
