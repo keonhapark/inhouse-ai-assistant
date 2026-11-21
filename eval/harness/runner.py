@@ -126,6 +126,8 @@ class RunMeta:
     model_settings: dict[str, str] = field(default_factory=dict)
     # 확인 셋 묶음 해시 확인 결과(run --bundle, contracts/eval/confirm-sets.md). 예: "confirm-v1 `<해시>` = 계약 표(...)"
     bundle: str | None = None
+    # 띄운 스택이 stackCommit의 소스인지 확인한 결과(harness/stackcheck.py, #449). 확인하지 않았으면 None
+    stack_check: str | None = None
 
 
 def _git(*args: str) -> str:
