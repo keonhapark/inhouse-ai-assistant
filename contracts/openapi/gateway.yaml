@@ -1076,7 +1076,7 @@ components:
         title: {type: [string, "null"], description: 같은 이름 md의 첫 제목. 없으면 null}
         startedAt: {type: string, format: date-time}
         finishedAt: {type: [string, "null"]}
-        sets: {type: array, items: {type: string}, description: 회차에 나온 셋(normal, confirm, dev)}
+        sets: {type: array, items: {type: string}, description: "회차에 나온 셋(normal, confirm, dev)"}
         conditions: {type: array, items: {type: string}}
         repeats: {type: integer}
         packStage: {type: [integer, "null"]}

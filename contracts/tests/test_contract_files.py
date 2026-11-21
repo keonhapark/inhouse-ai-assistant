@@ -27,6 +27,26 @@ def test_openapi_is_valid(spec: Path) -> None:
     validate_openapi(doc, base_uri=url)
 
 
+@pytest.mark.parametrize("spec", SPECS, ids=lambda p: p.name)
+def test_openapi_has_no_split_descriptions(spec: Path) -> None:
+    """흐름 매핑({... description: a, b})의 따옴표 없는 쉼표가 설명을 잘라 값 없는 키를 만들지 않았는지 봅니다."""
+    found: list[str] = []
+
+    def walk(o: object, path: str) -> None:
+        if isinstance(o, dict):
+            if isinstance(o.get("description"), str):
+                # default·example은 null이 정당한 값입니다
+                found.extend(f"{path}/{k}" for k, v in o.items() if v is None and k not in ("default", "example"))
+            for k, v in o.items():
+                walk(v, f"{path}/{k}")
+        elif isinstance(o, list):
+            for i, x in enumerate(o):
+                walk(x, f"{path}[{i}]")
+
+    walk(load(spec), "")
+    assert not found, "설명이 쉼표에서 잘렸습니다(따옴표로 감쌉니다): " + ", ".join(found)
+
+
 @pytest.mark.parametrize("rel", SCHEMAS)
 def test_json_schemas_are_valid(rel: str) -> None:
     Draft202012Validator.check_schema(load(CONTRACTS / rel))
