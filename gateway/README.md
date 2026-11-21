@@ -7,7 +7,7 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
 - `GET /health`, `GET /api/health`
 - `GET /api/.well-known/jwks.json`: 위임 토큰 검증용 공개 키. `kid`는 RFC 7638 지문입니다.
 - `POST /api/auth/login`, `GET /api/me`: erp에 그대로 넘기고 상태 코드와 본문을 그대로 돌려줍니다.
-- 위임 토큰 발급(`gateway/delegation.py`): 대화마다 ES256, 10분. 클레임은 `contracts/auth/delegation-token.schema.json`입니다.
+- 위임 토큰 발급(`gateway/delegation.py`): 대화마다 ES256, 10분. 클레임은 `contracts/auth/delegation-token.schema.json`입니다. `aud`는 erp·rag·mcp·incident(#352)입니다.
   - `scopes`: 라우팅된 에이전트 도구(`agents.yaml`의 `tools`)의 `required_scope`에서 사람 화면 전용 scope를 뺀 것입니다.
     직원 JWT는 erp에서 모든 scope를 가지므로, 요청자 쪽 제한은 erp가 "토큰 주인의 권한 ∩ 토큰 scopes"로 다시 봅니다.
   - `doc_scopes`: erp `/me/access-tags` ∩ 에이전트 `doc_scopes`
