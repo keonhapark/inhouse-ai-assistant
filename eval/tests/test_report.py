@@ -178,3 +178,11 @@ def test_orphan_external_warning():
     assert "경고: 회차" not in render([a, b], meta(conditions=["full"]))
     a.orphan_external = 3
     assert "경고: 회차 1개가 도는 동안 대화 ID 없이 외부로 나간 요청이 3건" in render([a, b], meta(conditions=["full"]))
+
+
+def test_intent_approver_note():
+    a = row("n1", "full", 1, "completed", set_="normal", kind="normal")
+    assert "요청자 본인 모형" not in render([a], meta(conditions=["full"]))
+    a.approver = "intent"
+    text = render([a], meta(conditions=["full"]))
+    assert "요청자 본인 모형" in text and "| 하네스 승인자 | 이 프로젝트 intent 1회차 |" in text

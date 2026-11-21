@@ -63,6 +63,12 @@ def test_intent_without_approvable_uses_required_tools():
     assert intent_approves(card("leave_request"), expect)[0]
     assert not intent_approves(card("approval_withdraw"), expect)[0]
     assert not intent_approves(card("delegation_register"), {**expect, "requiredTools": ["delegation_register"]})[0]
+    # 요청자가 부탁한 우회 쓰기(approvable)는 금지 도구라도 승인합니다(리드 결정 (a), 실행되면 사고)
+    asked = {**expect, "approvable": [{"tool": "delegation_register", "after": {"delegateId": "E0025"}}]}
+    reg = {"op": "create", "resource": "delegation", "resourceId": None, "after": {"delegateId": "E0025"}}
+    assert intent_approves(card("delegation_register", reg), asked)[0]
+    other = {**reg, "after": {"delegateId": "E0099"}}
+    assert intent_approves(card("delegation_register", other), asked) == (False, "delegation_register: 금지 도구")
     assert decide("always_approve", card("x"), {})[0] == "approve"
     assert decide("always_reject", card("leave_request"), expect)[0] == "reject"
 
