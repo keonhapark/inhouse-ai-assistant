@@ -1,0 +1,150 @@
+2026-11-20T15:58:08.269576345Z 2026-11-20 15:58:08.269 UTC [1385] LOG:  connection received: host=[local]
+2026-11-20T15:58:08.270231011Z 2026-11-20 15:58:08.270 UTC [1385] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:58:08.270240553Z 2026-11-20 15:58:08.270 UTC [1385] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:58:08.271348428Z 2026-11-20 15:58:08.271 UTC [1385] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T15:58:11.300275179Z 2026-11-20 15:58:11.300 UTC [1392] LOG:  connection received: host=[local]
+2026-11-20T15:58:11.301288763Z 2026-11-20 15:58:11.301 UTC [1392] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:58:11.301318388Z 2026-11-20 15:58:11.301 UTC [1392] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:58:11.309755513Z 2026-11-20 15:58:11.307 UTC [1392] LOG:  disconnection: session time: 0:00:00.007 user=iaa database=erp host=[local]
+2026-11-20T15:58:14.333561458Z 2026-11-20 15:58:14.333 UTC [1399] LOG:  connection received: host=[local]
+2026-11-20T15:58:14.334046417Z 2026-11-20 15:58:14.333 UTC [1399] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:58:14.334056958Z 2026-11-20 15:58:14.333 UTC [1399] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:58:14.334875042Z 2026-11-20 15:58:14.334 UTC [1399] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T15:58:17.362758585Z 2026-11-20 15:58:17.362 UTC [1406] LOG:  connection received: host=[local]
+2026-11-20T15:58:17.363340293Z 2026-11-20 15:58:17.363 UTC [1406] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:58:17.363345835Z 2026-11-20 15:58:17.363 UTC [1406] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:58:17.364460251Z 2026-11-20 15:58:17.364 UTC [1406] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T15:58:20.388641795Z 2026-11-20 15:58:20.388 UTC [1413] LOG:  connection received: host=[local]
+2026-11-20T15:58:20.389028795Z 2026-11-20 15:58:20.388 UTC [1413] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:58:20.389035128Z 2026-11-20 15:58:20.388 UTC [1413] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:58:20.390241920Z 2026-11-20 15:58:20.389 UTC [1413] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T15:58:23.420578879Z 2026-11-20 15:58:23.420 UTC [1420] LOG:  connection received: host=[local]
+2026-11-20T15:58:23.421228004Z 2026-11-20 15:58:23.421 UTC [1420] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:58:23.421233213Z 2026-11-20 15:58:23.421 UTC [1420] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:58:23.422634338Z 2026-11-20 15:58:23.422 UTC [1420] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T15:58:26.451440381Z 2026-11-20 15:58:26.451 UTC [1427] LOG:  connection received: host=[local]
+2026-11-20T15:58:26.452210297Z 2026-11-20 15:58:26.452 UTC [1427] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:58:26.452221172Z 2026-11-20 15:58:26.452 UTC [1427] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:58:26.453476256Z 2026-11-20 15:58:26.453 UTC [1427] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T15:58:26.947690881Z 2026-11-20 15:58:26.947 UTC [1] LOG:  received fast shutdown request
+2026-11-20T15:58:26.952613089Z 2026-11-20 15:58:26.952 UTC [1] LOG:  aborting any active transactions
+2026-11-20T15:58:26.955866339Z 2026-11-20 15:58:26.952 UTC [1342] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.955886298Z 2026-11-20 15:58:26.952 UTC [1339] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.955890881Z 2026-11-20 15:58:26.952 UTC [1340] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.955892756Z 2026-11-20 15:58:26.952 UTC [1337] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.955894756Z 2026-11-20 15:58:26.952 UTC [1341] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.955896589Z 2026-11-20 15:58:26.952 UTC [1336] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.955898339Z 2026-11-20 15:58:26.953 UTC [1342] LOG:  disconnection: session time: 0:00:33.110 user=iaa database=erp host=172.21.0.6 port=35208
+2026-11-20T15:58:26.955901423Z 2026-11-20 15:58:26.953 UTC [1339] LOG:  disconnection: session time: 0:00:33.222 user=iaa database=erp host=172.21.0.6 port=35184
+2026-11-20T15:58:26.955903381Z 2026-11-20 15:58:26.953 UTC [1340] LOG:  disconnection: session time: 0:00:33.185 user=iaa database=erp host=172.21.0.6 port=35190
+2026-11-20T15:58:26.955905256Z 2026-11-20 15:58:26.953 UTC [1337] LOG:  disconnection: session time: 0:00:33.298 user=iaa database=erp host=172.21.0.6 port=35172
+2026-11-20T15:58:26.955907089Z 2026-11-20 15:58:26.953 UTC [1341] LOG:  disconnection: session time: 0:00:33.148 user=iaa database=erp host=172.21.0.6 port=35198
+2026-11-20T15:58:26.955909256Z 2026-11-20 15:58:26.953 UTC [1338] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.955911214Z 2026-11-20 15:58:26.953 UTC [1336] LOG:  disconnection: session time: 0:00:33.340 user=iaa database=erp host=172.21.0.6 port=35160
+2026-11-20T15:58:26.955913006Z 2026-11-20 15:58:26.953 UTC [1338] LOG:  disconnection: session time: 0:00:33.261 user=iaa database=erp host=172.21.0.6 port=35182
+2026-11-20T15:58:26.955932964Z 2026-11-20 15:58:26.954 UTC [1335] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.955937673Z 2026-11-20 15:58:26.954 UTC [1335] LOG:  disconnection: session time: 0:00:33.383 user=iaa database=erp host=172.21.0.6 port=35144
+2026-11-20T15:58:26.955948673Z 2026-11-20 15:58:26.955 UTC [1334] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.956179714Z 2026-11-20 15:58:26.956 UTC [1334] LOG:  disconnection: session time: 0:00:33.429 user=iaa database=erp host=172.21.0.6 port=35130
+2026-11-20T15:58:26.958287673Z 2026-11-20 15:58:26.958 UTC [1] LOG:  background worker "logical replication launcher" (PID 60) exited with exit code 1
+2026-11-20T15:58:26.958904631Z 2026-11-20 15:58:26.958 UTC [1333] FATAL:  terminating connection due to administrator command
+2026-11-20T15:58:26.959229464Z 2026-11-20 15:58:26.959 UTC [1333] LOG:  disconnection: session time: 0:00:33.650 user=iaa database=erp host=172.21.0.6 port=35124
+2026-11-20T15:58:26.962747006Z 2026-11-20 15:58:26.962 UTC [55] LOG:  shutting down
+2026-11-20T15:58:26.969519256Z 2026-11-20 15:58:26.969 UTC [55] LOG:  checkpoint starting: shutdown immediate
+2026-11-20T15:58:27.003698631Z 2026-11-20 15:58:27.003 UTC [55] LOG:  checkpoint complete: wrote 23 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.004 s, sync=0.013 s, total=0.041 s; sync files=21, longest=0.009 s, average=0.001 s; distance=57 kB, estimate=2201 kB; lsn=0/1BB31E8, redo lsn=0/1BB31E8
+2026-11-20T15:58:27.011706756Z 2026-11-20 15:58:27.011 UTC [1] LOG:  database system is shut down
+2026-11-20T15:59:27.385420090Z 
+2026-11-20T15:59:27.385475090Z PostgreSQL Database directory appears to contain a database; Skipping initialization
+2026-11-20T15:59:27.385478340Z 
+2026-11-20T15:59:27.426645631Z 2026-11-20 15:59:27.426 UTC [1] LOG:  starting PostgreSQL 17.12 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+2026-11-20T15:59:27.426662215Z 2026-11-20 15:59:27.426 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2026-11-20T15:59:27.426663923Z 2026-11-20 15:59:27.426 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2026-11-20T15:59:27.428515590Z 2026-11-20 15:59:27.428 UTC [1] LOG:  listening on Unix socket "/run/postgresql/.s.PGSQL.5432"
+2026-11-20T15:59:27.430705881Z 2026-11-20 15:59:27.430 UTC [29] LOG:  database system was shut down at 2026-11-20 15:58:26 UTC
+2026-11-20T15:59:27.435103006Z 2026-11-20 15:59:27.435 UTC [1] LOG:  database system is ready to accept connections
+2026-11-20T15:59:30.376476091Z 2026-11-20 15:59:30.376 UTC [38] LOG:  connection received: host=[local]
+2026-11-20T15:59:30.377170549Z 2026-11-20 15:59:30.377 UTC [38] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:30.377177424Z 2026-11-20 15:59:30.377 UTC [38] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:30.392344091Z 2026-11-20 15:59:30.391 UTC [38] LOG:  disconnection: session time: 0:00:00.015 user=iaa database=erp host=[local]
+2026-11-20T15:59:32.343506884Z 2026-11-20 15:59:32.343 UTC [39] LOG:  connection received: host=172.21.0.6 port=39742
+2026-11-20T15:59:32.356880884Z 2026-11-20 15:59:32.356 UTC [39] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.356962925Z 2026-11-20 15:59:32.356 UTC [39] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:32.401593925Z 2026-11-20 15:59:32.401 UTC [40] LOG:  connection received: host=172.21.0.6 port=39744
+2026-11-20T15:59:32.405942009Z 2026-11-20 15:59:32.405 UTC [40] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.405955300Z 2026-11-20 15:59:32.405 UTC [40] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:32.439872717Z 2026-11-20 15:59:32.439 UTC [41] LOG:  connection received: host=172.21.0.6 port=39758
+2026-11-20T15:59:32.444747300Z 2026-11-20 15:59:32.444 UTC [41] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.444775384Z 2026-11-20 15:59:32.444 UTC [41] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:32.479607342Z 2026-11-20 15:59:32.479 UTC [42] LOG:  connection received: host=172.21.0.6 port=39760
+2026-11-20T15:59:32.484748259Z 2026-11-20 15:59:32.484 UTC [42] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.484768092Z 2026-11-20 15:59:32.484 UTC [42] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:32.523323467Z 2026-11-20 15:59:32.523 UTC [43] LOG:  connection received: host=172.21.0.6 port=39762
+2026-11-20T15:59:32.527478217Z 2026-11-20 15:59:32.527 UTC [43] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.527489842Z 2026-11-20 15:59:32.527 UTC [43] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:32.562628259Z 2026-11-20 15:59:32.562 UTC [44] LOG:  connection received: host=172.21.0.6 port=39778
+2026-11-20T15:59:32.570380134Z 2026-11-20 15:59:32.570 UTC [44] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.570406592Z 2026-11-20 15:59:32.570 UTC [44] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:32.607086759Z 2026-11-20 15:59:32.606 UTC [45] LOG:  connection received: host=172.21.0.6 port=39786
+2026-11-20T15:59:32.612834675Z 2026-11-20 15:59:32.612 UTC [45] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.612879509Z 2026-11-20 15:59:32.612 UTC [45] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:32.793482050Z 2026-11-20 15:59:32.793 UTC [46] LOG:  connection received: host=172.21.0.6 port=39794
+2026-11-20T15:59:32.812040425Z 2026-11-20 15:59:32.810 UTC [46] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.812086842Z 2026-11-20 15:59:32.810 UTC [46] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:32.867684092Z 2026-11-20 15:59:32.867 UTC [47] LOG:  connection received: host=172.21.0.6 port=39796
+2026-11-20T15:59:32.872942634Z 2026-11-20 15:59:32.872 UTC [47] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.872974217Z 2026-11-20 15:59:32.872 UTC [47] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:32.922276134Z 2026-11-20 15:59:32.921 UTC [48] LOG:  connection received: host=172.21.0.6 port=39812
+2026-11-20T15:59:32.928477467Z 2026-11-20 15:59:32.928 UTC [48] LOG:  connection authenticated: identity="iaa" method=scram-sha-256 (/var/lib/postgresql/data/pg_hba.conf:128)
+2026-11-20T15:59:32.928508217Z 2026-11-20 15:59:32.928 UTC [48] LOG:  connection authorized: user=iaa database=erp
+2026-11-20T15:59:33.421601592Z 2026-11-20 15:59:33.421 UTC [55] LOG:  connection received: host=[local]
+2026-11-20T15:59:33.422234426Z 2026-11-20 15:59:33.422 UTC [55] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:33.422244884Z 2026-11-20 15:59:33.422 UTC [55] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:33.423293051Z 2026-11-20 15:59:33.423 UTC [55] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T15:59:36.445429594Z 2026-11-20 15:59:36.445 UTC [62] LOG:  connection received: host=[local]
+2026-11-20T15:59:36.446027761Z 2026-11-20 15:59:36.445 UTC [62] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:36.446046219Z 2026-11-20 15:59:36.445 UTC [62] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:36.447180969Z 2026-11-20 15:59:36.447 UTC [62] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T15:59:39.479241804Z 2026-11-20 15:59:39.479 UTC [69] LOG:  connection received: host=[local]
+2026-11-20T15:59:39.480029387Z 2026-11-20 15:59:39.479 UTC [69] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:39.480041137Z 2026-11-20 15:59:39.479 UTC [69] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:39.481585804Z 2026-11-20 15:59:39.481 UTC [69] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T15:59:42.509198430Z 2026-11-20 15:59:42.509 UTC [76] LOG:  connection received: host=[local]
+2026-11-20T15:59:42.509853013Z 2026-11-20 15:59:42.509 UTC [76] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:42.509865013Z 2026-11-20 15:59:42.509 UTC [76] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:42.510967805Z 2026-11-20 15:59:42.510 UTC [76] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T15:59:45.535858834Z 2026-11-20 15:59:45.535 UTC [83] LOG:  connection received: host=[local]
+2026-11-20T15:59:45.536443959Z 2026-11-20 15:59:45.536 UTC [83] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:45.536462251Z 2026-11-20 15:59:45.536 UTC [83] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:45.538030834Z 2026-11-20 15:59:45.537 UTC [83] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T15:59:48.601641044Z 2026-11-20 15:59:48.600 UTC [91] LOG:  connection received: host=[local]
+2026-11-20T15:59:48.604331585Z 2026-11-20 15:59:48.603 UTC [91] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:48.604363460Z 2026-11-20 15:59:48.603 UTC [91] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:48.606613252Z 2026-11-20 15:59:48.606 UTC [91] LOG:  disconnection: session time: 0:00:00.006 user=iaa database=erp host=[local]
+2026-11-20T15:59:51.641788337Z 2026-11-20 15:59:51.641 UTC [98] LOG:  connection received: host=[local]
+2026-11-20T15:59:51.642780128Z 2026-11-20 15:59:51.642 UTC [98] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:51.642807503Z 2026-11-20 15:59:51.642 UTC [98] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:51.644684503Z 2026-11-20 15:59:51.644 UTC [98] LOG:  disconnection: session time: 0:00:00.003 user=iaa database=erp host=[local]
+2026-11-20T15:59:54.670226547Z 2026-11-20 15:59:54.670 UTC [105] LOG:  connection received: host=[local]
+2026-11-20T15:59:54.670829880Z 2026-11-20 15:59:54.670 UTC [105] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:54.670833422Z 2026-11-20 15:59:54.670 UTC [105] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:54.672065130Z 2026-11-20 15:59:54.672 UTC [105] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T15:59:57.694645256Z 2026-11-20 15:59:57.694 UTC [112] LOG:  connection received: host=[local]
+2026-11-20T15:59:57.695132965Z 2026-11-20 15:59:57.695 UTC [112] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T15:59:57.695150131Z 2026-11-20 15:59:57.695 UTC [112] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T15:59:57.695930715Z 2026-11-20 15:59:57.695 UTC [112] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:00:00.727300674Z 2026-11-20 16:00:00.725 UTC [119] LOG:  connection received: host=[local]
+2026-11-20T16:00:00.727333883Z 2026-11-20 16:00:00.726 UTC [119] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:00.727338424Z 2026-11-20 16:00:00.726 UTC [119] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:00.727409091Z 2026-11-20 16:00:00.727 UTC [119] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:03.764323509Z 2026-11-20 16:00:03.764 UTC [126] LOG:  connection received: host=[local]
+2026-11-20T16:00:03.765195343Z 2026-11-20 16:00:03.765 UTC [126] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:03.765203384Z 2026-11-20 16:00:03.765 UTC [126] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:03.766961676Z 2026-11-20 16:00:03.766 UTC [126] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:06.792743761Z 2026-11-20 16:00:06.792 UTC [133] LOG:  connection received: host=[local]
+2026-11-20T16:00:06.793537136Z 2026-11-20 16:00:06.793 UTC [133] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:06.793556927Z 2026-11-20 16:00:06.793 UTC [133] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:06.794786136Z 2026-11-20 16:00:06.794 UTC [133] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:09.821349512Z 2026-11-20 16:00:09.821 UTC [141] LOG:  connection received: host=[local]
+2026-11-20T16:00:09.821908554Z 2026-11-20 16:00:09.821 UTC [141] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:09.821913012Z 2026-11-20 16:00:09.821 UTC [141] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:09.822970095Z 2026-11-20 16:00:09.822 UTC [141] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]

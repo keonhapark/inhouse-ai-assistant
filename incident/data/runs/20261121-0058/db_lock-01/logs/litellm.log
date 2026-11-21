@@ -1,0 +1,76 @@
+2026-11-20T16:00:16.605226626Z INFO:     127.0.0.1:48054 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:00:21.689626212Z INFO:     127.0.0.1:48066 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:00:26.789389381Z INFO:     127.0.0.1:50084 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:00:31.879186758Z INFO:     127.0.0.1:50112 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:00:36.956854094Z INFO:     127.0.0.1:48718 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:00:38.000389470Z INFO:     172.21.0.7:60480 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+2026-11-20T16:00:38.069896095Z 16:00:38 - LiteLLM Proxy:ERROR: common_request_processing.py:1839 - litellm.proxy.proxy_server._handle_llm_api_exception(): Exception occured - litellm_call_id=bb6fbe0c-804b-4ac1-b45f-0a1873139178 - litellm.AuthenticationError: Missing Anthropic API Key - A call is being made to anthropic but no key is set either in the environment variables or via params. Please set `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` in your environment vars, or configure workload identity federation via `ANTHROPIC_FEDERATION_RULE_ID`, `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID` and `ANTHROPIC_IDENTITY_TOKEN_FILE` (or `ANTHROPIC_IDENTITY_TOKEN`)
+2026-11-20T16:00:38.069923720Z 
+2026-11-20T16:00:38.069924886Z LiteLLM: model group 'external' failed with the error above. No fallback was attempted.
+2026-11-20T16:00:38.069926095Z Traceback (most recent call last):
+2026-11-20T16:00:38.069927053Z   File "/usr/local/lib/python3.12/site-packages/litellm/proxy/proxy_server.py", line 12326, in chat_completion
+2026-11-20T16:00:38.069928178Z     result: Final = await base_llm_response_processor.base_process_llm_request(
+2026-11-20T16:00:38.069929178Z                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.069930261Z   File "/usr/local/lib/python3.12/site-packages/litellm/proxy/common_request_processing.py", line 2783, in base_process_llm_request
+2026-11-20T16:00:38.069931345Z     return await open_sse_before_first_byte(
+2026-11-20T16:00:38.069932261Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.069933220Z   File "/usr/local/lib/python3.12/site-packages/litellm/proxy/common_request_processing.py", line 1421, in open_sse_before_first_byte
+2026-11-20T16:00:38.069934345Z     return await produce_response
+2026-11-20T16:00:38.069935220Z            ^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.069936136Z   File "/usr/local/lib/python3.12/site-packages/litellm/proxy/common_request_processing.py", line 2919, in _process_llm_request
+2026-11-20T16:00:38.069937220Z     responses = await llm_responses
+2026-11-20T16:00:38.069938261Z                 ^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.069939178Z   File "/usr/local/lib/python3.12/site-packages/litellm/proxy/native_compaction.py", line 88, in with_proxy_compaction_executor
+2026-11-20T16:00:38.069976261Z     return await call
+2026-11-20T16:00:38.069978720Z            ^^^^^^^^^^
+2026-11-20T16:00:38.069979636Z   File "/usr/local/lib/python3.12/site-packages/litellm/router.py", line 3174, in acompletion
+2026-11-20T16:00:38.069980636Z     raise e
+2026-11-20T16:00:38.069981511Z   File "/usr/local/lib/python3.12/site-packages/litellm/router.py", line 3150, in acompletion
+2026-11-20T16:00:38.069983970Z     response = await self.async_function_with_fallbacks(**kwargs)
+2026-11-20T16:00:38.069984928Z                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.069985886Z   File "/usr/local/lib/python3.12/site-packages/litellm/router.py", line 8229, in async_function_with_fallbacks
+2026-11-20T16:00:38.069986928Z     return await self.async_function_with_fallbacks_common_utils(
+2026-11-20T16:00:38.069987845Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.069988803Z   File "/usr/local/lib/python3.12/site-packages/litellm/router.py", line 8168, in async_function_with_fallbacks_common_utils
+2026-11-20T16:00:38.069989845Z     raise original_exception
+2026-11-20T16:00:38.069990886Z   File "/usr/local/lib/python3.12/site-packages/litellm/router.py", line 8220, in ... (litellm_truncated skipped 2188 chars. Truncation is a stdout logging safeguard. Full, untruncated data is logged to logging callbacks (OTEL, Datadog, etc.) and at DEBUG level. To increase the truncation limit, set `MAX_STRING_LENGTH_STDOUT_LOG` in your env.) ...          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.069992345Z   File "/usr/local/lib/python3.12/concurrent/futures/thread.py", line 59, in run
+2026-11-20T16:00:38.069993345Z     result = self.fn(*self.args, **self.kwargs)
+2026-11-20T16:00:38.069994261Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.069995220Z   File "/usr/local/lib/python3.12/site-packages/litellm/utils.py", line 1754, in wrapper
+2026-11-20T16:00:38.069996220Z     result = original_function(*args, **kwargs)
+2026-11-20T16:00:38.069997136Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.069998053Z   File "/usr/local/lib/python3.12/site-packages/litellm/main.py", line 6155, in completion
+2026-11-20T16:00:38.069999053Z     raise exception_type(
+2026-11-20T16:00:38.069999970Z   File "/usr/local/lib/python3.12/site-packages/litellm/main.py", line 6039, in completion
+2026-11-20T16:00:38.070000970Z     response = _complete_anthropic(_dispatch_ctx)
+2026-11-20T16:00:38.070001845Z                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.070002761Z   File "/usr/local/lib/python3.12/site-packages/litellm/main.py", line 2871, in _complete_anthropic
+2026-11-20T16:00:38.070003761Z     response: Final = anthropic_chat_completions.completion(
+2026-11-20T16:00:38.070004720Z                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.070007720Z   File "/usr/local/lib/python3.12/site-packages/litellm/llms/anthropic/chat/handler.py", line 482, in completion
+2026-11-20T16:00:38.070008845Z     headers = AnthropicConfig().validate_environment(
+2026-11-20T16:00:38.070009761Z               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:00:38.070010803Z   File "/usr/local/lib/python3.12/site-packages/litellm/llms/anthropic/common_utils.py", line 1327, in validate_environment
+2026-11-20T16:00:38.070011886Z     raise litellm.AuthenticationError(
+2026-11-20T16:00:38.070012928Z litellm.exceptions.AuthenticationError: litellm.AuthenticationError: Missing Anthropic API Key - A call is being made to anthropic but no key is set either in the environment variables or via params. Please set `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` in your environment vars, or configure workload identity federation via `ANTHROPIC_FEDERATION_RULE_ID`, `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID` and `ANTHROPIC_IDENTITY_TOKEN_FILE` (or `ANTHROPIC_IDENTITY_TOKEN`)
+2026-11-20T16:00:38.070014470Z 
+2026-11-20T16:00:38.070015303Z LiteLLM: model group 'external' failed with the error above. No fallback was attempted.
+2026-11-20T16:00:38.072286261Z INFO:     172.21.0.7:60480 - "POST /v1/chat/completions HTTP/1.1" 401 Unauthorized
+2026-11-20T16:00:42.055518138Z INFO:     127.0.0.1:48746 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:00:47.136680710Z INFO:     127.0.0.1:59518 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:00:52.203625379Z INFO:     127.0.0.1:59530 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:00:57.278228339Z INFO:     127.0.0.1:46558 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:02.355428384Z INFO:     127.0.0.1:46576 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:07.438415178Z INFO:     127.0.0.1:33924 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:12.532876972Z INFO:     127.0.0.1:33932 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:17.603708335Z INFO:     127.0.0.1:37446 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:22.453300420Z INFO:     172.21.0.7:32814 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+2026-11-20T16:01:22.723061837Z INFO:     127.0.0.1:37462 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:25.014319755Z INFO:     172.21.0.7:32814 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+2026-11-20T16:01:27.793803715Z INFO:     127.0.0.1:42228 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:32.877206675Z INFO:     127.0.0.1:42254 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:34.491222676Z INFO:     172.21.0.7:49710 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+2026-11-20T16:01:37.939472928Z INFO:     127.0.0.1:38868 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:43.010252264Z INFO:     127.0.0.1:38884 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:01:48.074812502Z INFO:     127.0.0.1:49416 - "GET /health/liveliness HTTP/1.1" 200 OK

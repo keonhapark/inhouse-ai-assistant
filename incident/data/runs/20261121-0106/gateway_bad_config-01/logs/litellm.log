@@ -1,0 +1,64 @@
+2026-11-20T16:09:33.195891717Z INFO:     127.0.0.1:56490 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:09:38.275476386Z INFO:     127.0.0.1:32848 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:09:43.353864389Z INFO:     127.0.0.1:32870 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:09:48.467016085Z INFO:     127.0.0.1:46972 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:09:53.675875921Z INFO:     127.0.0.1:46986 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:09:58.762133965Z INFO:     127.0.0.1:48100 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:03.839621634Z INFO:     127.0.0.1:48126 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:08.920381803Z INFO:     127.0.0.1:55152 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:13.147792389Z 16:10:13 - LiteLLM Proxy:ERROR: auth_exception_handler.py:207 - litellm.proxy.proxy_server.user_api_key_auth(): Exception occured - No connected db.
+2026-11-20T16:10:13.147835055Z Requester IP Address:172.21.0.7
+2026-11-20T16:10:13.157271514Z INFO:     172.21.0.7:40892 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+2026-11-20T16:10:13.218217805Z 16:10:13 - LiteLLM Proxy:ERROR: auth_exception_handler.py:207 - litellm.proxy.proxy_server.user_api_key_auth(): Exception occured - No connected db.
+2026-11-20T16:10:13.218268514Z Requester IP Address:172.21.0.7
+2026-11-20T16:10:13.220897347Z INFO:     172.21.0.7:40892 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+2026-11-20T16:10:14.004341791Z INFO:     127.0.0.1:55164 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:19.081370211Z INFO:     127.0.0.1:58488 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:24.157209880Z INFO:     127.0.0.1:58512 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:29.233990590Z INFO:     127.0.0.1:55124 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:33.295974509Z 16:10:33 - LiteLLM Proxy:ERROR: auth_exception_handler.py:207 - litellm.proxy.proxy_server.user_api_key_auth(): Exception occured - No connected db.
+2026-11-20T16:10:33.296008842Z Requester IP Address:172.21.0.7
+2026-11-20T16:10:33.313065009Z INFO:     172.21.0.7:60228 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+2026-11-20T16:10:33.365785092Z 16:10:33 - LiteLLM Proxy:ERROR: auth_exception_handler.py:207 - litellm.proxy.proxy_server.user_api_key_auth(): Exception occured - No connected db.
+2026-11-20T16:10:33.365809884Z Requester IP Address:172.21.0.7
+2026-11-20T16:10:33.367470676Z INFO:     172.21.0.7:60228 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+2026-11-20T16:10:34.304984301Z INFO:     127.0.0.1:55134 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:39.413396970Z INFO:     127.0.0.1:51836 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:44.476579750Z INFO:     127.0.0.1:51864 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:49.555818086Z INFO:     127.0.0.1:40724 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:53.423199004Z 16:10:53 - LiteLLM Proxy:ERROR: auth_exception_handler.py:207 - litellm.proxy.proxy_server.user_api_key_auth(): Exception occured - No connected db.
+2026-11-20T16:10:53.423241588Z Requester IP Address:172.21.0.7
+2026-11-20T16:10:53.433314421Z INFO:     172.21.0.7:43218 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+2026-11-20T16:10:53.468654088Z 16:10:53 - LiteLLM Proxy:ERROR: auth_exception_handler.py:207 - litellm.proxy.proxy_server.user_api_key_auth(): Exception occured - No connected db.
+2026-11-20T16:10:53.468677088Z Requester IP Address:172.21.0.7
+2026-11-20T16:10:53.470897338Z INFO:     172.21.0.7:43218 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+2026-11-20T16:10:54.631458421Z INFO:     127.0.0.1:40758 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:10:59.698285216Z INFO:     127.0.0.1:43896 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:04.850835760Z INFO:     127.0.0.1:43938 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:09.944278887Z INFO:     127.0.0.1:45890 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:13.528758875Z 16:11:13 - LiteLLM Proxy:ERROR: auth_exception_handler.py:207 - litellm.proxy.proxy_server.user_api_key_auth(): Exception occured - No connected db.
+2026-11-20T16:11:13.528799083Z Requester IP Address:172.21.0.7
+2026-11-20T16:11:13.536959916Z INFO:     172.21.0.7:47560 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+2026-11-20T16:11:13.571573250Z 16:11:13 - LiteLLM Proxy:ERROR: auth_exception_handler.py:207 - litellm.proxy.proxy_server.user_api_key_auth(): Exception occured - No connected db.
+2026-11-20T16:11:13.571599625Z Requester IP Address:172.21.0.7
+2026-11-20T16:11:13.572924291Z INFO:     172.21.0.7:47560 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+2026-11-20T16:11:15.029254042Z INFO:     127.0.0.1:45916 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:20.116230836Z INFO:     127.0.0.1:33388 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:25.183145963Z INFO:     127.0.0.1:33396 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:30.257617632Z INFO:     127.0.0.1:46936 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:35.347133260Z INFO:     127.0.0.1:46946 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:40.634938012Z INFO:     127.0.0.1:60346 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:45.723166501Z INFO:     127.0.0.1:60370 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:50.828305670Z INFO:     127.0.0.1:42364 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:11:55.910030214Z INFO:     127.0.0.1:46792 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:12:01.015301883Z INFO:     127.0.0.1:46814 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:12:06.101693385Z INFO:     127.0.0.1:44670 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:12:11.184963929Z INFO:     127.0.0.1:44682 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:12:16.259142792Z INFO:     127.0.0.1:56578 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:12:17.121687418Z INFO:     172.21.0.7:44200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+2026-11-20T16:12:20.385984711Z INFO:     172.21.0.7:44200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+2026-11-20T16:12:20.530344420Z INFO:     172.21.0.7:44200 - "POST /v1/embeddings HTTP/1.1" 200 OK
+2026-11-20T16:12:21.357009795Z INFO:     127.0.0.1:56596 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:12:26.492845172Z INFO:     127.0.0.1:39298 - "GET /health/liveliness HTTP/1.1" 200 OK
+2026-11-20T16:12:28.231581590Z INFO:     172.21.0.7:44200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+2026-11-20T16:12:31.319245008Z INFO:     172.21.0.7:44200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
