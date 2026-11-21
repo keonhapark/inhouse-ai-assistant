@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Bridge, jwtExp, MESSAGES } from './bridge.js'
-import { GatewayError, UNAVAILABLE, type ChatEvent, type Gateway } from './gateway.js'
+import { GatewayError, RATE_LIMITED, UNAVAILABLE, type ChatEvent, type Gateway } from './gateway.js'
 import { ACTION } from './render.js'
 import { ev, fakeGateway, fakeSlack, flat } from './test-util.js'
 
@@ -162,6 +162,63 @@ describe('Bridge 메시지', () => {
     expect(posts[0].msg.text).not.toContain('<!')
     expect(flat(posts[0].msg)).not.toContain('<!channel>')
     expect(flat(posts[0].msg)).not.toContain('<https')
+  })
+})
+
+describe('Bridge /auth/slack 횟수 제한', () => {
+  function limited(times: number, retryAfter?: number) {
+    let n = 0
+    const waits: number[] = []
+    const g = fakeGateway({
+      async login(u) {
+        n++
+        if (n <= times) throw new GatewayError(RATE_LIMITED, 429, '429 rate-limited', retryAfter)
+        return { token: `tok-${u}`, expiresIn: 900 }
+      },
+    })
+    const s = fakeSlack()
+    const bridge = new Bridge({ gateway: g.gw, slack: s.slack, webUrl: '', sleep: async (ms) => void waits.push(ms) })
+    return { bridge, waits, logins: () => n, ...g, ...s }
+  }
+
+  it('429면 Retry-After만큼 기다렸다 한 번 다시 로그인해 이어 갑니다', async () => {
+    const t = limited(1, 2)
+    await t.bridge.onMessage(dm('U1', '안녕', '1'))
+    expect(t.waits).toEqual([2000])
+    expect(t.logins()).toBe(2)
+    expect(flat(t.posts[0].msg)).toContain('답입니다.')
+  })
+
+  it('다시 해도 막히거나 Retry-After가 30초보다 길면 잠시 뒤 다시 하라고 안내합니다', async () => {
+    const twice = limited(2, 1)
+    await twice.bridge.onMessage(dm('U1', '안녕', '1'))
+    expect(twice.logins()).toBe(2)
+    expect(twice.posts[0].msg.text).toBe(RATE_LIMITED)
+
+    const long = limited(1, 120)
+    await long.bridge.onMessage(dm('U1', '안녕', '1'))
+    expect(long.waits).toEqual([])
+    expect(long.logins()).toBe(1)
+    expect(long.posts[0].msg.text).toBe(RATE_LIMITED)
+  })
+
+  it('토큰 유효 시간이 길어도 15분까지만 다시 씁니다', async () => {
+    let now = Date.parse('2026-11-21T00:00:00Z')
+    const jwt = `x.${Buffer.from(JSON.stringify({ exp: now / 1000 + 3600 })).toString('base64url')}.y`
+    let logins = 0
+    const { gw } = fakeGateway({
+      async login() {
+        logins++
+        return { token: jwt, expiresIn: 3600 }
+      },
+    })
+    const bridge = new Bridge({ gateway: gw, slack: fakeSlack().slack, webUrl: '', now: () => now })
+    await bridge.onMessage(dm('U1', 'a', '1'))
+    now += 14 * 60_000
+    await bridge.onMessage(dm('U1', 'b', '2'))
+    now += 2 * 60_000
+    await bridge.onMessage(dm('U1', 'c', '3'))
+    expect(logins).toBe(2)
   })
 })
 

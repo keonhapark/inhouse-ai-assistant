@@ -47,6 +47,10 @@ const KEEP_MS = 24 * 60 * 60_000
 const UNMAPPED_MS = 5 * 60_000
 /** 같은 이벤트가 다시 와도 한 번만 처리하도록 기억하는 시간 */
 const DEDUPE_MS = 10 * 60_000
+/** 직원 토큰을 다시 쓰는 최대 시간(/auth/slack 호출을 줄임). 토큰 만료 1분 전이 더 이르면 그때까지 */
+const TOKEN_REUSE_MS = 15 * 60_000
+/** /auth/slack이 429면 Retry-After만큼 한 번 기다립니다. 이보다 길면 기다리지 않고 안내합니다 */
+const MAX_RETRY_WAIT_S = 30
 
 type Options = {
   gateway: Gateway
@@ -55,6 +59,8 @@ type Options = {
   /** 봇 자신의 슬랙 사용자 ID(멘션에서 이것만 지웁니다). 모르면 맨 앞 멘션 하나를 지웁니다. */
   botUserId?: string
   now?: () => number
+  /** 기다리기(시험에서 바꿉니다) */
+  sleep?: (ms: number) => Promise<void>
   log?: (msg: string, err?: unknown) => void
 }
 
@@ -71,6 +77,7 @@ export class Bridge {
   private readonly webUrl: string
   private readonly botUserId?: string
   private readonly now: () => number
+  private readonly sleep: (ms: number) => Promise<void>
   private readonly log: (msg: string, err?: unknown) => void
   private readonly threads = new Map<string, Conversation>()
   private readonly busyUsers = new Set<string>()
@@ -88,6 +95,7 @@ export class Bridge {
     this.webUrl = o.webUrl
     this.botUserId = o.botUserId
     this.now = o.now ?? Date.now
+    this.sleep = o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)))
     this.log = o.log ?? (() => undefined)
   }
 
@@ -305,14 +313,27 @@ export class Bridge {
   private async token(slackUserId: string): Promise<string | null> {
     const cached = this.tokens.get(slackUserId)
     if (cached && cached.exp > this.now()) return cached.token
-    const res = await this.gateway.login(slackUserId)
+    const res = await this.login(slackUserId)
     if (!res) {
       this.tokens.set(slackUserId, { token: null, exp: this.now() + UNMAPPED_MS })
       return null
     }
     const exp = jwtExp(res.token) ?? this.now() + res.expiresIn * 1000
-    this.tokens.set(slackUserId, { token: res.token, exp: exp - 60_000 })
+    this.tokens.set(slackUserId, { token: res.token, exp: Math.min(exp - 60_000, this.now() + TOKEN_REUSE_MS) })
     return res.token
+  }
+
+  /** /auth/slack이 429면 Retry-After만큼(최대 30초) 기다렸다 한 번 다시 부릅니다. 그래도 막히면 429 오류(안내 문구)를 던집니다. */
+  private async login(slackUserId: string) {
+    try {
+      return await this.gateway.login(slackUserId)
+    } catch (e) {
+      if (!(e instanceof GatewayError) || e.status !== 429) throw e
+      const wait = e.retryAfter ?? 1
+      if (wait > MAX_RETRY_WAIT_S) throw e
+      await this.sleep(wait * 1000)
+      return this.gateway.login(slackUserId)
+    }
   }
 
   /** 맨 앞의 봇 멘션 하나만 지웁니다. 질문 안의 다른 사람 멘션은 둡니다. */
