@@ -44,6 +44,10 @@ class Settings:
     eval_reports_dir: Path = REPO_ROOT / "eval/reports"  # GATEWAY_EVAL_REPORTS_DIR: 평가 보고서 폴더(읽기 전용, #332)
     # GATEWAY_LOCAL_REASONING_EFFORT: 외부 별칭 요청을 로컬로 돌릴 때 채울 reasoning_effort(#427). 빈 값이면 채우지 않음
     local_reasoning_effort: str | None = "none"
+    # 의미 캐시(#465). GATEWAY_SEMANTIC_CACHE=1일 때만 켜고, 평가 모드(GATEWAY_EVAL_MODE=1)에서는 늘 끕니다.
+    semantic_cache: bool = False
+    cache_threshold: float = 0.95      # GATEWAY_CACHE_THRESHOLD: 마지막 user 메시지 임베딩 코사인 유사도 문턱
+    cache_ttl_seconds: float = 600.0   # GATEWAY_CACHE_TTL_SECONDS
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -72,5 +76,8 @@ class Settings:
             slack_login_per_minute=int(os.environ.get("SLACK_LOGIN_PER_MINUTE") or 60),
             eval_reports_dir=_path(os.environ.get("GATEWAY_EVAL_REPORTS_DIR"), REPO_ROOT / "eval/reports"),
             local_reasoning_effort=os.environ.get("GATEWAY_LOCAL_REASONING_EFFORT", "none") or None,
+            semantic_cache=os.environ.get("GATEWAY_SEMANTIC_CACHE") == "1",
+            cache_threshold=float(os.environ.get("GATEWAY_CACHE_THRESHOLD") or 0.95),
+            cache_ttl_seconds=float(os.environ.get("GATEWAY_CACHE_TTL_SECONDS") or 600),
             audit_event_files=tuple(x.strip() for x in os.environ.get("AUDIT_EVENT_FILES", "").split(",") if x.strip()),
         )

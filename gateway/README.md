@@ -66,6 +66,14 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     남기고, 로컬 호출의 감사 이벤트 detail에 `외부 장애(<코드>)로 로컬 폴백`을 적습니다. 로컬이 지원하지 않는 `response_format`
     요청, 미지원(400), 정책 거절, 로컬 별칭 자체의 실패는 폴백하지 않습니다. 스트림은 흘려보내기 전에 실패한 경우만 폴백합니다.
   - 스트림(`"stream": true`)은 받은 대로 흘려보내고, 끝나면 기록합니다.
+  - 의미 캐시(`gateway/cache.py`, #465, 계약 #475): `GATEWAY_SEMANTIC_CACHE=1`일 때만 켜고, 평가 모드(`GATEWAY_EVAL_MODE=1`)와
+    평가 조건이 있는 대화에서는 쓰지 않습니다. 위임 토큰이 있고 스트림·이미지가 아닌 호출을 정책·기밀 판정·가림이 끝난 뒤 찾습니다.
+    키는 에이전트·토큰 `scopes`·`doc_scopes`·보낼 별칭과, 마지막 user 메시지를 뺀 본문(시스템 프롬프트·이전 메시지·도구 결과·
+    샘플링 값)의 해시입니다. 그 안에서 마지막 user 메시지의 로컬 임베딩(`local-embed`) 코사인 유사도가 `GATEWAY_CACHE_THRESHOLD`
+    (기본 0.95) 이상이고 숫자열이 같을 때만 적중합니다("3월 9일"과 "3월 10일"은 적중하지 않음). 도구 호출이 없는 끝난 답만 메모리에
+    `GATEWAY_CACHE_TTL_SECONDS`(기본 600초) 동안 1,000개까지 둡니다. 적중하면 LLM을 부르지 않고(외부 전송·비용·외부 기록 없음)
+    `X-Cache: hit`와 그 답을 만든 별칭을 머리글로 돌려주고, 감사 detail에 `의미 캐시 적중(유사도 …)`을 남깁니다. 찾았는데 없으면
+    `X-Cache: miss`입니다. 임베딩이 실패하면 캐시 없이 보냅니다. 문턱과 적중률은 아직 실제 임베딩으로 재지 않아 기본은 끔입니다.
   - 별칭 설정 `model_info.drop_params`에 적은 필드는 보내기 전에 뺍니다. `external`(Claude Haiku 5.5)은 기본값이 아닌
     `temperature`·`top_p`를 400으로 거절해 둘을 뺍니다(LiteLLM 1.108.1도 빼지만 판이 바뀌어도 안전하게).
     `reasoning_effort`는 LiteLLM이 `thinking: adaptive`와 `output_config.effort`로 바꿔 넘깁니다(실측).
@@ -195,7 +203,8 @@ DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
 `LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
 `AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`,
 `SLACK_BRIDGE_SECRET`, `SLACK_USERS_FILE`, `ERP_SERVICE_LOGIN_SECRET`, `SLACK_LOGIN_PER_USER_PER_MINUTE`, `SLACK_LOGIN_PER_MINUTE`, `GATEWAY_EVAL_REPORTS_DIR`,
-`GATEWAY_LOCAL_REASONING_EFFORT`(기본 `none`, #427).
+`GATEWAY_LOCAL_REASONING_EFFORT`(기본 `none`, #427),
+`GATEWAY_SEMANTIC_CACHE`(`1`이면 켬, #465), `GATEWAY_CACHE_THRESHOLD`(기본 0.95), `GATEWAY_CACHE_TTL_SECONDS`(기본 600).
 상대 경로는 저장소 루트 기준입니다. LiteLLM은 1.108.1로 고정합니다(배포 뒤 2주가 지난 판).
 
 ## 시험

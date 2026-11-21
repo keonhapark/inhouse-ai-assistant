@@ -14,6 +14,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 
 from gateway import redact
+from gateway.cache import SemanticCache
 from gateway.alerts import Alerter
 from gateway import audit_query, eval_reports, ops, slack_login
 from gateway.chat import AgentClient, ChatService
@@ -78,7 +79,12 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                     vision_alias=next((a for a, i in model_info.items()
                                        if i.get("vision") and i["location"] == "local"), None),
                     eval_toolcall=settings.eval_toolcall,
-                    local_reasoning_effort=settings.local_reasoning_effort)
+                    local_reasoning_effort=settings.local_reasoning_effort,
+                    embed_alias=next((a for a, i in model_info.items()
+                                      if i.get("mode") == "embedding" and i["location"] == "local"), None))
+    if settings.semantic_cache and not settings.eval_mode:
+        # 평가 실행 조건은 '캐시 끔'입니다(기획서). 평가 모드 스택에서는 설정과 관계없이 붙이지 않습니다.
+        egress.cache = SemanticCache(egress.embed_text, threshold=settings.cache_threshold, ttl=settings.cache_ttl_seconds)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
