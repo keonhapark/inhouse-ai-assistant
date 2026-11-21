@@ -131,25 +131,36 @@ def rag_file_sha256(cfg: dict[str, Any], env: str) -> str | None:
     return got[0] if got and re.fullmatch(r"[0-9a-f]{64}", got[0]) else None
 
 
-def verify_stack(cfg: dict[str, Any], required: bool) -> str | None:
-    """설정 stackCheck.containers가 있으면 띄운 스택이 stackCommit의 소스인지 봅니다(#449). 다르면 멈춥니다.
-    required(확인 셋)인데 설정이 없으면 멈춥니다."""
-    from harness.stackcheck import StackCheckError, check_stack
+def verify_stack(cfg: dict[str, Any], required: bool) -> tuple[str | None, dict[str, str]]:
+    """설정 stackCheck가 있으면 띄운 스택이 stackCommit의 소스인지 봅니다(#449, #470). 다르면 멈춥니다.
 
-    containers = cfg.get("stackCheck", {}).get("containers")
-    commit = cfg.get("stackCommit")
+    - containers: 컨테이너 /repo 소스를 대조합니다. required(확인 셋)면 agent·gateway·rag 소스가 모두 비교돼야 합니다.
+    - mounts: [{container, path, repo}] 호스트 작업 트리를 마운트한 경로(litellm 설정 등)도 대조합니다.
+    - env: {컨테이너: [변수 이름]} 판정에 영향이 있는 설정 값을 보고서에 남깁니다(비밀일 수 있는 이름은 받지 않음).
+    required인데 설정이 없으면 멈춥니다. 돌려주는 값은 (보고서 한 줄, 환경 값)."""
+    from harness.stackcheck import StackCheckError, check_mounts, check_stack, container_env
+
+    sc = cfg.get("stackCheck", {})
+    containers, commit = sc.get("containers"), cfg.get("stackCommit")
     if not containers or not commit:
         if required:
             raise SystemExit("--bundle 실행은 띄운 스택을 확인합니다. 설정에 stackCommit과 stackCheck.containers를 둡니다")
-        return None
+        return None, {}
     try:
         c = check_stack(list(containers), commit)
+        if sc.get("mounts"):
+            check_mounts(c, list(sc["mounts"]))
+        env = {f"{name}:{k}": v for name, keys in (sc.get("env") or {}).items()
+               for k, v in container_env(name, list(keys)).items()}
     except StackCheckError as e:
         raise SystemExit(str(e)) from e
     if not c.ok:
         raise SystemExit(f"띄운 스택이 stackCommit과 다릅니다: {c.describe()}. 예: {', '.join(c.mismatched[:5])}")
+    if required and c.missing_modules():
+        raise SystemExit(f"확인 셋은 {', '.join(c.missing_modules())} 소스도 대조해야 합니다. "
+                         "stackCheck.containers에 그 컨테이너를 넣습니다")
     print(c.describe(), flush=True)
-    return c.describe()
+    return c.describe(), env
 
 
 def check_bundle_scenarios(bundle: Path, scenarios: Path) -> None:
@@ -236,7 +247,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                          "부를 수 있게 합니다")
     if args.bundle and injected:
         check_bundle_injected_docs(Path(args.bundle), cfg)
-    stack_check = verify_stack(cfg, required=bool(args.bundle))
+    stack_check, stack_env = verify_stack(cfg, required=bool(args.bundle))
     system, erp = make_factories(cfg)
     out = Path(args.out)
     rows_file = out.with_suffix(".rows.jsonl")
@@ -293,6 +304,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     meta.model_override = cfg["gateway"].get("modelOverride")
     meta.bundle = bundle
     meta.stack_check = stack_check
+    meta.stack_env = stack_env
     meta.model_settings = {str(k): str(v) for k, v in (cfg.get("modelSettings") or {}).items()}
     if injected and any(not has_document_injection(s) for s in scenarios):
         meta.notes.append("주입 문서 파일을 켠 스택에서 문서형 주입이 아닌 시나리오도 돌려, 주입 문서가 그 검색에 섞였을 수 "

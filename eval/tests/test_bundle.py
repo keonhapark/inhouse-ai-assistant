@@ -101,7 +101,8 @@ def _stack_matches(monkeypatch):
     from harness.stackcheck import StackCheck
 
     monkeypatch.setattr("harness.stackcheck.check_stack",
-                        lambda containers, commit: StackCheck(commit, list(containers), compared=3))
+                        lambda containers, commit: StackCheck(commit, list(containers), compared=3,
+                                                              modules={"agent", "gateway", "rag"}))
 
 
 def _run_cfg(tmp_path, rag=True, stack=True):
@@ -315,3 +316,18 @@ def test_bundle_resume_refuses_other_stack_even_with_allow_mixed(tmp_path, monke
                                               encoding="utf-8")
     with pytest.raises(_Reached):
         main(args)
+
+
+def test_bundle_run_requires_agent_gateway_rag_sources(tmp_path, monkeypatch):
+    """확인 셋은 비교한 파일에 agent·gateway·rag가 모두 있어야 합니다(#470)."""
+    from harness.stackcheck import StackCheck
+
+    root, table = make_bundle(tmp_path, name="confirm-v1")
+    _confirm_table(monkeypatch, table)
+    monkeypatch.setattr("harness.cli.load_scenarios", lambda d: [])
+    _fake_docker(monkeypatch, "")
+    monkeypatch.setattr("harness.stackcheck.check_stack", lambda containers, commit: StackCheck(
+        commit, list(containers), compared=3, modules={"agent", "gateway", "contracts"}))
+    with pytest.raises(SystemExit, match="rag 소스도 대조해야"):
+        main(["run", "--config", str(_run_cfg(tmp_path)), "--scenarios", str(root / "scenarios"),
+              "--out", str(tmp_path / "r"), "--bundle", str(root)])

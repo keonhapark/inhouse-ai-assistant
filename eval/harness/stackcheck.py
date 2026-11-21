@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
@@ -18,8 +19,12 @@ from harness.paths import ROOT
 
 SKIP_PARTS = {".venv", "__pycache__", "node_modules", ".pytest_cache", ".ruff_cache"}
 # docker exec 한 번으로 /repo 아래 파일 해시를 모두 구합니다
-LIST_CMD = ("cd /repo && find . -type f ! -path '*/.venv/*' ! -path '*/__pycache__/*' ! -path '*/node_modules/*' "
-            "-exec sha256sum {} +")
+LIST_CMD = ("cd {root} && find . -type f ! -path '*/.venv/*' ! -path '*/__pycache__/*' ! -path '*/node_modules/*' "
+            "-exec sha256sum {{}} +")
+# 확인 셋(--bundle)이면 비교한 파일에 이 모듈 폴더가 모두 있어야 합니다(#470)
+REQUIRED_MODULES = ("agent", "gateway", "rag")
+# 기록할 환경 변수 이름에 이 말이 들어가면 값이 비밀일 수 있어 받지 않습니다
+SECRET_WORDS = ("KEY", "SECRET", "TOKEN", "PASSWORD", "PASS", "CREDENTIAL", "URL")
 
 
 class StackCheckError(RuntimeError):
@@ -33,23 +38,33 @@ class StackCheck:
     compared: int = 0
     missing: int = 0
     mismatched: list[str] = field(default_factory=list)
+    # 비교한 파일의 맨 위 폴더(agent, gateway, rag, contracts, packs …)
+    modules: set[str] = field(default_factory=set)
+    # 마운트 대조: "컨테이너:경로 = 저장소 경로" 설명
+    mounts: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
         return self.compared > 0 and not self.mismatched
 
+    def missing_modules(self, required: tuple[str, ...] = REQUIRED_MODULES) -> list[str]:
+        return [m for m in required if m not in self.modules]
+
     def describe(self) -> str:
         head = f"{', '.join(self.containers)} 컨테이너 소스 {self.compared}개"
+        mounts = f"; 마운트 {', '.join(self.mounts)}" if self.mounts else "; 마운트(litellm 설정 등) 대조 안 함"
         if self.ok:
-            return f"{head} = 스택 커밋 `{self.commit[:7]}`(컨테이너에 없는 저장소 파일 {self.missing}개)"
-        return f"{head} 중 스택 커밋 `{self.commit[:7]}`과 다른 파일 {len(self.mismatched)}개"
+            return f"{head} = 스택 커밋 `{self.commit[:7]}`(컨테이너에 없는 저장소 파일 {self.missing}개){mounts}"
+        return f"{head} 중 스택 커밋 `{self.commit[:7]}`과 다른 파일 {len(self.mismatched)}개{mounts}"
 
 
-def container_hashes(container: str, run=subprocess.run) -> dict[str, str]:
-    """컨테이너 /repo 기준 상대 경로 → SHA-256."""
+def container_hashes(container: str, run=subprocess.run, root: str = "/repo") -> dict[str, str]:
+    """컨테이너 root 기준 상대 경로 → SHA-256."""
+    if not re.fullmatch(r"/[\w./-]*", root):
+        raise StackCheckError(f"컨테이너 경로가 이상합니다: {root}")
     try:
-        r = run(["docker", "exec", container, "sh", "-c", LIST_CMD], capture_output=True, text=True, timeout=300,
-                check=True)
+        r = run(["docker", "exec", container, "sh", "-c", LIST_CMD.format(root=root)], capture_output=True, text=True,
+                timeout=300, check=True)
     except (OSError, subprocess.SubprocessError) as e:
         raise StackCheckError(f"{container}의 파일 해시를 구하지 못했습니다: {e}") from e
     out = {}
@@ -92,9 +107,41 @@ def check_stack(containers: list[str], commit: str, run=subprocess.run) -> Stack
         c.mismatched += sorted(f"{name}:{p}" for p, h in want.items() if got[p] != h)
         c.mismatched += sorted(f"{name}:{p}(커밋에 없음)" for p in set(got) - set(want))
         tops = {PurePosixPath(p).parts[0] for p in got}
+        c.modules |= {PurePosixPath(p).parts[0] for p in want}
         tracked_under = _tracked_under(commit, tops, run)
         c.missing += len(tracked_under - set(got))
     return c
+
+
+def check_mounts(c: StackCheck, mounts: list[dict[str, str]], run=subprocess.run) -> StackCheck:
+    """호스트 작업 트리를 마운트한 컨테이너 경로(예: litellm /cfg ← gateway/litellm)를 stackCommit과 견줍니다.
+    mounts: [{container, path, repo}]. 마운트 안 파일은 모두 그 커밋의 repo 경로에 있어야 합니다."""
+    for m in mounts:
+        got = {f"{m['repo'].rstrip('/')}/{p}": h for p, h in container_hashes(m["container"], run, m["path"]).items()}
+        want = git_hashes(c.commit, set(got), run)
+        c.compared += len(want)
+        c.mismatched += sorted(f"{m['container']}:{p}" for p, h in want.items() if got[p] != h)
+        c.mismatched += sorted(f"{m['container']}:{p}(커밋에 없음)" for p in set(got) - set(want))
+        c.mounts.append(f"{m['container']}:{m['path']} = {m['repo']}({len(want)}개)")
+    return c
+
+
+def container_env(container: str, names: list[str], run=subprocess.run) -> dict[str, str]:
+    """컨테이너 환경 변수 중 names의 값(없으면 빈 문자열). 비밀일 수 있는 이름은 받지 않습니다."""
+    bad = [n for n in names if any(w in n.upper() for w in SECRET_WORDS) or not re.fullmatch(r"[A-Z][A-Z0-9_]*", n)]
+    if bad:
+        raise StackCheckError(f"기록하지 않는 환경 변수 이름: {', '.join(bad)}")
+    script = "; ".join(f'printf "%s=%s\\n" {n} "${n}"' for n in names)
+    try:
+        r = run(["docker", "exec", container, "sh", "-c", script], capture_output=True, text=True, timeout=30, check=True)
+    except (OSError, subprocess.SubprocessError) as e:
+        raise StackCheckError(f"{container}의 환경 변수를 읽지 못했습니다: {e}") from e
+    out = {n: "" for n in names}
+    for line in r.stdout.splitlines():
+        k, _, v = line.partition("=")
+        if k in out:
+            out[k] = v
+    return out
 
 
 def _tracked_under(commit: str, tops: set[str], run=subprocess.run) -> set[str]:
