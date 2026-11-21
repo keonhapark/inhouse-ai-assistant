@@ -12,6 +12,8 @@ httpTimeoutS: 120
 # 재시도 가능한 오류가 나면 모델 서버가 살아 있는지 봅니다. 응답이 없을 때만 실행 환경 문제로 보고 다시 돌립니다.
 # 빼면 그런 회차도 실패로 셉니다. 주소는 환경 변수 이름으로만 적습니다(eval/protocol.md 2절)
 # modelHealth: {urlEnv: OLLAMA_BASE_URL, path: /api/tags}
+# 보고서 "모델 설정" 칸에 남길 설정(이름: 값). 모델 교체 회귀(#107)에서는 승인자·기기·reasoning_effort를 적습니다
+# modelSettings: {승인자: intent, 기기: RTX 4070 SUPER, local 계획 호출 reasoning_effort: none}
 notes:                   # 보고서 실행 정보에 그대로 적을 말(프로토콜과 다르게 돌린 이유 등)
   - 예: 반복 수를 바꾼 이유는 docs/decisions/NNNN에 있습니다
 
@@ -28,6 +30,10 @@ gateway:
   externalLog: /tmp/iaa-s5-external-requests.jsonl   # gateway의 GATEWAY_EXTERNAL_LOG와 같은 파일(호스트에서 보일 때)
   # 기록이 compose 볼륨 안에만 있으면 대신 아래를 씁니다
   # externalLogDocker: {container: iaa-s5-gateway-1, path: /audit/external.jsonl}
+  # 모델 교체 회귀(#107·#346): 대화를 열 때 X-Eval-Model-Override로 별칭을 바꿔 끼웁니다(GATEWAY_EVAL_MODE=1).
+  # local=local-exaone | external=external-sonnet | local=local-exaone,external=external-sonnet. 빼면 기본 별칭.
+  # 바꿔 끼운 회차는 다른 출력 이름으로 돌립니다(--resume은 값이 다르면 멈춤)
+  # modelOverride: local=local-exaone
   conditions:            # 조건 ID는 agent 계약 Condition
     - no_guard
     - write_blocked

@@ -29,6 +29,10 @@ from harness.scenario import ScenarioError, has_document_injection, load_scenari
 from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
 
 
+# contracts/openapi/gateway.yaml createConversation의 X-Eval-Model-Override
+MODEL_OVERRIDES = ("local=local-exaone", "external=external-sonnet", "local=local-exaone,external=external-sonnet")
+
+
 def load_config(path: Path) -> dict[str, Any]:
     cfg = yaml.safe_load(path.read_text(encoding="utf-8"))
     gw = cfg.get("gateway", {})
@@ -38,6 +42,8 @@ def load_config(path: Path) -> dict[str, Any]:
         raise ValueError(f"계약에 없는 조건: {unknown}")
     if not conds:
         raise ValueError("gateway.conditions가 비어 있습니다")
+    if gw.get("modelOverride") not in (None, *MODEL_OVERRIDES):
+        raise ValueError(f"계약에 없는 모델 교체 값: {gw['modelOverride']} (가능: {', '.join(MODEL_OVERRIDES)})")
     if not gw.get("baseUrl"):
         raise ValueError("gateway.baseUrl이 없습니다")
     if not cfg.get("erp", {}).get("baseUrl"):
@@ -59,7 +65,7 @@ def make_factories(cfg: dict[str, Any]):
     def system(condition: str, seed: int) -> GatewayChat:
         client = httpx.Client(base_url=gw["baseUrl"], timeout=timeout)
         return GatewayChat(client, auditor=gw.get("auditor"), external_log=external,
-                           condition=system_condition(condition))
+                           condition=system_condition(condition), model_override=gw.get("modelOverride"))
 
     erp_cfg = cfg["erp"]
 
@@ -141,7 +147,11 @@ def cmd_run(args: argparse.Namespace) -> int:
         resume = load_rows_jsonl(rows_file)
         done, prior_cost = resume.done, resume.prior_cost_usd
         if out.with_suffix(".json").exists():
-            started_at = load_run(out.with_suffix(".json"))[1].started_at
+            prior_meta = load_run(out.with_suffix(".json"))[1]
+            started_at = prior_meta.started_at
+            if prior_meta.model_override != cfg["gateway"].get("modelOverride"):
+                raise SystemExit(f"앞선 회차의 모델 교체 값({prior_meta.model_override})이 지금 설정"
+                                 f"({cfg['gateway'].get('modelOverride')})과 다릅니다. 다른 출력 이름으로 돌립니다")
         print(f"이어 돌리기: 끝난 회차 {len(done)}개를 건너뜁니다", flush=True)
         now = (_git("rev-parse", "HEAD"), cfg.get("stackCommit"), cfg.get("packStage"))
         other = {sig: n for sig, n in signature_counts(done).items() if sig != now}
@@ -171,6 +181,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         meta.notes.append("외부 요청 기록(gateway.externalLog)을 주지 않아 외부 기록의 표지 문자열은 보지 않았습니다")
     meta.notes.extend(cfg.get("notes", []))
     meta.tuned_sets = list(cfg.get("tunedSets", []))
+    meta.model_override = cfg["gateway"].get("modelOverride")
+    meta.model_settings = {str(k): str(v) for k, v in (cfg.get("modelSettings") or {}).items()}
     if injected and any(not has_document_injection(s) for s in scenarios):
         meta.notes.append("주입 문서 파일을 켠 스택에서 문서형 주입이 아닌 시나리오도 돌려, 주입 문서가 그 검색에 섞였을 수 "
                           "있습니다(eval/protocol.md 7절)")

@@ -217,3 +217,12 @@ def test_full_always_approve_reported_next_to_full():
     mm = meta(conditions=["no_guard", "full", "full_always_approve"])
     assert "- 이 프로젝트(항상 승인) 대 장치 없음:" in render(nr, mm)
     assert summarize(nr, mm)["sets"][0]["normal"]["fullAlwaysApproveVsNoGuard"]["verdict"] == "mostly_not_blocked"
+
+
+def test_model_override_and_settings_in_report():
+    rows = normal_rows()
+    assert "| 모델 교체(X-Eval-Model-Override) | 없음(기본 별칭) |" in render(rows, meta())
+    text = render(rows, meta(model_override="external=external-sonnet",
+                             model_settings={"승인자": "intent", "local 계획 호출 reasoning_effort": "none"}))
+    assert "| 모델 교체(X-Eval-Model-Override) | `external=external-sonnet` |" in text
+    assert "| 모델 설정 | 승인자 intent; local 계획 호출 reasoning_effort none |" in text
