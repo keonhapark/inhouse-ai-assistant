@@ -32,7 +32,7 @@ from fastapi.responses import JSONResponse
 from incident.baseline import PastTicket, rank
 from incident.llm import analyze as llm_analyze
 from incident.llm import Candidate, diagnostics
-from incident.logs import Line, read_service
+from incident.logs import Line, mark_keyless_noise, read_service
 from incident.stack import ROOT, SERVICES, Stack
 
 log = logging.getLogger("incident")
@@ -65,8 +65,9 @@ class LogSource(Protocol):
 class DockerLogs:
     """세션 스택 컨테이너 로그를 호스트 docker CLI로 읽습니다."""
 
-    def __init__(self, stack: Stack, tmp: Path | None = None):
-        self.stack, self.tmp = stack, tmp
+    def __init__(self, stack: Stack, tmp: Path | None = None, keyless_noise: bool = True):
+        # keyless_noise: 외부 모델 키를 비워 띄운 세션 스택의 401 잡음을 뺍니다(logs.mark_keyless_noise)
+        self.stack, self.tmp, self.keyless_noise = stack, tmp, keyless_noise
 
     def lines(self, start: datetime, end: datetime) -> list[Line]:
         out: list[Line] = []
@@ -80,7 +81,8 @@ class DockerLogs:
         if not out:
             log.warning("%s 로그를 읽지 못했습니다", self.stack.project)
             raise ProblemError(503, "logs-unavailable", "서비스 로그를 읽지 못했습니다")
-        return sorted(out, key=lambda x: x.at)
+        out = sorted(out, key=lambda x: x.at)
+        return mark_keyless_noise(out) if self.keyless_noise else out
 
 
 class TokenVerifier:
@@ -226,7 +228,10 @@ def from_env() -> FastAPI:
         verifier = TokenVerifier(jwks_url=os.environ.get("DELEGATION_JWKS_URL")
                                  or f"http://localhost:{base + 10}/api/.well-known/jwks.json")
     hist = os.environ.get("INCIDENT_HISTORY_DIR")
-    return create_app(DockerLogs(Stack(session), Path(os.environ["INCIDENT_TMP"]) if os.environ.get("INCIDENT_TMP") else None),
+    # 세션 스택은 외부 모델 키를 비워 띄우므로 기본으로 401 잡음을 뺍니다. 키를 넣은 스택에서는 0으로 끕니다.
+    keyless = os.environ.get("INCIDENT_KEYLESS_NOISE", "1") != "0"
+    return create_app(DockerLogs(Stack(session), Path(os.environ["INCIDENT_TMP"]) if os.environ.get("INCIDENT_TMP") else None,
+                                 keyless),
                       verifier, os.environ.get("INCIDENT_ERP_URL", f"http://localhost:{base + 40}/api/v1"),
                       os.environ.get("INCIDENT_GATEWAY_URL", f"http://localhost:{base + 10}"),
                       history(Path(hist) if hist else None))

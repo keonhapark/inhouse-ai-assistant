@@ -1,0 +1,491 @@
+{
+  "runs": [
+    "data/runs/20261121-0058",
+    "data/runs/20261121-0106",
+    "data/runs/20261121-0115"
+  ],
+  "reportDelayS": 45,
+  "windowS": 45,
+  "keylessNoise": "removed",
+  "rcaevalBinS": 15,
+  "summary": {
+    "logs": {
+      "n": 7,
+      "top1": 0.571,
+      "top3": 0.857,
+      "msMedian": 10,
+      "errors": 0
+    },
+    "logs+tickets": {
+      "n": 7,
+      "top1": 0.429,
+      "top3": 0.857,
+      "msMedian": 11,
+      "errors": 0
+    },
+    "nsigma": {
+      "n": 7,
+      "top1": 0.0,
+      "top3": 0.143,
+      "msMedian": 16,
+      "errors": 0
+    },
+    "baro": {
+      "n": 7,
+      "top1": 0.0,
+      "top3": 0.143,
+      "msMedian": 16,
+      "errors": 0
+    }
+  },
+  "rows": [
+    {
+      "incidentId": "20261121-0058/db_down-01",
+      "truth": "postgres",
+      "logs": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "gateway"
+        ],
+        "ms": 9
+      },
+      "logs+tickets": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "litellm"
+        ],
+        "ms": 8
+      },
+      "nsigma": {
+        "ranking": [
+          "agent",
+          "litellm",
+          "rag"
+        ],
+        "ms": 11,
+        "topColumns": [
+          [
+            "agent_7",
+            3.0
+          ],
+          [
+            "litellm_9",
+            3.0
+          ],
+          [
+            "rag_8",
+            1.0
+          ]
+        ]
+      },
+      "baro": {
+        "ranking": [
+          "agent",
+          "litellm",
+          "rag"
+        ],
+        "ms": 11,
+        "topColumns": [
+          [
+            "agent_7",
+            3.0
+          ],
+          [
+            "litellm_9",
+            3.0
+          ],
+          [
+            "rag_8",
+            1.0
+          ]
+        ]
+      }
+    },
+    {
+      "incidentId": "20261121-0058/db_lock-01",
+      "truth": "postgres",
+      "logs": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "agent"
+        ],
+        "ms": 7
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "litellm"
+        ],
+        "ms": 7
+      },
+      "nsigma": {
+        "ranking": [
+          "gateway",
+          "postgres",
+          "rag"
+        ],
+        "ms": 9,
+        "topColumns": [
+          [
+            "gateway_2",
+            3.536
+          ],
+          [
+            "postgres_15",
+            3.0
+          ],
+          [
+            "postgres_17",
+            2.0
+          ]
+        ]
+      },
+      "baro": {
+        "ranking": [
+          "gateway",
+          "postgres",
+          "agent"
+        ],
+        "ms": 10,
+        "topColumns": [
+          [
+            "gateway_2",
+            4.0
+          ],
+          [
+            "postgres_15",
+            3.0
+          ],
+          [
+            "postgres_14",
+            2.0
+          ]
+        ]
+      }
+    },
+    {
+      "incidentId": "20261121-0058/erp_memory-01",
+      "truth": "erp",
+      "logs": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "gateway"
+        ],
+        "ms": 6
+      },
+      "logs+tickets": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "litellm"
+        ],
+        "ms": 7
+      },
+      "nsigma": {
+        "ranking": [
+          "postgres",
+          "rag",
+          "gateway"
+        ],
+        "ms": 9,
+        "topColumns": [
+          [
+            "postgres_3",
+            1.0
+          ],
+          [
+            "postgres_4",
+            1.0
+          ],
+          [
+            "postgres_5",
+            1.0
+          ]
+        ]
+      },
+      "baro": {
+        "ranking": [
+          "postgres",
+          "rag",
+          "gateway"
+        ],
+        "ms": 9,
+        "topColumns": [
+          [
+            "postgres_3",
+            1.0
+          ],
+          [
+            "postgres_4",
+            1.0
+          ],
+          [
+            "postgres_5",
+            1.0
+          ]
+        ]
+      }
+    },
+    {
+      "incidentId": "20261121-0058/llm_timeout-01",
+      "truth": "litellm",
+      "logs": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "erp"
+        ],
+        "ms": 16
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "litellm",
+          "rag"
+        ],
+        "ms": 14
+      },
+      "nsigma": {
+        "ranking": [
+          "agent",
+          "postgres",
+          "erp"
+        ],
+        "ms": 16,
+        "topColumns": [
+          [
+            "agent_10",
+            1.225
+          ],
+          [
+            "postgres_3",
+            1.131
+          ],
+          [
+            "postgres_11",
+            1.0
+          ]
+        ]
+      },
+      "baro": {
+        "ranking": [
+          "agent",
+          "postgres",
+          "erp"
+        ],
+        "ms": 18,
+        "topColumns": [
+          [
+            "agent_10",
+            1.0
+          ],
+          [
+            "postgres_11",
+            1.0
+          ],
+          [
+            "postgres_3",
+            0.4
+          ]
+        ]
+      }
+    },
+    {
+      "incidentId": "20261121-0106/gateway_bad_config-01",
+      "truth": "gateway",
+      "logs": {
+        "ranking": [
+          "litellm",
+          "agent",
+          "postgres"
+        ],
+        "ms": 19
+      },
+      "logs+tickets": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "agent"
+        ],
+        "ms": 17
+      },
+      "nsigma": {
+        "ranking": [
+          "agent",
+          "litellm",
+          "erp"
+        ],
+        "ms": 18,
+        "topColumns": [
+          [
+            "agent_10",
+            2.449
+          ],
+          [
+            "litellm_11",
+            2.0
+          ],
+          [
+            "litellm_12",
+            2.0
+          ]
+        ]
+      },
+      "baro": {
+        "ranking": [
+          "agent",
+          "litellm",
+          "erp"
+        ],
+        "ms": 16,
+        "topColumns": [
+          [
+            "agent_10",
+            2.0
+          ],
+          [
+            "litellm_11",
+            2.0
+          ],
+          [
+            "litellm_12",
+            2.0
+          ]
+        ]
+      }
+    },
+    {
+      "incidentId": "20261121-0106/rag_corrupt-01",
+      "truth": "rag",
+      "logs": {
+        "ranking": [
+          "rag",
+          "agent",
+          "postgres"
+        ],
+        "ms": 14
+      },
+      "logs+tickets": {
+        "ranking": [
+          "rag",
+          "postgres",
+          "litellm"
+        ],
+        "ms": 17
+      },
+      "nsigma": {
+        "ranking": [
+          "gateway",
+          "erp",
+          "postgres"
+        ],
+        "ms": 22,
+        "topColumns": [
+          [
+            "gateway_2",
+            1.768
+          ],
+          [
+            "erp_1",
+            0.828
+          ],
+          [
+            "erp_3",
+            0.707
+          ]
+        ]
+      },
+      "baro": {
+        "ranking": [
+          "gateway",
+          "agent",
+          "litellm"
+        ],
+        "ms": 18,
+        "topColumns": [
+          [
+            "gateway_2",
+            1.0
+          ],
+          [
+            "agent_8",
+            0.667
+          ],
+          [
+            "litellm_10",
+            0.667
+          ]
+        ]
+      }
+    },
+    {
+      "incidentId": "20261121-0115/db_down-01",
+      "truth": "postgres",
+      "logs": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "gateway"
+        ],
+        "ms": 10
+      },
+      "logs+tickets": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "litellm"
+        ],
+        "ms": 11
+      },
+      "nsigma": {
+        "ranking": [
+          "erp",
+          "rag",
+          "gateway"
+        ],
+        "ms": 20,
+        "topColumns": [
+          [
+            "erp_17",
+            2.0
+          ],
+          [
+            "erp_18",
+            2.0
+          ],
+          [
+            "erp_19",
+            2.0
+          ]
+        ]
+      },
+      "baro": {
+        "ranking": [
+          "erp",
+          "agent",
+          "gateway"
+        ],
+        "ms": 16,
+        "topColumns": [
+          [
+            "erp_17",
+            2.0
+          ],
+          [
+            "erp_18",
+            2.0
+          ],
+          [
+            "erp_19",
+            2.0
+          ]
+        ]
+      }
+    }
+  ]
+}

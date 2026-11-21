@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, replace
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # 헬스 검사 줄은 평소에도 일정하게 찍혀 신호가 없고, LLM에 줄 진단 텍스트만 길게 만듭니다.
@@ -25,7 +25,8 @@ class Line:
     at: datetime
     service: str
     level: str
-    """error, warn, info, heartbeat(헬스 검사 줄: 템플릿 변화에는 안 쓰고, 로그가 끊겼는지 볼 때만 씀)"""
+    """error, warn, info, heartbeat(헬스 검사 줄: 템플릿 변화에는 안 쓰고, 로그가 끊겼는지 볼 때만 씀),
+    noise(알려진 잡음: heartbeat와 같이 다룸)"""
     text: str
 
 
@@ -90,11 +91,41 @@ def read_events(path: Path) -> list[Line]:
     return out
 
 
-def read_bundle(bundle: Path) -> list[Line]:
+# 외부 모델 키를 일부러 비운 스택(세션 스택)에서는 외부 별칭 호출이 평소에도 LiteLLM에서 "Missing Anthropic API Key"
+# 예외와 401로 끝납니다. 예외 한 건이 litellm에 오류 줄·스택 추적·"model group ... failed"·401 접근 로그로 찍히고,
+# gateway가 같은 401을 접근 로그로 남깁니다. 실제 운영에서 키가 빠졌다면 장애이므로 이 표시는 끌 수 있습니다.
+KEYLESS = re.compile(r"Missing \w+ API Key")
+KEYLESS_SPAN = timedelta(seconds=1)
+KEYLESS_BLOCK = re.compile(r"model group '[^']*' failed with the error above")
+ACCESS_401 = re.compile(r"\" 401\b")
+
+
+def mark_keyless_noise(lines: list[Line]) -> list[Line]:
+    """키 없는 외부 호출 예외(litellm)와 그 앞뒤 1초 안의 같은 예외 묶음 줄, gateway 401 접근 로그를 noise로 바꿉니다.
+    잘못된 키로 gateway를 배포한 장애(litellm 'No connected db', 키 확인 실패)는 이 무늬가 아니라 그대로 둡니다."""
+    anchors = [x.at for x in lines if x.service == "litellm" and x.level != "heartbeat" and KEYLESS.search(x.text)]
+    if not anchors:
+        return lines
+
+    def near(t: datetime) -> bool:
+        return any(abs(t - a) <= KEYLESS_SPAN for a in anchors)
+
+    out = []
+    for x in lines:
+        if x.level in ("error", "warn", "info") and near(x.at) and (
+                (x.service == "litellm" and (x.level != "info" or KEYLESS_BLOCK.search(x.text)))
+                or (x.service == "gateway" and ACCESS_401.search(x.text))):
+            x = replace(x, level="noise")
+        out.append(x)
+    return out
+
+
+def read_bundle(bundle: Path, keyless_noise: bool = True) -> list[Line]:
     lines: list[Line] = []
     for path in sorted((bundle / "logs").glob("*.log")):
         if path.name == "docker-events.log":
             lines += read_events(path)
         else:
             lines += read_service(path, path.stem)
-    return sorted(lines, key=lambda x: x.at)
+    lines = sorted(lines, key=lambda x: x.at)
+    return mark_keyless_noise(lines) if keyless_noise else lines
