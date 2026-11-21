@@ -13,6 +13,11 @@ public record ErpPrincipal(String employeeId, boolean viaDelegationToken, String
         return new ErpPrincipal(employeeId, false, null, null, null, Set.of(), false);
     }
 
+    /** 감사 이벤트 actor.channel: 위임 토큰이면 agent, 서비스 로그인(amr slack)이면 slack, 그 밖에는 web. */
+    public String channel() {
+        return viaDelegationToken ? "agent" : viaServiceLogin ? "slack" : "web";
+    }
+
     public static ErpPrincipal serviceLogin(String employeeId) {
         return new ErpPrincipal(employeeId, false, null, null, null, Set.of(), true);
     }

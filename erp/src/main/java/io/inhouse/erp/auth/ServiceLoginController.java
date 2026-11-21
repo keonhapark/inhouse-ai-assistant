@@ -47,7 +47,7 @@ public class ServiceLoginController {
         String s = props.serviceLoginSecret();
         this.secret = s == null || s.isBlank() ? null : s.getBytes(StandardCharsets.UTF_8);
         if (secret != null && secret.length < MIN_SECRET_BYTES) {
-            throw new IllegalStateException("ERP_SERVICE_LOGIN_SECRET은 " + MIN_SECRET_BYTES + "바이트 이상이어야 합니다");
+            log.warn("ERP_SERVICE_LOGIN_SECRET이 {}바이트보다 짧습니다. 길고 무작위인 값을 쓰세요", MIN_SECRET_BYTES);
         }
     }
 
