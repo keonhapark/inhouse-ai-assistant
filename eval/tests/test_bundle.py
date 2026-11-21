@@ -75,3 +75,76 @@ def test_run_stops_on_bundle_mismatch(tmp_path, capsys):
     assert not (tmp_path / "r.rows.jsonl").exists()
     with pytest.raises(SystemExit, match="계약과 맞지 않습니다"):
         main(["bundle-check", str(root)])
+
+
+def _run_cfg(tmp_path, rag=True):
+    cfg = {"erp": {"baseUrl": "http://e"}, "gateway": {"baseUrl": "http://g", "conditions": ["full"]}}
+    if rag:
+        cfg["rag"] = {"container": "rag-c"}
+    p = tmp_path / "c.yaml"
+    p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    return p
+
+
+def _fake_docker(monkeypatch, extra_docs: str, sha: str = ""):
+    import subprocess
+
+    def run(cmd, **kw):
+        out = sha + "  " + extra_docs if "sha256sum" in cmd[-1] and extra_docs else extra_docs
+        return subprocess.CompletedProcess(cmd, 0, stdout=out, stderr="")
+
+    monkeypatch.setattr(subprocess, "run", run)
+
+
+def _confirm_table(monkeypatch, table):
+    """run이 시험용 계약 표를 읽게 합니다."""
+    recorded = recorded_hashes(table)
+    monkeypatch.setattr("harness.bundle.recorded_hashes", lambda table=None: recorded)
+
+
+@pytest.mark.parametrize("where", ["unlisted-in-bundle", "outside-bundle"])
+def test_run_stops_when_scenarios_are_not_in_manifest(tmp_path, monkeypatch, where):
+    root, table = make_bundle(tmp_path, name="confirm-v1")
+    _confirm_table(monkeypatch, table)
+    if where == "unlisted-in-bundle":
+        (root / "scenarios" / "extra.yaml").write_text("- id: extra\n", encoding="utf-8")
+        scen = root / "scenarios"
+    else:
+        scen = tmp_path / "dev"
+        scen.mkdir()
+        (scen / "a.yaml").write_bytes(b"- id: a\n")
+    with pytest.raises(SystemExit, match="manifest에 없는 파일 1개"):
+        main(["run", "--config", str(_run_cfg(tmp_path)), "--scenarios", str(scen), "--out", str(tmp_path / "r"),
+              "--bundle", str(root)])
+    assert not (tmp_path / "r.rows.jsonl").exists()
+
+
+def test_run_stops_when_rag_injected_docs_are_not_from_bundle(tmp_path, monkeypatch):
+    root, table = make_bundle(tmp_path, name="confirm-v1")
+    _confirm_table(monkeypatch, table)
+    monkeypatch.setattr("harness.cli.load_scenarios", lambda d: [])
+    args = ["run", "--config", str(_run_cfg(tmp_path)), "--scenarios", str(root / "scenarios"),
+            "--out", str(tmp_path / "r"), "--bundle", str(root)]
+    _fake_docker(monkeypatch, "/eval/confirm/injected-docs.json", "0" * 64)
+    with pytest.raises(SystemExit, match="어느 파일과도 해시가 다릅니다"):
+        main(args)
+    _fake_docker(monkeypatch, "/eval/confirm/injected-docs.json", "")
+    with pytest.raises(SystemExit, match="해시를 구하지 못했습니다"):
+        main(args)
+    with pytest.raises(SystemExit, match="rag.container"):
+        main(["run", "--config", str(_run_cfg(tmp_path, rag=False)), "--scenarios", str(root / "scenarios"),
+              "--out", str(tmp_path / "r"), "--bundle", str(root)])
+    assert not (tmp_path / "r.rows.jsonl").exists()
+
+
+def test_bundle_inputs_pass_when_files_are_listed(tmp_path, monkeypatch):
+    from harness.bundle import manifest_sha256s, unlisted
+    from harness.cli import check_bundle_injected_docs, check_bundle_scenarios
+
+    root, _ = make_bundle(tmp_path)
+    assert unlisted(root, [root / "scenarios" / "a.yaml", root / "x" / ".." / "markers.yaml"]) == []
+    check_bundle_scenarios(root, root / "scenarios")
+    sha = hashlib.sha256(b"markers: {}\n").hexdigest()
+    assert sha in manifest_sha256s(root)
+    _fake_docker(monkeypatch, "/eval/confirm/markers.yaml", sha)
+    check_bundle_injected_docs(root, {"rag": {"container": "rag-c"}})
