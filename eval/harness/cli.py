@@ -332,6 +332,14 @@ def cmd_toolcall_run(args: argparse.Namespace) -> int:
     from harness.setup import run_setup
     from harness.toolcall import run_items
 
+    bundle = None
+    if args.bundle:
+        from harness.bundle import unlisted
+
+        bundle = check_bundle(args.bundle, args.bundle_name)
+        bad = unlisted(Path(args.bundle), [Path(args.items)])
+        if bad:
+            raise SystemExit(f"--bundle을 주면 --items는 묶음 manifest의 파일이어야 합니다: {bad[0]}")
     items = _toolcall_items(args)
     variant = json.loads(args.variant)
     out = Path(args.out)
@@ -344,6 +352,10 @@ def cmd_toolcall_run(args: argparse.Namespace) -> int:
             "machine": f"{platform.platform()} {platform.machine()}", "started_at": _now(), "items": args.items,
             "itemsSha256": _sha256(Path(args.items)), "itemCount": len(items), "maxStage": args.max_stage,
             "model": args.model, "variant": variant, "repeats": args.repeats, "notes": list(args.note or [])}
+    if bundle:
+        # 저장소 밖 묶음의 절대 경로는 보고서에 남기지 않고 묶음 안 경로만 적습니다
+        meta["items"] = str(Path(args.items).resolve().relative_to(Path(args.bundle).resolve()))
+        meta["bundle"] = bundle
     client = httpx.Client(base_url=args.agent_url, timeout=args.timeout)
     setup = None
     if args.erp_url:
@@ -454,6 +466,8 @@ def main(argv: list[str] | None = None) -> int:
     tr.add_argument("--timeout", type=float, default=300)
     tr.add_argument("--title", default="도구 호출 측정")
     tr.add_argument("--note", action="append", help="보고서 실행 정보에 적을 말(기기, 모델 digest, Ollama 판 등)")
+    tr.add_argument("--bundle", help="확인 묶음 폴더(toolcall-v1). 해시를 계약 표와 대조하고 --items가 그 manifest 파일인지 봄")
+    tr.add_argument("--bundle-name", help="계약 표의 묶음 이름(manifest에 이름이 없을 때)")
     tp = sub.add_parser("toolcall-report", help="도구 호출 기록을 지금 규칙으로 다시 채점")
     tp.add_argument("run")
     tp.add_argument("--items", default=str(DEV_TOOLCALL))
