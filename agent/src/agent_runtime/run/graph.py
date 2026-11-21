@@ -43,6 +43,7 @@ class RunGraphState(TypedDict, total=False):
     pending: dict[str, Any] | None
     tainted: bool
     conversation_tainted: bool
+    taint_exempt: list[str]  # 이 턴의 신뢰 불가 표시(tainted)에서 뺄 도구. 영수증 턴의 expense_request(결정 0004 덧붙임)
     force_local: bool  # 라우터 fallback으로 연 대화(#308). TURN_RESET에 넣지 않아 대화 끝까지 남습니다
     actions: list[dict[str, Any]]
     undo_notes: list[str]
@@ -55,7 +56,7 @@ class RunGraphState(TypedDict, total=False):
 
 # conversation_tainted는 턴마다 풀지 않습니다(대화가 끝날 때까지 남음).
 TURN_RESET: RunGraphState = {
-    "queue": [], "current": None, "pending": None, "tainted": False, "actions": [], "undo_notes": [],
+    "queue": [], "current": None, "pending": None, "tainted": False, "taint_exempt": [], "actions": [], "undo_notes": [],
     "citations": [], "blocked": [], "final": "", "status": "", "steps": 0,
 }
 
@@ -169,7 +170,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         if spec is None or not visible_to_model(spec.meta, state["condition"]):
             d_action, reason, undo_note = "blocked", f"{name}은 이 대화에서 쓸 수 없는 도구입니다", False
         else:
-            d = decide(ctx.agent, spec.meta, args, state["condition"], state.get("tainted", False), deps.wide,
+            d = decide(ctx.agent, spec.meta, args, state["condition"], _tainted_for(state, name), deps.wide,
                        state.get("conversation_tainted", False))
             d_action, reason, undo_note = d.action, d.reason, d.undo_note
         if d_action in ("blocked", "deny"):
@@ -188,7 +189,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         ctx = runtime.context
         cur = state["current"]
         name = cur["call"]["function"]["name"]
-        out = await safe_call(name, cur["args"], ctx.token, {"dryRun": True, **_trust_meta(state)})
+        out = await safe_call(name, cur["args"], ctx.token, {"dryRun": True, **_trust_meta(state, name)})
         if not out.ok:
             msg = tool_message(cur["call"], out.payload)
             return after_tool(state, {"messages": [*state["messages"], msg]})
@@ -217,7 +218,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         call, args = cur["call"], cur["args"]
         name = call["function"]["name"]
         spec = ctx.spec(name)
-        meta = dict(_trust_meta(state))
+        meta = dict(_trust_meta(state, name))
         if spec.meta.risk != "read":
             meta["idempotencyKey"] = idempotency_key(state["conversationId"], call["id"])
         out = await safe_call(name, args, ctx.token, meta)
@@ -290,9 +291,14 @@ def prepare_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def _trust_meta(state: RunGraphState) -> dict[str, str]:
+def _tainted_for(state: RunGraphState, tool: str) -> bool:
+    """이 턴의 신뢰 불가 표시가 이 도구에 걸리는지. taint_exempt 도구는 대신 conversation_tainted로 승인을 받습니다."""
+    return bool(state.get("tainted")) and tool not in (state.get("taint_exempt") or [])
+
+
+def _trust_meta(state: RunGraphState, tool: str) -> dict[str, str]:
     # 신뢰 등급은 full 조건에서만 씁니다. 그 밖의 조건은 MCP 서버의 신뢰 검사도 끕니다.
-    if state["condition"] == "full" and state.get("tainted"):
+    if state["condition"] == "full" and _tainted_for(state, tool):
         return {"trustLevel": "untrusted"}
     return {"trustLevel": "user_direct"}
 
