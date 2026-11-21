@@ -89,6 +89,19 @@ uv run python -m bench.rca --runs data/runs/<runId> ... [--llm http://localhost:
 - 과거 티켓은 같은 묶음 모음의 다른 장애 티켓과 정답 원인입니다(한 건씩 빼고 나머지).
 - `--llm`은 세션 스택의 gateway입니다(`litellm`·`gateway`만 띄워도 됨). 위임 토큰 없는 로컬 별칭 호출입니다.
 
+### `/analyze`(호스트 로컬 도구)
+
+계약은 `contracts/openapi/incident.yaml`입니다. compose에 넣지 않고 호스트에서 띄워 세션 스택 로그를 docker CLI로 읽습니다(도커 소켓을 컨테이너에 열지 않음).
+
+```bash
+cd incident && INCIDENT_SESSION=1 uv run uvicorn --factory incident.app:from_env --host 0.0.0.0 --port 8170
+```
+
+- 위임 토큰(`X-Delegation-Token`, aud `incident`, scope `incident:read`)을 확인하고, 같은 토큰으로 erp `GET /tickets?box=all`이 되는 사람(티켓 담당)만 분석합니다.
+- `ticketId`를 주면 erp에서 티켓을 읽어 본문을 증상으로 쓰고, 분석 기준 시각은 `at`이나 티켓 작성 시각입니다.
+- LLM이 실패하거나 후보를 못 내면 기준선 순위로 답합니다(`method: baseline`).
+- `INCIDENT_HISTORY_DIR`에 원인이 밝혀진 묶음(truth.json) 폴더를 주면 비슷한 과거 티켓을 씁니다.
+
 ### 개발용 측정(7건)
 
 `bench/results/dev-7-1047.json`, 2026-11-21 10:47, 데스크탑(RTX 4070 SUPER, qwen3.5:9b), 묶음 7개(장애 6종 각 1회 + db_down 1회), 각 1회.

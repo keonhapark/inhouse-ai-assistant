@@ -5,7 +5,10 @@ description = "장애 분석: 우리 스택에 장애를 주입해 로그·티�
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "drain3==0.9.11",
+  "fastapi==0.165.0",
   "httpx==0.28.1",
+  "pyjwt[crypto]==2.15.1",
+  "uvicorn==0.54.0",
 ]
 
 [dependency-groups]
