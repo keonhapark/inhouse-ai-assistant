@@ -42,6 +42,8 @@ class Settings:
     slack_login_per_user_per_minute: int = 10    # SLACK_LOGIN_PER_USER_PER_MINUTE: 슬랙 사용자 ID별 분당 상한(#331)
     slack_login_per_minute: int = 60             # SLACK_LOGIN_PER_MINUTE: /auth/slack 전체 분당 상한(틀린 비밀값 포함)
     eval_reports_dir: Path = REPO_ROOT / "eval/reports"  # GATEWAY_EVAL_REPORTS_DIR: 평가 보고서 폴더(읽기 전용, #332)
+    # GATEWAY_LOCAL_REASONING_EFFORT: 외부 별칭 요청을 로컬로 돌릴 때 채울 reasoning_effort(#427). 빈 값이면 채우지 않음
+    local_reasoning_effort: str | None = "none"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -69,5 +71,6 @@ class Settings:
             slack_login_per_user_per_minute=int(os.environ.get("SLACK_LOGIN_PER_USER_PER_MINUTE") or 10),
             slack_login_per_minute=int(os.environ.get("SLACK_LOGIN_PER_MINUTE") or 60),
             eval_reports_dir=_path(os.environ.get("GATEWAY_EVAL_REPORTS_DIR"), REPO_ROOT / "eval/reports"),
+            local_reasoning_effort=os.environ.get("GATEWAY_LOCAL_REASONING_EFFORT", "none") or None,
             audit_event_files=tuple(x.strip() for x in os.environ.get("AUDIT_EVENT_FILES", "").split(",") if x.strip()),
         )
