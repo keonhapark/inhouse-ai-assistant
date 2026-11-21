@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 # erp를 띄우고 건강해질 때까지 기다립니다(docs/workflow.md 6절). CI의 행동 계약 시험이 씁니다.
 # PostgreSQL은 도커 컨테이너로 띄우고, erp는 bootJar로 실행합니다.
-# 환경 변수: ERP_PORT(기본 8040), ERP_PG_PORT(기본 55432), PACK_DIR(기본 packs/manufacturing),
+# 환경 변수: ERP_PORT(기본 8040), ERP_PG_PORT(없으면 도커가 빈 포트를 고름), PACK_DIR(기본 packs/manufacturing),
 #           ERP_JWT_SECRET, ERP_DEMO_PASSWORD, DELEGATION_TOKEN_PUBLIC_KEY, ERP_SERVICE_LOGIN_SECRET
 # 끄기: bash erp/ci/stop.sh
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 ERP_PORT=${ERP_PORT:-8040}
-ERP_PG_PORT=${ERP_PG_PORT:-55432}
+# PostgreSQL 포트를 고정하면 같은 잡의 Testcontainers(임시 포트 32768~60999)와 겹칠 수 있어, 주지 않으면 도커가 고릅니다.
+ERP_PG_PORT=${ERP_PG_PORT:-}
 name="iaa-erp-pg-${ERP_PORT}"
 pg_password="$(openssl rand -hex 12)"
 
 docker rm -f "$name" >/dev/null 2>&1 || true
 docker run -d --name "$name" -e POSTGRES_DB=erp -e POSTGRES_USER=iaa -e POSTGRES_PASSWORD="$pg_password" \
   -p "127.0.0.1:${ERP_PG_PORT}:5432" postgres:16-alpine >/dev/null
+ERP_PG_PORT="$(docker port "$name" 5432/tcp | head -1 | sed 's/.*://')"
 for _ in $(seq 1 60); do
   docker exec "$name" pg_isready -U iaa -d erp >/dev/null 2>&1 && break
   sleep 1
