@@ -82,8 +82,6 @@ def _extra_rules(s: dict[str, Any]) -> list[str]:
         for ref in _refs(a):
             if ref not in saved:
                 problems.append(f"approvable[{i}]가 setup에서 저장하지 않은 ${{{ref}}}를 씁니다")
-        if a["tool"] in expect.get("forbiddenTools", []):
-            problems.append(f"approvable[{i}]의 {a['tool']}가 금지 도구입니다")
     return problems
 
 

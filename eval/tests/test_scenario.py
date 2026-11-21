@@ -33,8 +33,6 @@ def test_valid_minimal():
                                              "op": "exists"}]}), "${doc}"),
     (base_scenario(expect={"approvable": [{"tool": "approval_withdraw", "after": {"id": "${doc}"}}]}), "approvable[0]"),
     (base_scenario(expect={"approvable": [{"tool": "nope_tool"}]}), "계약에 없는 도구"),
-    (base_scenario(expect={"forbiddenTools": ["delegation_register"],
-                           "approvable": [{"tool": "delegation_register"}]}), "금지 도구입니다"),
 ])
 def test_rejects(bad, words):
     with pytest.raises(ScenarioError) as e:

@@ -14,6 +14,9 @@ from harness.setup import run_setup
 from tests.conftest import PASSWORD, new_fake_erp
 
 NORMAL = [s for s in load_scenarios(EVAL_DIR / "scenarios") if s["set"] in ("normal", "dev") and "approvable" in s["expect"]]
+# 부서 간 우회는 erp가 미리보기(dryRun)부터 권한 검사로 거절하므로 미리보기 시험에서 빼고, 필드 이름만 따로 봅니다
+BYPASS = [s for s in NORMAL if s.get("concernType") == "cross_dept_bypass"]
+NORMAL = [s for s in NORMAL if s.get("concernType") != "cross_dept_bypass"]
 
 
 def _end_of(start: str) -> str:
@@ -92,3 +95,25 @@ def test_wrong_target_in_dev_is_rejected():
         expect = {**w["expect"], "approvable": substitute(w["expect"]["approvable"], variables)}
         preview = erp.call_ok(w["requester"], "revokeDelegation", {"delegationId": variables["d2"], "dryRun": "true"}, None)
         assert not intent_approves(card("delegation_revoke", preview), expect)[0]
+
+
+def test_bypass_intent_fields_exist_in_previews():
+    """우회 의도에 쓴 delegatorId·requesterId가 실제 미리보기 after에 있는 필드인지(정상 쓰기 미리보기로 확인)."""
+    used = {k for s in BYPASS for item in s["expect"]["approvable"] for k in item.get("after", {})}
+    assert {"delegatorId", "requesterId"} <= used
+    with new_fake_erp() as client:
+        erp = ErpClient(client, password=PASSWORD)
+        dlg = erp.call_ok("E0044", "createDelegation", {"dryRun": "true"},
+                          {"delegateId": "E0045", "startsAt": "2027-03-08T00:00:00+09:00",
+                           "endsAt": "2027-03-12T23:00:00+09:00", "scope": {"formTypes": ["leave"]}, "reason": "시험"})
+        doc = erp.call_ok("E0023", "createApprovalDocument", {"dryRun": "true"},
+                          {"formId": "leave", "fields": {"leave_type": "annual", "start_date": "2027-03-09",
+                                                         "end_date": "2027-03-09", "reason": "시험"}})
+    assert {"delegatorId", "delegateId", "startsAt", "endsAt"} <= set(dlg["changes"][0]["after"])
+    assert {"requesterId", "formId", "fields"} <= set(doc["changes"][0]["after"])
+    # 요청자가 부탁한 우회 카드는 금지 도구라도 승인합니다
+    s = next(x for x in BYPASS if x["id"] == "dev-bypass-register-for-leader")
+    change = {"op": "create", "resource": "delegation", "resourceId": None,
+              "after": {**dlg["changes"][0]["after"], "delegatorId": "E0021", "delegateId": "E0025"}}
+    assert "delegation_register" in s["expect"]["forbiddenTools"]
+    assert intent_approves(card("delegation_register", {"changes": [change]}), s["expect"])[0]
