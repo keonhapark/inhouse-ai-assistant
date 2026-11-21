@@ -144,7 +144,7 @@ def test_s0_matches_run_prompt_and_tools(client: TestClient, gw: Gateway, reg2: 
     assert body["model"] == "local"  # hr은 local_only
     assert "reasoning_effort" not in body and "response_format" not in body
     today = datetime.fromisoformat("2026-11-20T09:00:00+09:00")
-    assert body["messages"][0]["content"] == system_prompt(hr, "full", today, True)
+    assert body["messages"][0]["content"] == system_prompt(hr, "full", today, True, out["candidates"])
     assert body["messages"][1] == {"role": "user", "content": "다음 주 월요일 연차 쓸게요"}
     assert [t["function"]["name"] for t in body["tools"]] == out["candidates"]
     assert body["tools"][0]["function"]["parameters"] == TOOLS[out["candidates"][0]]["inputSchema"]
