@@ -1,0 +1,104 @@
+{
+ "oracle-l1": {
+  "drawings": 60,
+  "partTop1": 60,
+  "partTop5": 60,
+  "dimsTop1": 58,
+  "dimsTop5": 60,
+  "endToEndAllCorrect": 60,
+  "endToEndItems": "360/360",
+  "ocrOnlyAllCorrect": 60,
+  "ocrOnlyItems": "360/360",
+  "partNoRead": 60,
+  "titleRead": 60,
+  "ocrMs": {
+   "p50": 0,
+   "p95": 0
+  }
+ },
+ "oracle-l2": {
+  "drawings": 60,
+  "partTop1": 60,
+  "partTop5": 60,
+  "dimsTop1": 60,
+  "dimsTop5": 60,
+  "endToEndAllCorrect": 60,
+  "endToEndItems": "360/360",
+  "ocrOnlyAllCorrect": 60,
+  "ocrOnlyItems": "360/360",
+  "partNoRead": 60,
+  "titleRead": 60,
+  "ocrMs": {
+   "p50": 0,
+   "p95": 0
+  }
+ },
+ "oracle-l3": {
+  "drawings": 60,
+  "partTop1": 60,
+  "partTop5": 60,
+  "dimsTop1": 60,
+  "dimsTop5": 60,
+  "endToEndAllCorrect": 60,
+  "endToEndItems": "360/360",
+  "ocrOnlyAllCorrect": 60,
+  "ocrOnlyItems": "360/360",
+  "partNoRead": 60,
+  "titleRead": 60,
+  "ocrMs": {
+   "p50": 0,
+   "p95": 0
+  }
+ },
+ "rapidocr-l1": {
+  "drawings": 60,
+  "partTop1": 60,
+  "partTop5": 60,
+  "dimsTop1": 52,
+  "dimsTop5": 60,
+  "endToEndAllCorrect": 60,
+  "endToEndItems": "360/360",
+  "ocrOnlyAllCorrect": 60,
+  "ocrOnlyItems": "360/360",
+  "partNoRead": 60,
+  "titleRead": 60,
+  "ocrMs": {
+   "p50": 977,
+   "p95": 1393
+  }
+ },
+ "rapidocr-l2": {
+  "drawings": 60,
+  "partTop1": 60,
+  "partTop5": 60,
+  "dimsTop1": 46,
+  "dimsTop5": 57,
+  "endToEndAllCorrect": 12,
+  "endToEndItems": "284/360",
+  "ocrOnlyAllCorrect": 12,
+  "ocrOnlyItems": "284/360",
+  "partNoRead": 60,
+  "titleRead": 60,
+  "ocrMs": {
+   "p50": 872,
+   "p95": 1453
+  }
+ },
+ "rapidocr-l3": {
+  "drawings": 60,
+  "partTop1": 60,
+  "partTop5": 60,
+  "dimsTop1": 4,
+  "dimsTop5": 44,
+  "endToEndAllCorrect": 2,
+  "endToEndItems": "244/360",
+  "ocrOnlyAllCorrect": 2,
+  "ocrOnlyItems": "244/360",
+  "partNoRead": 60,
+  "titleRead": 60,
+  "ocrMs": {
+   "p50": 1039,
+   "p95": 1345
+  }
+ }
+}

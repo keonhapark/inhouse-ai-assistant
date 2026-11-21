@@ -168,3 +168,31 @@ def test_fetch_visa_refuses_repo_output():
     mod = _load_tool("fetch_visa")
     with pytest.raises(SystemExit, match="저장소 밖"):
         mod.main(["--out", str(EVAL_DIR / "images/visa"), "--archive", "none.tar"])
+
+
+def test_hard_drawing_levels_keep_truth_fields_and_are_deterministic(tmp_path):
+    pytest.importorskip("PIL")
+    import random
+
+    mod = _load_tool("make_images")
+    for level in (2, 3):
+        a = [mod.drawing(random.Random(11), n, None, level)[1] for n in (1, 2)]
+        b = [mod.drawing(random.Random(11), n, None, level)[1] for n in (1, 2)]
+        assert a == b and all(t["level"] == level for t in a)
+        assert all(set(t) == {"part_no", "title", "dimensions", "notes", "level"} for t in a)
+    # 1단계는 단계 인자 없이 부른 것과 같은 그림입니다(커밋한 images/와 rag 기준선 #503이 그대로)
+    i1, t1 = mod.drawing(random.Random(5), 3, None)
+    i2, t2 = mod.drawing(random.Random(5), 3, None, 1)
+    assert t1 == t2 and i1.tobytes() == i2.tobytes()
+
+
+def test_hard_drawings_go_outside_repo_and_confirm_needs_other_seed(tmp_path):
+    pytest.importorskip("PIL")
+    mod = _load_tool("make_images")
+    with pytest.raises(SystemExit, match="저장소 밖"):
+        mod.main(["--out", str(EVAL_DIR / "images" / "x"), "--level", "2", "--drawings", "1"])
+    with pytest.raises(SystemExit, match="개발 시드와 달라야"):
+        mod.main(["--out", str(tmp_path / "c"), "--set", "confirm", "--level", "3", "--drawings", "1"])
+    assert mod.main(["--out", str(tmp_path / "d"), "--level", "3", "--drawings", "2"]) == 0
+    truth = [json.loads(x) for x in (tmp_path / "d" / "truth.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [t["id"] for t in truth] == ["dwg-l3-001", "dwg-l3-002"] and (tmp_path / "d" / truth[0]["file"]).exists()
