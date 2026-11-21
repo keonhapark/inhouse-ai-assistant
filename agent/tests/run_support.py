@@ -42,9 +42,9 @@ class ScriptedLLM:
     script: list[Any] = field(default_factory=list)
     requests: list[dict[str, Any]] = field(default_factory=list)
 
-    def chat(self, messages, tools=None, headers=None, model_policy=None):
+    def chat(self, messages, tools=None, headers=None, model_policy=None, extra=None):
         self.requests.append({"messages": json.loads(json.dumps(messages)), "tools": tools, "headers": headers,
-                              "model_policy": model_policy})
+                              "model_policy": model_policy, "extra": extra})
         if not self.script:
             raise AssertionError("각본에 남은 LLM 답이 없습니다")
         nxt = self.script.pop(0)

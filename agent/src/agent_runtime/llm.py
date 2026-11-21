@@ -81,9 +81,10 @@ class ChatClient:
         return self.chat(messages, headers=headers).get("content") or ""
 
     def chat(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None,
-             headers: dict[str, str] | None = None, model_policy: str | None = None) -> dict[str, Any]:
+             headers: dict[str, str] | None = None, model_policy: str | None = None,
+             extra: dict[str, Any] | None = None) -> dict[str, Any]:
         """assistant 메시지(content, tool_calls)를 돌려줍니다. model_policy는 에이전트 등록부 model_policy.mode입니다."""
-        return self.chat_detail(messages, tools, headers, self.settings.model_for(model_policy)).message
+        return self.chat_detail(messages, tools, headers, self.settings.model_for(model_policy), extra).message
 
     def chat_detail(self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None,
                     headers: dict[str, str] | None = None, model: str | None = None,

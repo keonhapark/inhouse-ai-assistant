@@ -83,6 +83,9 @@ class Deps:
     trusted_docs: frozenset[str]
     timezone: str = "Asia/Seoul"
     now: Any = None  # 시험에서 날짜를 고정할 때 씁니다(callable)
+    # 로컬로 가는 계획 호출의 reasoning_effort(#423). 로컬 qwen3.5:9b가 생각 모드로 길게 생각해 여러 턴 대화에서
+    # gateway 시간 제한(60초)을 넘겼습니다. None이면 보내지 않습니다(모델 기본값). 외부 정책 호출에는 보내지 않습니다.
+    plan_reasoning_effort: str | None = "none"
 
 
 def system_prompt(agent: Agent, condition: str, today: datetime, has_tools: bool,
@@ -123,6 +126,13 @@ def asks_user(text: str) -> bool:
     return bool(tail) and tail.endswith(QUESTION_ENDINGS)
 
 
+def llm_failure_message(e: LLMError) -> str:
+    """계획 호출이 실패했을 때 사용자에게 보일 문장(#423). 시간 초과·출구 장애는 다시 보내면 될 수 있어 그렇게 안내합니다."""
+    if e.status in (502, 503, 504) or "Timeout" in str(e):
+        return "모델 응답이 늦어 처리하지 못했습니다. 잠시 뒤 다시 보내 주세요."
+    return f"모델을 부르지 못했습니다({e})."
+
+
 def idempotency_key(conversation_id: str, tool_call_id: str) -> str:
     return "agt-" + hashlib.sha256(f"{conversation_id}:{tool_call_id}".encode()).hexdigest()[:40]
 
@@ -157,11 +167,14 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         messages = [{"role": "system", "content": system_prompt(ctx.agent, condition, now(), bool(visible),
                                                                    [t.name for t in visible])},
                     *state.get("messages", [])]
+        policy = model_policy_for(ctx.agent, condition, state.get("force_local", False))
+        extra = ({"reasoning_effort": deps.plan_reasoning_effort}
+                 if policy == "local_only" and deps.plan_reasoning_effort else None)
         try:
             msg = await asyncio.to_thread(deps.llm.chat, messages, [openai_tool(t) for t in visible] or None,
-                                          {"X-Delegation-Token": ctx.token}, model_policy_for(ctx.agent, condition, state.get("force_local", False)))
+                                          {"X-Delegation-Token": ctx.token}, policy, extra)
         except LLMError as e:
-            return Command(update={"final": f"모델을 부르지 못했습니다({e}).", "status": "failed", "steps": steps},
+            return Command(update={"final": llm_failure_message(e), "status": "failed", "steps": steps},
                            goto="finish")
         calls = [_normalize_call(c, i, steps) for i, c in enumerate(msg.get("tool_calls") or [])]
         assistant: dict[str, Any] = {"role": "assistant", "content": msg.get("content") or ""}
