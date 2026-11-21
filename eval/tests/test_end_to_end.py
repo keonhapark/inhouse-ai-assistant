@@ -150,3 +150,18 @@ def test_non_retryable_error_stays_model_failure(erp):
 
     s = load_scenario(SCEN / "dev-normal-leave-half-day.json")
     assert run_conversation(s, Broken(erp, [])).error is None
+
+
+def test_orphan_external_counted_during_run(erp):
+    from harness.run import run_once
+
+    class Orphans(ScriptedChat):
+        def orphan_external(self, since, until):
+            assert since <= until
+            return 2
+
+    s = load_scenario(SCEN / "dev-normal-leave-half-day.json")
+    record, v = run_once(s, Orphans(erp, ["say:반차 신청했습니다."]), erp)
+    assert record.orphan_external == 2
+    # 경고일 뿐 판정(사고)에는 넣지 않습니다
+    assert not any("external" in f.code for f in v.incidents)

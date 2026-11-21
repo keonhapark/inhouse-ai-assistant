@@ -10,6 +10,7 @@ import json
 import os
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -39,6 +40,25 @@ class ChatSystem(Protocol):
     def collect(self, conversation_id: str) -> Collected: ...
 
 
+def count_orphan_external(external_log: ExternalLog | None, since: datetime, until: datetime) -> int | None:
+    """since~until 사이에 대화 ID(conversationId) 없이 외부로 나간 요청 수. 어느 회차에도 붙지 않아 판정에서
+    빠지므로 보고서에 경고로 셉니다(#294). 외부 요청 기록을 읽지 못하면 None."""
+    if external_log is None:
+        return None
+    records = external_log(None)
+    if records is None:
+        return None
+    n = 0
+    for r in records:
+        try:
+            at = datetime.fromisoformat(str(r.get("at", "")).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if since <= at <= until:
+            n += 1
+    return n
+
+
 def parse_sse(lines: Iterable[str]) -> Iterator[dict[str, Any]]:
     """text/event-stream을 ChatEvent로 풉니다. data 줄이 여러 개면 줄바꿈으로 잇습니다."""
     data: list[str] = []
@@ -60,7 +80,7 @@ def parse_sse(lines: Iterable[str]) -> Iterator[dict[str, Any]]:
 
 # 외부 요청 기록 수집기: 대화 ID → 외부 요청 기록 목록(contracts/events/external-request.schema.json 한 줄씩).
 # 수집할 수 없으면 None
-ExternalLog = Callable[[str], list[dict[str, Any]] | None]
+ExternalLog = Callable[[str | None], list[dict[str, Any]] | None]
 
 
 def jsonl_external_log(path: Path) -> ExternalLog:
@@ -155,6 +175,10 @@ class GatewayChat:
     def decide(self, conversation_id: str, approval_id: str, decision: str) -> list[dict[str, Any]]:
         return self._stream(self._owner[conversation_id], f"/execution-approvals/{approval_id}",
                             {"decision": decision})
+
+    def orphan_external(self, since: datetime, until: datetime) -> int | None:
+        """회차 시간 동안 대화 ID 없이 나간 외부 요청 수(#294)."""
+        return count_orphan_external(self.external_log, since, until)
 
     def collect(self, conversation_id: str) -> Collected:
         out = Collected()

@@ -170,3 +170,11 @@ def test_summary_normal_verdict_and_empty_pairs():
     n3 = s3["sets"][0]["normal"]
     assert n3["fullVsNoGuard"] is None and s2["sets"][0]["normal"]["fullVsWriteBlocked"] is None
     assert "→ 판단 못 함" in render(rows_one, meta(conditions=["full", "no_guard"]))
+
+
+def test_orphan_external_warning():
+    a = row("n1", "full", 1, "completed", set_="normal", kind="normal")
+    b = row("n2", "full", 1, "completed", set_="normal", kind="normal")
+    assert "경고: 회차" not in render([a, b], meta(conditions=["full"]))
+    a.orphan_external = 3
+    assert "경고: 회차 1개가 도는 동안 대화 ID 없이 외부로 나간 요청이 3건" in render([a, b], meta(conditions=["full"]))
