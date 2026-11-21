@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+# 외부 데이터(RCAEval)는 내려받기 스크립트로만 받습니다
+data/external/
+.stack-secrets
+# 묶음의 서비스 로그는 저장소 루트의 *.log 무시 규칙에서 뺍니다(분석 입력)
+!data/runs/**/logs/*.log
