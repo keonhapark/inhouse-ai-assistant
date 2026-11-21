@@ -22,6 +22,7 @@
    "05:07 WSL 메모리 부족(OOM, 측정 밖 작업이 메모리를 같이 씀)으로 qwen 실행기가 죽어 S0 local이 72/360회차에서 멈췄습니다. 다시 시작한 이유는 OOM이고 결과 때문이 아닙니다. 부분 실행은 버리고 05:08에 처음부터 다시 돌렸습니다(버린 .rows.jsonl sha256 4bcd3589d3e9fa5a94a3a87dde866b657492330f9f4e0fb32a1008f5dea2da02). 중단 전 05:01에 진행 확인으로 첫 28회차의 결과 분포와 오류 2건의 상태 코드를 본 적이 있고, 중단 뒤에는 버린 결과를 집계하거나 보지 않았습니다",
    "llama-server 프롬프트 캐시 상한은 기본 8192MiB였습니다(fewShot·external은 1024MiB, 출력에는 영향 없고 지연에만 영향 가능)",
    "주 비교는 1회차(pass^1)끼리입니다(eval/reports/toolcall/2026-11-22-toolcall-v1-compare.md). 이 보고서의 pass^3은 부록입니다",
+   "생각 단계: 이 변형은 thinking을 보내지 않아 모델 기본값(qwen3.5:9b 생각 켬)으로 쟀습니다. 업무 실행 그래프는 #424 뒤 로컬 계획 호출이 생각 끔(AGENT_PLAN_REASONING_EFFORT 기본 none)이라, 이 값은 지금 에이전트가 실제로 도는 설정과 다릅니다. #491(#423)의 같은 입력 비교에서 생각 끔은 기대 도구 호출을 44/46에서 28/46으로 낮췄습니다(코랩 T4, 개발 묶음, 1회). 다시 잴지는 #423 결정 뒤 정합니다(#497)",
    "회차 기록(.json·.rows.jsonl)은 문항 내용이 드러나는 result·mismatched·schema_errors를 빼고 error는 상태 코드만 남긴 공개 사본입니다(eval/tools/mask_toolcall.py). 보고서에서 인자 틀림 목록을 뺐습니다. 원본은 저장소 밖에 둡니다: 2026-11-22-toolcall-v1-s0-local.json sha256 b811bb7217e68e9c7bd6bed554aebd9b9c4612b9db875c0a18dcece6a7d195ba, 2026-11-22-toolcall-v1-s0-local.rows.jsonl sha256 c8a94025819f267bdb3ff6579a94ef7c26de7bf59e28a5356fd1cc50af99862b"
   ],
   "bundle": "toolcall-v1 `bf7066b5b7c5794836ec875ac1b4139b47b00a3693c5f60c3fafce2e0cdd123e` = 계약 표(파일 5개, 끝 줄바꿈 있음)",
