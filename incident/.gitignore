@@ -3,5 +3,8 @@ __pycache__/
 # 외부 데이터(RCAEval)는 내려받기 스크립트로만 받습니다
 data/external/
 .stack-secrets
-# 묶음의 서비스 로그는 저장소 루트의 *.log 무시 규칙에서 뺍니다(분석 입력)
-!data/runs/**/logs/*.log
+# 묶음의 원문(서비스 로그, 감사 이벤트, 요청 기록)은 저장소가 공개라 커밋하지 않습니다.
+# incident.run으로 다시 만들고, 저장소에는 정답 요약(truth.json)만 둡니다.
+data/runs/*/*/logs/
+data/runs/*/*/audit/
+data/runs/*/*/traffic.jsonl
