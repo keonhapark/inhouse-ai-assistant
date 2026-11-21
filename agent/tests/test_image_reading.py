@@ -393,3 +393,42 @@ def test_patterned_value_is_checked_before_cutting() -> None:
     spec = FieldSpec("bno", "string", "사업자번호", pattern=r"[0-9]{3}-[0-9]{2}-[0-9]{5}", max_length=12)
     assert spec.clean("123-45-67890") == "123-45-67890"
     assert spec.clean("123-45-678901") is None
+
+
+# ---- 미리보기 fromAttachments(#394) ----
+
+
+@pytest.mark.anyio
+async def test_preview_marks_attachment_turn(r2: RunHarness) -> None:
+    import jsonschema
+    import yaml
+
+    from tests.conftest import CONTRACTS
+
+    spec = yaml.safe_load((CONTRACTS / "openapi" / "agent.yaml").read_text("utf-8"))
+    preview_schema = {**spec["components"]["schemas"]["ToolPreview"], "components": spec["components"]}
+    r2.runner.images = StubReader(dict(READ))
+    conv = f"cnv_{uuid.uuid4().hex[:8]}"
+    token = mint(agent="finance", cid=conv)
+    r2.llm.script = [call("expense_request", EXPENSE), say("올렸습니다."), call("expense_request", EXPENSE),
+                     say("올렸습니다.")]
+    s = await _run(r2, "finance", "영수증 정산해 줘. 거래처 점심", [IMAGE], conv, token)
+    preview = s["pendingApproval"]["toolPreview"]
+    assert preview["fromAttachments"] is True
+    jsonschema.validate(preview, preview_schema)
+    done = await r2.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
+    assert done["status"] == "completed"
+    # 다음 턴(첨부 없음): 대화 표시로 승인은 받지만 이미지에서 읽은 값이 든 턴은 아님
+    s2 = await _run(r2, "finance", "같은 걸로 하나 더 올려 줘", None, conv, token)
+    assert s2["pendingApproval"]["toolPreview"]["fromAttachments"] is False
+
+
+@pytest.mark.anyio
+async def test_preview_without_attachments_is_false(r2: RunHarness) -> None:
+    from agent_runtime.mcp_server.service import CallMeta
+
+    created = await r2.h.service.call("expense_request", EXPENSE, mint(agent="finance"),
+                                      CallMeta(trust_level="user_direct", idempotency_key=uuid.uuid4().hex))
+    r2.llm.script = [call("approval_withdraw", {"documentId": created.data["resource"]["id"]})]
+    s = await _run(r2, "finance", "그 경비 결재 회수해 줘", None)
+    assert s["pendingApproval"]["toolPreview"]["fromAttachments"] is False
