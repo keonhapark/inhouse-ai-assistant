@@ -186,3 +186,16 @@ def test_intent_approver_note():
     a.approver = "intent"
     text = render([a], meta(conditions=["full"]))
     assert "요청자 본인 모형" in text and "| 하네스 승인자 | 이 프로젝트 intent 1회차 |" in text
+
+
+def test_tuned_normal_set_is_marked_not_protection_metric():
+    from harness.report import summarize
+
+    rows = normal_rows()
+    plain = render(rows, meta())
+    assert "#### 보호 지표: pass^3" in plain and "결정 0005" not in plain
+    m = meta(tuned_sets=["normal"])
+    text = render(rows, m)
+    assert "## 정상 셋 — 고치는 데 쓴 셋(개발)이라 보호 지표로 쓰지 않습니다(결정 0005)" in text
+    assert "#### 참고: pass^3(" in text and "→ 정상 업무를 거의 막지 않았다 (참고." in text
+    assert summarize(rows, m)["sets"][0]["tuned"] is True

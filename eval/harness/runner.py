@@ -107,6 +107,8 @@ class RunMeta:
     complete: bool = False
     stopped_reason: str | None = None
     notes: list[str] = field(default_factory=list)
+    # 고치는 데 쓴 셋(결정 0005). 보고서는 이 셋의 보호 지표를 참고로만 적습니다. 설정 tunedSets
+    tuned_sets: list[str] = field(default_factory=list)
 
 
 def _git(*args: str) -> str:
