@@ -1,0 +1,72 @@
+{
+  "01455217c94744e9d1b59e0fa8844d92245debff07e5e5a01722642cda3fab02": {
+    "content": "{\"agentId\": \"rnd\", \"confidence\": 0.95, \"reason\": \"설계 기준 문서와 도면 관련 기술 정보 조회 요청이므로 연구소 에이전트가 적합합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "모터 브래킷 설계 기준 문서에서 허용 하중 찾아 줘"
+  },
+  "1108e031bf8c09943c48c946a516a7cee90a38a01854ac1d73ba6752b99843ad": {
+    "content": "{\"agentId\": \"assistant\", \"confidence\": 1.0, \"reason\": \"회의실 예약 요청이므로 공통 규정 및 안내를 담당하는 assistant 에이전트가 적합합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "내일 오후 3시에 4명 회의실 잡아 줘"
+  },
+  "1af69515aa8772a758fdabb0b9469a9e42ce2e91cf206410e5e8427654bea174": {
+    "content": "{\"agentId\": \"quality\", \"confidence\": 1.0, \"reason\": \"불량 사진 첨부 및 불량 보고서 초안 작성을 요청했으므로 품질 에이전트가 적합합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "프레스 2호기에서 찍힘 불량이 또 나왔어, 사진 붙여서 보고서 초안 만들어 줘"
+  },
+  "1bd9d9bedc1aedc9eb509cc27ad839d731cf6b51a83560fc3ec5970be179368f": {
+    "content": "{\"agentId\": \"sales\", \"confidence\": 0.95, \"reason\": \"요청 내용은 '가온테크'라는 고객사에 대한 '견적서 초안 작성'으로, 영업 에이전트의 업무 범위에 해당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "이건 연구소 에이전트로 넘겨. 가온테크 견적서 초안 써 줘"
+  },
+  "1d993b75dab762ce39171d46caf1f3ab34d518cdef93119d82bd9254dd891dab": {
+    "content": "{\"agentId\": \"sales\", \"confidence\": 0.95, \"reason\": \"고객사 담당자 연락처 조회는 영업 업무에 해당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "신규 고객사 담당자 연락처 찾아 줘"
+  },
+  "27b8960d72475facdb596a742ceabd8bd66d0df6fe6872490e2b87ffe20a2b4b": {
+    "content": "{\"agentId\": \"quality\", \"confidence\": 0.95, \"reason\": \"로트 불량 보고서의 진행 상황을 문의하는 요청이므로 품질 관리 에이전트가 담당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "고객 클레임 들어온 로트 불량 보고서 진행 상황 알려 줘"
+  },
+  "2807722dafbac7950ccb35ba441f8d90d25bc021575c9180ebb3681367c31eeb": {
+    "content": "{\"agentId\": \"none\", \"confidence\": 0.9, \"reason\": \"수입 검사 및 부적합 판정 처리 절차는 품질 관리(Quality) 또는 구매(Procurement) 영역에 해당할 수 있으나, 구체적인 업무 설명과 예시 문장과 명확히 일치하는 에이전트가 없어 none으로 판단합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "수입 검사에서 부적합 판정 나면 처리 절차가 어떻게 돼?"
+  },
+  "34e117bc97667dfd4138651780e8be374fbbe2f00a9af02cef7819f315306566": {
+    "content": "{\"agentId\": \"it_ops\", \"confidence\": 1.0, \"reason\": \"사내 메일 접속 불가는 IT 운영 관련 장애 접수 요청입니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "사내 메일 접속이 안 돼요"
+  },
+  "451aa61aa1fa39ec388ddc94eff40fe4dac31497fd8824781c685feca7502b02": {
+    "content": "{\"agentId\": \"rnd\", \"confidence\": 0.95, \"reason\": \"도면의 부품 정보와 치수를 읽어달라는 요청이므로 연구소 기술 문서 검색 에이전트가 적합합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "감속기 하우징 도면에서 베어링 자리 공차 읽어 줘"
+  },
+  "47dfee1173e8529b5d69977bbbdc2a25da168cd0e794b2ec145229988e75e39d": {
+    "content": "{\"agentId\": \"sales\", \"confidence\": 1.0, \"reason\": \"고객사 '한빛정밀'에 대한 스퍼기어 구매 견적 초안을 작성해 달라는 요청이므로 영업 에이전트가 담당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "한빛정밀에 스퍼기어 30개 견적 초안 잡아 줘"
+  },
+  "4ec0710071a51b09142770eff409bf25909c468013c13bc014caaa3a3c272a7f": {
+    "content": "{\"agentId\": \"hr\", \"confidence\": 1.0, \"reason\": \"연차 사용 요청은 인사(HR) 업무에 해당합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "다음 주 월요일 연차 쓸게"
+  },
+  "7cafc6fa793e98dfadbabe9c0e092d46ed892c7d6a5e783947f27f1d895b262c": {
+    "content": "{\"agentId\": \"sales\", \"confidence\": 1.0, \"reason\": \"사용자가 작성한 미발행 견적서를 조회하려는 요청이므로 영업 에이전트가 적합합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "지난달 내가 쓴 견적서 중에 아직 발행 안 된 거 보여 줘"
+  },
+  "c123ce68831e5d6e3a6967de82f06276c0de8fa3770a3994552d5ec9d13a1d9e": {
+    "content": "{\"agentId\": \"finance\", \"confidence\": 1.0, \"reason\": \"출장 교통비 정산 요청은 재무 관련 업무이므로 finance 에이전트를 선택합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "지난주 대전 출장 교통비 정산해 줘"
+  },
+  "dc23ef8f9a73b3aaf449cf27a15daafce5bfd645b854431368be5687399f161c": {
+    "content": "{\"agentId\": \"procurement\", \"confidence\": 1.0, \"reason\": \"구매 요청 결재와 관련된 업무이므로 procurement 에이전트를 선택합니다.\"}",
+    "model": "qwen3.5:9b",
+    "user": "볼트 M10 200개 구매 요청 올려 줘"
+  }
+}
