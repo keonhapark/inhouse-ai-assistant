@@ -87,7 +87,7 @@ class RunMeta:
     pack: str | None = None
     # packs/<id>/pack.yaml의 version("id 버전", 여럿이면 쉼표)
     pack_version: str | None = None
-    # 대상 시스템을 띄운 팩 단계(AGENT_PACK_STAGE 등). 설정 packStage로 받습니다
+    # 대상 시스템을 띄운 팩 단계(compose PACK_STAGE). 설정 packStage로 받습니다
     pack_stage: int | None = None
     conditions: list[str] = field(default_factory=list)
     repeats: int = 3
@@ -200,7 +200,7 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
     if unknown:
         raise ValueError(f"계약에 없는 조건: {unknown}")
     packs = sorted({s["pack"] for s in scenarios})
-    meta = RunMeta(commit=_git("rev-parse", "HEAD"), dirty=bool(_git("status", "--porcelain")),
+    meta = RunMeta(commit=_git("rev-parse", "HEAD"), dirty=bool(_git("status", "--porcelain", "--untracked-files=no")),
                    machine=f"{platform.platform()} {platform.machine()}", started_at=started_at or _now(), model=model,
                    pack=",".join(packs), pack_version=pack_versions(packs), pack_stage=pack_stage,
                    conditions=list(conditions), repeats=repeats, base_seed=base_seed,
