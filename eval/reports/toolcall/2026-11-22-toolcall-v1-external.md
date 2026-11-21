@@ -24,6 +24,7 @@
 - 범위: 변형은 개발 묶음(agent/eval_dev, 60개) 결과를 보고 정했습니다. 문법 강제·전부 켬은 개발 묶음에서 gateway 60초 제한 초과 502가 많아(18/60, 20/60) 뺐습니다. 120개 전부(2단계 도구 포함)를 돌리고 단계별 표에 1단계 소계가 있습니다
 - 변형: {}, 반복 1
 - 반복: 실행 시간(GPU 대기열) 때문에 fewShot·external은 1회만 돌렸습니다(사용자 결정, 결정 0007). 주 비교는 세 변형의 1회차끼리입니다. llama-server 프롬프트 캐시 상한: S0 local은 기본 8192MiB, fewShot·external은 OOM 뒤 Ollama를 LLAMA_ARG_CACHE_RAM=1024로 다시 띄운 뒤 돌렸습니다(출력에는 영향 없고 지연에만 영향 가능)
+- 생각 단계: external 실행의 hr 44회차는 업무 주제 로컬 강제로 gateway가 로컬로 돌린 호출이고 #434로 생각 끔(reasoning_effort none)이었습니다. 이 묶음의 낮은 점수(25/44, 같은 항목 S0 local 33/43)는 #491의 생각 끔·켬 차이와 방향이 같습니다. 외부로 간 76회차는 Haiku입니다(#497)
 - 회차 기록(.json·.rows.jsonl)은 문항 내용이 드러나는 result·mismatched·schema_errors를 빼고 error는 상태 코드만 남긴 공개 사본입니다(eval/tools/mask_toolcall.py). 보고서에서 인자 틀림 목록을 뺐습니다. 원본은 저장소 밖에 둡니다: 2026-11-22-toolcall-v1-external.json sha256 f34bb05ba548de2a305d5a13c2b5fc6f5e767b8a687ef6ab9da495c45e3b391f, 2026-11-22-toolcall-v1-external.rows.jsonl sha256 ca47604076799311030da5c8d07740b9632bb2a0ff421005962dc3b157c0e5ba
 
 채점 규칙은 `contracts/eval/toolcall/README.md`입니다. 첫 행동만 보고, 실행 오류는 분모에서 뺍니다.
