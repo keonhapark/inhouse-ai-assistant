@@ -43,10 +43,11 @@ agents:
     version: 0.1.0
     stage: 3
     owner_unit: pmo
-    description: 내가 올린 공수 보고의 진행 확인과 회수, 고객사 조회, 프로젝트 수행 기준 질의를 맡습니다. 공수 보고 올리기는 팩 양식 도구(forms.yaml effort_report)를 agent가 읽게 되면(#397) 더합니다.
+    description: 공수 보고 올리기(미리보기 승인 뒤 상신)와 진행 확인·회수, 고객사 조회, 프로젝트 수행 기준 질의를 맡습니다.
     callable_by:
       roles: [project_staff]
     tools:
+      - effort_report
       - approval_list_mine
       - approval_get
       - approval_withdraw
@@ -59,7 +60,7 @@ agents:
       reason: 고객사 프로젝트 정보는 외부 LLM으로 보내지 않습니다.
     risk_policy:
       read: auto
-      reversible_write: auto_with_undo
+      reversible_write: confirm
       irreversible: confirm
     routing:
       keywords: [공수, 투입, 프로젝트, 고객사, 산출물, PM]
