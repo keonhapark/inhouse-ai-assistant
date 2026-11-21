@@ -4,8 +4,10 @@
 워크스페이스마다 달라 팩이 아니라 로컬 설정, 커밋하지 않음)에 있으면, erp `POST /auth/service-login`으로 그 직원의
 짧은 직원 JWT(`amr: [slack]`)를 받아 돌려줍니다. 직원 JWT의 발급 주체는 erp입니다(리드 결정 A안).
 
-이 토큰으로는 사람 화면 전용 기능을 부를 수 없습니다. erp 경로(결재 승인·반려 등)는 erp가, gateway 자체 경로(감사 조회,
-운영 지표·외부 전송 기록)는 `reject_service_login`이 403으로 막습니다.
+이 토큰은 허용 목록(`SLACK_ALLOWED`)의 경로만 부를 수 있습니다(리드 결정): 내 정보, 알림, 대화 만들기·조회·메시지,
+실행 승인, 되돌리기. 나머지(대결, 결재함, 감사, 운영 등)는 `relay.bearer`가 403 `service-login-not-allowed`로 막습니다.
+막을 경로를 나열하지 않고 허용할 경로를 나열해, 새 사람 화면 경로가 생겨도 슬랙 토큰에는 닫혀 있게 합니다.
+erp도 자기 사람 전용 경로(`x-human-only`)를 따로 막습니다.
 비밀값·토큰·매핑 파일 내용은 로그와 감사에 남기지 않습니다.
 """
 
@@ -14,6 +16,7 @@ from __future__ import annotations
 import hmac
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -29,17 +32,37 @@ log = logging.getLogger(__name__)
 
 SOURCE = "slack"
 
+# 슬랙 토큰으로 부를 수 있는 사람 화면 경로(메서드, /api 뒤 경로). contracts/openapi/gateway.yaml /auth/slack
+SLACK_ALLOWED = (
+    ("GET", re.compile(r"/api/me")),
+    ("GET", re.compile(r"/api/notifications")),
+    ("GET", re.compile(r"/api/conversations")),
+    ("POST", re.compile(r"/api/conversations")),
+    ("GET", re.compile(r"/api/conversations/[^/]+")),
+    ("POST", re.compile(r"/api/conversations/[^/]+/messages")),
+    ("POST", re.compile(r"/api/execution-approvals/[^/]+")),
+    ("POST", re.compile(r"/api/actions/[^/]+/undo")),
+)
 
-def reject_service_login(token: str) -> None:
-    """erp 서비스 로그인 토큰(`amr`에 slack)이면 403입니다. 서명은 보지 않습니다(진위는 erp가 확인)."""
+
+def is_service_login_token(token: str) -> bool:
+    """erp 서비스 로그인 토큰(`amr`에 slack)인지. 서명은 보지 않습니다(진위는 erp가 확인)."""
     try:
         claims = jwt.decode(token, options={"verify_signature": False})
     except jwt.PyJWTError:
-        return
+        return False
     amr = claims.get("amr") if isinstance(claims, dict) else None
     # 배열이 계약이지만, 문자열로 발급돼도 막습니다(발급 쪽 모양이 바뀌어도 열리지 않게)
-    if amr == SOURCE or (isinstance(amr, list) and SOURCE in amr):
-        raise ProblemError(403, "service-login-not-allowed", "슬랙 로그인 토큰으로는 부를 수 없는 사람 화면 전용 기능입니다")
+    return amr == SOURCE or (isinstance(amr, list) and SOURCE in amr)
+
+
+def check_service_login(token: str, method: str, path: str) -> None:
+    """슬랙 토큰이 허용 목록 밖 경로를 부르면 403입니다."""
+    if not is_service_login_token(token):
+        return
+    if any(method == m and p.fullmatch(path.rstrip("/") or "/") for m, p in SLACK_ALLOWED):
+        return
+    raise ProblemError(403, "service-login-not-allowed", "슬랙 로그인 토큰으로는 부를 수 없는 기능입니다")
 
 
 def load_users(path: Path) -> dict[str, str]:

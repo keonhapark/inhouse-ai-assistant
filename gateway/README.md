@@ -126,9 +126,11 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   `infra/slack/slack-users.json`, 커밋하지 않음. 형식은 `infra/slack/slack-users.example.json`)에 있으면 erp
   `POST /auth/service-login`(`ERP_SERVICE_LOGIN_SECRET`)으로 받은 직원 JWT(15분, `amr: [slack]`)를 돌려줍니다. 매핑에 없거나
   매핑된 직원이 erp에 없으면 403, `SLACK_BRIDGE_SECRET`이 없으면 404, erp가 서비스 비밀값을 거절하면 gateway 설정 문제로 보고 502입니다.
-  감사 `auth.login`에 `출처 slack`과 결과를 남기고 비밀값·토큰은 남기지 않습니다. 이 토큰으로는 사람 화면 전용 기능을 부를 수 없습니다:
-  결재 승인·반려 등 erp 경로는 erp가, 감사 조회·운영 지표·외부 전송 기록은 gateway가 403 `service-login-not-allowed`로 막습니다.
-  대화·실행 승인·휴가 같은 직원 본인 기능은 됩니다.
+  감사 `auth.login`에 `출처 slack`과 결과를 남기고 비밀값·토큰은 남기지 않습니다. `ERP_SERVICE_LOGIN_SECRET`이 없거나 비면
+  erp를 부르지 않고 502입니다. 이 토큰(`amr`에 slack, 배열이든 문자열이든)은 허용 목록(`SLACK_ALLOWED`)의 경로만 부를 수
+  있습니다: 내 정보, 알림, 대화 만들기·조회·메시지, 실행 승인, 되돌리기. 그 밖(대결, 결재함, 감사, 운영 등)은 `relay.bearer`가
+  403 `service-login-not-allowed`로 막습니다. 막을 경로 대신 허용할 경로를 적어, 새 사람 화면 경로가 생겨도 슬랙 토큰에는
+  닫혀 있습니다(브리지 비밀값이 새도 팀장 슬랙 ID로 대결을 등록해 승인 권한을 넘기는 우회를 막음).
 - 토큰 위생: 모든 로그 레코드에서 JWT 모양과 `Bearer <값>`을 가립니다(`gateway/redact.py`). 발급 기록은 `jti`만 남깁니다.
 
 ## 실행

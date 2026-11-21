@@ -25,7 +25,6 @@ from fastapi.responses import JSONResponse
 
 from gateway.audit import AuditLog
 from gateway.erp_client import ErpClient
-from gateway.slack_login import reject_service_login
 from gateway.problems import ProblemError
 from gateway.relay import bearer
 
@@ -100,7 +99,6 @@ def build_router(erp: ErpClient, audit: AuditLog, files: tuple[str, ...]) -> API
         order: Literal["asc", "desc"] = "asc",
     ) -> JSONResponse:
         token = bearer(request)
-        reject_service_login(token)  # 사람 화면 전용(#273)
         if any(t is not None and t.tzinfo is None for t in (since, until)):
             raise ProblemError(422, "validation", "since·until에는 시간대 오프셋이 필요합니다")
         me = await erp.get_json("/me", token)

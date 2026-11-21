@@ -19,7 +19,6 @@ from fastapi.responses import JSONResponse
 
 from gateway.audit import AuditLog
 from gateway.audit_query import AUDITOR_ROLE, read_files
-from gateway.slack_login import reject_service_login
 from gateway.budgets import BudgetLedger
 from gateway.egress import response_usage
 from gateway.erp_client import ErpClient
@@ -110,7 +109,6 @@ def _uncursor(cursor: str) -> tuple[datetime, str]:
 
 async def require_auditor(erp: ErpClient, request: Request) -> None:
     token = bearer(request)
-    reject_service_login(token)  # 사람 화면 전용(#273)
     me = await erp.get_json("/me", token)
     if AUDITOR_ROLE not in me.get("roles", []):
         raise ProblemError(403, "forbidden", "감사 조회 역할만 봅니다")

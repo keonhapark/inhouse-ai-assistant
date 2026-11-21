@@ -119,7 +119,7 @@ def test_erp_rejecting_service_secret_is_502_not_401(settings, issuer, users_fil
 
 
 def test_slack_token_cannot_use_human_only_routes(sc, auditor):
-    """감사·운영 조회는 사람 화면 전용입니다. auditor 직원이라도 슬랙 토큰이면 403입니다."""
+    """감사·운영 조회는 허용 목록 밖입니다. auditor 직원이라도 슬랙 토큰이면 403입니다."""
     tok = _login(sc, "U2").json()["accessToken"]
     h = {"Authorization": f"Bearer {tok}"}
     for path in ("/api/audit-events", "/api/ops/metrics", "/api/ops/egress"):
@@ -159,12 +159,40 @@ def test_missing_service_secret_never_calls_erp(settings, issuer, users_file, se
 
 
 @pytest.mark.parametrize("amr", ["slack", ["pwd", "slack"]])
-def test_reject_service_login_handles_string_and_list_amr(amr):
-    from gateway.problems import ProblemError
-    from gateway.slack_login import reject_service_login
+def test_string_and_list_amr_are_both_slack_tokens(amr):
+    from gateway.slack_login import is_service_login_token
 
-    tok = jwt.encode({"sub": "E1", "amr": amr}, "k" * 32, algorithm="HS256")
-    with pytest.raises(ProblemError) as e:
-        reject_service_login(tok)
-    assert e.value.status == 403
-    reject_service_login(jwt.encode({"sub": "E1", "amr": ["pwd"]}, "k" * 32, algorithm="HS256"))
+    assert is_service_login_token(jwt.encode({"sub": "E1", "amr": amr}, "k" * 32, algorithm="HS256"))
+    assert not is_service_login_token(jwt.encode({"sub": "E1", "amr": ["pwd"]}, "k" * 32, algorithm="HS256"))
+    assert not is_service_login_token("not-a-jwt")
+
+
+ALLOWED = [("GET", "/api/me", None), ("GET", "/api/notifications", None), ("GET", "/api/conversations", None),
+           ("POST", "/api/conversations", {}), ("GET", "/api/conversations/conv_x", None),
+           ("POST", "/api/conversations/conv_x/messages", {"content": "hi"}),
+           ("POST", "/api/execution-approvals/ap_x", {"decision": "approve"}), ("POST", "/api/actions/a_x/undo", None)]
+DENIED = [("GET", "/api/agents", None), ("GET", "/api/agent-registry", None), ("GET", "/api/org/units", None),
+          ("GET", "/api/employees", None), ("GET", "/api/approval-forms", None),
+          ("GET", "/api/inbox?box=inbox", None), ("POST", "/api/inbox/d_x/approve", {"version": 1}),
+          ("POST", "/api/inbox/d_x/reject", {"version": 1}), ("GET", "/api/delegations?role=delegator", None),
+          ("POST", "/api/delegations", {}), ("POST", "/api/delegations/dl_x/revoke", None),
+          ("GET", "/api/audit-events", None), ("GET", "/api/ops/metrics", None), ("GET", "/api/ops/egress", None),
+          ("DELETE", "/api/conversations/conv_x", None)]
+
+
+@pytest.mark.parametrize("method,path,body", DENIED)
+def test_slack_token_is_refused_outside_allow_list(sc, method, path, body):
+    """허용 목록 밖은 403입니다. 대결 등록으로 승인 권한을 넘기는 우회도 여기서 막힙니다(리드 결정)."""
+    tok = _login(sc, "U2").json()["accessToken"]
+    r = sc.request(method, path, headers={"Authorization": f"Bearer {tok}"}, json=body)
+    if method == "DELETE":  # 없는 경로는 라우팅에서 405
+        assert r.status_code in (403, 405)
+        return
+    assert r.status_code == 403 and r.json()["type"] == "urn:problem:service-login-not-allowed", (path, r.text)
+
+
+@pytest.mark.parametrize("method,path,body", ALLOWED)
+def test_slack_token_passes_allow_list(sc, method, path, body):
+    tok = _login(sc).json()["accessToken"]
+    r = sc.request(method, path, headers={"Authorization": f"Bearer {tok}"}, json=body)
+    assert not (r.status_code == 403 and "service-login-not-allowed" in r.text), (path, r.text)
