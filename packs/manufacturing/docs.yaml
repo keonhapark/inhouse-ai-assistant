@@ -124,3 +124,36 @@ documents:
     trust: trusted
     stage: 2
     status: ready
+  - id: gen-quality-rule
+    title: 품질 규정(불량 처리 절차)
+    kind: regulation
+    source:
+      type: generated
+      generator: rag
+      license: 이 저장소에서 생성
+    acl_tags: [quality-policy]
+    trust: trusted
+    stage: 3
+    status: ready
+  - id: gen-rnd-guide
+    title: 연구 기술문서 관리 지침
+    kind: regulation
+    source:
+      type: generated
+      generator: rag
+      license: 이 저장소에서 생성
+    acl_tags: [rnd-confidential]
+    trust: trusted
+    stage: 3
+    status: ready
+  - id: gen-sales-rule
+    title: 영업 규정(견적·할인 승인 기준)
+    kind: regulation
+    source:
+      type: generated
+      generator: rag
+      license: 이 저장소에서 생성
+    acl_tags: [sales-policy]
+    trust: trusted
+    stage: 3
+    status: ready
