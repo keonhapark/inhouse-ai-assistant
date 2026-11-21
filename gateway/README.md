@@ -94,6 +94,11 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - `POST /v1/embeddings`: 로컬 별칭(`local-embed` → Ollama `bge-m3`, 1024차원)만 받습니다. 외부 별칭은 403입니다.
   - `reasoning_effort`는 그대로 넘깁니다. LiteLLM 1.108.1은 Ollama에 `none`이면 `think: false`, `low`·`high`면 `think: true`로
     바꿔 보냅니다(단계는 구분되지 않음). Ollama 전용 `think`는 외부로 보낼 때 뺍니다(Anthropic이 400으로 거절함).
+  - 외부 별칭 요청을 gateway가 로컬로 돌린 호출(이미지, 팩 외부 LLM 금지, 기밀 판정·업무 주제, 비용 상한, 외부 장애 폴백)에
+    `reasoning_effort`도 `think`도 없으면 `reasoning_effort: none`을 채워 생각 단계를 끕니다(#427). 로컬 qwen3.5:9b는 생각 모드가
+    기본이라 외부 모델을 기대한 호출이 길게 생각하다 시간 제한(`LLM_TIMEOUT_SECONDS`)을 넘기기 때문입니다. 감사 detail에
+    `생각 단계 끔(reasoning_effort=none)`을 적습니다. 처음부터 로컬 별칭으로 온 요청, 호출한 쪽이 정한 값, 별칭 `drop_params`가
+    `reasoning_effort`를 빼는 경우는 건드리지 않습니다. 값은 `GATEWAY_LOCAL_REASONING_EFFORT`(기본 `none`, 빈 값이면 채우지 않음)로 바꿉니다.
 - 외부로 나가는 요청의 기밀 판정과 가림(로컬 모델로 가는 요청은 가리지 않습니다)
   - 사내 용어 사전(`gateway/confidential.py`): 팩의 `glossary.yaml`(#62)에서 용어를 읽어, 용어의 `action`이
     `block`이면 403 `confidential`, `local_only`면 로컬 별칭으로 돌립니다. 파일이 없으면 판정하지 않습니다.
@@ -187,7 +192,8 @@ DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
 `DELEGATION_TOKEN_PRIVATE_KEY`(없으면 임시 키를 만들고 경고를 남깁니다), `LITELLM_BASE_URL`(기본 `http://localhost:4000`),
 `LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
 `AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`,
-`SLACK_BRIDGE_SECRET`, `SLACK_USERS_FILE`, `ERP_SERVICE_LOGIN_SECRET`, `SLACK_LOGIN_PER_USER_PER_MINUTE`, `SLACK_LOGIN_PER_MINUTE`, `GATEWAY_EVAL_REPORTS_DIR`.
+`SLACK_BRIDGE_SECRET`, `SLACK_USERS_FILE`, `ERP_SERVICE_LOGIN_SECRET`, `SLACK_LOGIN_PER_USER_PER_MINUTE`, `SLACK_LOGIN_PER_MINUTE`, `GATEWAY_EVAL_REPORTS_DIR`,
+`GATEWAY_LOCAL_REASONING_EFFORT`(기본 `none`, #427).
 상대 경로는 저장소 루트 기준입니다. LiteLLM은 1.108.1로 고정합니다(배포 뒤 2주가 지난 판).
 
 ## 시험

@@ -560,7 +560,7 @@ def test_external_failure_falls_back_to_local(client, app, token_for, litellm, a
     ev = _llm_events(app)
     assert ev[-2]["result"] == "error" and ev[-2]["problemType"] == f"urn:problem:{code}"
     assert ev[-1]["result"] == "ok" and ev[-1]["model"]["name"] == "local"
-    assert ev[-1]["detail"] == f"외부 장애({code})로 로컬 폴백"
+    assert ev[-1]["detail"] == f"외부 장애({code})로 로컬 폴백; 생각 단계 끔(reasoning_effort=none)"  # #427
     # 화면 표시: 요청이 실제로 외부로 나갔으면 external로 남습니다
     used = app.state.egress.usage.take("conv-9")
     assert used["location"] == ("external" if sent_out else "local")
@@ -572,7 +572,7 @@ def test_stream_falls_back_before_streaming(client, app, token_for, litellm):
     r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
                     json={"model": "external", "messages": MSG, "stream": True})
     assert r.status_code == 200 and "하세요" in r.text
-    assert _llm_events(app)[-1]["detail"].endswith("로컬 폴백")
+    assert "로컬 폴백" in _llm_events(app)[-1]["detail"]
 
 
 @pytest.mark.parametrize("case", ["response_format", "unsupported", "local_failure", "ok"])
