@@ -102,8 +102,12 @@ services:
       DELEGATION_JWKS_URL: http://gateway:8000/api/.well-known/jwks.json
       AGENT_AUDIT_LOG: /audit/agent.jsonl
       AGENT_PACK_STAGE: ${PACK_STAGE:-}
+      # 장애 분석은 compose 밖 호스트 로컬 도구(incident/README.md). 도커 브리지 주소(172.17.0.1)에 열어 둔 것을 부릅니다
+      INCIDENT_BASE_URL: http://host.docker.internal:${PORT_INCIDENT:-8070}
     volumes:
       - audit:/audit
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:${PORT_AGENT:-8020}:8000"
       - "127.0.0.1:${PORT_MCP:-8021}:8001"
