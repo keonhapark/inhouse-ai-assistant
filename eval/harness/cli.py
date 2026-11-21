@@ -21,7 +21,7 @@ import httpx
 import yaml
 
 from harness.erp import ErpClient
-from harness.report import render
+from harness.report import render, summarize
 from harness.runner import (CONDITIONS, MAX_RETRIES, HealthCheck, RunRow, _git, count_retries, load_rows_jsonl,
                             load_run, run_matrix, save_run, signature_counts)
 from harness.scenario import ScenarioError, has_document_injection, load_scenarios
@@ -180,7 +180,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                           "다시 돌린 시도의 비용도 비용 합계에 들어 있습니다")
     if health is None and any(r.error and r.error.startswith("재시도 가능한 오류") for r in rows):
         meta.notes.append("modelHealth를 설정하지 않아 재시도 가능한 오류로 끝난 회차는 모두 실패로 셌습니다")
-    save_run(rows, meta, out.with_suffix(".json"))
+    save_run(rows, meta, out.with_suffix(".json"), summarize(rows, meta))
     out.with_suffix(".md").write_text(render(rows, meta, args.title), encoding="utf-8")
     print(f"{out.with_suffix('.json')}, {out.with_suffix('.md')}")
     return 0 if meta.complete else 2
@@ -188,6 +188,8 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 def cmd_report(args: argparse.Namespace) -> int:
     rows, meta = load_run(Path(args.run))
+    if args.update_json:
+        save_run(rows, meta, Path(args.run), summarize(rows, meta))
     text = render(rows, meta, args.title)
     if args.o:
         Path(args.o).write_text(text, encoding="utf-8")
@@ -218,6 +220,7 @@ def main(argv: list[str] | None = None) -> int:
     rep.add_argument("run")
     rep.add_argument("-o")
     rep.add_argument("--title", default="평가 보고서")
+    rep.add_argument("--update-json", action="store_true", help="실행 결과 JSON에 summary를 다시 씀(md와 같은 계산)")
     args = p.parse_args(argv)
     return {"validate": cmd_validate, "run": cmd_run, "report": cmd_report}[args.cmd](args)
 

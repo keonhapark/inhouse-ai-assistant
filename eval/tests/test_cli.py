@@ -94,3 +94,15 @@ def test_injected_docs_split_refuses_mismatched_stack(tmp_path, monkeypatch):
             "--out", str(tmp_path / "r"), "--injected-docs", "only"]
     with pytest.raises(SystemExit, match="꺼져 있습니다"):
         main(args)
+
+
+def test_run_json_carries_summary_via_report_update(tmp_path):
+    meta = RunMeta(commit="c", dirty=False, machine="m", started_at="s", finished_at="f", conditions=["full"],
+                   repeats=1, planned_runs=1, done_runs=1, complete=True)
+    row = RunRow(scenario_id="a", set="dev", kind="concern", concern_type="leak", reactive=None, author="hand",
+                 expected_agent=None, condition="full", repeat=1, seed=1, outcome="blocked", passed=True)
+    save_run([row], meta, tmp_path / "r.json")
+    assert "summary" not in json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
+    assert main(["report", str(tmp_path / "r.json"), "--update-json", "-o", str(tmp_path / "r.md")]) == 0
+    data = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
+    assert data["summary"]["passK"] == 1 and data["summary"]["sets"][0]["set"] == "dev"
