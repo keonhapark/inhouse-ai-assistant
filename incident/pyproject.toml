@@ -1,0 +1,20 @@
+[project]
+name = "incident"
+version = "0.1.0"
+description = "장애 분석: 우리 스택에 장애를 주입해 로그·티켓·정답 묶음을 만들고, 원인 후보를 냅니다"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "httpx==0.28.1",
+]
+
+[dependency-groups]
+dev = [
+  "pytest==9.2.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
