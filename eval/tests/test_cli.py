@@ -19,6 +19,8 @@ def test_example_config_is_valid():
     ({"erp": {"baseUrl": "x"}, "gateway": {"baseUrl": "g", "conditions": []}}, "비어 있습니다"),
     ({"erp": {"baseUrl": "x"}, "gateway": {"conditions": ["full"]}}, "gateway.baseUrl"),
     ({"erp": {}, "gateway": {"baseUrl": "g", "conditions": ["full"]}}, "erp.baseUrl"),
+    ({"erp": {"baseUrl": "x"}, "gateway": {"baseUrl": "g", "conditions": ["full"], "modelOverride": "local=qwen"}},
+     "계약에 없는 모델 교체 값"),
 ])
 def test_bad_config(tmp_path, cfg, msg):
     p = tmp_path / "c.yaml"
@@ -106,3 +108,47 @@ def test_run_json_carries_summary_via_report_update(tmp_path):
     assert main(["report", str(tmp_path / "r.json"), "--update-json", "-o", str(tmp_path / "r.md")]) == 0
     data = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
     assert data["summary"]["passK"] == 1 and data["summary"]["sets"][0]["set"] == "dev"
+
+
+def test_model_override_header_and_meta(tmp_path):
+    """gateway.modelOverride는 대화를 열 때 X-Eval-Model-Override로 붙고, 실행 정보에 남습니다(#107·#346)."""
+    import httpx
+
+    from harness.cli import make_factories
+    from harness.sut import GatewayChat
+
+    seen = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/auth/login":
+            return httpx.Response(200, json={"accessToken": "t"})
+        seen.append(dict(req.headers))
+        return httpx.Response(201, json={"conversationId": "c1"})
+
+    cfg = {"erp": {"baseUrl": "x"}, "gateway": {"baseUrl": "http://g", "conditions": ["full"],
+                                                "modelOverride": "local=local-exaone"}}
+    p = tmp_path / "c.yaml"
+    p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    load_config(p)
+    system, _ = make_factories(cfg)
+    chat = system("full", 0)
+    assert chat.model_override == "local=local-exaone"
+    chat.c = httpx.Client(base_url="http://g", transport=httpx.MockTransport(handler))
+    chat.start("E0001")
+    assert seen[0]["x-eval-model-override"] == "local=local-exaone" and seen[0]["x-eval-condition"] == "full"
+
+    plain = GatewayChat(httpx.Client(base_url="http://g", transport=httpx.MockTransport(handler)), auditor=None)
+    plain.start("E0001")
+    assert "x-eval-model-override" not in seen[1]
+
+
+def test_resume_refuses_different_model_override(tmp_path):
+    out = tmp_path / "r"
+    save_run([], RunMeta(commit="c", dirty=False, machine="m", started_at="s", model_override="local=local-exaone"),
+             out.with_suffix(".json"))
+    (tmp_path / "r.rows.jsonl").write_text("", encoding="utf-8")
+    cfg = {"erp": {"baseUrl": "http://e"}, "gateway": {"baseUrl": "http://g", "conditions": ["full"]}}
+    p = tmp_path / "c.yaml"
+    p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    with pytest.raises(SystemExit, match="모델 교체 값"):
+        main(["run", "--config", str(p), "--scenarios", str(EVAL_DIR / "scenarios"), "--out", str(out), "--resume"])

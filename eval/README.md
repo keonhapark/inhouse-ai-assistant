@@ -19,6 +19,9 @@
 | `harness/runner.py` | 다섯 조건 × 반복 실행, 실행 정보(커밋·시드·비용 상한) |
 | `harness/stats.py` | Wilson·Clopper-Pearson 구간, Newcombe 짝 비교 구간, pass^k |
 | `harness/report.py` | 회차별 결과로 보고서(`reports/`) |
+| `harness/attachments.py` | 시나리오 턴의 `attachments`(eval 폴더 기준 이미지 경로)를 gateway 메시지의 이미지 첨부로 바꿉니다 |
+| `harness/vision.py` | 이미지 읽기 채점: 도면 부품 번호·도면 이름·치수·주기, 불량 품목·유형을 `images/truth.jsonl`과 대조합니다 |
+| `harness/bundle.py` | 확인 셋 묶음 해시를 계약 표(`contracts/eval/confirm-sets.md`)와 대조합니다 |
 | `harness/cli.py` | `validate`, `run`, `report` 명령 |
 
 ## 실행
@@ -37,6 +40,8 @@ uv run python -m harness.cli report reports/<이름>.json -o reports/<이름>.md
 - `--max-runs N`이면 이번 실행은 새 회차 N개까지만 돌리고 멈춥니다. `--resume`과 같이 써서 여러 번에 나눠 돌립니다.
 - `--injected-docs only|exclude`는 문서형 주입 시나리오만 또는 그 밖의 시나리오만 돌립니다. 주입 문서 파일(`RAG_EXTRA_DOCS`)은 스택 전체 검색에 보이므로, 켠 스택과 끈 스택에서 나눠 같은 결과 파일에 이어 돌립니다. 설정 `rag.container`가 있으면 시작할 때 스택 설정과 맞는지 확인합니다.
 - `--set normal`이면 정상 셋만, `--only <ID,...>`면 지정한 시나리오만 돌립니다.
+- 확인 셋은 `--bundle <저장소 밖 묶음 폴더>`로 돌립니다. 시작할 때 묶음 manifest의 `files`(목록·객체 둘 다 읽음)로 묶음 해시를 계산해 `contracts/eval/confirm-sets.md` 표와 대조하고, 각 파일의 SHA-256도 다시 계산합니다. 맞지 않으면 회차를 하나도 돌리지 않고 멈춥니다. 맞으면 보고서 "확인 셋 묶음" 칸에 해시와 계산 방식(끝 줄바꿈 있음·없음)을 적습니다. 실행 없이 대조만 하려면 `uv run python -m harness.cli bundle-check <폴더> [--name confirm-v1]`입니다.
+- 반복 수는 나눠 늘릴 수 있습니다. 회차 번호가 바깥 고리라, 설정 `repeats: 1`로 돈 결과 파일에 `repeats: 3`으로 `--resume`하면 2·3회차만 더 돌립니다. 보고서의 pass^k는 마지막 실행의 설정 `repeats`를 씁니다(1회로 돈 결과는 pass^1, `repeats: 3`으로 다 돈 뒤에는 pass^3).
 - 설정의 `notes`는 보고서 실행 정보에 그대로 적힙니다(프로토콜과 다르게 돌린 이유 등).
 
 ## 도구 호출 측정(#103, #237)
@@ -56,6 +61,22 @@ uv run python -m harness.cli toolcall-report reports/<이름>.json   # 기록을
 - 첫 행동만 봅니다. 결과는 정답, 대안 정답, 확인 후 진행(되돌릴 수 없는 도구 앞의 확인 질문), 다른 도구, 인자 틀림, 인자를 못 읽음, 부르지 않고 되물음·답함, 되물어야 하는데 부름, 실행 오류(분모 제외)로 나눕니다. 인자 비교는 `argMatch`(`exact`·`date`·`set`·`normalized`·`nonempty`·`ignore`)이고, 날짜·시각은 같은 시점이면 같다고 봅니다.
 - 보조로 인자 스키마 유효(`contracts/mcp/tools.json` inputSchema), 되묻기 비율, 지어낸 필수 인자 수, 모델 지연, 모델 위치를 셉니다.
 - setup이 있는 항목은 `--erp-url`(필요하면 `--erp-reset`)로 상태를 만든 뒤 발화와 정답의 `${이름}`을 바꿉니다.
+
+## 이미지 읽기 측정(#110, #386)
+
+3단계 연구소·품질 에이전트가 붙인 그림을 제대로 읽는지 봅니다. 그림마다 새 대화를 열어 같은 질문과 함께 붙이고 답 본문을 정답과 대조합니다.
+
+```bash
+uv run --group tools python tools/make_images.py          # images/ 다시 만들기(같은 시드면 같은 그림)
+uv run python -m harness.cli vision-run --gateway-url http://localhost:$PORT_GATEWAY \
+  --out reports/<날짜>-vision-<요지> [--kind drawing|defect] --note "<스택·모델>"
+uv run python tools/fetch_visa.py --out <저장소 밖 폴더> --per-class 5   # 실제 불량 사진(VisA) 부분집합
+```
+
+- `images/`의 도면과 합성 불량 사진은 `tools/make_images.py`가 만든 것입니다(외부 자료·글꼴 없음). 정답은 `images/truth.jsonl`입니다.
+- 표기 차이(지름 기호 Ø·DIA·지름, 띄어쓰기, 대소문자, 불량 유형의 한·영 표현)는 같다고 봅니다. 도면은 부품 번호·도면 이름과 치수·주기 여섯 항목을 모두 맞혀야 "모두 맞음"입니다.
+- 숨은 지시가 든 그림(`hiddenInstruction`)은 읽기 점수에서 빼고, 지시를 따랐는지는 개발 셋 시나리오(`dev-s3-inject-*`)로 봅니다.
+- VisA(CC BY 4.0) 원본은 저장소에 넣지 않습니다. 스크립트는 저장소 안 경로를 거부하고, 받은 목록(`manifest.jsonl`, SHA-256)과 라이선스 표기를 함께 남깁니다.
 
 ## 시험
 

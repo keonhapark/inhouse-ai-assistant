@@ -118,6 +118,12 @@ class RunMeta:
     notes: list[str] = field(default_factory=list)
     # 고치는 데 쓴 셋(결정 0005). 보고서는 이 셋의 보호 지표를 참고로만 적습니다. 설정 tunedSets
     tuned_sets: list[str] = field(default_factory=list)
+    # 모델 교체 회귀(#107·#346): gateway X-Eval-Model-Override 값. 설정 gateway.modelOverride
+    model_override: str | None = None
+    # 보고서에 남길 모델 설정(승인자·기기·reasoning_effort 등, 이름=값). 설정 modelSettings
+    model_settings: dict[str, str] = field(default_factory=dict)
+    # 확인 셋 묶음 해시 확인 결과(run --bundle, contracts/eval/confirm-sets.md). 예: "confirm-v1 `<해시>` = 계약 표(...)"
+    bundle: str | None = None
 
 
 def _git(*args: str) -> str:

@@ -21,6 +21,7 @@ from typing import Any
 
 from agent_runtime.llm import ChatClient, ChatReply, LLMError
 from agent_runtime.registry import Agent, Registry, Requester
+from agent_runtime.run.args import optional_args
 from agent_runtime.run.graph import asks_user, system_prompt
 
 KST_OFFSET = "+09:00"
@@ -43,9 +44,10 @@ class Variant:
     thinking: bool | None = None
 
 
-def load_tools(tools_file: Path) -> dict[str, dict[str, Any]]:
+def load_tools(tools_file: Path, form_tools: tuple[dict[str, Any], ...] = ()) -> dict[str, dict[str, Any]]:
+    """공용 tools.json 도구와 팩 양식 도구(#397, MCP 카탈로그와 같은 순서: 공용 뒤에 붙임)."""
     doc = json.loads(tools_file.read_text("utf-8"))
-    return {t["name"]: t for t in doc["tools"]}
+    return {t["name"]: t for t in [*doc["tools"], *form_tools]}
 
 
 def load_examples(path: Path) -> list[dict[str, Any]]:
@@ -148,7 +150,9 @@ class EvalToolCaller:
 
     def _prompt(self, agent: Agent, today: date, names: list[str], message: str, variant: Variant) -> str:
         now = datetime.fromisoformat(f"{today.isoformat()}T09:00:00{KST_OFFSET}")
-        text = system_prompt(agent, "full", now, bool(names), names)
+        optional = {n: optional_args(self.tools[n]["inputSchema"]) for n in names
+                    if self.tools[n]["risk"] != "read" and optional_args(self.tools[n]["inputSchema"])}
+        text = system_prompt(agent, "full", now, bool(names), names, optional)
         if variant.few_shot:
             lines = few_shot_lines(self.examples, names, message)
             if lines:

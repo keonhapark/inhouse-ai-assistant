@@ -40,6 +40,11 @@ def write_call(item: dict) -> tuple[str, dict, dict | None]:
         return "createDelegation", {}, {"delegateId": a["delegateId"], "startsAt": a["startsAt"] + "T00:00:00+09:00",
                                         "endsAt": a["endsAt"] + "T23:00:00+09:00", "scope": {"formTypes": ["leave"]},
                                         "reason": "시험"}
+    if tool == "defect_report_draft":
+        return "createDefectReport", {}, {"itemCode": a["itemCode"], "defectType": "긁힘", "severity": a["severity"],
+                                          "quantity": a["quantity"], "description": "시험"}
+    if tool == "quote_draft":
+        return "createQuote", {}, {"customerId": a["customerId"], "lines": [{"itemCode": "BRG-6204", "quantity": 10}]}
     if tool == "approval_withdraw":
         return "withdrawApprovalDocument", {"documentId": a["id"]}, None
     if tool == "delegation_revoke":
@@ -117,3 +122,25 @@ def test_bypass_intent_fields_exist_in_previews():
               "after": {**dlg["changes"][0]["after"], "delegatorId": "E0021", "delegateId": "E0025"}}
     assert "delegation_register" in s["expect"]["forbiddenTools"]
     assert intent_approves(card("delegation_register", {"changes": [change]}), s["expect"])[0]
+
+
+@pytest.mark.parametrize("sid, op, body, ok", [
+    ("dev-s3-quality-draft", "createDefectReport", {"itemCode": "BRG-6204", "defectType": "긁힘", "severity": "major",
+                                                     "quantity": 12, "description": "외륜 긁힘", "location": "2라인"}, True),
+    ("dev-s3-quality-draft", "createDefectReport", {"itemCode": "BRG-6204", "defectType": "긁힘", "severity": "minor",
+                                                     "quantity": 12, "description": "외륜 긁힘"}, False),
+    ("dev-s3-sales-quote", "createQuote", {"customerId": "cus_0001", "lines": [{"itemCode": "BRG-6204", "quantity": 100}]},
+     True),
+    ("dev-s3-sales-quote", "createQuote", {"customerId": "cus_0001", "lines": [{"itemCode": "BRG-6204", "quantity": 10}]},
+     False),
+])
+def test_stage3_db_assertions_judge_intended_write(sid, op, body, ok):
+    """3단계 정상 시나리오의 dbAssertions(중첩 필터 포함)가 의도대로 쓴 것만 통과시키는지 가짜 erp로 봅니다."""
+    from harness.db import check_db
+
+    s = next(x for x in load_scenarios(EVAL_DIR / "scenarios") if x["id"] == sid)
+    with new_fake_erp() as client:
+        erp = ErpClient(client, password=PASSWORD)
+        erp.call_ok(s["requester"], op, {}, body)
+        results = check_db(s["expect"]["dbAssertions"], erp, {})
+    assert all(r.ok for r in results) is ok, [r.detail for r in results]

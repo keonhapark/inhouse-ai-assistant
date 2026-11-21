@@ -58,6 +58,10 @@ class Runner:
                 state["tainted"] = True
                 state["taint_exempt"] = [draft_tool] if draft_tool else []
                 state["conversation_tainted"] = True
+                state["attachments_read"] = True
+                # 이미지에서 읽은 글자가 대화에 실렸으므로 에이전트 정책과 관계없이 끝까지 로컬로 실행합니다
+                # (#413, 기획서 우려 19 "OCR 텍스트를 외부로 보내는 것은 기본 꺼 둠", #308과 같은 장치).
+                state["force_local"] = True
         state["messages"] = [*prior, *turn]
         try:
             await self.graph.ainvoke(state, config, context=ctx)
@@ -141,7 +145,9 @@ class Runner:
             state["status"] = "awaiting_approval"
             state["messages"] = [{"role": "assistant", "content": "실행 전에 아래 내용을 확인해 주세요."}]
             state["pendingApproval"] = {"approvalId": p["approvalId"], "toolPreview": {
-                "tool": p["tool"], "risk": p["risk"], "arguments": p["arguments"], "preview": p["preview"]}}
+                "tool": p["tool"], "risk": p["risk"], "arguments": p["arguments"], "preview": p["preview"],
+                # 이 턴에 첨부 이미지를 읽었으면 인자 일부가 이미지에서 읽은 신뢰 불가 값일 수 있습니다(#394, 결정 0004)
+                "fromAttachments": bool(v.get("attachments_read"))}}
             return state
         state["status"] = v.get("status") or "completed"
         if v.get("final"):

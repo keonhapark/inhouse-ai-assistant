@@ -26,6 +26,7 @@ from agent_runtime.llm import ChatClient, LLMError
 from agent_runtime.registry import Agent
 from agent_runtime.run.policy import WideScope, decide, model_policy_for, visible_to_model
 from agent_runtime.run.tools import ToolCaller, ToolOutcome, ToolSpec, openai_tool
+from agent_runtime.run.args import normalize_args, optional_args
 from agent_runtime.run.trust import output_trusted
 
 MAX_PLAN_STEPS = 6
@@ -44,8 +45,9 @@ class RunGraphState(TypedDict, total=False):
     pending: dict[str, Any] | None
     tainted: bool
     conversation_tainted: bool
+    attachments_read: bool  # 이 턴에 첨부 이미지에서 값을 읽음(미리보기 fromAttachments, #394). 턴마다 비움
     taint_exempt: list[str]  # 이 턴의 신뢰 불가 표시(tainted)에서 뺄 도구. 영수증 턴의 expense_request(결정 0004 덧붙임)
-    force_local: bool  # 라우터 fallback으로 연 대화(#308). TURN_RESET에 넣지 않아 대화 끝까지 남습니다
+    force_local: bool  # 라우터 fallback 대화(#308)·이미지를 읽은 대화(#413). TURN_RESET에 넣지 않아 대화 끝까지 남습니다
     actions: list[dict[str, Any]]
     undo_notes: list[str]
     citations: list[dict[str, Any]]
@@ -57,7 +59,8 @@ class RunGraphState(TypedDict, total=False):
 
 # conversation_tainted는 턴마다 풀지 않습니다(대화가 끝날 때까지 남음).
 TURN_RESET: RunGraphState = {
-    "queue": [], "current": None, "pending": None, "tainted": False, "taint_exempt": [], "actions": [], "undo_notes": [],
+    "queue": [], "current": None, "pending": None, "tainted": False, "taint_exempt": [], "attachments_read": False,
+    "actions": [], "undo_notes": [],
     "citations": [], "blocked": [], "final": "", "status": "", "steps": 0,
 }
 
@@ -82,10 +85,13 @@ class Deps:
     trusted_docs: frozenset[str]
     timezone: str = "Asia/Seoul"
     now: Any = None  # 시험에서 날짜를 고정할 때 씁니다(callable)
+    # 로컬로 가는 계획 호출의 reasoning_effort(#423). 로컬 qwen3.5:9b가 생각 모드로 길게 생각해 여러 턴 대화에서
+    # gateway 시간 제한(60초)을 넘겼습니다. None이면 보내지 않습니다(모델 기본값). 외부 정책 호출에는 보내지 않습니다.
+    plan_reasoning_effort: str | None = "none"
 
 
 def system_prompt(agent: Agent, condition: str, today: datetime, has_tools: bool,
-                  tool_names: Collection[str] = ()) -> str:
+                  tool_names: Collection[str] = (), optional: dict[str, list[str]] | None = None) -> str:
     lines = [
         f"당신은 사내 AI 비서의 '{agent.name}' 에이전트입니다. 맡은 일: {agent.description}",
         f"오늘은 {today:%Y-%m-%d}({WEEKDAYS[today.weekday()]})입니다. 시간대는 한국 표준시(+09:00)입니다.",
@@ -100,7 +106,14 @@ def system_prompt(agent: Agent, condition: str, today: datetime, has_tools: bool
             "시스템이 미리보기로 따로 받습니다.",
             "도구의 필수 값이 빠졌을 때만 그 값을 묻습니다. 선택 값은 묻지 않습니다.",
             "빠진 값이 조회 도구(직원 찾기, 내 결재·예약·위임 목록 등)로 찾을 수 있는 것이면 묻지 않고 먼저 조회합니다.",
+            # #426: '어제'·'다음 주 금요일'을 풀지 못해 날짜 형식 검사에 막혔습니다.
+            "날짜 인자는 오늘을 기준으로 YYYY-MM-DD로 풀어 씁니다(예: 어제, 다음 주 금요일).",
         ]
+        if optional:
+            # #421·#426: 선택 항목(사업자번호 등)을 필수처럼 묻거나 빈 값으로 채우지 않게 도구별로 적습니다.
+            items = "; ".join(f"{name}: {', '.join(args)}" for name, args in optional.items() if args)
+            if items:
+                lines.append(f"다음 선택 항목은 요청에 없으면 묻지 않고 비워 둡니다(빈 문자열로 채우지 않음) — {items}")
         if "leave_request" in tool_names:
             lines.append("휴가·반차 날짜가 하루만 있으면 시작일과 종료일을 같은 날로 봅니다.")
         if "policy_search" in tool_names:
@@ -120,6 +133,19 @@ def asks_user(text: str) -> bool:
     """마지막 답이 되묻기 모양인지(eval/protocol.md 2절과 같은 기준: "?", "~까요", "~나요", "~주세요" 등)."""
     tail = text.rstrip().rstrip(".!。 ").rstrip()
     return bool(tail) and tail.endswith(QUESTION_ENDINGS)
+
+
+def write_optional(specs: list[ToolSpec]) -> dict[str, list[str]]:
+    """쓰기 도구별 선택 항목 이름(프롬프트용, #421). 읽기 도구는 길어지지 않게 뺍니다."""
+    return {t.name: optional_args(t.input_schema) for t in specs
+            if t.meta.risk != "read" and optional_args(t.input_schema)}
+
+
+def llm_failure_message(e: LLMError) -> str:
+    """계획 호출이 실패했을 때 사용자에게 보일 문장(#423). 시간 초과·출구 장애는 다시 보내면 될 수 있어 그렇게 안내합니다."""
+    if e.status in (502, 503, 504) or "Timeout" in str(e):
+        return "모델 응답이 늦어 처리하지 못했습니다. 잠시 뒤 다시 보내 주세요."
+    return f"모델을 부르지 못했습니다({e})."
 
 
 def idempotency_key(conversation_id: str, tool_call_id: str) -> str:
@@ -154,13 +180,16 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         condition = state["condition"]
         visible = [t for t in ctx.tools if visible_to_model(t.meta, condition)]
         messages = [{"role": "system", "content": system_prompt(ctx.agent, condition, now(), bool(visible),
-                                                                   [t.name for t in visible])},
+                                                                   [t.name for t in visible], write_optional(visible))},
                     *state.get("messages", [])]
+        policy = model_policy_for(ctx.agent, condition, state.get("force_local", False))
+        extra = ({"reasoning_effort": deps.plan_reasoning_effort}
+                 if policy == "local_only" and deps.plan_reasoning_effort else None)
         try:
             msg = await asyncio.to_thread(deps.llm.chat, messages, [openai_tool(t) for t in visible] or None,
-                                          {"X-Delegation-Token": ctx.token}, model_policy_for(ctx.agent, condition, state.get("force_local", False)))
+                                          {"X-Delegation-Token": ctx.token}, policy, extra)
         except LLMError as e:
-            return Command(update={"final": f"모델을 부르지 못했습니다({e}).", "status": "failed", "steps": steps},
+            return Command(update={"final": llm_failure_message(e), "status": "failed", "steps": steps},
                            goto="finish")
         calls = [_normalize_call(c, i, steps) for i, c in enumerate(msg.get("tool_calls") or [])]
         assistant: dict[str, Any] = {"role": "assistant", "content": msg.get("content") or ""}
@@ -183,6 +212,8 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
             msg = tool_message(call, {"error": "invalid_arguments", "detail": "인자가 JSON 객체가 아닙니다"})
             return after_tool(state, {"messages": [*state["messages"], msg]})
         spec = ctx.spec(name)
+        if spec is not None:
+            args = normalize_args(args, spec.input_schema)
         if spec is None or not visible_to_model(spec.meta, state["condition"]):
             d_action, reason, undo_note = "blocked", f"{name}은 이 대화에서 쓸 수 없는 도구입니다", False
         else:
@@ -284,6 +315,23 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
     return g.compile(checkpointer=checkpointer or InMemorySaver())
 
 
+PRIOR_TURNS_KEEP = 6
+PRIOR_TOOL_MAX_CHARS = 1500
+
+
+def _is_user_turn(m: dict[str, Any]) -> bool:
+    """사용자 발화(첨부 이미지 안내 메시지는 발화에 딸린 것이라 빼고 셉니다)."""
+    content = str(m.get("content", ""))
+    return m.get("role") == "user" and not content.startswith(UNTRUSTED_NOTE) and not content.startswith("[첨부")
+
+
+def _keep_recent_turns(messages: list[dict[str, Any]], keep: int) -> list[dict[str, Any]]:
+    starts = [i for i, m in enumerate(messages) if _is_user_turn(m)]
+    if len(starts) <= keep:
+        return messages
+    return messages[starts[-keep]:]
+
+
 def prepare_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """새 턴을 시작하기 전에 이전 기록을 고칩니다.
 
@@ -291,12 +339,18 @@ def prepare_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
       것입니다. 모델이 쓴 문장과 막힌 호출의 인자는 남으므로, 그 대화의 user_direct 도구는 다음 턴부터
       승인을 받습니다(conversation_tainted, policy.decide).
     - 응답이 없는 도구 호출(중간에 끊긴 턴)에는 건너뜀 응답을 채웁니다.
+    - 입력이 길어지지 않게(#423) 최근 PRIOR_TURNS_KEEP개 사용자 턴만 남기고, 이전 턴의 긴 도구 출력은
+      PRIOR_TOOL_MAX_CHARS자로 줄입니다. 남기는 범위는 사용자 발화에서 시작해 도구 호출과 응답 짝이 깨지지 않습니다.
     """
+    messages = _keep_recent_turns(messages, PRIOR_TURNS_KEEP)
     out: list[dict[str, Any]] = []
     answered = {m.get("tool_call_id") for m in messages if m.get("role") == "tool"}
     for m in messages:
         if m.get("role") == "tool" and str(m.get("content", "")).startswith(UNTRUSTED_NOTE):
             m = {**m, "content": f"{UNTRUSTED_NOTE} (이전 턴의 출력이라 본문을 뺐습니다)"}
+        elif m.get("role") == "tool" and len(str(m.get("content", ""))) > PRIOR_TOOL_MAX_CHARS:
+            text = str(m["content"])
+            m = {**m, "content": f"{text[:PRIOR_TOOL_MAX_CHARS]}…(이전 턴 출력이라 줄였습니다. 전체 {len(text)}자)"}
         out.append(m)
         if m.get("role") == "assistant":
             for c in m.get("tool_calls") or []:
