@@ -89,17 +89,30 @@ def _chat_calls(c) -> int:
     return sum(1 for q in c.llm.requests if q.url.path.endswith("/chat/completions"))
 
 
-def test_similar_question_in_same_scope_hits(cc):
+def test_similar_question_from_same_requester_hits(cc):
     _, ext = _agent_ids(cc.app_ref)
     tok = _tok(cc, ext)
     first = _ask(cc, tok, "출장비 규정 알려 줘")
-    again = _ask(cc, _tok(cc, ext, cid="conv-d", who="E0002"), "출장비 규정이 어떻게 돼?")   # 같은 권한 범위의 다른 직원
+    again = _ask(cc, _tok(cc, ext, cid="conv-d"), "출장비 규정이 어떻게 돼?")   # 같은 직원의 다른 대화
     assert first.headers["x-cache"] == "miss" and again.headers["x-cache"] == "hit"
     assert again.json() == first.json() and _chat_calls(cc) == 1
     assert again.headers["x-egress-model"] == "local" and again.headers["x-egress-location"] == "local"
     ev = [e for e in _audit(cc.app_ref) if e["kind"] == "llm.request"][-1]
     assert ev["result"] == "ok" and ev["detail"].startswith("의미 캐시 적중(유사도 0.99")
     assert ev["model"]["externalSent"] is False
+
+
+def test_other_requester_with_same_scope_misses(cc):
+    """권한(에이전트·scopes·doc_scopes)이 같아도 다른 직원에게는 앞사람의 답을 주지 않습니다(#484)."""
+    _, ext = _agent_ids(cc.app_ref)
+    VECTORS["이수진 팀장님께 보낼 휴가 사유 문장 다듬어 줘. 아이 병원 진료 때문이야"] = [0.6, 0.8, 0.0]
+    VECTORS["박민호 팀장님께 보낼 휴가 사유 문장 다듬어 줘. 부모님 병원 진료 때문이야"] = [0.6, 0.8, 0.0]   # 임베딩이 같게 나와도
+    a = _ask(cc, _tok(cc, ext, who="E0001"), "이수진 팀장님께 보낼 휴가 사유 문장 다듬어 줘. 아이 병원 진료 때문이야")
+    b = _ask(cc, _tok(cc, ext, who="E0002"), "박민호 팀장님께 보낼 휴가 사유 문장 다듬어 줘. 부모님 병원 진료 때문이야")
+    assert a.headers["x-cache"] == "miss" and b.headers["x-cache"] == "miss" and _chat_calls(cc) == 2
+    c = _ask(cc, _tok(cc, ext, who="E0002"), "출장비 규정 알려 줘")
+    d = _ask(cc, _tok(cc, ext, who="E0001"), "출장비 규정 알려 줘")   # 글이 똑같아도 사람이 다르면 놓침
+    assert c.headers["x-cache"] == "miss" and d.headers["x-cache"] == "miss" and _chat_calls(cc) == 4
 
 
 def _rag_message(question: str, evidence: str) -> str:
