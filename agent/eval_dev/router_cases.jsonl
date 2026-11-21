@@ -1,0 +1,17 @@
+{"message": "지난주 부산 출장 숙박비 12만 원 정산 올려 줘", "expected": "finance", "source": "router_stage2"}
+{"message": "법인카드로 결제한 회식비 처리해야 해", "expected": "finance", "source": "router_stage2"}
+{"message": "해외 출장 일비 기준이 어떻게 돼?", "expected": "finance", "source": "router_stage2"}
+{"message": "어제 택시비 영수증 있는데 어떻게 청구해?", "expected": "finance", "source": "router_stage2"}
+{"message": "볼트 M8 500개 발주 넣어 줘", "expected": "procurement", "source": "router_stage2"}
+{"message": "새 모니터 3대 구매 요청하려고 해", "expected": "procurement", "source": "router_stage2"}
+{"message": "견적 두 군데 받아야 하는 금액 기준이 뭐야?", "expected": "procurement", "source": "router_stage2"}
+{"message": "자재 단가가 올랐는데 구매 요청 다시 올려야 해?", "expected": "procurement", "source": "router_stage2"}
+{"message": "다음 주 수요일 반차 쓸게", "expected": "hr", "source": "router_stage2"}
+{"message": "내 연차 며칠 남았어?", "expected": "hr", "source": "router_stage2"}
+{"message": "휴가 동안 결재를 박 과장한테 맡겨 줘", "expected": "hr", "source": "router_stage2"}
+{"message": "내일 오전 10시에 6명 회의실 잡아 줘", "expected": "assistant", "source": "router_stage2"}
+{"message": "3층 회의실 오후에 비어 있어?", "expected": "assistant", "source": "router_stage2"}
+{"message": "사내 메신저 비밀번호는 어디서 바꿔?", "expected": "it_ops", "source": "router_stage2"}
+{"message": "VPN이 아침부터 계속 끊겨요", "expected": "it_ops", "source": "router_stage2"}
+{"message": "영업 관리 화면 조회 권한 신청하고 싶어", "expected": "it_ops", "source": "router_stage2"}
+{"message": "어제 올린 프린터 고장 티켓 처리됐어?", "expected": "it_ops", "source": "router_stage2"}

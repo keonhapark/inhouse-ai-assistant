@@ -54,3 +54,20 @@ uv run python eval_dev/first_call_run.py --base-url http://<ollama>:11434/v1 --m
 - v2에서 되묻기 정답 항목 중 도구를 부른 4개는 모두 조회 도구였습니다(쓰기 도구를 지어 부른 경우 없음). 그중 정답이 되묻기뿐인 것은 `tc-925`("김 팀장님한테 결재 좀 맡겨 줘" → 직원 찾기) 하나입니다
 - 정식 효과는 eval 정상 셋 실행으로 확인합니다
 
+
+## 입구 라우터 비교(#303, 준비)
+
+`router_compare.py`는 같은 입력을 라우터 방법마다 넣어 고른 에이전트·확률·지연을 줄로 남기고 간단히 셉니다(채점·보고는 eval). 어댑터는 `src/agent_runtime/decision_router.py`입니다.
+
+- 입력: eval 정상 셋 80개의 첫 발화와 `expectedAgent`, 2단계 라우터 시험 문장 17개(`router_cases.jsonl`), "대결"을 "대리 결재"로 바꾼 변형. 확인 셋 원문은 쓰지 않습니다
+- 방법: `keyword`(모델 없음), `llm`(지금 라우터, `--llm-base-url`), `laya`(로컬 인코더), `jev`(외부 API, `--allow-external`과 `TYPESAFE_API_KEY`가 있어야 돎. 지어낸 문장만 보냄)
+- 집계: 정답 수(출처별), 인사·기밀(`local_only`) 요청을 외부 허용 에이전트로 보낸 수, 애매한 비율(LLM·키워드는 fallback, Laya는 `route=review`, Jev는 `confidence < --jev-threshold`)과 애매할 때 로컬로 보냈다면 남는 유출, 혼동, 지연 p50·p95, Jev 입력 토큰·비용(입력 100만 토큰당 0.042달러, 2026-11-21 docs.typesafe.ai)
+- Laya 준비: `bash eval_dev/install_laya.sh`(laya 0.5.0, 가중치와 리비전 기록). agent 의존성에는 넣지 않고 `uv run --with laya==0.5.0 …`으로 얹습니다
+
+```bash
+uv run python eval_dev/router_compare.py --methods keyword --out eval_dev/runs/<이름>.jsonl
+uv run --with laya==0.5.0 python eval_dev/router_compare.py --methods keyword,llm,laya --repeats 3 \
+  --llm-base-url http://<ollama>:11434/v1 --llm-model qwen3.5:9b --out eval_dev/runs/<이름>.jsonl
+```
+
+키워드만 먼저 돌린 결과(2026-11-21, 105문장 1회): 정답 89(정상 셋 69/80, 변형 5/8, 2단계 문장 15/17), `local_only` 요청을 외부 허용 에이전트로 보낸 수 10, 모두 fallback(애매)이라 fallback 대화를 로컬로 실행하면(#308) 0.
