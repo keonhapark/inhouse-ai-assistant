@@ -1,0 +1,118 @@
+openapi: 3.1.0
+info:
+  title: incident (장애 원인 분석)
+  version: 0.1.0
+  description: |
+    장애 원인 후보를 냅니다(#284, 기획서 표 ③). compose에 넣지 않는 호스트 로컬 도구이며, 세션 스택의 컨테이너 로그를
+    호스트의 docker CLI로 읽습니다(도커 소켓을 컨테이너에 열지 않음). IT운영 에이전트의 `incident_analyze` 도구가 부릅니다.
+
+    공통 규칙
+    - 인증: `X-Delegation-Token`(gateway 위임 토큰, `aud`에 `incident`, scope `incident:read`). 없거나 틀리면 401, scope가 없으면 403 scope-missing.
+    - 권한: 분석은 티켓 담당 역할만 합니다. incident는 같은 토큰으로 erp `GET /tickets?box=all&limit=1`을 불러 403이면 403 forbidden입니다.
+      `ticketId`를 주면 erp `GET /tickets/{ticketId}`로 티켓을 읽고(볼 수 없으면 404), 그 본문을 분석에 씁니다.
+    - 구간: 분석 구간은 `at`(없으면 티켓 작성 시각, 둘 다 없으면 지금) 직전 `windowSeconds`, 기준 구간은 그 앞 같은 길이입니다.
+    - 방법: LLM 없는 기준선(로그 템플릿 빈도 변화, 로그가 끊긴 서비스, 비슷한 과거 티켓)이 모은 진단 텍스트를 gateway `local` 별칭에
+      주고 후보 3개를 받습니다. 모델이 실패하면 기준선 순위로 답하고 `method: baseline`입니다.
+    - 근거 줄(`evidence`)과 이유(`reason`)는 로그·모델이 만든 글이라 신뢰 불가 출력으로 다룹니다.
+servers:
+  - url: http://localhost:{port}
+    variables:
+      port: {default: "8070", description: PORT_BASE + 70(호스트 로컬)}
+paths:
+  /health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: 살아 있음
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {const: ok}
+  /analyze:
+    post:
+      operationId: analyze
+      summary: 장애 원인 후보(서비스·종류·근거 줄)
+      parameters:
+        - $ref: "#/components/parameters/DelegationToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                ticketId: {type: string, description: 분석할 장애 티켓. 본문을 증상으로 씁니다}
+                at: {type: string, format: date-time, description: "분석 기준 시각(신고 시각). 없으면 티켓 작성 시각이나 지금"}
+                windowSeconds: {type: integer, minimum: 30, maximum: 3600, default: 300}
+      responses:
+        "200":
+          description: 원인 후보
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Analysis"}
+        "401": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
+        "503": {$ref: "#/components/responses/Problem"}
+components:
+  parameters:
+    DelegationToken:
+      name: X-Delegation-Token
+      in: header
+      required: true
+      schema: {type: string}
+  responses:
+    Problem:
+      description: RFC 9457. 503은 로그를 읽지 못함(세션 스택이 없음 등)
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            required: [type, title, status]
+            properties:
+              type: {type: string}
+              title: {type: string}
+              status: {type: integer}
+              detail: {type: string}
+  schemas:
+    Candidate:
+      type: object
+      required: [service, kind, reason, evidence]
+      properties:
+        service: {type: string, enum: [postgres, erp, rag, agent, litellm, gateway]}
+        kind:
+          type: [string, "null"]
+          enum: [dependency_down, lock_contention, resource_exhaustion, dependency_timeout, data_corruption, bad_config, null]
+        reason: {type: string}
+        evidence: {type: array, items: {type: string}, maxItems: 3}
+    Analysis:
+      type: object
+      required: [window, method, candidates, baseline]
+      properties:
+        ticketId: {type: [string, "null"]}
+        window:
+          type: object
+          required: [start, end]
+          properties:
+            start: {type: string, format: date-time}
+            end: {type: string, format: date-time}
+        method: {type: string, enum: [llm, baseline]}
+        candidates:
+          type: array
+          maxItems: 3
+          items: {$ref: "#/components/schemas/Candidate"}
+        baseline:
+          type: array
+          description: 기준선 서비스 순위(점수 높은 순)
+          items:
+            type: object
+            required: [service, score]
+            properties:
+              service: {type: string}
+              score: {type: number}

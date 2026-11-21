@@ -32,7 +32,7 @@
             "required": ["service", "operationId"],
             "additionalProperties": false,
             "properties": {
-              "service": {"enum": ["erp", "rag"]},
+              "service": {"enum": ["erp", "rag", "incident"]},
               "operationId": {"type": "string"},
               "fixed": {"type": "object", "description": "도구가 고정해 넘기는 값(예: formId)"}
             }

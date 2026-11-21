@@ -195,6 +195,7 @@ def check_tools() -> list[str]:
     specs = {
         "erp": openapi_operations(load(CONTRACTS / "openapi/erp.yaml")),
         "rag": openapi_operations(load(CONTRACTS / "openapi/rag.yaml")),
+        "incident": openapi_operations(load(CONTRACTS / "openapi/incident.yaml")),
     }
     names = Counter(t["name"] for t in tools_doc["tools"])
     for n, c in names.items():

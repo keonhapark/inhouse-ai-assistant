@@ -358,6 +358,24 @@
       "required_scope": "ticket:write",
       "backend": {"service": "erp", "operationId": "addTicketComment"},
       "stage": 2
+    },
+    {
+      "name": "incident_analyze",
+      "description": "장애 티켓이나 시각을 주면 그 무렵 서비스 로그를 분석해 원인일 만한 서비스 3개와 근거 로그 줄을 냅니다. IT 담당자만 씁니다. 결과는 참고용 추정입니다.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticketId": {"type": "string"},
+          "at": {"type": "string", "format": "date-time"},
+          "windowSeconds": {"type": "integer", "minimum": 30, "maximum": 3600}
+        },
+        "additionalProperties": false
+      },
+      "risk": "read",
+      "trust_required": "any",
+      "required_scope": "incident:read",
+      "backend": {"service": "incident", "operationId": "analyze"},
+      "stage": 2
     }
   ]
 }
