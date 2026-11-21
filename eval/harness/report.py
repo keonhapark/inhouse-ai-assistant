@@ -346,6 +346,8 @@ def render(rows: list[RunRow], meta: RunMeta, title: str = "평가 보고서") -
         ["모델 설정", "; ".join(f"{k} {v}" for k, v in meta.model_settings.items()) or "-"],
         ["확인 셋 묶음", meta.bundle or "-"],
         ["띄운 스택 확인(마지막 실행 시작 때)", meta.stack_check or "확인 안 함"],
+        ["스택 설정 값(마지막 실행 시작 때)", "; ".join(f"{k}={v or '(빈 값)'}" for k, v in meta.stack_env.items())
+         or "기록 안 함"],
         ["모델(실행 기록)", ", ".join(f"{m} {n}회차" for m, n in sorted(seen.items())) or "-"],
         ["기기", meta.machine],
         ["회차별 실행 시스템", _signatures(rows)],
