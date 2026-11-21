@@ -100,3 +100,66 @@ def test_parse_survives_truncated_answer_and_string_evidence() -> None:
            ' {"service": "erp", "kind": "resource_exhaustion", "reason": "잘린')
     got = parse(raw)
     assert [(c.service, c.evidence) for c in got] == [("postgres", ["die postgres"])]
+
+
+def test_level_of_matches_errors_inside_words_and_only_http_status_codes() -> None:
+    from incident.logs import level_of
+
+    assert level_of("ValueError: bad") == "error"
+    assert level_of("Caused by: java.sql.SQLException: x") == "error"
+    assert level_of('INFO: 1.2.3.4:5 - "POST /v1/chat/completions HTTP/1.1" 504 Gateway Timeout') == "error"
+    assert level_of("WARN 1 --- access : GET /api/v1/tickets 503 12ms") == "error"
+    assert level_of("INFO 1 --- access : GET /api/v1/tickets/tkt_x 404 3ms") == "warn"
+    assert level_of("completed in 512 ms") == "info"
+    assert level_of("took 404 ms to load") == "info"
+    assert level_of("INFO 1 --- access : GET /api/v1/tickets 200 39812ms") == "info"
+
+
+def test_parse_finds_service_in_any_key_order_and_case() -> None:
+    got = parse('{"candidates":[{"kind":"dependency_down","service":"Postgres"},{"reason":"r","service":"erp"}]}')
+    assert [c.service for c in got] == ["postgres", "erp"]
+
+
+def test_similar_tickets_do_not_override_strong_log_signal() -> None:
+    lines = [Line(at(s), "postgres", "error", "FATAL: terminating connection due to administrator command")
+             for s in range(110, 140, 2)]
+    history = [PastTicket("t1", "AI 비서가 답을 안 합니다 질문을 보내면 답이 오지 않습니다", "litellm", "dependency_timeout")]
+    r = rank(lines, at(150), timedelta(seconds=45), "AI 비서 답이 느립니다", history, since=at(0))
+    assert r.similar and r.similar[0].ticket.root_service == "litellm"
+    assert r.ranking[0][0] == "postgres"
+
+
+def _bundle(root, name: str, service: str, logs: dict[str, str]) -> None:
+    import json
+
+    b = root / "run" / name
+    (b / "logs").mkdir(parents=True)
+    for svc, text in logs.items():
+        (b / "logs" / f"{svc}.log").write_text(text, encoding="utf-8")
+    (b / "truth.json").write_text(json.dumps({
+        "incidentId": name, "runId": "run", "rootService": service, "kind": "dependency_down",
+        "injectedAt": at(60).isoformat(), "window": {"start": at(0).isoformat(), "end": at(200).isoformat()},
+        "ticket": {"id": f"tkt_{name}", "title": "오류", "description": "화면이 안 열립니다"}}), encoding="utf-8")
+
+
+def test_bench_summary_counts_hits_and_survives_bad_llm_answers(tmp_path, monkeypatch, capsys) -> None:
+    import json
+
+    from bench import rca
+
+    errors = "".join(f"{ts(s)} FATAL: the database system is shutting down\n" for s in range(62, 100, 2))
+    steady = "".join(f'{ts(s)} INFO: 1.2.3.4:1 - "GET /health HTTP/1.1" 200 OK\n' for s in range(0, 200, 5))
+    _bundle(tmp_path, "a", "postgres", {"postgres": errors, "gateway": steady})
+    _bundle(tmp_path, "b", "gateway", {"postgres": errors, "gateway": steady})
+
+    def broken(*a, **k):
+        raise KeyError("choices")
+
+    monkeypatch.setattr(rca, "analyze", broken)
+    out = tmp_path / "r.json"
+    assert rca.main(["--runs", str(tmp_path / "run"), "--llm", "http://gw", "--out", str(out)]) == 0
+    s = json.loads(out.read_text())["summary"]
+    assert (s["logs"]["top1"], s["logs"]["top3"]) == (0.5, 0.5)
+    assert s["llm"]["errors"] == 2 and s["llm"]["top3"] == 0.0
+    (tmp_path / "empty").mkdir()
+    assert rca.main(["--runs", str(tmp_path / "empty")]) == 1

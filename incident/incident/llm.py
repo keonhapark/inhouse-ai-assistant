@@ -71,23 +71,26 @@ def parse(content: str) -> list[Candidate]:
     목록 밖 서비스는 버리고, 같은 서비스는 처음 것만 둡니다."""
     decoder = json.JSONDecoder()
     objs: list[Any] = []
-    for m in re.finditer(r'\{\s*"service"', content):
+    # 키 순서와 상관없이 "service"가 든 객체를 찾습니다. 바깥 {"candidates": ...}도 풀리지만 service가 없어 걸러집니다.
+    for m in re.finditer(r"\{", content):
         try:
             obj, _ = decoder.raw_decode(content, m.start())
         except json.JSONDecodeError:
             continue
-        objs.append(obj)
+        if isinstance(obj, dict) and "service" in obj:
+            objs.append(obj)
     out: list[Candidate] = []
     seen: set[str] = set()
     for c in objs:
-        if not isinstance(c, dict) or c.get("service") not in SERVICES or c["service"] in seen:
+        service = str(c.get("service", "")).strip().lower()
+        if service not in SERVICES or service in seen:
             continue
-        seen.add(c["service"])
+        seen.add(service)
         kind = c.get("kind") if c.get("kind") in KINDS else None
         ev_raw = c.get("evidence", [])
         ev_list = [ev_raw] if isinstance(ev_raw, str) else ev_raw if isinstance(ev_raw, list) else []
         ev = [str(x) for x in ev_list if isinstance(x, (str, int, float))][:3]
-        out.append(Candidate(c["service"], kind, str(c.get("reason", ""))[:300], ev))
+        out.append(Candidate(service, kind, str(c.get("reason", ""))[:300], ev))
     return out[:3]
 
 

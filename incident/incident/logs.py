@@ -9,9 +9,10 @@ from pathlib import Path
 
 # 헬스 검사 줄은 평소에도 일정하게 찍혀 신호가 없고, LLM에 줄 진단 텍스트만 길게 만듭니다.
 NOISE = re.compile(r'"GET /health(/liveliness)? HTTP|application_name=pg_isready|GET /api/v1/health ')
-ERROR = re.compile(r"\b(ERROR|FATAL|PANIC|CRITICAL|Traceback|Exception|exception|Error:|refused|"
-                   r"timed out|Timeout|unhealthy|oom|die)\b|\s5\d\d\s|HTTP/1.1\" 5\d\d")
-WARN = re.compile(r"\b(WARN|WARNING|still waiting|duration:)\b|\s4\d\d\s")
+# 오류·경고: 단어 중간(ValueError, SQLException)도 잡고, HTTP 상태는 접근 로그 모양(uvicorn '" 503', erp '503 12ms')일 때만 봅니다.
+ERROR = re.compile(r"ERROR|FATAL|PANIC|CRITICAL|Traceback|Exception\b|Error\b|refused|timed out|[Tt]imeout|unhealthy|"
+                   r"\b(oom|die)\b|\" 5\d\d\b|\s5\d\d \d+ms\b")
+WARN = re.compile(r"\b(WARN|WARNING|still waiting|duration:)\b|\" 4\d\d\b|\s4\d\d \d+ms\b")
 # 앱이 줄 앞에 다시 찍는 시각·프로세스 번호 등(템플릿을 흐리게 함)
 APP_PREFIX = re.compile(r"^(\d{4}-\d{2}-\d{2}[ T][\d:.,]+Z?( UTC)?\s+|\d{2}:\d{2}:\d{2}\s+-\s+)")
 # 컨테이너 이벤트 중 사람이 한 조작(주입·복구 명령)은 장애의 증상이 아니라 빼고 읽습니다.

@@ -91,7 +91,7 @@ uv run python -m bench.rca --runs data/runs/<runId> ... [--llm http://localhost:
 
 ### 개발용 측정(7건)
 
-`bench/results/dev-7.json`, 2026-11-21 10:47, 데스크탑(RTX 4070 SUPER, qwen3.5:9b), 묶음 7개(장애 6종 각 1회 + db_down 1회), 각 1회.
+`bench/results/dev-7-1047.json`, 2026-11-21 10:47, 데스크탑(RTX 4070 SUPER, qwen3.5:9b), 묶음 7개(장애 6종 각 1회 + db_down 1회), 각 1회.
 
 | 방법 | 상위 1 | 상위 3 | 지연 중앙값 |
 |---|---|---|---|
@@ -100,6 +100,7 @@ uv run python -m bench.rca --runs data/runs/<runId> ... [--llm http://localhost:
 | LLM(진단 텍스트) | 0.571 | 0.714 | 10.5초 |
 | LLM(티켓만) | 0.429 | 0.857 | 9.3초 |
 
+- 그 뒤 로그 수준 판정을 고쳤습니다(단어 중간의 ValueError·SQLException을 오류로, HTTP 상태는 접근 로그 모양일 때만). 기준선만 다시 잰 값(`bench/results/dev-7-baseline-1053.json`, 10:53): 로그 상위 1 0.429·상위 3 0.857, 로그 + 유사 티켓 상위 1 0.286·상위 3 0.857. 세션 스택을 메모리 때문에 내려 LLM은 다시 재지 못했습니다.
 - 이 7건으로 기준선을 손봤으므로(로그 끊김 신호, 기준 구간) 개발용 수치입니다. 결론은 기준선을 고정한 뒤 새로 모을 6종 × 3회로 냅니다.
 - 같은 Ollama를 평가 스택(iaa-s5)이 함께 쓰는 중이라 LLM 지연은 흔들립니다.
 - 틀리는 경우: 외부 모델 키를 비워 생기는 LiteLLM 401(Missing Anthropic API Key)이 늘어난 오류로 잡혀 litellm을 원인으로 고름. gateway 잘못된 키 배포는 오류가 LiteLLM 쪽에 찍혀 litellm을 고름.

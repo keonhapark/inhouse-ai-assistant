@@ -46,7 +46,7 @@ def llm_row(gateway: str, text: str) -> dict[str, Any]:
     t0 = time.monotonic()
     try:
         r = analyze(gateway, text)
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as e:  # 연결·상태·응답 모양
         return {"ranking": [], "ms": round((time.monotonic() - t0) * 1000), "error": type(e).__name__ + " " + str(e)[:120]}
     return {"ranking": [c.service for c in r.candidates], "kinds": [c.kind for c in r.candidates],
             "ms": r.latency_ms, "raw": r.raw[:2000]}
@@ -64,6 +64,9 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     bundles = load(args.runs)
+    if not bundles:
+        print("truth.json이 있는 묶음이 없습니다")
+        return 1
     rows = []
     for bundle, truth in bundles:
         at = datetime.fromisoformat(truth["injectedAt"]) + REPORT_DELAY
