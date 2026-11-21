@@ -434,7 +434,8 @@ class Egress:
         if (self.cache is None or self.embed_alias is None or caller.agent is None or sent.get("stream") or has_images
                 or self.condition_of(caller.conversation_id) is not None):
             return None
-        scope = (caller.agent.id, caller.scopes, caller.doc_scopes, model["name"])
+        # 요청자(sub)를 넣어 사람마다 따로 둡니다(#484). 권한이 같아도 이름·사유만 다른 문장이 의미상 같게 잡힐 수 있습니다.
+        scope = (caller.employee_id, caller.agent.id, caller.scopes, caller.doc_scopes, model["name"])
         try:
             return await self.cache.probe(scope, sent)
         except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as e:
