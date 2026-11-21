@@ -94,12 +94,13 @@ uv run python -m bench.rca --runs data/runs/<runId> ... [--llm http://localhost:
 계약은 `contracts/openapi/incident.yaml`입니다. compose에 넣지 않고 호스트에서 띄워 세션 스택 로그를 docker CLI로 읽습니다(도커 소켓을 컨테이너에 열지 않음).
 
 ```bash
-cd incident && INCIDENT_SESSION=1 uv run uvicorn --factory incident.app:from_env --host 0.0.0.0 --port 8170
+cd incident && INCIDENT_SESSION=1 uv run uvicorn --factory incident.app:from_env --host 127.0.0.1 --port 8170
 ```
 
+- 호스트 로그를 읽는 도구라 기본은 루프백(127.0.0.1)에만 엽니다. agent 컨테이너가 부르게 하려면 도커 브리지 주소에 엽니다. 분석은 한 번에 하나만 돌고, 서비스마다 로그는 5MB까지만 읽습니다.
 - 위임 토큰(`X-Delegation-Token`, aud `incident`, scope `incident:read`)을 확인하고, 같은 토큰으로 erp `GET /tickets?box=all`이 되는 사람(티켓 담당)만 분석합니다.
 - `ticketId`를 주면 erp에서 티켓을 읽어 본문을 증상으로 쓰고, 분석 기준 시각은 `at`이나 티켓 작성 시각입니다.
-- LLM이 실패하거나 후보를 못 내면 기준선 순위로 답합니다(`method: baseline`).
+- LLM이 실패하거나 후보를 못 내면 기준선 순위로 답합니다(`method: baseline`). 근거 줄·이유에서 토큰·이메일처럼 보이는 값은 가립니다.
 - `INCIDENT_HISTORY_DIR`에 원인이 밝혀진 묶음(truth.json) 폴더를 주면 비슷한 과거 티켓을 씁니다.
 
 ### 개발용 측정(7건)

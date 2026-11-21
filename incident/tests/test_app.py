@@ -15,7 +15,7 @@ from incident.app import TokenVerifier, create_app
 from incident.logs import Line
 
 KEY = ec.generate_private_key(ec.SECP256R1())
-AT = datetime(2026, 11, 21, 1, 0, tzinfo=timezone.utc)
+AT = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(hours=1)
 TICKET = {"id": "tkt_1", "title": "회의실 예약이 멈춥니다", "description": "예약 버튼이 오래 걸립니다",
           "createdAt": AT.isoformat()}
 
@@ -58,7 +58,8 @@ def llm(content: str | None):
 
 
 def client(handler=True, answer='{"candidates":[{"service":"postgres","kind":"lock_contention","reason":"잠금 대기",'
-                                 '"evidence":["still waiting"]}]}', logs=None):
+                                 '"evidence":["still waiting Authorization: Bearer eyJhbGciOiJFUzI1NiJ9.abc.def"]}]}',
+           logs=None):
     app = create_app(logs or Logs(), TokenVerifier(key=KEY.public_key()), "http://erp/api/v1", "http://gw",
                      erp_transport=erp(handler), llm_transport=llm(answer))
     return TestClient(app)
@@ -76,7 +77,7 @@ def test_analyze_ticket_with_llm() -> None:
     d = r.json()
     assert d["method"] == "llm" and d["ticketId"] == "tkt_1"
     assert d["candidates"][0] == {"service": "postgres", "kind": "lock_contention", "reason": "잠금 대기",
-                                  "evidence": ["still waiting"]}
+                                  "evidence": ["still waiting Authorization: <가림>"]}
     assert d["baseline"][0]["service"] == "postgres"
     # 티켓 작성 시각을 기준으로 직전 120초를 분석하고, 그 앞 120초를 기준 구간으로 읽습니다
     assert d["window"] == {"start": (AT - timedelta(seconds=120)).isoformat(), "end": AT.isoformat()}
@@ -108,6 +109,24 @@ def test_only_ticket_handlers_and_known_tickets() -> None:
 
 
 @pytest.mark.parametrize("body", [{"windowSeconds": 10}, {"windowSeconds": "60"}, {"at": "어제"},
-                                  {"at": "2026-11-21T01:00:00"}, {"extra": 1}])
+                                  {"at": "2026-11-21T01:00:00"}, {"extra": 1}, {"at": "0001-01-01T00:00:00Z"},
+                                  {"ticketId": "../../../actuator/env"}, {"ticketId": "1?box=all"},
+                                  {"ticketId": {"a": 1}}])
 def test_validation(body) -> None:
     assert post(client(), body).status_code == 422
+
+
+def test_ticket_response_of_wrong_shape_is_not_found() -> None:
+    def h(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/v1/tickets":
+            return httpx.Response(200, json={"items": []})
+        return httpx.Response(200, json={"items": []})  # 티켓 모양이 아님
+
+    app = create_app(Logs(), TokenVerifier(key=KEY.public_key()), "http://erp/api/v1", "http://gw",
+                     erp_transport=httpx.MockTransport(h), llm_transport=llm(None))
+    assert post(TestClient(app), {"ticketId": "tkt_1"}).status_code == 404
+
+
+def test_scope_string_is_not_substring_matched() -> None:
+    r = post(client(), {"at": AT.isoformat()}, token(scopes="xincident:readx"))
+    assert r.status_code == 403
