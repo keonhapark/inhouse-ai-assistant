@@ -21,6 +21,7 @@ import httpx
 import yaml
 
 from harness.erp import ErpClient
+from harness.paths import ROOT
 from harness.report import render, summarize
 from harness.runner import (CONDITIONS, MAX_RETRIES, HealthCheck, RunRow, _git, count_retries, load_rows_jsonl,
                             load_run, run_matrix, save_run, signature_counts)
@@ -199,6 +200,99 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+DEV_TOOLCALL = ROOT / "agent/eval_dev/tool_calls.jsonl"
+
+
+def _toolcall_items(args: argparse.Namespace) -> list[dict[str, Any]]:
+    from harness.toolcall import ToolcallError, load_items, tool_catalog
+
+    try:
+        items = load_items(Path(args.items))
+    except ToolcallError as e:
+        raise SystemExit("\n".join(e.problems)) from None
+    if getattr(args, "max_stage", None):
+        items = [i for i in items if tool_catalog()[i["targetTool"]]["stage"] <= args.max_stage]
+    return items
+
+
+def cmd_toolcall_validate(args: argparse.Namespace) -> int:
+    print(f"항목 {len(_toolcall_items(args))}개 통과")
+    return 0
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def cmd_toolcall_run(args: argparse.Namespace) -> int:
+    """agent POST /eval/tool-call로 항목을 부르고 채점합니다(AGENT_EVAL_MODE=1인 agent)."""
+    import platform
+
+    from harness import toolcall_report
+    from harness.runner import _git, _now
+    from harness.setup import run_setup
+    from harness.toolcall import run_items
+
+    items = _toolcall_items(args)
+    variant = json.loads(args.variant)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    rows_file = out.with_suffix(".rows.jsonl")
+    if rows_file.exists():
+        raise SystemExit(f"{rows_file}가 이미 있습니다")
+    meta = {"title": args.title, "commit": _git("rev-parse", "HEAD"),
+            "dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
+            "machine": f"{platform.platform()} {platform.machine()}", "started_at": _now(), "items": args.items,
+            "itemsSha256": _sha256(Path(args.items)), "itemCount": len(items), "maxStage": args.max_stage,
+            "model": args.model, "variant": variant, "repeats": args.repeats, "notes": list(args.note or [])}
+    client = httpx.Client(base_url=args.agent_url, timeout=args.timeout)
+    setup = None
+    if args.erp_url:
+        erp = ErpClient(httpx.Client(base_url=args.erp_url, timeout=args.timeout))
+
+        def setup(item: dict[str, Any]) -> dict[str, str]:
+            if args.erp_reset:
+                erp.reset()
+            return run_setup(item, erp)
+
+    def post(body: dict[str, Any]) -> tuple[int, Any]:
+        r = client.post("/eval/tool-call", json=body)
+        return r.status_code, (r.json() if r.status_code == 200 else r.text[:300])
+
+    def progress(row: dict[str, Any]) -> None:
+        with rows_file.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        print(f"{row['repeat']} {row['id']} {row['outcome']}", flush=True)
+
+    rows = run_items(items, post, variant=variant, model=args.model, repeats=args.repeats, setup=setup,
+                     on_row=progress)
+    meta["finished_at"] = _now()
+    summary = toolcall_report.summarize(rows, args.repeats)
+    out.with_suffix(".json").write_text(json.dumps({"meta": meta, "summary": summary, "rows": rows},
+                                                   ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    out.with_suffix(".md").write_text(toolcall_report.render(rows, meta, args.title), encoding="utf-8")
+    print(f"{out.with_suffix('.json')}, {out.with_suffix('.md')}")
+    return 0
+
+
+def cmd_toolcall_report(args: argparse.Namespace) -> int:
+    """기록(.json)을 지금 채점 규칙으로 다시 채점하고 보고서를 다시 씁니다."""
+    from harness import toolcall_report
+    from harness.toolcall import rescore
+
+    data = json.loads(Path(args.run).read_text(encoding="utf-8"))
+    items = _toolcall_items(args)
+    rows = rescore(items, data["rows"])
+    meta = data["meta"]
+    data["rows"], data["summary"] = rows, toolcall_report.summarize(rows, meta.get("repeats", 1))
+    Path(args.run).write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    Path(args.run).with_suffix(".md").write_text(toolcall_report.render(rows, meta, meta.get("title", "도구 호출 측정")),
+                                                 encoding="utf-8")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="harness.cli")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -222,8 +316,28 @@ def main(argv: list[str] | None = None) -> int:
     rep.add_argument("-o")
     rep.add_argument("--title", default="평가 보고서")
     rep.add_argument("--update-json", action="store_true", help="실행 결과 JSON에 summary를 다시 씀(md와 같은 계산)")
+    tv = sub.add_parser("toolcall-validate", help="도구 호출 항목(toolcall-v1) 검사")
+    tv.add_argument("--items", default=str(DEV_TOOLCALL))
+    tv.add_argument("--max-stage", type=int)
+    tr = sub.add_parser("toolcall-run", help="agent /eval/tool-call로 도구 호출 측정")
+    tr.add_argument("--items", default=str(DEV_TOOLCALL))
+    tr.add_argument("--agent-url", required=True)
+    tr.add_argument("--out", required=True)
+    tr.add_argument("--model", help="gateway 출구 별칭(local, external 등). 없으면 에이전트 정책")
+    tr.add_argument("--variant", default="{}", help='측정 단계 장치(JSON, 예 {"thinking": false})')
+    tr.add_argument("--repeats", type=int, default=1)
+    tr.add_argument("--max-stage", type=int, help="이 단계까지의 targetTool만(1단계는 1)")
+    tr.add_argument("--erp-url", help="setup이 있는 항목용 erp 주소")
+    tr.add_argument("--erp-reset", action="store_true", help="setup 전에 erp를 초기화(ERP_EVAL_RESET=1)")
+    tr.add_argument("--timeout", type=float, default=300)
+    tr.add_argument("--title", default="도구 호출 측정")
+    tr.add_argument("--note", action="append", help="보고서 실행 정보에 적을 말(기기, 모델 digest, Ollama 판 등)")
+    tp = sub.add_parser("toolcall-report", help="도구 호출 기록을 지금 규칙으로 다시 채점")
+    tp.add_argument("run")
+    tp.add_argument("--items", default=str(DEV_TOOLCALL))
     args = p.parse_args(argv)
-    return {"validate": cmd_validate, "run": cmd_run, "report": cmd_report}[args.cmd](args)
+    return {"validate": cmd_validate, "run": cmd_run, "report": cmd_report, "toolcall-validate": cmd_toolcall_validate,
+            "toolcall-run": cmd_toolcall_run, "toolcall-report": cmd_toolcall_report}[args.cmd](args)
 
 
 if __name__ == "__main__":
