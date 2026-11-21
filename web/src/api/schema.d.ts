@@ -767,7 +767,7 @@ export interface components {
             /** Format: date-time */
             startedAt: string;
             finishedAt?: string | null;
-            /** @description 회차에 나온 셋(normal */
+            /** @description 회차에 나온 셋(normal, confirm, dev) */
             sets?: string[];
             conditions: string[];
             repeats?: number;
@@ -1843,6 +1843,8 @@ export interface operations {
             header?: {
                 /** @description 평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의 agent /run에 condition으로 넘기고(이어지는 /resume은 agent 실행 상태가 조건을 기억합니다), 같은 대화의 출구 호출과 위임 토큰 발급에도 조건을 적용합니다. 조건별 장치 구성은 contracts/eval/conditions.md입니다. */
                 "X-Eval-Condition"?: "no_guard" | "write_blocked" | "approve_all" | "baseline_tools" | "full";
+                /** @description 평가 전용(모델 교체 회귀, #107·#346). GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. 이 대화의 위임 토큰을 붙인 출구 호출에서 별칭을 바꿔 끼웁니다. `local=local-exaone`은 로컬 업무 별칭(`local`, `local-gguf`, 기밀 판정·비용 상한·외부 장애 폴백으로 로컬로 돌릴 때 포함)을 `local-exaone`으로, `external=external-sonnet`은 `external`을 `external-sonnet`으로 보냅니다. 위치(local·external)는 바뀌지 않으므로 모델 정책·가림·기밀 판정은 그대로입니다. 이미지(`local-vision`)·임베딩(`local-embed`)과 토큰 없는 호출(입구 라우터)은 바꾸지 않습니다. 응답 머리글 `X-Egress-Model`에 실제로 보낸 별칭이 나옵니다. 운영 경로에는 영향이 없습니다. */
+                "X-Eval-Model-Override"?: "local=local-exaone" | "external=external-sonnet" | "local=local-exaone,external=external-sonnet";
             };
             path?: never;
             cookie?: never;

@@ -54,12 +54,18 @@ async function pump(call: () => Promise<StreamResponse>, onEvent: (e: ChatEvent)
   return sawDone ? { ok: true } : { ok: false, message: CUT, status, retryable: false }
 }
 
-export function postMessage(conversationId: string, content: string, onEvent: (e: ChatEvent) => void, signal?: AbortSignal) {
+export function postMessage(
+  conversationId: string,
+  content: string,
+  onEvent: (e: ChatEvent) => void,
+  signal?: AbortSignal,
+  images: { dataUrl: string }[] = [],
+) {
   return pump(
     () =>
       api.POST('/conversations/{conversationId}/messages', {
         params: { path: { conversationId } },
-        body: { content },
+        body: images.length ? { content, attachments: images.map((i) => ({ kind: 'image' as const, dataUrl: i.dataUrl })) } : { content },
         parseAs: 'stream',
         signal,
       }),

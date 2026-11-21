@@ -9,10 +9,12 @@ type Model = NonNullable<ChatEvent['model']>
 export type Route = NonNullable<ChatEvent['route']>
 
 export type ThreadItem =
-  | { kind: 'user'; key: string; text: string }
+  /** images는 이번 화면에서 보낸 사진(미리보기용 data URL). 복원한 기록에는 없습니다. */
+  | { kind: 'user'; key: string; text: string; images?: { name: string; dataUrl: string }[] }
   | { kind: 'assistant'; key: string; text: string; streaming: boolean; model?: Model; citations?: Citation[] }
   | { kind: 'tool'; key: string; call: NonNullable<ChatEvent['toolCall']> }
-  | { kind: 'approval'; key: string; approval: Approval; decision?: 'approve' | 'reject'; closed?: 'expired' | 'failed' }
+  /** fromImage: 사진을 붙인 턴에 나온 카드. 값 일부가 사진에서 읽은 것일 수 있어 확인 필요를 표시합니다. */
+  | { kind: 'approval'; key: string; approval: Approval; decision?: 'approve' | 'reject'; closed?: 'expired' | 'failed'; fromImage?: boolean }
   | { kind: 'action'; key: string; action: Action; undone: boolean }
   | { kind: 'blocked'; key: string; reason: string; code?: string }
   | { kind: 'error'; key: string; message: string; retryable: boolean }
@@ -29,7 +31,7 @@ export type ThreadState = {
 
 export type ThreadAction =
   | { type: 'reset'; events?: HistoryEvent[] }
-  | { type: 'user'; text: string }
+  | { type: 'user'; text: string; images?: { name: string; dataUrl: string }[] }
   | { type: 'event'; event: ChatEvent }
   | { type: 'stream-start' }
   | { type: 'stream-end' }
@@ -42,6 +44,15 @@ export const emptyThread: ThreadState = { items: [], lastSeq: -1, streaming: fal
 
 let localKey = 0
 const nextKey = (p: string) => `${p}-${++localKey}`
+
+/** 지금 턴(마지막 사용자 메시지)에 사진을 붙였는지 */
+function turnHasImages(items: ThreadItem[]): boolean {
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i]
+    if (it.kind === 'user') return !!it.images?.length
+  }
+  return false
+}
 
 function lastAssistantIndex(items: ThreadItem[]): number {
   for (let i = items.length - 1; i >= 0; i--) {
@@ -107,7 +118,7 @@ function applyEvent(s: ThreadState, e: ChatEvent): ThreadState {
       return e.toolCall ? { ...st, items: [...items, { kind: 'tool', key: `t-${e.seq}`, call: e.toolCall }] } : st
     case 'approval_required':
       return e.approval
-        ? { ...st, items: [...items, { kind: 'approval', key: e.approval.approvalId, approval: e.approval }] }
+        ? { ...st, items: [...items, { kind: 'approval', key: e.approval.approvalId, approval: e.approval, fromImage: turnHasImages(items) }] }
         : st
     case 'approval_decided': {
       const d = e.decision
@@ -170,7 +181,11 @@ export function threadReducer(s: ThreadState, a: ThreadAction): ThreadState {
       return { ...st, streaming: false }
     }
     case 'user':
-      return { ...s, pendingCitations: undefined, items: [...s.items, { kind: 'user', key: nextKey('u'), text: a.text }] }
+      return {
+        ...s,
+        pendingCitations: undefined,
+        items: [...s.items, { kind: 'user', key: nextKey('u'), text: a.text, ...(a.images?.length ? { images: a.images } : {}) }],
+      }
     case 'event':
       return applyEvent(s, a.event)
     case 'stream-start':

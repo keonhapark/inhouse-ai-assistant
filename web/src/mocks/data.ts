@@ -72,6 +72,13 @@ export const agents: Schemas['AgentInfo'][] = [
     modelPolicy: 'local_only',
     callable: true,
   },
+  {
+    id: 'finance',
+    name: '재무',
+    description: '경비 정산 결재 요청과 회수, 재무 규정(여비·경비) 질의를 맡습니다.',
+    modelPolicy: 'local_only',
+    callable: true,
+  },
 ]
 
 export function tokenFor(e: Employee): string {

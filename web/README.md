@@ -186,6 +186,12 @@ GATEWAY_EXTERNAL_LOG=/audit/gateway/external.jsonl docker compose -f infra/compo
 |---|---|
 | ![실제 평가 리포트](docs/images/real-eval-report.png) | ![실제 시나리오별 결과](docs/images/real-eval-scenarios.png) |
 
+| 사진 첨부: 보낼 사진(미리보기·빼기) | 사진을 붙인 턴의 미리보기 카드 |
+|---|---|
+| ![사진 첨부](docs/images/chat-attach-pick-light.png) | ![이미지에서 읽은 값](docs/images/chat-attach-preview-light.png) |
+
+채팅에서 JPEG·PNG 사진을 한 번에 3장(한 장 5MB)까지 붙여 보냅니다(gateway 메시지 `attachments`, data URL). 사진을 붙인 턴에 나온 실행 미리보기 카드에는 "이미지에서 읽은 값(확인 필요)"을 붙입니다. 사진에서 읽은 값은 신뢰 불가로 다루기 때문입니다(결정 0004). 화면의 영수증은 시험용으로 지어낸 것이고, 모의 서버는 사진을 읽지 않고 정해 둔 값을 돌려줍니다(실제 읽기는 agent의 로컬 비전 모델).
+
 | 로그인 오류 | 디자인 부품 |
 |---|---|
 | ![로그인 오류](docs/images/login-error-light.png) | ![부품](docs/images/design-light.png) |

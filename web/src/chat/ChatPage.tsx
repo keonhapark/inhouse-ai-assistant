@@ -3,6 +3,7 @@ import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { decideApproval, postMessage, undoAction, type StreamResult } from './api'
+import { formatBytes, IMAGE_TYPES, MAX_IMAGES, pickImages, type PickedImage } from './attachments'
 import { ActionCard, AssistantMessage, PreviewCard, ToolCall } from './parts'
 import { emptyThread, pendingApproval, threadReducer, type ChatEvent } from './thread'
 import './chat.css'
@@ -20,6 +21,10 @@ export function ChatPage() {
   const [selected, setSelected] = useState<Summary | null>(null)
   const [thread, dispatch] = useReducer(threadReducer, emptyThread)
   const [draft, setDraft] = useState('')
+  // 보내기 전 붙인 사진과 붙이지 못한 이유
+  const [images, setImages] = useState<PickedImage[]>([])
+  const [attachErrors, setAttachErrors] = useState<string[]>([])
+  const fileRef = useRef<HTMLInputElement>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const abort = useRef<AbortController | null>(null)
@@ -109,8 +114,11 @@ export function ChatPage() {
     dispatch({ type: 'reset' })
   }
 
-  async function send(text: string) {
-    const content = text.trim()
+  /** 사진만 보낼 때 메시지 본문(계약상 content는 필수입니다) */
+  const IMAGE_ONLY = '사진을 첨부했습니다.'
+
+  async function send(text: string, imgs: { name: string; dataUrl: string }[] = []) {
+    const content = text.trim() || (imgs.length ? IMAGE_ONLY : '')
     if (!content) return
     setNotice(null)
     let conv = selected
@@ -135,9 +143,11 @@ export function ChatPage() {
     }
     stick.current = true
     setDraft('')
-    dispatch({ type: 'user', text: content })
+    setImages([])
+    setAttachErrors([])
+    dispatch({ type: 'user', text: content, images: imgs.map(({ name, dataUrl }) => ({ name, dataUrl })) })
     const signal = startStream()
-    await finishStream(await postMessage(conv.conversationId, content, onEvent, signal))
+    await finishStream(await postMessage(conv.conversationId, content, onEvent, signal, imgs))
   }
 
   async function decide(approvalId: string, decision: 'approve' | 'reject') {
@@ -172,13 +182,22 @@ export function ChatPage() {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (canSend) void send(draft)
+    if (canSend) void send(draft, images)
+  }
+
+  async function onPick(files: FileList | null) {
+    if (!files?.length) return
+    const { images: picked, errors } = await pickImages(Array.from(files), images.length)
+    setImages((cur) => [...cur, ...picked].slice(0, MAX_IMAGES))
+    setAttachErrors(errors)
+    // 같은 파일을 지웠다가 다시 고를 수 있게 비웁니다.
+    if (fileRef.current) fileRef.current.value = ''
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
-      if (canSend) void send(draft)
+      if (canSend) void send(draft, images)
     }
   }
 
@@ -254,10 +273,19 @@ export function ChatPage() {
             switch (it.kind) {
               case 'user':
                 return (
-                  <p key={it.key} className="msg msg--user">
+                  <div key={it.key} className="msg msg--user">
                     <span className="visually-hidden">나: </span>
                     {it.text}
-                  </p>
+                    {!!it.images?.length && (
+                      <ul className="msg__images" aria-label={`첨부한 사진 ${it.images.length}장`}>
+                        {it.images.map((img, i) => (
+                          <li key={i}>
+                            <img src={img.dataUrl} alt={img.name} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 )
               case 'assistant':
                 return <AssistantMessage key={it.key} item={it} />
@@ -269,6 +297,7 @@ export function ChatPage() {
                     key={it.key}
                     agentName={agentName}
                     approval={it.approval}
+                    fromImage={it.fromImage}
                     decision={it.decision}
                     closed={it.closed}
                     busy={thread.streaming}
@@ -290,7 +319,7 @@ export function ChatPage() {
                   <div key={it.key} className="notice notice--error" role="alert">
                     <span>{it.message}</span>
                     {it.retryable && lastUser?.kind === 'user' && canSend && (
-                      <Button onClick={() => void send(lastUser.text)}>다시 보내기</Button>
+                      <Button onClick={() => void send(lastUser.text, lastUser.images)}>다시 보내기</Button>
                     )}
                   </div>
                 )
@@ -305,6 +334,31 @@ export function ChatPage() {
             </p>
           )}
           {waiting && <p className="muted">미리보기 카드에서 실행하거나 취소하면 이어서 쓸 수 있습니다.</p>}
+          {attachErrors.map((m, i) => (
+            <p key={i} role="alert" className="alert">
+              {m}
+            </p>
+          ))}
+          {images.length > 0 && (
+            <ul className="attach" aria-label="보낼 사진">
+              {images.map((img) => (
+                <li key={img.id} className="attach__item">
+                  <img src={img.dataUrl} alt="" />
+                  <span className="attach__name">
+                    {img.name} <span className="muted">{formatBytes(img.bytes)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="attach__remove"
+                    aria-label={`${img.name} 빼기`}
+                    onClick={() => setImages((cur) => cur.filter((x) => x.id !== img.id))}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="chat__input">
             <label className="visually-hidden" htmlFor="chat-input">
               메시지
@@ -320,7 +374,27 @@ export function ChatPage() {
               onKeyDown={onKeyDown}
               disabled={!!waiting}
             />
-            <Button type="submit" variant="primary" disabled={!canSend || !draft.trim()}>
+            <input
+              ref={fileRef}
+              id="chat-file"
+              type="file"
+              accept={IMAGE_TYPES.join(',')}
+              multiple
+              className="visually-hidden"
+              tabIndex={-1}
+              onChange={(e) => void onPick(e.target.files)}
+            />
+            <Button
+              onClick={() => fileRef.current?.click()}
+              disabled={!!waiting || images.length >= MAX_IMAGES}
+              aria-describedby="chat-file-hint"
+            >
+              사진 첨부
+            </Button>
+            <span id="chat-file-hint" className="visually-hidden">
+              JPEG·PNG, {MAX_IMAGES}장까지, 한 장 5MB까지
+            </span>
+            <Button type="submit" variant="primary" disabled={!canSend || (!draft.trim() && images.length === 0)}>
               보내기
             </Button>
           </div>
