@@ -8,7 +8,7 @@
 서버 없이 모델 서버(OpenAI 호환)를 바로 부릅니다. gateway를 거치지 않으므로 별칭 대신 모델 이름을 씁니다.
 
     uv run python eval_dev/first_call_run.py --base-url http://<ollama>:11434/v1 --model qwen3.5:9b \\
-        --out eval_dev/runs/<이름>.jsonl [--scenarios <id 목록 파일>]
+        --out eval_dev/runs/<이름>.jsonl [--scenarios <id 목록 파일>] [--variant '{"thinking": false}']
 """
 
 from __future__ import annotations
@@ -74,7 +74,9 @@ async def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--scenarios")
     ap.add_argument("--stage", type=int, default=2)
+    ap.add_argument("--variant", default="{}", help='Variant 필드 JSON, 예: {"thinking": false}(업무 경로의 로컬 계획 호출과 같음)')
     args = ap.parse_args()
+    variant = Variant(**json.loads(args.variant))
     pack = ROOT / "packs" / "manufacturing"
     reg = Registry.load(pack, stage=args.stage)
     raw = json.loads((pack / "fixtures" / "employees.json").read_text("utf-8"))
@@ -94,7 +96,7 @@ async def main() -> None:
             for attempt in range(1, 4):
                 try:
                     res = await caller.run(it["message"], it["agent"], requester(people, it["requester"]),
-                                           date.fromisoformat(str(it["today"])), args.model, Variant())
+                                           date.fromisoformat(str(it["today"])), args.model, variant)
                     row = {**it, "tool": res["tool"], "asked": res["asked"], "content": res["content"],
                            "latencyMs": res["latencyMs"], "error": None, "attempts": attempt}
                     break
