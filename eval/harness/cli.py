@@ -23,8 +23,8 @@ import yaml
 from harness.erp import ErpClient
 from harness.paths import ROOT
 from harness.report import render, summarize
-from harness.runner import (CONDITIONS, MAX_RETRIES, HealthCheck, RunRow, _git, count_retries, load_rows_jsonl,
-                            load_run, run_matrix, save_run, signature_counts)
+from harness.runner import (MAX_RETRIES, RUN_CONDITIONS, HealthCheck, RunRow, _git, count_retries, load_rows_jsonl,
+                            load_run, run_matrix, save_run, signature_counts, system_condition)
 from harness.scenario import ScenarioError, has_document_injection, load_scenarios
 from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
 
@@ -33,7 +33,7 @@ def load_config(path: Path) -> dict[str, Any]:
     cfg = yaml.safe_load(path.read_text(encoding="utf-8"))
     gw = cfg.get("gateway", {})
     conds = gw.get("conditions") or []
-    unknown = [c for c in conds if c not in CONDITIONS]
+    unknown = [c for c in conds if c not in RUN_CONDITIONS]
     if unknown:
         raise ValueError(f"계약에 없는 조건: {unknown}")
     if not conds:
@@ -58,7 +58,8 @@ def make_factories(cfg: dict[str, Any]):
 
     def system(condition: str, seed: int) -> GatewayChat:
         client = httpx.Client(base_url=gw["baseUrl"], timeout=timeout)
-        return GatewayChat(client, auditor=gw.get("auditor"), external_log=external, condition=condition)
+        return GatewayChat(client, auditor=gw.get("auditor"), external_log=external,
+                           condition=system_condition(condition))
 
     erp_cfg = cfg["erp"]
 

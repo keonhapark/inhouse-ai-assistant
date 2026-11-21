@@ -24,6 +24,15 @@ from harness.run import run_once
 from harness.sut import ChatSystem
 
 CONDITIONS = ("no_guard", "write_blocked", "approve_all", "baseline_tools", "full")
+# 하네스 조건: 대상 시스템에는 계약 조건(값)으로 보내고 하네스 승인자만 바꿉니다(결정 0006 민감도 분석)
+HARNESS_CONDITIONS = {"full_always_approve": "full"}
+# 실행·보고서 순서. 하네스 조건은 그 계약 조건 바로 뒤에 둡니다
+RUN_CONDITIONS = ("no_guard", "write_blocked", "approve_all", "baseline_tools", "full", "full_always_approve")
+
+
+def system_condition(condition: str) -> str:
+    """대상 시스템(gateway X-Eval-Condition)에 보낼 계약 조건."""
+    return HARNESS_CONDITIONS.get(condition, condition)
 # 실행 환경 문제로 끝나지 못한 같은 회차를 다시 돌리는 상한. 넘으면 "실패로 끝남"으로 확정합니다(eval/protocol.md 2절)
 MAX_RETRIES = 2
 
@@ -207,7 +216,7 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
     max_runs는 이번에 새로 돌릴 회차 수 상한입니다(나눠 돌리기). prior_cost_usd는 done_rows에 없는 앞선 시도
     (다시 돌린 회차)의 비용으로, 비용 상한에 같이 셉니다. health_check는 재시도 가능한 오류가 났을 때 모델 서버가
     살아 있는지 봅니다. 없으면 그런 회차도 "실패로 끝남"으로 둡니다."""
-    unknown = [c for c in conditions if c not in CONDITIONS]
+    unknown = [c for c in conditions if c not in RUN_CONDITIONS]
     if unknown:
         raise ValueError(f"계약에 없는 조건: {unknown}")
     packs = sorted({s["pack"] for s in scenarios})

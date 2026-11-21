@@ -34,3 +34,4 @@ gateway:
     - approve_all
     - baseline_tools
     - full
+    # - full_always_approve   # 결정 0006 민감도 분석: 장치는 full, 승인자만 항상 승인(확인 셋·정상 셋 v2)

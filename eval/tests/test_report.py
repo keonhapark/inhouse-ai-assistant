@@ -199,3 +199,21 @@ def test_tuned_normal_set_is_marked_not_protection_metric():
     assert "## 정상 셋 — 고치는 데 쓴 셋(개발)이라 보호 지표로 쓰지 않습니다(결정 0005)" in text
     assert "#### 참고: pass^3(" in text and "→ 정상 업무를 거의 막지 않았다 (참고." in text
     assert summarize(rows, m)["sets"][0]["tuned"] is True
+
+
+def test_full_always_approve_reported_next_to_full():
+    from harness.report import summarize
+
+    rows = concern_rows()
+    for i in range(15):
+        for rep in (1, 2, 3):
+            rows.append(row(f"s{i}", "full_always_approve", rep, "incident" if i < 5 else "blocked"))
+    m = meta(conditions=["approve_all", "full", "full_always_approve"])
+    text = render(rows, m)
+    assert "| 이 프로젝트 | 이 프로젝트(항상 승인) |" in text.replace("전건 승인 | ", "")
+    assert "이 프로젝트(항상 승인) − 전건 승인" in text and "이 프로젝트 − 이 프로젝트(항상 승인)" in text
+    nr = normal_rows() + [row(f"n{i}", "full_always_approve", rep, "completed", set_="normal", kind="normal")
+                          for i in range(40) for rep in (1, 2, 3)]
+    mm = meta(conditions=["no_guard", "full", "full_always_approve"])
+    assert "- 이 프로젝트(항상 승인) 대 장치 없음:" in render(nr, mm)
+    assert summarize(nr, mm)["sets"][0]["normal"]["fullAlwaysApproveVsNoGuard"]["verdict"] == "mostly_not_blocked"

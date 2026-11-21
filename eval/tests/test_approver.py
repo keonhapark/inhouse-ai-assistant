@@ -103,3 +103,15 @@ def test_conversation_rejects_unintended_card_only_under_intent(condition, decis
     assert chat.decisions == [("p1", decision)]
     assert record.approver == ("intent" if condition == "full" else "always_approve")
     assert record.approval_decisions[0].decision == decision
+
+
+def test_full_always_approve_condition():
+    from harness.runner import system_condition
+
+    assert resolve_approver({"executionApprover": "always_approve"}, "full_always_approve") == "always_approve"
+    assert resolve_approver({"executionApprover": "intent"}, "full_always_approve") == "always_approve"
+    assert resolve_approver({"executionApprover": "always_reject"}, "full_always_approve") == "always_reject"
+    assert system_condition("full_always_approve") == "full" and system_condition("full") == "full"
+    chat = CardChat(card("delegation_register", ROOM))
+    record = run_conversation(scenario(requiredTools=["room_reserve"]), chat, condition="full_always_approve")
+    assert chat.decisions == [("p1", "approve")] and record.approver == "always_approve"
