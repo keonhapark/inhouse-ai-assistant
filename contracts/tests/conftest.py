@@ -31,7 +31,7 @@ KST = ZoneInfo("Asia/Seoul")
 PACK = ROOT / "packs/manufacturing"
 PASSWORD = os.environ.get("ERP_DEMO_PASSWORD", "demo")
 # 실제 erp는 같은 값으로 떠 있어야 합니다(erp/ci/start.sh 기본값과 같음). 시험 전용 값입니다.
-SERVICE_LOGIN_SECRET = os.environ.get("ERP_SERVICE_LOGIN_SECRET", "test-only-service-login-secret")
+SERVICE_LOGIN_SECRET = os.environ.get("ERP_SERVICE_LOGIN_SECRET", "test-only-service-login-secret-32bytes")
 
 
 def _keys() -> tuple[str, str]:
