@@ -1,0 +1,38 @@
+{
+  "incidentId": "db_down-03",
+  "runId": "20261122-0752",
+  "fault": "db_down",
+  "title": "PostgreSQL 중단",
+  "rootService": "postgres",
+  "kind": "dependency_down",
+  "window": {
+    "start": "2026-11-22T08:21:17.650267+09:00",
+    "end": "2026-11-22T08:23:52.900197+09:00"
+  },
+  "injectedAt": "2026-11-22T08:22:02.653161+09:00",
+  "recoverStartedAt": "2026-11-22T08:23:03.898676+09:00",
+  "recoveredAt": "2026-11-22T08:23:11.007375+09:00",
+  "ticket": {
+    "id": "tkt_86b4492e15fd",
+    "requesterId": "E0048",
+    "title": "ERP 화면 전체가 오류입니다",
+    "description": "로그인은 되는데 연차 조회, 회의실 조회가 모두 실패합니다. 동료들도 같다고 합니다.",
+    "createdAt": "2026-11-22T08:23:52.938709179+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 26,
+    "logs/erp.log": 1354,
+    "logs/rag.log": 32,
+    "logs/agent.log": 48,
+    "logs/litellm.log": 93,
+    "logs/gateway.log": 50,
+    "audit/gateway_egress.jsonl": 1,
+    "audit/gateway_audit.jsonl": 13,
+    "audit/rag.jsonl": 1,
+    "audit/agent.jsonl": 5,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 5
+  },
+  "trafficErrors": 9,
+  "trafficTotal": 626
+}

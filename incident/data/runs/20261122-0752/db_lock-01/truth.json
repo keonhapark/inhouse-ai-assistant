@@ -1,0 +1,38 @@
+{
+  "incidentId": "db_lock-01",
+  "runId": "20261122-0752",
+  "fault": "db_lock",
+  "title": "업무 표 배타 잠금",
+  "rootService": "postgres",
+  "kind": "lock_contention",
+  "window": {
+    "start": "2026-11-22T07:55:25.053874+09:00",
+    "end": "2026-11-22T07:57:42.024623+09:00"
+  },
+  "injectedAt": "2026-11-22T07:56:10.056987+09:00",
+  "recoverStartedAt": "2026-11-22T07:57:10.278691+09:00",
+  "recoveredAt": "2026-11-22T07:57:12.024124+09:00",
+  "ticket": {
+    "id": "tkt_cfd2f55859e9",
+    "requesterId": "E0036",
+    "title": "연차 조회가 오래 걸립니다",
+    "description": "연차 잔여를 보려고 하면 화면이 멈춘 것처럼 오래 걸립니다.",
+    "createdAt": "2026-11-22T07:57:42.064304905+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 49,
+    "logs/erp.log": 643,
+    "logs/rag.log": 27,
+    "logs/agent.log": 50,
+    "logs/litellm.log": 144,
+    "logs/gateway.log": 48,
+    "audit/gateway_egress.jsonl": 2,
+    "audit/gateway_audit.jsonl": 16,
+    "audit/rag.jsonl": 1,
+    "audit/agent.jsonl": 6,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 0
+  },
+  "trafficErrors": 7,
+  "trafficTotal": 606
+}

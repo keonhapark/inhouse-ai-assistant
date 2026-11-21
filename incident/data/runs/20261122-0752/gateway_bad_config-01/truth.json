@@ -1,0 +1,38 @@
+{
+  "incidentId": "gateway_bad_config-01",
+  "runId": "20261122-0752",
+  "fault": "gateway_bad_config",
+  "title": "gateway 잘못된 LLM 키 배포",
+  "rootService": "gateway",
+  "kind": "bad_config",
+  "window": {
+    "start": "2026-11-22T08:04:02.303945+09:00",
+    "end": "2026-11-22T08:07:02.240780+09:00"
+  },
+  "injectedAt": "2026-11-22T08:04:47.307371+09:00",
+  "recoverStartedAt": "2026-11-22T08:06:22.684133+09:00",
+  "recoveredAt": "2026-11-22T08:06:32.240213+09:00",
+  "ticket": {
+    "id": "tkt_4841962a3f4c",
+    "requesterId": "E0034",
+    "title": "AI 비서 답변 실패",
+    "description": "어떤 질문을 해도 답변 생성에 실패했다고 나옵니다.",
+    "createdAt": "2026-11-22T08:07:02.277740859+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 2,
+    "logs/erp.log": 1471,
+    "logs/rag.log": 35,
+    "logs/agent.log": 65,
+    "logs/litellm.log": 170,
+    "logs/gateway.log": 50,
+    "audit/gateway_egress.jsonl": 2,
+    "audit/gateway_audit.jsonl": 22,
+    "audit/rag.jsonl": 0,
+    "audit/agent.jsonl": 8,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 8
+  },
+  "trafficErrors": 7,
+  "trafficTotal": 1421
+}

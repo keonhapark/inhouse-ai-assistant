@@ -1,0 +1,38 @@
+{
+  "incidentId": "rag_corrupt-03",
+  "runId": "20261122-0752",
+  "fault": "rag_corrupt",
+  "title": "rag 임베딩 캐시 손상",
+  "rootService": "rag",
+  "kind": "data_corruption",
+  "window": {
+    "start": "2026-11-22T08:29:07.895509+09:00",
+    "end": "2026-11-22T08:32:30.730791+09:00"
+  },
+  "injectedAt": "2026-11-22T08:29:52.898489+09:00",
+  "recoverStartedAt": "2026-11-22T08:30:56.018869+09:00",
+  "recoveredAt": "2026-11-22T08:31:45.718217+09:00",
+  "ticket": {
+    "id": "tkt_e7f36e20a193",
+    "requesterId": "E0054",
+    "title": "규정 질문에 답이 없습니다",
+    "description": "취업규칙을 물어봤는데 처리 중 오류가 발생했다고만 나옵니다.",
+    "createdAt": "2026-11-22T08:32:30.760198816+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 0,
+    "logs/erp.log": 1536,
+    "logs/rag.log": 85,
+    "logs/agent.log": 77,
+    "logs/litellm.log": 172,
+    "logs/gateway.log": 82,
+    "audit/gateway_egress.jsonl": 2,
+    "audit/gateway_audit.jsonl": 34,
+    "audit/rag.jsonl": 1,
+    "audit/agent.jsonl": 11,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 10
+  },
+  "trafficErrors": 2,
+  "trafficTotal": 1482
+}
