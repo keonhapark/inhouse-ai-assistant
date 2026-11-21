@@ -124,6 +124,7 @@ class Conversation:
     pending: str | None = None
     condition: str | None = None   # 평가 조건(X-Eval-Condition). 운영에서는 None
     unit_id: str | None = None     # 요청자 소속 부서(비용 상한의 부서 기준)
+    route_method: str | None = None  # 대화를 연 라우팅 방식(llm·keyword·fallback·explicit). /run의 routeMethod(#311)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     def event(self, type_: str, **fields: Any) -> dict[str, Any]:
@@ -286,7 +287,7 @@ class ChatService:
                                                       "code": "agent_not_callable"})
                     yield c.event("done")
                     return
-                c.agent_id, c.routed = agent.id, True
+                c.agent_id, c.routed, c.route_method = agent.id, True, route["method"]
                 if route["method"] == "explicit":
                     # 직원이 고른 대화는 agent 라우터를 거치지 않아 gateway가 route.decided를 남깁니다(운영 지표 호출 수).
                     self.audit.event("route.decided", employee_id=who.id, agent_id=agent.id, via_token=False,
@@ -300,6 +301,10 @@ class ChatService:
                         "requester": agent_requester(who)}
                 if c.condition:
                     body["condition"] = c.condition
+                if c.route_method:
+                    # fallback이면 agent가 그 대화를 로컬로만 실행합니다(#308: 로컬 장애 때 외부 허용 fallback 에이전트로 넘어가 외부로 나가던 경로).
+                    # 계약은 첫 턴만 넘겨도 된다고 하지만, agent가 다시 떠도 같게 매 턴 넘깁니다.
+                    body["routeMethod"] = c.route_method
                 if attachments:
                     # 이 턴의 첨부만 넘깁니다. 대화 기록(c.events)에는 남기지 않습니다(화면 복원은 글만)
                     body["attachments"] = attachments
