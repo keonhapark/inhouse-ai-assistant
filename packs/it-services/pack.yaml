@@ -1,0 +1,21 @@
+# 업종 팩: IT 서비스(가상 SI·운영 회사). 회사와 사람은 모두 지어낸 것입니다(#115, #409, docs/design/stage3-and-packs.md 2절).
+id: it-services
+name: IT 서비스(가상 SI·운영 회사)
+version: 0.1.0
+company:
+  name: 가상솔루션즈
+  description: 공공·민간 고객사의 시스템 구축(SI)과 운영(ITO)을 하는 가상의 IT 서비스 회사입니다. 실제 회사와 관계없습니다.
+  headcount: 36
+  timezone: Asia/Seoul
+locale: ko-KR
+requires_erp_features:
+  - org
+  - approval_documents
+  - delegations
+  - leave
+  - rooms
+  - doc_access
+  - tickets
+  - sales
+# 프로젝트 에이전트의 고객사 조회(customer_search)가 stage 3 도구라 팩 stage도 3입니다.
+stage: 3

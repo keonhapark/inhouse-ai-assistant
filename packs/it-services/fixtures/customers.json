@@ -1,0 +1,32 @@
+{
+  "customers": [
+    {
+      "id": "cus_0001",
+      "name": "새솔시청(가상)",
+      "contact_name": "김도현",
+      "contact_email": "pm1@example.com",
+      "contact_phone": "010-0000-0101"
+    },
+    {
+      "id": "cus_0002",
+      "name": "한결물류(가상)",
+      "contact_name": "이수아",
+      "contact_email": "pm2@example.com",
+      "contact_phone": "010-0000-0102"
+    },
+    {
+      "id": "cus_0003",
+      "name": "온누리병원(가상)",
+      "contact_name": "박지성",
+      "contact_email": "pm3@example.com",
+      "contact_phone": "010-0000-0103"
+    },
+    {
+      "id": "cus_0004",
+      "name": "미르카드(가상)",
+      "contact_name": "최예린",
+      "contact_email": "pm4@example.com",
+      "contact_phone": "010-0000-0104"
+    }
+  ]
+}

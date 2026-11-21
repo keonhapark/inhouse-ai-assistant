@@ -1,0 +1,45 @@
+# 결재 양식. erp의 결재 문서 엔진이 이 정의를 그대로 씁니다.
+forms:
+  - id: leave
+    name: 휴가 신청
+    stage: 1
+    fields:
+      type: object
+      required: [leave_type, start_date, end_date, reason]
+      additionalProperties: false
+      properties:
+        leave_type:
+          title: 종류
+          type: string
+          enum: [annual, half_am, half_pm, sick, special]
+          x-labels: {annual: 연차, half_am: 오전 반차, half_pm: 오후 반차, sick: 병가, special: 경조사}
+        start_date: {title: 시작일, type: string, format: date}
+        end_date: {title: 종료일, type: string, format: date}
+        reason: {title: 사유, type: string, maxLength: 200}
+    effects:
+      on_final_approval: deduct_leave_balance
+      on_withdraw_after_approval: restore_leave_balance
+    approval_line:
+      - when: {}
+        steps: [team_leader]
+
+  - id: effort
+    name: 공수 보고
+    stage: 1
+    # 팩 양식 도구(#397): 공용 tools.json을 바꾸지 않고 이 양식을 올리는 도구를 만듭니다.
+    tool:
+      name: effort_report
+      description: 프로젝트 공수(주간 투입 시간) 보고 결재를 올립니다. 결재는 팀장(PM)이 합니다. 실행 전에 미리보기를 보여 줍니다.
+    fields:
+      type: object
+      required: [project_code, week_start, hours, summary]
+      additionalProperties: false
+      properties:
+        project_code: {title: 프로젝트 코드, type: string, pattern: "^PRJ-[0-9]{4}-[0-9]{2}$", maxLength: 16}
+        week_start: {title: 주 시작일(월), type: string, format: date}
+        hours: {title: 투입 시간, type: integer, minimum: 1, maximum: 60}
+        overtime_hours: {title: 연장 시간, type: integer, minimum: 0, maximum: 20}
+        summary: {title: 수행 내용, type: string, maxLength: 300}
+    approval_line:
+      - when: {}
+        steps: [team_leader]

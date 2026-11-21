@@ -1,0 +1,221 @@
+{
+  "seed": 20261122,
+  "balances": [
+    {
+      "employee_id": "E0001",
+      "year": 2026,
+      "annual_total": 18.0,
+      "annual_used": 8.0
+    },
+    {
+      "employee_id": "E0002",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 6.0
+    },
+    {
+      "employee_id": "E0003",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 6.0
+    },
+    {
+      "employee_id": "E0004",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 6.5
+    },
+    {
+      "employee_id": "E0005",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 7.0
+    },
+    {
+      "employee_id": "E0006",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 5.5
+    },
+    {
+      "employee_id": "E0007",
+      "year": 2026,
+      "annual_total": 17.0,
+      "annual_used": 8.5
+    },
+    {
+      "employee_id": "E0008",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 8.5
+    },
+    {
+      "employee_id": "E0009",
+      "year": 2026,
+      "annual_total": 16.0,
+      "annual_used": 5.0
+    },
+    {
+      "employee_id": "E0010",
+      "year": 2026,
+      "annual_total": 17.0,
+      "annual_used": 8.5
+    },
+    {
+      "employee_id": "E0011",
+      "year": 2026,
+      "annual_total": 18.0,
+      "annual_used": 6.0
+    },
+    {
+      "employee_id": "E0012",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 8.5
+    },
+    {
+      "employee_id": "E0013",
+      "year": 2026,
+      "annual_total": 18.0,
+      "annual_used": 3.5
+    },
+    {
+      "employee_id": "E0014",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 6.5
+    },
+    {
+      "employee_id": "E0015",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 0.0
+    },
+    {
+      "employee_id": "E0016",
+      "year": 2026,
+      "annual_total": 17.0,
+      "annual_used": 5.5
+    },
+    {
+      "employee_id": "E0017",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 2.5
+    },
+    {
+      "employee_id": "E0018",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 6.5
+    },
+    {
+      "employee_id": "E0019",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 8.0
+    },
+    {
+      "employee_id": "E0020",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 6.0
+    },
+    {
+      "employee_id": "E0021",
+      "year": 2026,
+      "annual_total": 17.0,
+      "annual_used": 1.5
+    },
+    {
+      "employee_id": "E0022",
+      "year": 2026,
+      "annual_total": 16.0,
+      "annual_used": 6.0
+    },
+    {
+      "employee_id": "E0023",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 7.5
+    },
+    {
+      "employee_id": "E0024",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 5.5
+    },
+    {
+      "employee_id": "E0025",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 6.0
+    },
+    {
+      "employee_id": "E0026",
+      "year": 2026,
+      "annual_total": 17.0,
+      "annual_used": 2.0
+    },
+    {
+      "employee_id": "E0027",
+      "year": 2026,
+      "annual_total": 16.0,
+      "annual_used": 6.0
+    },
+    {
+      "employee_id": "E0028",
+      "year": 2026,
+      "annual_total": 16.0,
+      "annual_used": 1.5
+    },
+    {
+      "employee_id": "E0029",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 7.5
+    },
+    {
+      "employee_id": "E0030",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 7.0
+    },
+    {
+      "employee_id": "E0031",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 6.0
+    },
+    {
+      "employee_id": "E0032",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 2.5
+    },
+    {
+      "employee_id": "E0033",
+      "year": 2026,
+      "annual_total": 20.0,
+      "annual_used": 5.0
+    },
+    {
+      "employee_id": "E0034",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 6.5
+    },
+    {
+      "employee_id": "E0035",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 3.5
+    },
+    {
+      "employee_id": "E0036",
+      "year": 2026,
+      "annual_total": 15.0,
+      "annual_used": 1.5
+    }
+  ]
+}
