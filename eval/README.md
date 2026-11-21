@@ -57,7 +57,7 @@ uv run python -m harness.cli toolcall-run --agent-url http://localhost:$PORT_AGE
 uv run python -m harness.cli toolcall-report reports/<이름>.json   # 기록을 지금 규칙으로 다시 채점
 ```
 
-- 항목 기본값은 개발 묶음 `agent/eval_dev/tool_calls.jsonl`(60개, 1단계 도구 48개)입니다. 확인 묶음은 총괄이 넘긴 경로를 `--items`로 줍니다.
+- 항목 기본값은 개발 묶음 `agent/eval_dev/tool_calls.jsonl`(60개, 1단계 도구 48개)입니다. 확인 묶음은 총괄이 넘긴 경로를 `--items`로 주고 `--bundle <묶음 폴더>`를 붙입니다. 시작할 때 묶음 해시를 계약 표와 대조하고 `--items`가 그 manifest 파일인지 보며, 맞지 않으면 멈춥니다. 보고서에는 묶음 대조 결과와 묶음 안 경로만 적고 저장소 밖 절대 경로는 남기지 않습니다.
 - 첫 행동만 봅니다. 결과는 정답, 대안 정답, 확인 후 진행(되돌릴 수 없는 도구 앞의 확인 질문), 다른 도구, 인자 틀림, 인자를 못 읽음, 부르지 않고 되물음·답함, 되물어야 하는데 부름, 실행 오류(분모 제외)로 나눕니다. 인자 비교는 `argMatch`(`exact`·`date`·`set`·`normalized`·`nonempty`·`ignore`)이고, 날짜·시각은 같은 시점이면 같다고 봅니다.
 - 보조로 인자 스키마 유효(`contracts/mcp/tools.json` inputSchema), 되묻기 비율, 지어낸 필수 인자 수, 모델 지연, 모델 위치를 셉니다.
 - setup이 있는 항목은 `--erp-url`(필요하면 `--erp-reset`)로 상태를 만든 뒤 발화와 정답의 `${이름}`을 바꿉니다.

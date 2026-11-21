@@ -224,3 +224,32 @@ def test_resume_refuses_rows_from_another_bundle(tmp_path, monkeypatch):
                                               encoding="utf-8")
     with pytest.raises(_Reached):
         main(args)
+
+
+def _toolcall_args(root, tmp_path, items):
+    return ["toolcall-run", "--agent-url", "http://agent", "--out", str(tmp_path / "tc" / "r"),
+            "--items", str(items), "--bundle", str(root)]
+
+
+def test_toolcall_run_checks_bundle_and_items(tmp_path, monkeypatch):
+    root, table = make_bundle(tmp_path, name="toolcall-v1")
+    _confirm_table(monkeypatch, table)
+    outside = tmp_path / "items.jsonl"
+    outside.write_text("", encoding="utf-8")
+    with pytest.raises(SystemExit, match="manifest의 파일이어야"):
+        main(_toolcall_args(root, tmp_path, outside))
+    (root / "markers.yaml").write_bytes(b"changed\n")
+    with pytest.raises(SystemExit, match="계약과 맞지 않습니다"):
+        main(_toolcall_args(root, tmp_path, root / "scenarios" / "a.yaml"))
+    assert not (tmp_path / "tc" / "r.rows.jsonl").exists()
+
+
+def test_toolcall_run_records_bundle_and_relative_items(tmp_path, monkeypatch):
+    root, table = make_bundle(tmp_path, name="toolcall-v1")
+    _confirm_table(monkeypatch, table)
+    monkeypatch.setattr("harness.cli._toolcall_items", lambda args: [])
+    monkeypatch.setattr("harness.toolcall.run_items", lambda items, post, **kw: [])
+    assert main(_toolcall_args(root, tmp_path, root / "scenarios" / "a.yaml")) == 0
+    meta = json.loads((tmp_path / "tc" / "r.json").read_text(encoding="utf-8"))["meta"]
+    assert meta["items"] == "scenarios/a.yaml" and meta["bundle"].startswith("toolcall-v1 `")
+    assert str(tmp_path) not in (tmp_path / "tc" / "r.md").read_text(encoding="utf-8")
