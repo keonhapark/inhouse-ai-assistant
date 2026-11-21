@@ -17,7 +17,7 @@ def _registry() -> Registry:
     reg = Registry()
     for rel in ["openapi/erp.yaml", "openapi/gateway.yaml", "openapi/agent.yaml", "openapi/rag.yaml",
                 "events/audit.schema.json", "events/trace.schema.json", "auth/delegation-token.schema.json",
-                "eval/scenario.schema.json", "pack/pack.schema.json", "mcp/tools.schema.json"]:
+                "eval/scenario.schema.json", "eval/report.schema.json", "pack/pack.schema.json", "mcp/tools.schema.json"]:
         doc = load(CONTRACTS / rel)
         reg = reg.with_resource(BASE + rel, Resource.from_contents(doc, default_specification=DRAFT202012))
     return reg

@@ -17,7 +17,7 @@ from tools.check_packs import main as check_packs_main
 from tools.common import CONTRACTS, PACKS, ROOT, load, openapi_operations
 
 SPECS = sorted((CONTRACTS / "openapi").glob("*.yaml"))
-SCHEMAS = ["events/audit.schema.json", "events/trace.schema.json", "eval/scenario.schema.json",
+SCHEMAS = ["events/audit.schema.json", "events/trace.schema.json", "eval/scenario.schema.json", "eval/report.schema.json",
            "pack/pack.schema.json", "mcp/tools.schema.json", "auth/delegation-token.schema.json"]
 
 
@@ -126,6 +126,63 @@ def test_agent_registry_matches_pack() -> None:
                 "routingKeywords": a.get("routing", {}).get("keywords", []),
             }
             validate("openapi/gateway.yaml", "AgentRegistryEntry", entry)
+
+
+def test_eval_reports_follow_schema() -> None:
+    """커밋된 평가 보고서 JSON이 web 평가 리포트 화면(#214)이 읽는 형식을 지킵니다."""
+    reports = sorted((ROOT / "eval" / "reports").glob("*.json"))
+    assert reports, "eval/reports에 보고서 JSON이 없습니다"
+    for f in reports:
+        validate_file("eval/report.schema.json", json.loads(f.read_text(encoding="utf-8")))
+
+
+def test_eval_report_summary_example() -> None:
+    """summary 예시(1단계 정상 셋 보고서의 값)가 형식을 지킵니다."""
+    def prop(n: int, total: int, low: float, high: float) -> dict:
+        return {"n": n, "N": total, "rate": n / total, "low": low, "high": high}
+
+    conds = ["no_guard", "write_blocked", "full"]
+    summary = {
+        "passK": 1,
+        "sets": [{
+            "set": "normal", "main": False, "concern": None,
+            "normal": {
+                "passK": [{"group": "all", "cells": [
+                    {"condition": "no_guard", "rate": prop(25, 80, 0.213, 0.426)},
+                    {"condition": "write_blocked", "rate": prop(23, 80, 0.192, 0.400)},
+                    {"condition": "full", "rate": prop(43, 80, 0.422, 0.650)}]}],
+                "fullVsWriteBlocked": {"full": 43, "writeBlocked": 23},
+                "fullVsNoGuard": {"diff": {"a": "full", "b": "no_guard", "pairs": 80, "pA": 0.5375, "pB": 0.3125,
+                                           "diff": 0.225, "low": 0.122, "high": 0.319}, "verdict": "mostly_not_blocked"},
+                "router": [{"condition": c, "rate": prop(71, 80, 0.797, 0.947)} for c in conds],
+            },
+            "common": {
+                "approvals": [{"condition": "full", "requested": 5, "missedRisks": 0, "unnecessary": 0}],
+                "routes": [{"condition": "no_guard", "route": "external", "incident": 23, "blocked": 0, "completed": 15, "failed": 2}],
+                "costLatency": [{"condition": "full", "p50S": 37.5, "p95S": 120.0, "costUsd": 0.05, "costUnknown": 0}],
+            },
+        }, {
+            "set": "confirm", "main": True, "normal": None,
+            "concern": {
+                "full": [{"concernType": "leak", "scenarios": prop(0, 15, 0.0, 0.218), "runs": {"n": 0, "N": 45}},
+                         {"concernType": None, "scenarios": prop(1, 75, 0.0003, 0.072), "runs": {"n": 1, "N": 225}}],
+                "byCondition": [{"concernType": None, "cells": [{"condition": "full", "n": 1, "N": 75}]}],
+                "comparisons": [{"concernType": None, "diffs": [{"a": "full", "b": "approve_all", "pairs": 75,
+                                                                 "diff": -0.2, "low": -0.3, "high": -0.1}]}],
+                "byAuthor": [{"author": "hand", "cells": [{"condition": "full", "n": 1, "N": 40}]}],
+                "outcomes": [{"condition": "full", "incident": 1, "blocked": 200, "completed": 20, "failed": 4,
+                              "executedThenUndone": 0, "forbiddenAttempts": 3}],
+            },
+            "common": {"approvals": [], "routes": [], "costLatency": [{"condition": "full", "p50S": None, "p95S": None,
+                                                                       "costUsd": None, "costUnknown": 225}]},
+        }],
+    }
+    report = json.loads((ROOT / "eval" / "reports" / "2026-11-20-normal-stage1.json").read_text(encoding="utf-8"))
+    validate_file("eval/report.schema.json", {**report, "summary": summary})
+    bad = {**summary, "sets": [{**summary["sets"][0], "normal": {**summary["sets"][0]["normal"],
+                                                                  "fullVsNoGuard": {"diff": {}, "verdict": "maybe"}}}]}
+    with pytest.raises(AssertionError):
+        validate_file("eval/report.schema.json", {**report, "summary": bad})
 
 
 def test_no_human_only_operation_is_a_tool() -> None:

@@ -36,3 +36,4 @@
 | 2026-11-21 | gateway | #273 | gateway `POST /auth/slack`(헤더 `X-Slack-Bridge-Secret`, 본문 `{slackUserId}`, 응답 erp `LoginResponse`, 401·403·404), erp `POST /auth/service-login`(#291)을 부름 | #102 슬랙 입구 | contract/gateway-slack PR |
 | 2026-11-21 | gateway | #304 | 팩 glossary.yaml 선택 항목 `topics`(id·action·reason·patterns 정규식, 대화 내용만 봄), 제조 팩 hr-attendance | #304 인사 정보 로컬 강제(#308 두 번째 방어선) | contract/gateway-local-topics PR |
 | 2026-11-21 | gateway | #331 | gateway `POST /auth/slack` 429 `rate-limited`(`Retry-After`), 슬랙 사용자별·전체 분당 상한 | #331 브리지 비밀값이 새도 토큰을 마음대로 받지 못하게 | contract/gateway-slack-rate-limit PR |
+| 2026-11-21 | web | #214 | `contracts/eval/report.schema.json`(meta·rows·summary), gateway `GET /eval/reports`·`GET /eval/reports/{reportId}`(auditor만, eval/reports 읽기 전용) | 평가 리포트 화면. summary는 eval #328이 씀 | contract/web-eval-report PR, gateway 구현 이슈 |

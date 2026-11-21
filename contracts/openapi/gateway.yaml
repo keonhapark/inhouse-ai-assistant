@@ -657,6 +657,46 @@ paths:
         "400": {$ref: "#/components/responses/Problem"}
         "403": {$ref: "#/components/responses/Problem"}
 
+  /eval/reports:
+    get:
+      tags: [ops]
+      operationId: listEvalReports
+      description: |
+        auditor 역할만(관리자 콘솔 평가 리포트, 위임 토큰 403). 저장소 eval/reports의 보고서 JSON 목록을 최근 것부터 돌려줍니다.
+        gateway는 그 폴더를 읽기 전용으로 마운트해 읽기만 합니다(평가를 돌리지 않음). reportId는 파일 이름에서 .json을 뺀 것입니다.
+      responses:
+        "200":
+          description: 보고서 목록
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: "#/components/schemas/EvalReportSummary"}
+        "403": {$ref: "#/components/responses/Problem"}
+
+  /eval/reports/{reportId}:
+    get:
+      tags: [ops]
+      operationId: getEvalReport
+      description: auditor 역할만. 보고서 JSON 한 개를 그대로 돌려줍니다(contracts/eval/report.schema.json). 없으면 404.
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema: {type: string, pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*$"}
+      responses:
+        "200":
+          description: 보고서
+          content:
+            application/json:
+              schema: {$ref: "../eval/report.schema.json"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+
 components:
   securitySchemes:
     bearer:
@@ -1026,3 +1066,21 @@ components:
       type: string
       enum: [auto, auto_with_undo, confirm, deny]
       description: "auto: 바로 실행. auto_with_undo: 실행하고 되돌리기 안내. confirm: 미리보기 카드로 실행 승인. deny: 이 에이전트에서 금지"
+
+    EvalReportSummary:
+      type: object
+      description: 보고서 목록 한 줄. 본문 meta에서 뽑은 값입니다
+      required: [reportId, startedAt, conditions, complete, hasSummary]
+      properties:
+        reportId: {type: string, description: "파일 이름에서 .json을 뺀 것(예: 2026-11-20-normal-stage1)"}
+        title: {type: [string, "null"], description: 같은 이름 md의 첫 제목. 없으면 null}
+        startedAt: {type: string, format: date-time}
+        finishedAt: {type: [string, "null"]}
+        sets: {type: array, items: {type: string}, description: 회차에 나온 셋(normal, confirm, dev)}
+        conditions: {type: array, items: {type: string}}
+        repeats: {type: integer}
+        packStage: {type: [integer, "null"]}
+        doneRuns: {type: integer}
+        plannedRuns: {type: integer}
+        complete: {type: boolean}
+        hasSummary: {type: boolean, description: "본문에 summary가 있는지(#328 전 보고서는 false)"}

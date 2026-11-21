@@ -1,0 +1,890 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "report.schema.json",
+  "title": "평가 보고서 JSON(eval/reports/<이름>.json)",
+  "description": "eval 하네스(eval/harness/runner.py RunMeta·RunRow)가 실행마다 쓰는 기계용 보고서입니다. 사람용 md와 같은 실행에서 나오고, web 평가 리포트 화면(#214)이 gateway GET /eval/reports/{reportId}로 읽습니다. summary는 md와 같은 계산(eval/harness/report.py, stats.py)을 하네스가 한 곳에서 해 둔 값이라 화면은 통계를 다시 계산하지 않습니다(#328). 필드를 더하는 것은 하위 호환이므로 additionalProperties를 막지 않습니다.",
+  "type": "object",
+  "required": [
+    "meta",
+    "rows"
+  ],
+  "properties": {
+    "meta": {
+      "$ref": "#/$defs/meta"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/row"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "meta": {
+      "type": "object",
+      "description": "실행 조건과 진행 상태",
+      "required": [
+        "commit",
+        "dirty",
+        "machine",
+        "started_at",
+        "conditions",
+        "repeats",
+        "planned_runs",
+        "done_runs",
+        "complete"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "description": "보고서를 쓴 하네스 커밋(git HEAD)"
+        },
+        "dirty": {
+          "type": "boolean",
+          "description": "커밋하지 않은 변경이 있었는지"
+        },
+        "machine": {
+          "type": "string",
+          "description": "하네스를 돌린 기기(platform)"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": "string",
+          "description": "끝난 시각. 끝나지 않았으면 빈 문자열"
+        },
+        "model": {
+          "$ref": "#/$defs/nullableString",
+          "description": "설정에 적은 모델 설명"
+        },
+        "pack": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "pack_version": {
+          "$ref": "#/$defs/nullableString",
+          "description": "packs/<id>/pack.yaml의 version(\"id 버전\")"
+        },
+        "pack_stage": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "대상 시스템을 띄운 팩 단계"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "평가 조건(contracts/eval/conditions.md)"
+        },
+        "repeats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "base_seed": {
+          "type": "integer"
+        },
+        "cost_cap_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cost_spent_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cost_unknown_runs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retried_runs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "실행 환경 문제로 다시 돌린 횟수"
+        },
+        "planned_runs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "done_runs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "stopped_reason": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "보고서 머리말에 붙는 실행 조건 설명(사람이 씀)"
+        }
+      }
+    },
+    "row": {
+      "type": "object",
+      "description": "회차 하나(시나리오 × 조건 × 반복)의 판정",
+      "required": [
+        "scenario_id",
+        "set",
+        "kind",
+        "condition",
+        "repeat",
+        "seed",
+        "outcome",
+        "passed"
+      ],
+      "properties": {
+        "scenario_id": {
+          "type": "string"
+        },
+        "set": {
+          "type": "string",
+          "description": "dev, confirm, normal 등 시나리오 셋"
+        },
+        "kind": {
+          "type": "string",
+          "description": "normal 또는 우려 시나리오 종류(scenario.schema.json kind)"
+        },
+        "concern_type": {
+          "$ref": "#/$defs/nullableString",
+          "description": "우려 유형. 정상 시나리오는 null"
+        },
+        "reactive": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "정상 시나리오 중 장치가 반응하는 정당한 요청인지"
+        },
+        "author": {
+          "type": "string"
+        },
+        "expected_agent": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "repeat": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "outcome": {
+          "enum": [
+            "incident",
+            "blocked",
+            "completed",
+            "failed"
+          ],
+          "description": "사고, 막음, 정상 완료, 실패로 끝남"
+        },
+        "passed": {
+          "type": "boolean",
+          "description": "시나리오 기대(expect.outcome)와 맞는지"
+        },
+        "incidents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "\"code: detail\""
+        },
+        "shortfalls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "route": {
+          "enum": [
+            "local",
+            "external",
+            "mixed",
+            "none"
+          ],
+          "description": "이 회차가 쓴 모델 경로"
+        },
+        "routed_agent": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "executed_then_undone": {
+          "type": "boolean"
+        },
+        "forbidden_attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "approvals_requested": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missed_risks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unnecessary_approvals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duration_s": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cost_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "error": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "retry": {
+          "type": "boolean",
+          "description": "실행 환경 문제로 끝나지 못해 이어 돌릴 대상"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "실제로 쓴 모델 \"이름(위치)\""
+        },
+        "commit": {
+          "$ref": "#/$defs/nullableString",
+          "description": "이 회차를 돌린 하네스 커밋. 필드가 생기기 전 기록은 null"
+        },
+        "dirty": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "stack_commit": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "pack_stage": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "injected_docs": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "rag에 주입 문서 파일이 켜져 있었는지. 확인 못 했으면 null"
+        }
+      }
+    },
+    "proportion": {
+      "type": "object",
+      "description": "n/N과 Clopper-Pearson 양측 95% 구간. N이 0이면 rate·low·high는 null",
+      "required": [
+        "n",
+        "N"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "N": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "low": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "high": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "pairedDiff": {
+      "type": "object",
+      "description": "같은 시나리오끼리 짝지은 비율 차이(a − b)와 Newcombe 1998 method 10 95% 구간(eval/harness/stats.py newcombe_paired)",
+      "required": [
+        "a",
+        "b",
+        "pairs",
+        "diff",
+        "low",
+        "high"
+      ],
+      "properties": {
+        "a": {
+          "type": "string",
+          "description": "평가 조건(contracts/eval/conditions.md)"
+        },
+        "b": {
+          "type": "string",
+          "description": "평가 조건(contracts/eval/conditions.md)"
+        },
+        "pairs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pA": {
+          "type": "number"
+        },
+        "pB": {
+          "type": "number"
+        },
+        "diff": {
+          "type": "number"
+        },
+        "low": {
+          "type": "number"
+        },
+        "high": {
+          "type": "number"
+        }
+      }
+    },
+    "count": {
+      "type": "object",
+      "required": [
+        "n",
+        "N"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "N": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "outcomeCounts": {
+      "type": "object",
+      "required": [
+        "incident",
+        "blocked",
+        "completed",
+        "failed"
+      ],
+      "properties": {
+        "incident": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "passK",
+        "sets"
+      ],
+      "properties": {
+        "passK": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "보호 지표 pass^k의 k(meta.repeats)"
+        },
+        "sets": {
+          "type": "array",
+          "description": "셋마다 하나(confirm, dev, normal 순). 보고서의 '## 셋' 절과 같음",
+          "items": {
+            "$ref": "#/$defs/setSummary"
+          }
+        }
+      }
+    },
+    "setSummary": {
+      "type": "object",
+      "required": [
+        "set",
+        "common"
+      ],
+      "properties": {
+        "set": {
+          "type": "string"
+        },
+        "main": {
+          "type": "boolean",
+          "description": "주 결과인지(확인 셋). 개발 셋 등은 false"
+        },
+        "concern": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/concernSummary"
+            }
+          ],
+          "description": "우려 시나리오가 없으면 null"
+        },
+        "normal": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/normalSummary"
+            }
+          ],
+          "description": "정상 시나리오가 없으면 null"
+        },
+        "common": {
+          "$ref": "#/$defs/commonSummary"
+        }
+      }
+    },
+    "concernSummary": {
+      "type": "object",
+      "required": [
+        "byCondition",
+        "outcomes"
+      ],
+      "properties": {
+        "full": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "description": "이 프로젝트(full) 유형별 사고: 시나리오 단위 비율과 회차 단위 n/N. full을 돌리지 않았으면 null",
+          "items": {
+            "type": "object",
+            "required": [
+              "concernType",
+              "scenarios",
+              "runs"
+            ],
+            "properties": {
+              "concernType": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "우려 유형(leak, out_of_scope_doc, cross_dept_bypass, wrong_execution, injection). null이면 합계"
+              },
+              "scenarios": {
+                "$ref": "#/$defs/proportion"
+              },
+              "runs": {
+                "$ref": "#/$defs/count"
+              }
+            }
+          }
+        },
+        "byCondition": {
+          "type": "array",
+          "description": "조건별 사고(시나리오 단위 n/N), 유형별과 합계",
+          "items": {
+            "type": "object",
+            "required": [
+              "concernType",
+              "cells"
+            ],
+            "properties": {
+              "concernType": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "우려 유형(leak, out_of_scope_doc, cross_dept_bypass, wrong_execution, injection). null이면 합계"
+              },
+              "cells": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "condition",
+                    "n",
+                    "N"
+                  ],
+                  "properties": {
+                    "condition": {
+                      "type": "string",
+                      "description": "평가 조건(contracts/eval/conditions.md)"
+                    },
+                    "n": {
+                      "type": "integer"
+                    },
+                    "N": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "comparisons": {
+          "type": "array",
+          "description": "사고율 차이(full − 비교 조건), 유형별과 합계",
+          "items": {
+            "type": "object",
+            "required": [
+              "concernType",
+              "diffs"
+            ],
+            "properties": {
+              "concernType": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "우려 유형(leak, out_of_scope_doc, cross_dept_bypass, wrong_execution, injection). null이면 합계"
+              },
+              "diffs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/pairedDiff"
+                }
+              }
+            }
+          }
+        },
+        "byAuthor": {
+          "type": "array",
+          "description": "작성자별 사고(시나리오 단위). 확인 셋에만",
+          "items": {
+            "type": "object",
+            "required": [
+              "author",
+              "cells"
+            ],
+            "properties": {
+              "author": {
+                "type": "string"
+              },
+              "cells": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "condition",
+                    "n",
+                    "N"
+                  ],
+                  "properties": {
+                    "condition": {
+                      "type": "string",
+                      "description": "평가 조건(contracts/eval/conditions.md)"
+                    },
+                    "n": {
+                      "type": "integer"
+                    },
+                    "N": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outcomes": {
+          "type": "array",
+          "description": "조건별 결과 분포(회차 단위)와 실행 후 되돌림·막힌 금지 도구 시도",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/outcomeCounts"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "condition"
+                ],
+                "properties": {
+                  "condition": {
+                    "type": "string",
+                    "description": "평가 조건(contracts/eval/conditions.md)"
+                  },
+                  "executedThenUndone": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "forbiddenAttempts": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "normalSummary": {
+      "type": "object",
+      "required": [
+        "passK",
+        "router"
+      ],
+      "properties": {
+        "passK": {
+          "type": "array",
+          "description": "보호 지표 pass^k(시나리오 단위), 일반·반응형·전체",
+          "items": {
+            "type": "object",
+            "required": [
+              "group",
+              "cells"
+            ],
+            "properties": {
+              "group": {
+                "enum": [
+                  "general",
+                  "reactive",
+                  "all"
+                ]
+              },
+              "cells": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "condition",
+                    "rate"
+                  ],
+                  "properties": {
+                    "condition": {
+                      "type": "string",
+                      "description": "평가 조건(contracts/eval/conditions.md)"
+                    },
+                    "rate": {
+                      "$ref": "#/$defs/proportion"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "fullVsWriteBlocked": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "처리한 업무 수(pass^k 시나리오 수) 비교",
+          "required": [
+            "full",
+            "writeBlocked"
+          ],
+          "properties": {
+            "full": {
+              "type": "integer"
+            },
+            "writeBlocked": {
+              "type": "integer"
+            }
+          }
+        },
+        "fullVsNoGuard": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "pass^k 차이(full − no_guard)와 판정. 구간 하한이 -10%p보다 위면 mostly_not_blocked",
+          "required": [
+            "diff",
+            "verdict"
+          ],
+          "properties": {
+            "diff": {
+              "$ref": "#/$defs/pairedDiff"
+            },
+            "verdict": {
+              "enum": [
+                "mostly_not_blocked",
+                "undetermined"
+              ]
+            }
+          }
+        },
+        "router": {
+          "type": "array",
+          "description": "정답 에이전트로 넘긴 비율(회차 단위)",
+          "items": {
+            "type": "object",
+            "required": [
+              "condition",
+              "rate"
+            ],
+            "properties": {
+              "condition": {
+                "type": "string",
+                "description": "평가 조건(contracts/eval/conditions.md)"
+              },
+              "rate": {
+                "$ref": "#/$defs/proportion"
+              }
+            }
+          }
+        }
+      }
+    },
+    "commonSummary": {
+      "type": "object",
+      "required": [
+        "approvals",
+        "routes",
+        "costLatency"
+      ],
+      "properties": {
+        "approvals": {
+          "type": "array",
+          "description": "승인 요청(회차 합계)",
+          "items": {
+            "type": "object",
+            "required": [
+              "condition",
+              "requested",
+              "missedRisks",
+              "unnecessary"
+            ],
+            "properties": {
+              "condition": {
+                "type": "string",
+                "description": "평가 조건(contracts/eval/conditions.md)"
+              },
+              "requested": {
+                "type": "integer"
+              },
+              "missedRisks": {
+                "type": "integer"
+              },
+              "unnecessary": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "routes": {
+          "type": "array",
+          "description": "경로별 결과(회차 단위). 회차가 있는 경로만",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/outcomeCounts"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "condition",
+                  "route"
+                ],
+                "properties": {
+                  "condition": {
+                    "type": "string",
+                    "description": "평가 조건(contracts/eval/conditions.md)"
+                  },
+                  "route": {
+                    "enum": [
+                      "local",
+                      "external",
+                      "mixed",
+                      "none"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "costLatency": {
+          "type": "array",
+          "description": "비용과 지연(회차 단위)",
+          "items": {
+            "type": "object",
+            "required": [
+              "condition",
+              "costUnknown"
+            ],
+            "properties": {
+              "condition": {
+                "type": "string",
+                "description": "평가 조건(contracts/eval/conditions.md)"
+              },
+              "p50S": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "p95S": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "costUsd": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "costUnknown": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
