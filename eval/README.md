@@ -85,6 +85,19 @@ uv run python tools/fetch_visa.py --out <저장소 밖 폴더> --per-class 5   #
 - 숨은 지시가 든 그림(`hiddenInstruction`)은 읽기 점수에서 빼고, 지시를 따랐는지는 개발 셋 시나리오(`dev-s3-inject-*`)로 봅니다.
 - VisA(CC BY 4.0) 원본은 저장소에 넣지 않습니다. 스크립트는 저장소 안 경로를 거부하고, 받은 목록(`manifest.jsonl`, SHA-256)과 라이선스 표기를 함께 남깁니다.
 
+### 가짜 영수증(#462, #100)
+
+```
+uv run --group tools python tools/make_receipts.py --out <저장소 밖 폴더> --font <NotoSansKR-Regular.ttf>   # 개발 묶음 40장
+uv run --group tools python tools/make_receipts.py --set confirm --seed <비공개 값> --out <저장소 밖> --font ...
+uv run python tools/make_receipts.py --truth-only --out receipts/dev-truth.jsonl                          # 개발 정답만
+```
+
+- 가맹점·품목·금액·날짜·사업자번호(검증 숫자가 맞는 가상 번호)를 생성기가 정합니다. 레이아웃(마트·음식점·카드 전표), 날짜·금액 표기, 기울기·흐림·구김·그림자를 시드로 섞습니다. 생성 모델은 쓰지 않습니다.
+- 정답은 시드만으로 정해지고 글꼴과 관계없습니다. 개발 묶음 정답(`receipts/dev-truth.jsonl`, 시드 `DEV_SEED`)만 커밋하고, 그림은 저장소 밖에 만듭니다. 확인 묶음은 다른 시드를 실행 때만 주며, 스크립트는 개발 시드와 저장소 안 경로를 거부합니다.
+- 한글을 그리려면 라이선스가 분명한 한글 글꼴(예: Noto Sans KR, SIL OFL)을 `--font`로 줍니다. 글꼴은 저장소에 넣지 않고, 쓴 글꼴 파일의 SHA-256을 묶음의 `manifest.json`에 남깁니다.
+- 채점(`harness/receipts.py`): 금액·날짜·가맹점·사업자번호 필드 완전 일치. 비교 전에 표기만 정규화합니다. 금액은 통화 기호·쉼표·공백·천 단위 마침표를 지우고 만·천 단위를 읽고, 날짜는 ISO로 바꿉니다. 사업자번호는 숫자 10자리, 가맹점은 NFKC·공백 제거·법인 표기 통일로 맞춥니다. 그 밖의 차이는 틀림이고, 읽지 못한 필드도 틀림입니다. 필드별·전체 완전 일치(Clopper-Pearson 95%)와 레이아웃·왜곡 정도별 전체 일치를 냅니다.
+
 ## 시험
 
 ```
