@@ -276,8 +276,213 @@ class TicketsMixin:
                                               "before": before, "after": ticket_view(t)}], ticket_view(t)
 
 
+# ---------- 품질·영업 ----------
+
+SEVERITIES = ("minor", "major", "critical")
+
+
+def _int(body: dict[str, Any], name: str, lo: int, hi: int) -> int:
+    v = body.get(name)
+    if not isinstance(v, int) or isinstance(v, bool) or not lo <= v <= hi:
+        raise ProblemError(422, "validation", f"{name}: {lo}~{hi} 정수", [{"field": name, "message": "invalid"}])
+    return v
+
+
+def _opt_text(body: dict[str, Any], name: str, max_len: int) -> str | None:
+    if body.get(name) is None:
+        return None
+    v = body[name]
+    if not isinstance(v, str) or len(v) > max_len:
+        raise ProblemError(422, "validation", f"{name}: {max_len}자 이하", [{"field": name, "message": "invalid"}])
+    return v
+
+
+def defect_from_fixture(d: dict[str, Any], items: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    return {"id": d["id"], "createdBy": d["created_by"], "itemCode": d["item_code"],
+            "itemName": items[d["item_code"]]["name"], "defectType": d["defect_type"], "severity": d["severity"],
+            "quantity": d["quantity"], "location": d.get("location"), "lotNo": d.get("lot_no"),
+            "description": d["description"], "status": d["status"], "version": 0,
+            "confirmedBy": d.get("confirmed_by"), "createdAt": d["created_at"], "updatedAt": d["created_at"]}
+
+
+class QualitySalesMixin:
+    """State에 붙는 품질(불량 보고서)·영업(견적, 품목, 고객사) 규칙(erp.yaml quality·sales·catalog)."""
+
+    features: set[str]
+    items: dict[str, dict[str, Any]]
+    customers: dict[str, dict[str, Any]]
+    defect_reports: dict[str, dict[str, Any]]
+    quotes: dict[str, dict[str, Any]]
+
+    def need(self, feature: str) -> None:
+        if feature not in self.features:
+            raise ProblemError(404, "not-found", "없는 경로입니다")
+
+    def _role(self, emp_id: str, key: str) -> bool:
+        return self.has_role(emp_id, self.erp_role(key))  # type: ignore[attr-defined]
+
+    # 품목·고객사
+    def list_items(self, q: str | None, limit: int) -> list[dict[str, Any]]:
+        rows = [i for i in self.items.values() if not q or q.lower() in i["code"].lower() or q in i["name"]]
+        return [{"code": i["code"], "name": i["name"], "unit": i["unit"], "unitPrice": i["unit_price"],
+                 "stock": i["stock"]} for i in rows[: max(1, min(limit, 100))]]
+
+    def list_customers(self, emp_id: str, q: str | None, limit: int) -> list[dict[str, Any]]:
+        self.need("sales")
+        rep = self._role(emp_id, "sales_rep")
+        rows = [c for c in self.customers.values() if not q or q in c["name"]]
+        return [{"id": c["id"], "name": c["name"],
+                 "contact": {"name": c["contact_name"], "email": c["contact_email"], "phone": c["contact_phone"]}
+                 if rep else None} for c in rows[: max(1, min(limit, 100))]]
+
+    # 불량 보고서
+    def visible_defect(self, emp_id: str, rid: str) -> dict[str, Any]:
+        self.need("quality")
+        d = self.defect_reports.get(rid)
+        if d is None or (d["createdBy"] != emp_id and not self._role(emp_id, "quality_reviewer")):
+            raise ProblemError(404, "not-found", "불량 보고서가 없습니다")
+        return d
+
+    def list_defects(self, emp_id: str, box: str, status: str | None, limit: int) -> list[dict[str, Any]]:
+        self.need("quality")
+        if box not in ("mine", "all"):
+            raise ProblemError(422, "validation", "box: mine, all 중 하나", [{"field": "box", "message": "invalid"}])
+        if box == "all" and not self._role(emp_id, "quality_reviewer"):
+            raise ProblemError(403, "forbidden", "품질 확인 역할만 전체를 봅니다")
+        rows = [d for d in self.defect_reports.values()
+                if (box == "all" or d["createdBy"] == emp_id) and (status is None or d["status"] == status)]
+        rows.sort(key=lambda d: d["createdAt"], reverse=True)
+        return [dict(d) for d in rows[: max(1, min(limit, 100))]]
+
+    def create_defect(self, p: Principal, body: dict[str, Any]) -> tuple[str, list, bool, dict]:
+        self.need("quality")
+        _only(body, {"itemCode", "defectType", "severity", "quantity", "location", "lotNo", "description"})
+        code = _text(body, "itemCode", 32)
+        if code not in self.items:
+            raise ProblemError(422, "validation", "없는 품목입니다", [{"field": "itemCode", "message": "unknown"}])
+        at = iso(now())
+        d = {"id": new_id("dfr"), "createdBy": p.employee_id, "itemCode": code, "itemName": self.items[code]["name"],
+             "defectType": _text(body, "defectType", 50), "severity": _one_of(body, "severity", SEVERITIES),
+             "quantity": _int(body, "quantity", 1, 1_000_000), "location": _opt_text(body, "location", 100),
+             "lotNo": _opt_text(body, "lotNo", 50), "description": _text(body, "description", 1000),
+             "status": "draft", "version": 0, "confirmedBy": None, "createdAt": at, "updatedAt": at}
+        self.defect_reports[d["id"]] = d
+        return (f"{d['itemName']} 불량 보고서 초안을 씁니다", [{"op": "create", "resource": "defect_report",
+                "resourceId": d["id"], "before": None, "after": dict(d)}], True, dict(d))
+
+    def undo_create_defect(self, rid: str) -> tuple[str, list, dict]:
+        d = self.defect_reports[rid]
+        if d["status"] != "draft":
+            raise ProblemError(409, "undo-conflict", "그사이 확정되었습니다")
+        before = dict(d)
+        d["status"], d["version"], d["updatedAt"] = "cancelled", d["version"] + 1, iso(now())
+        return "불량 보고서 초안을 되돌렸습니다(취소)", [{"op": "update", "resource": "defect_report", "resourceId": rid,
+                                                 "before": before, "after": dict(d)}], dict(d)
+
+    def confirm_defect(self, p: Principal, rid: str, body: dict[str, Any]) -> tuple[str, list, bool, dict]:
+        d = self.visible_defect(p.employee_id, rid)
+        if not self._role(p.employee_id, "quality_reviewer"):
+            raise ProblemError(403, "forbidden", "품질 확인 역할만 확정합니다")
+        _only(body, {"version"})
+        version = _int(body, "version", 0, 1_000_000)
+        if version != d["version"]:
+            raise ProblemError(409, "version-conflict", "그사이 보고서가 바뀌었습니다")
+        if d["status"] != "draft":
+            raise ProblemError(409, "invalid-state", f"{d['status']} 보고서는 확정할 수 없습니다")
+        before = dict(d)
+        d["status"], d["version"], d["confirmedBy"], d["updatedAt"] = "confirmed", d["version"] + 1, p.employee_id, iso(now())
+        return (f"{d['itemName']} 불량 보고서를 확정합니다", [{"op": "update", "resource": "defect_report", "resourceId": rid,
+                "before": before, "after": dict(d)}], False, dict(d))
+
+    # 견적
+    def visible_quote(self, emp_id: str, qid: str) -> dict[str, Any]:
+        self.need("sales")
+        q = self.quotes.get(qid)
+        if q is None or (q["createdBy"] != emp_id and not self._role(emp_id, "sales_rep")):
+            raise ProblemError(404, "not-found", "견적이 없습니다")
+        return q
+
+    def list_quotes(self, emp_id: str, box: str, status: str | None, limit: int) -> list[dict[str, Any]]:
+        self.need("sales")
+        if box not in ("mine", "all"):
+            raise ProblemError(422, "validation", "box: mine, all 중 하나", [{"field": "box", "message": "invalid"}])
+        if box == "all" and not self._role(emp_id, "sales_rep"):
+            raise ProblemError(403, "forbidden", "영업 역할만 전체를 봅니다")
+        rows = [q for q in self.quotes.values()
+                if (box == "all" or q["createdBy"] == emp_id) and (status is None or q["status"] == status)]
+        rows.sort(key=lambda q: q["createdAt"], reverse=True)
+        return [copy.deepcopy(q) for q in rows[: max(1, min(limit, 100))]]
+
+    def create_quote(self, p: Principal, body: dict[str, Any]) -> tuple[str, list, bool, dict]:
+        self.need("sales")
+        if not self._role(p.employee_id, "sales_rep"):
+            raise ProblemError(403, "forbidden", "영업 역할만 견적을 씁니다")
+        _only(body, {"customerId", "lines", "validUntil", "note"})
+        cid = _text(body, "customerId", 32)
+        if cid not in self.customers:
+            raise ProblemError(422, "validation", "없는 고객사입니다", [{"field": "customerId", "message": "unknown"}])
+        raw = body.get("lines")
+        if not isinstance(raw, list) or not 1 <= len(raw) <= 20:
+            raise ProblemError(422, "validation", "lines: 1~20줄", [{"field": "lines", "message": "invalid"}])
+        lines = []
+        for i, ln in enumerate(raw):
+            if not isinstance(ln, dict) or set(ln) - {"itemCode", "quantity"}:
+                raise ProblemError(422, "validation", f"lines[{i}]: itemCode, quantity만", [{"field": f"lines/{i}", "message": "invalid"}])
+            code = _text(ln, "itemCode", 32)
+            if code not in self.items:
+                raise ProblemError(422, "validation", "없는 품목입니다", [{"field": f"lines/{i}/itemCode", "message": "unknown"}])
+            qty = _int(ln, "quantity", 1, 1_000_000)
+            price = self.items[code]["unit_price"]
+            lines.append({"itemCode": code, "itemName": self.items[code]["name"], "quantity": qty, "unitPrice": price,
+                          "amount": qty * price})
+        valid = body.get("validUntil")
+        if valid is None:
+            valid = (now().date() + timedelta(days=30)).isoformat()
+        else:
+            try:
+                if date.fromisoformat(str(valid)) < now().date():
+                    raise ValueError
+            except ValueError:
+                raise ProblemError(422, "validation", "validUntil: 오늘이나 그 뒤 날짜", [{"field": "validUntil", "message": "invalid"}])
+        at = iso(now())
+        q = {"id": new_id("quo"), "createdBy": p.employee_id, "customerId": cid, "customerName": self.customers[cid]["name"],
+             "lines": lines, "totalAmount": sum(ln["amount"] for ln in lines), "validUntil": valid,
+             "note": _opt_text(body, "note", 500), "status": "draft", "version": 0, "issuedBy": None,
+             "createdAt": at, "updatedAt": at}
+        self.quotes[q["id"]] = q
+        return (f"{q['customerName']} 견적 초안({q['totalAmount']:,}원)을 씁니다",
+                [{"op": "create", "resource": "quote", "resourceId": q["id"], "before": None, "after": copy.deepcopy(q)}],
+                True, copy.deepcopy(q))
+
+    def undo_create_quote(self, qid: str) -> tuple[str, list, dict]:
+        q = self.quotes[qid]
+        if q["status"] != "draft":
+            raise ProblemError(409, "undo-conflict", "그사이 발행되었습니다")
+        before = copy.deepcopy(q)
+        q["status"], q["version"], q["updatedAt"] = "cancelled", q["version"] + 1, iso(now())
+        return "견적 초안을 되돌렸습니다(취소)", [{"op": "update", "resource": "quote", "resourceId": qid,
+                                            "before": before, "after": copy.deepcopy(q)}], copy.deepcopy(q)
+
+    def issue_quote(self, p: Principal, qid: str, body: dict[str, Any]) -> tuple[str, list, bool, dict]:
+        q = self.visible_quote(p.employee_id, qid)
+        if not self._role(p.employee_id, "sales_rep"):
+            raise ProblemError(403, "forbidden", "영업 역할만 발행합니다")
+        _only(body, {"version"})
+        version = _int(body, "version", 0, 1_000_000)
+        if version != q["version"]:
+            raise ProblemError(409, "version-conflict", "그사이 견적이 바뀌었습니다")
+        if q["status"] != "draft":
+            raise ProblemError(409, "invalid-state", f"{q['status']} 견적은 발행할 수 없습니다")
+        if date.fromisoformat(q["validUntil"]) < now().date():
+            raise ProblemError(409, "invalid-state", "유효 기한이 지났습니다")
+        before = copy.deepcopy(q)
+        q["status"], q["version"], q["issuedBy"], q["updatedAt"] = "issued", q["version"] + 1, p.employee_id, iso(now())
+        return (f"{q['customerName']} 견적을 발행합니다", [{"op": "update", "resource": "quote", "resourceId": qid,
+                "before": before, "after": copy.deepcopy(q)}], False, copy.deepcopy(q))
+
+
 @dataclass
-class State(TicketsMixin):
+class State(TicketsMixin, QualitySalesMixin):
     pack: dict[str, Any]
     employees: dict[str, dict[str, Any]]
     units: dict[str, dict[str, Any]]
@@ -288,6 +493,11 @@ class State(TicketsMixin):
     delegations: dict[str, dict[str, Any]] = field(default_factory=dict)
     reservations: dict[str, dict[str, Any]] = field(default_factory=dict)
     tickets: dict[str, dict[str, Any]] = field(default_factory=dict)
+    features: set[str] = field(default_factory=set)
+    items: dict[str, dict[str, Any]] = field(default_factory=dict)
+    customers: dict[str, dict[str, Any]] = field(default_factory=dict)
+    defect_reports: dict[str, dict[str, Any]] = field(default_factory=dict)
+    quotes: dict[str, dict[str, Any]] = field(default_factory=dict)
     actions: dict[str, Action] = field(default_factory=dict)
     notifications: list[dict[str, Any]] = field(default_factory=list)
     audit: list[dict[str, Any]] = field(default_factory=list)
@@ -302,6 +512,11 @@ class State(TicketsMixin):
         bals = load(pack_dir / "fixtures/leave_balances.json")["balances"]
         tickets_file = pack_dir / "fixtures/tickets.json"
         tickets = load(tickets_file)["tickets"] if tickets_file.exists() else []
+
+        def optional(name: str, key: str) -> list[dict[str, Any]]:
+            f = pack_dir / f"fixtures/{name}.json"
+            return load(f)[key] if f.exists() else []
+        pack_yaml = yaml.safe_load((pack_dir / "pack.yaml").read_text(encoding="utf-8"))
         units = {u["id"]: dict(u) for u in org["units"]}
         employees = {e["id"]: dict(e) for e in emps}
         for e in employees.values():
@@ -319,6 +534,11 @@ class State(TicketsMixin):
             e["roles"] = st._roles_of(e)
         for t in tickets:
             st.tickets[t["id"]] = ticket_from_fixture(t)
+        st.features = set(pack_yaml.get("requires_erp_features", []))
+        st.items = {i["code"]: i for i in optional("items", "items")}
+        st.customers = {c["id"]: c for c in optional("customers", "customers")}
+        for d in optional("defect_reports", "defect_reports"):
+            st.defect_reports[d["id"]] = defect_from_fixture(d, st.items)
         return st
 
     # ---------- 조직 ----------
@@ -346,7 +566,8 @@ class State(TicketsMixin):
 
     def erp_role(self, key: str) -> str:
         """org.yaml erp_roles의 역할 ID(hr, auditor, ticket_handler). 없으면 hr_staff·auditor·it_admin입니다."""
-        defaults = {"hr": "hr_staff", "auditor": "auditor", "ticket_handler": "it_admin"}
+        defaults = {"hr": "hr_staff", "auditor": "auditor", "ticket_handler": "it_admin",
+                    "quality_reviewer": "quality_staff", "sales_rep": "sales_staff"}
         return self.pack["org"].get("erp_roles", {}).get(key, defaults[key])
 
     def can_register_for_others(self, emp_id: str) -> bool:

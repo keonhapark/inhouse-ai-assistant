@@ -1,0 +1,88 @@
+{
+  "items": [
+    {
+      "code": "BRG-6204",
+      "name": "깊은 홈 볼 베어링 6204",
+      "unit": "EA",
+      "unit_price": 4200,
+      "stock": 1250
+    },
+    {
+      "code": "BRG-6205",
+      "name": "깊은 홈 볼 베어링 6205",
+      "unit": "EA",
+      "unit_price": 4900,
+      "stock": 860
+    },
+    {
+      "code": "SFT-2040",
+      "name": "정밀 샤프트 20x400",
+      "unit": "EA",
+      "unit_price": 38000,
+      "stock": 120
+    },
+    {
+      "code": "GR-M2-40",
+      "name": "평기어 모듈2 40T",
+      "unit": "EA",
+      "unit_price": 27500,
+      "stock": 64
+    },
+    {
+      "code": "BLT-M8-30",
+      "name": "육각 볼트 M8x30",
+      "unit": "EA",
+      "unit_price": 120,
+      "stock": 18000
+    },
+    {
+      "code": "NUT-M8",
+      "name": "육각 너트 M8",
+      "unit": "EA",
+      "unit_price": 45,
+      "stock": 22000
+    },
+    {
+      "code": "BSH-2530",
+      "name": "오일리스 부시 25x30",
+      "unit": "EA",
+      "unit_price": 3300,
+      "stock": 410
+    },
+    {
+      "code": "HSG-A100",
+      "name": "알루미늄 하우징 A100",
+      "unit": "EA",
+      "unit_price": 56000,
+      "stock": 35
+    },
+    {
+      "code": "CPL-J20",
+      "name": "조 커플링 J20",
+      "unit": "EA",
+      "unit_price": 15800,
+      "stock": 90
+    },
+    {
+      "code": "SEAL-35",
+      "name": "오일 실 35x52x8",
+      "unit": "EA",
+      "unit_price": 1900,
+      "stock": 640
+    },
+    {
+      "code": "PLT-S304-2",
+      "name": "스테인리스 판재 304 2T",
+      "unit": "SHT",
+      "unit_price": 84000,
+      "stock": 22
+    },
+    {
+      "code": "SPR-C12",
+      "name": "압축 스프링 C12",
+      "unit": "EA",
+      "unit_price": 650,
+      "stock": 3100
+    }
+  ]
+}

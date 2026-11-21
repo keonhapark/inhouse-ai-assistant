@@ -1,0 +1,39 @@
+{
+  "customers": [
+    {
+      "id": "cus_0001",
+      "name": "가온테크(가상)",
+      "contact_name": "박지훈",
+      "contact_email": "buyer1@example.com",
+      "contact_phone": "010-0000-0001"
+    },
+    {
+      "id": "cus_0002",
+      "name": "누리모터스(가상)",
+      "contact_name": "이서연",
+      "contact_email": "buyer2@example.com",
+      "contact_phone": "010-0000-0002"
+    },
+    {
+      "id": "cus_0003",
+      "name": "다온로보틱스(가상)",
+      "contact_name": "최민수",
+      "contact_email": "buyer3@example.com",
+      "contact_phone": "010-0000-0003"
+    },
+    {
+      "id": "cus_0004",
+      "name": "라온산업기계(가상)",
+      "contact_name": "정하늘",
+      "contact_email": "buyer4@example.com",
+      "contact_phone": "010-0000-0004"
+    },
+    {
+      "id": "cus_0005",
+      "name": "마루에너지설비(가상)",
+      "contact_name": "한도윤",
+      "contact_email": "buyer5@example.com",
+      "contact_phone": "010-0000-0005"
+    }
+  ]
+}

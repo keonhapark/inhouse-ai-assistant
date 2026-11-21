@@ -438,6 +438,72 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
         return run_write(request, p, "changeTicketStatus", body, lambda s: s.change_ticket_status(p, tid, body),
                          lambda r: (lambda s: s.undo_ticket_status(r["id"], r["version"])), "ticket")
 
+    # ---------- 품질·영업·품목 ----------
+    @app.get("/api/v1/items")
+    def list_items(request: Request, q: str | None = None, limit: int = 20) -> dict:
+        principal(request, "item:read")
+        with lock:
+            return {"items": st.list_items(q, limit)}
+
+    @app.get("/api/v1/customers")
+    def list_customers(request: Request, q: str | None = None, limit: int = 20) -> dict:
+        p = principal(request, "customer:read")
+        with lock:
+            return {"items": st.list_customers(p.employee_id, q, limit)}
+
+    @app.get("/api/v1/quality/defect-reports")
+    def list_defects(request: Request, box: str = "mine", status: str | None = None, limit: int = 20) -> dict:
+        p = principal(request, "quality:read")
+        with lock:
+            return {"items": st.list_defects(p.employee_id, box, status, limit)}
+
+    @app.get("/api/v1/quality/defect-reports/{rid}")
+    def get_defect(request: Request, rid: str) -> dict:
+        p = principal(request, "quality:read")
+        with lock:
+            return dict(st.visible_defect(p.employee_id, rid))
+
+    @app.post("/api/v1/quality/defect-reports")
+    async def create_defect(request: Request) -> JSONResponse:
+        p = principal(request, "quality:write")
+        body = await json_body(request)
+        st.need("quality")
+        return run_write(request, p, "createDefectReport", body, lambda s: s.create_defect(p, body),
+                         lambda r: (lambda s: s.undo_create_defect(r["id"])), "defect_report")
+
+    @app.post("/api/v1/quality/defect-reports/{rid}/confirm")
+    async def confirm_defect(request: Request, rid: str) -> JSONResponse:
+        p = principal(request, "quality:confirm", human_only=True)
+        body = await json_body(request)
+        return run_write(request, p, "confirmDefectReport", body, lambda s: s.confirm_defect(p, rid, body),
+                         None, "defect_report")
+
+    @app.get("/api/v1/sales/quotes")
+    def list_quotes(request: Request, box: str = "mine", status: str | None = None, limit: int = 20) -> dict:
+        p = principal(request, "sales:read")
+        with lock:
+            return {"items": st.list_quotes(p.employee_id, box, status, limit)}
+
+    @app.get("/api/v1/sales/quotes/{qid}")
+    def get_quote(request: Request, qid: str) -> dict:
+        p = principal(request, "sales:read")
+        with lock:
+            return copy.deepcopy(st.visible_quote(p.employee_id, qid))
+
+    @app.post("/api/v1/sales/quotes")
+    async def create_quote(request: Request) -> JSONResponse:
+        p = principal(request, "sales:write")
+        body = await json_body(request)
+        st.need("sales")
+        return run_write(request, p, "createQuote", body, lambda s: s.create_quote(p, body),
+                         lambda r: (lambda s: s.undo_create_quote(r["id"])), "quote")
+
+    @app.post("/api/v1/sales/quotes/{qid}/issue")
+    async def issue_quote(request: Request, qid: str) -> JSONResponse:
+        p = principal(request, "sales:issue", human_only=True)
+        body = await json_body(request)
+        return run_write(request, p, "issueQuote", body, lambda s: s.issue_quote(p, qid, body), None, "quote")
+
     def action_view(a: Action) -> dict:
         return {"id": a.id, "operation": a.operation, "actorId": a.actor.employee_id,
                 "viaDelegationToken": a.actor.via_delegation_token, "agentId": a.actor.agent_id,

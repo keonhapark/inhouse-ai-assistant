@@ -43,7 +43,9 @@ def check_pack(pack_dir: Path) -> list[str]:
             loc = "/".join(str(p) for p in e.absolute_path)
             errors.append(f"{pack_dir.name}/{rel}:{loc}: {e.message}")
     for optional, def_name in (("glossary.yaml", "glossary"), ("budgets.yaml", "budgets"),  # 선택 파일
-                               ("fixtures/tickets.json", "fixtures_tickets")):
+                               ("fixtures/tickets.json", "fixtures_tickets"), ("fixtures/items.json", "fixtures_items"),
+                               ("fixtures/customers.json", "fixtures_customers"),
+                               ("fixtures/defect_reports.json", "fixtures_defect_reports")):
         f = pack_dir / optional
         if not f.exists():
             continue
@@ -192,6 +194,16 @@ def check_pack(pack_dir: Path) -> list[str]:
     for b in balances:
         if b["employee_id"] not in emp_ids:
             errors.append(f"{p}fixtures/leave_balances.json: 없는 직원 '{b['employee_id']}'")
+    item_codes = [i["code"] for i in (data.get("fixtures/items.json") or {}).get("items", [])]
+    for dup, n in Counter(item_codes).items():
+        if n > 1:
+            errors.append(f"{p}fixtures/items.json: 품목 코드 중복 '{dup}'")
+    for d in (data.get("fixtures/defect_reports.json") or {}).get("defect_reports", []):
+        if d["item_code"] not in item_codes:
+            errors.append(f"{p}fixtures/defect_reports.json {d['id']}: 없는 품목 '{d['item_code']}'")
+        for who in [d["created_by"], d.get("confirmed_by")]:
+            if who is not None and who not in emp_ids:
+                errors.append(f"{p}fixtures/defect_reports.json {d['id']}: 없는 직원 '{who}'")
     for t in (data.get("fixtures/tickets.json") or {}).get("tickets", []):
         for who in [t["requester_id"], *(c["author_id"] for c in t.get("comments", []))]:
             if who not in emp_ids:
