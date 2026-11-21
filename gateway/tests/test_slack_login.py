@@ -196,3 +196,78 @@ def test_slack_token_passes_allow_list(sc, method, path, body):
     tok = _login(sc).json()["accessToken"]
     r = sc.request(method, path, headers={"Authorization": f"Bearer {tok}"}, json=body)
     assert not (r.status_code == 403 and "service-login-not-allowed" in r.text), (path, r.text)
+
+
+# ---------- 요청 횟수 제한(#331) ----------
+class Clock:
+    def __init__(self):
+        self.t = 1000.0
+
+    def __call__(self):
+        return self.t
+
+
+def test_rate_limiter_window_and_retry_after():
+    from gateway.slack_login import RateLimiter
+
+    clock = Clock()
+    rl = RateLimiter(2, 60, clock=clock)
+    assert rl.hit("a") is None and rl.hit("a") is None
+    assert rl.hit("a") == 60          # 세 번째는 막힘, 첫 요청이 창을 벗어날 때까지
+    assert rl.hit("b") is None        # 키마다 따로
+    clock.t += 30
+    assert rl.hit("a") == 30
+    clock.t += 30.5
+    assert rl.hit("a") is None        # 첫 요청이 창을 벗어남
+
+
+def _limited_app(settings, issuer, users_file, clock, per_user=2, total=5):
+    erp = create_fake_erp(PACK, demo_password=PASSWORD, delegation_public_key=issuer.public_pem(),
+                          service_login_secret=SERVICE)
+    s = dataclasses.replace(settings, slack_bridge_secret=BRIDGE, slack_users_file=users_file,
+                            erp_service_login_secret=SERVICE, slack_login_per_user_per_minute=per_user,
+                            slack_login_per_minute=total)
+    app = create_app(s, erp_transport=httpx.ASGITransport(app=erp), issuer=issuer)
+    return app
+
+
+def test_per_user_limit_is_429_with_retry_after_and_audited_once(settings, issuer, users_file):
+    clock = Clock()
+    app = _limited_app(settings, issuer, users_file, clock)
+    with TestClient(app) as c:
+        c.app_ref = app
+        app.state.slack_limits.set_clock(clock)
+        assert [_login(c).status_code for _ in range(2)] == [200, 200]
+        r = _login(c)
+        assert r.status_code == 429 and r.json()["type"] == "urn:problem:rate-limited"
+        assert int(r.headers["retry-after"]) == 60
+        assert _login(c).status_code == 429
+        assert _login(c, "U2").status_code == 200        # 다른 사용자는 됨
+        limited = [e for e in _audit(c) if e["problemType"] == "urn:problem:rate-limited"]
+        assert len(limited) == 1 and limited[0]["result"] == "denied"   # 같은 창에서는 한 번만 남김
+        clock.t += 61
+        assert _login(c).status_code == 200
+
+
+def test_total_limit_counts_wrong_secrets(settings, issuer, users_file):
+    clock = Clock()
+    app = _limited_app(settings, issuer, users_file, clock, per_user=100, total=3)
+    with TestClient(app) as c:
+        c.app_ref = app
+        app.state.slack_limits.set_clock(clock)
+        assert [_login(c, secret="bad").status_code for _ in range(3)] == [401, 401, 401]
+        assert _login(c).status_code == 429             # 맞는 비밀값도 전체 상한에 걸림
+        assert sum(1 for e in _audit(c) if e["problemType"] == "urn:problem:unauthorized") == 3
+
+
+def test_settings_read_rate_limits(monkeypatch):
+    from gateway.config import Settings
+
+    monkeypatch.delenv("SLACK_LOGIN_PER_USER_PER_MINUTE", raising=False)
+    monkeypatch.delenv("SLACK_LOGIN_PER_MINUTE", raising=False)
+    s = Settings.from_env()
+    assert (s.slack_login_per_user_per_minute, s.slack_login_per_minute) == (10, 60)
+    monkeypatch.setenv("SLACK_LOGIN_PER_USER_PER_MINUTE", "3")
+    monkeypatch.setenv("SLACK_LOGIN_PER_MINUTE", "7")
+    s = Settings.from_env()
+    assert (s.slack_login_per_user_per_minute, s.slack_login_per_minute) == (3, 7)
