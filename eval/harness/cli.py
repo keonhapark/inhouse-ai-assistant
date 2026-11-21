@@ -168,6 +168,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):
         meta.notes.append("외부 요청 기록(gateway.externalLog)을 주지 않아 외부 기록의 표지 문자열은 보지 않았습니다")
     meta.notes.extend(cfg.get("notes", []))
+    meta.tuned_sets = list(cfg.get("tunedSets", []))
     if injected and any(not has_document_injection(s) for s in scenarios):
         meta.notes.append("주입 문서 파일을 켠 스택에서 문서형 주입이 아닌 시나리오도 돌려, 주입 문서가 그 검색에 섞였을 수 "
                           "있습니다(eval/protocol.md 7절)")

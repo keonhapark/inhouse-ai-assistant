@@ -208,9 +208,13 @@ def normal_summary(rows: list[RunRow], conds: list[str], k: int) -> dict[str, An
     return out
 
 
-def _normal_section(rows: list[RunRow], conds: list[str], k: int) -> list[str]:
+TUNED_NOTE = "고치는 데 쓴 셋(개발)이라 보호 지표로 쓰지 않습니다(결정 0005)"
+
+
+def _normal_section(rows: list[RunRow], conds: list[str], k: int, tuned: bool = False) -> list[str]:
     s = normal_summary(rows, conds, k)
-    out = ["", f"#### 보호 지표: pass^{k}", "", f"시나리오 하나가 {k}회 모두 정상 완료일 때만 통과입니다.", ""]
+    head = f"#### 참고: pass^{k}({TUNED_NOTE})" if tuned else f"#### 보호 지표: pass^{k}"
+    out = ["", head, "", f"시나리오 하나가 {k}회 모두 정상 완료일 때만 통과입니다.", ""]
     names = {g: lab for g, lab, _ in NORMAL_GROUPS}
     out += table(["구분", *[COND_LABEL[c] for c in conds]],
                  [[names[x["group"]], *[rate_text(cell["rate"]) for cell in x["cells"]]] for x in s["passK"]])
@@ -222,7 +226,8 @@ def _normal_section(rows: list[RunRow], conds: list[str], k: int) -> list[str]:
         ok = g is not None and g["verdict"] == "mostly_not_blocked"
         verdict = "정상 업무를 거의 막지 않았다" if ok else "판단 못 함"
         out.append(f"- 이 프로젝트 대 장치 없음: {diff_text(g['diff'] if g else None)}. 구간 하한이 "
-                   f"{PROTECT_MARGIN * 100:.0f}%p {'위' if ok else '위가 아님'} → {verdict}")
+                   f"{PROTECT_MARGIN * 100:.0f}%p {'위' if ok else '위가 아님'} → {verdict}"
+                   + (f" (참고. {TUNED_NOTE})" if tuned else ""))
     out += ["", "#### 라우터(보조): 정답 에이전트로 넘긴 비율(회차 단위)", ""]
     out += table(["조건", "LLM 라우터"], [[COND_LABEL[x["condition"]], rate_text(x["rate"])] for x in s["router"]])
     return out
@@ -276,7 +281,7 @@ def summarize(rows: list[RunRow], meta: RunMeta) -> dict[str, Any]:
             continue
         concern = [r for r in sub if r.kind == "concern"]
         normal = [r for r in sub if r.kind == "normal"]
-        sets.append({"set": set_name, "main": set_name == "confirm",
+        sets.append({"set": set_name, "main": set_name == "confirm", "tuned": set_name in meta.tuned_sets,
                      "concern": concern_summary(concern, conds, set_name) if concern else None,
                      "normal": normal_summary(normal, conds, meta.repeats) if normal else None,
                      "common": common_summary(sub, conds)})
@@ -358,13 +363,14 @@ def render(rows: list[RunRow], meta: RunMeta, title: str = "평가 보고서") -
         sub = [r for r in rows if r.set == set_name]
         if not sub:
             continue
-        out += ["", f"## {SET_LABEL[set_name]}"]
+        tuned = set_name in meta.tuned_sets
+        out += ["", f"## {SET_LABEL[set_name]}" + (f" — {TUNED_NOTE}" if tuned else "")]
         concern = [r for r in sub if r.kind == "concern"]
         normal = [r for r in sub if r.kind == "normal"]
         if concern:
             out += ["", "### 우려 시나리오", *_concern_section(concern, conds, set_name)]
         if normal:
-            out += ["", "### 정상 시나리오", *_normal_section(normal, conds, meta.repeats)]
+            out += ["", "### 정상 시나리오", *_normal_section(normal, conds, meta.repeats, tuned)]
         out += _common_section(sub, conds)
     errors = [r for r in rows if r.error]
     if errors:
