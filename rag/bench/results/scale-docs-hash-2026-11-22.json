@@ -1,0 +1,261 @@
+{
+ "measuredAt": "2026-11-22T06:51:49+0900",
+ "machine": "Linux x86_64, WSL2 12GB, CPU",
+ "embedder": "hash",
+ "corpus": {
+  "gitCommit": "db83241f7383c2b0d53943059d160303c1997559",
+  "uncommittedCorpusChanges": false,
+  "files": [
+   {
+    "path": "corpus/law/admrul-duty-discipline.json",
+    "sha256": "6ac07a53d57a5f62e82fdc06180348c77e9ce0a36e5aa965d945483ee58b2ed8"
+   },
+   {
+    "path": "corpus/law/law-civil-service-duty.json",
+    "sha256": "68de8e3ff0575ae0df3c7f7ffd624a7e612ce762472faf97c0e373eaad07e5df"
+   },
+   {
+    "path": "corpus/law/law-travel-expense.json",
+    "sha256": "bf845777f8be19572cda709e66d1f8ba518734b0cb80d7b2135b5a807d088763"
+   },
+   {
+    "path": "corpus/law/law-travel-expense@2026-01-02.json",
+    "sha256": "433ac84085208264fccabf54304d7e3228e23dcc0d5df5dd96d5b69ac8882ab7"
+   },
+   {
+    "path": "corpus/law/law-travel-expense@2026-07-01.json",
+    "sha256": "192afacaa79174de273c270a0ab5d6a50de4893ddda9fc284b056bf55837662c"
+   },
+   {
+    "path": "templates/fin-control-findings.md",
+    "sha256": "ef576dcaa3d69567564ab6e67a4477aeddad3a46f9c0c9bce402c6e9a5236f37"
+   },
+   {
+    "path": "templates/fin-credit-rules.md",
+    "sha256": "e7873064c7dfb4097c2e10c360c709666af9d9243f20faaa4a4a16bc08719c8a"
+   },
+   {
+    "path": "templates/fin-ethics-code.md",
+    "sha256": "24b97bb99b9198e21dd876d9cb86ee733ab665fc1ea3d6c4679ed626cd25b81a"
+   },
+   {
+    "path": "templates/fin-leave-rules.md",
+    "sha256": "fa665f1acd6093e0157a37b0d6918762c540da76aa29e0cbcd1a7d15f2835e7e"
+   },
+   {
+    "path": "templates/fin-work-rules.md",
+    "sha256": "52f8d1e434d41a796a4b720369ed03b1dd697e836136801f8816e372131a5ae6"
+   },
+   {
+    "path": "templates/gen-account-access.md",
+    "sha256": "5b06d3ddbf2b42b20b4b94b277401d2437cc1fe288021661aa4a6530a7fe1145"
+   },
+   {
+    "path": "templates/gen-delegation-rule.md",
+    "sha256": "077b40f8a8bc0361633d9f30a4b27549a3e2b0d10751731af3d6bafbd7a57f8c"
+   },
+   {
+    "path": "templates/gen-hr-notice.md",
+    "sha256": "0481ddd3a9421592a66edb74f1ef9d8ad576f456bbf1fb2e1c0bf5023ecc4cf0"
+   },
+   {
+    "path": "templates/gen-incident-response.md",
+    "sha256": "175bf71209c0458ff589b36cfd2fb19955ac04c8157b5481d070c15beea2c9ca"
+   },
+   {
+    "path": "templates/gen-leave-guide.md",
+    "sha256": "059885ae1d1cbf03b7461ea096e67997272f452f98599d2e7fa1844bf099a496"
+   },
+   {
+    "path": "templates/gen-purchase-rule.md",
+    "sha256": "951ac7bd05053c964e1aabeaf1b796547c1e8516556edb7429de5c12c00a13e1"
+   },
+   {
+    "path": "templates/gen-quality-rule.md",
+    "sha256": "d88f73f89df9f3e2982280976939bd1a8a949a01c528ee1faa2a5668799f94b9"
+   },
+   {
+    "path": "templates/gen-rnd-guide.md",
+    "sha256": "2ff6bf43beaedaf8353231f4a2b25566dd138cd5ee79843c7e2bbfc2b5d49925"
+   },
+   {
+    "path": "templates/gen-room-guide.md",
+    "sha256": "e55f2026ea2cc5221910e5010ab2931be0ee087c4e1f468964698f85b539655d"
+   },
+   {
+    "path": "templates/gen-salary-standard.md",
+    "sha256": "332ee5ae39e2c0fb0fd7fefbe92ff4a80041f326a3a3f67090080f981c6ca76f"
+   },
+   {
+    "path": "templates/gen-sales-rule.md",
+    "sha256": "e3326146eafee7d98c24d92424d823dbf3d67a6738f527cad02fc2342d2e6f4d"
+   },
+   {
+    "path": "templates/its-customer-contract-sample.md",
+    "sha256": "facd4c6706f506623a8c0ef94b5ceb53b90aa06f66afdb7ce69c97b5c95b69f4"
+   },
+   {
+    "path": "templates/its-leave-rules.md",
+    "sha256": "f97677228239d31fbb92c278478d96a62bdeee45c114568eedf130106520e41b"
+   },
+   {
+    "path": "templates/its-ops-runbook.md",
+    "sha256": "9c8efa9a7317477fdb0129bac9e0f767f47ad6fee5cf750f37554eb9556a9171"
+   },
+   {
+    "path": "templates/its-project-standards.md",
+    "sha256": "861f5c77148afc196298c86b1f0c7358d96728b3ff16ea79e775ba4ef50394cf"
+   },
+   {
+    "path": "templates/its-work-rules.md",
+    "sha256": "fd939b98a9c8642f6a44cc869616fa2bf6bf470a63b19676364cb6da269314b1"
+   }
+  ]
+ },
+ "repeat": 3,
+ "tags": 500,
+ "groupsPerUser": 10,
+ "scales": [
+  {
+   "scale": 1,
+   "documents": 1000,
+   "permission": {
+    "leakedHits": 0,
+    "goldLeaksRestricted": 0,
+    "allowedChunks": 590,
+    "restrictedGroups": 10,
+    "tags": 500
+   },
+   "chunks": 18044,
+   "indexSecondsLexical": 4.411,
+   "indexSecondsWithEmbedding": 7.928,
+   "maxRssMb": 513.3,
+   "latencyMs": {
+    "bm25": {
+     "p50": 2.35,
+     "p95": 2.95,
+     "n": 48
+    },
+    "vector": {
+     "p50": 2.46,
+     "p95": 3.0,
+     "n": 48
+    },
+    "hybrid": {
+     "p50": 2.9,
+     "p95": 3.81,
+     "n": 48
+    }
+   },
+   "hitRate": {
+    "bm25": {
+     "top1": 0.688,
+     "top5": 0.812
+    },
+    "vector": {
+     "top1": 0.375,
+     "top5": 0.562
+    },
+    "hybrid": {
+     "top1": 0.562,
+     "top5": 0.875
+    }
+   },
+   "questions": 16
+  },
+  {
+   "scale": 1,
+   "documents": 3000,
+   "permission": {
+    "leakedHits": 0,
+    "goldLeaksRestricted": 0,
+    "allowedChunks": 1215,
+    "restrictedGroups": 10,
+    "tags": 500
+   },
+   "chunks": 54066,
+   "indexSecondsLexical": 8.569,
+   "indexSecondsWithEmbedding": 25.277,
+   "maxRssMb": 1391.2,
+   "latencyMs": {
+    "bm25": {
+     "p50": 7.07,
+     "p95": 9.11,
+     "n": 48
+    },
+    "vector": {
+     "p50": 7.13,
+     "p95": 8.41,
+     "n": 48
+    },
+    "hybrid": {
+     "p50": 8.08,
+     "p95": 9.93,
+     "n": 48
+    }
+   },
+   "hitRate": {
+    "bm25": {
+     "top1": 0.688,
+     "top5": 0.688
+    },
+    "vector": {
+     "top1": 0.375,
+     "top5": 0.5
+    },
+    "hybrid": {
+     "top1": 0.438,
+     "top5": 0.688
+    }
+   },
+   "questions": 16
+  },
+  {
+   "scale": 1,
+   "documents": 5000,
+   "permission": {
+    "leakedHits": 0,
+    "goldLeaksRestricted": 0,
+    "allowedChunks": 2192,
+    "restrictedGroups": 10,
+    "tags": 500
+   },
+   "chunks": 90113,
+   "indexSecondsLexical": 14.427,
+   "indexSecondsWithEmbedding": 48.683,
+   "maxRssMb": 2288.0,
+   "latencyMs": {
+    "bm25": {
+     "p50": 15.76,
+     "p95": 37.59,
+     "n": 48
+    },
+    "vector": {
+     "p50": 38.05,
+     "p95": 69.47,
+     "n": 48
+    },
+    "hybrid": {
+     "p50": 35.77,
+     "p95": 64.84,
+     "n": 48
+    }
+   },
+   "hitRate": {
+    "bm25": {
+     "top1": 0.562,
+     "top5": 0.688
+    },
+    "vector": {
+     "top1": 0.375,
+     "top5": 0.5
+    },
+    "hybrid": {
+     "top1": 0.438,
+     "top5": 0.625
+    }
+   },
+   "questions": 16
+  }
+ ]
+}

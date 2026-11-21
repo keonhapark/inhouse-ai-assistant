@@ -48,3 +48,31 @@ def test_정답_청크는_배수와_상관없이_원래_문서에만_있다():
 def test_백분위():
     values = list(range(1, 101))
     assert percentile(values, 50) == 50 and percentile(values, 95) == 95 and percentile([3.0], 95) == 3.0
+
+
+def test_문서_수를_맞추고_그룹_태그를_붙인다():
+    base = base_documents()
+    chunks, n = scaled_chunks(1, docs=len(base) + 25, tags=7)
+    assert n == len(base) + 25
+    groups = {t for c in chunks for t in c.acl_tags if t.startswith("grp-")}
+    assert groups and groups <= {f"grp-{i:03d}" for i in range(7)}
+    assert all(not any(t.startswith("grp-") for t in c.acl_tags) for c in chunks if "~" not in c.doc_id)
+
+
+def test_태그를_주지_않으면_원래_문서의_ACL을_따른다():
+    base = base_documents()
+    chunks, _ = scaled_chunks(1, docs=len(base) + 5)
+    assert all(not t.startswith("grp-") for c in chunks for t in c.acl_tags)
+
+
+def test_권한_확인은_범위_밖_청크가_없다고_센다():
+    from bench.scale import check_permissions, user_scopes
+    from rag.embed import HashEmbedder
+    from rag.search import SearchIndex
+
+    chunks, _ = scaled_chunks(1, docs=len(base_documents()) + 60, tags=20)
+    index = SearchIndex(chunks, HashEmbedder())
+    scope = user_scopes(20, 3)
+    result = check_permissions(index, questions(), scope, 20)
+    assert result["leakedHits"] == 0 and result["goldLeaksRestricted"] == 0
+    assert result["restrictedGroups"] == 3 and result["allowedChunks"] > 0
