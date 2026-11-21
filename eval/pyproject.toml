@@ -20,6 +20,8 @@ dev = [
 ]
 tools = [
     "pillow==11.3.0",
+    # VisA 전통 기준선 특징 계산(tools/visa_baseline.py)
+    "numpy==2.3.5",
 ]
 
 [tool.uv]

@@ -145,6 +145,25 @@ def test_fetch_visa_takes_subset_and_renames(tmp_path):
     assert len((out / "manifest.jsonl").read_text().splitlines()) == 2
 
 
+def test_fetch_visa_takes_normal_images_when_asked(tmp_path):
+    import io
+    import tarfile
+
+    tar_path = tmp_path / "visa.tar"
+    with tarfile.open(tar_path, "w") as tar:
+        for k in range(3):
+            for kind in ("Anomaly", "Normal"):
+                info = tarfile.TarInfo(f"VisA/pcb1/Data/Images/{kind}/{k:03d}.JPG")
+                info.size = 1
+                tar.addfile(info, io.BytesIO(b"x"))
+    mod = _load_tool("fetch_visa")
+    with open(tar_path, "rb") as f:
+        rows = mod.extract(f, tmp_path / "out", per_class=1, classes=None, normal_per_class=2)
+    assert [(r["file"], r["kind"]) for r in rows] == [("pcb1/pcb1-001.jpg", "anomaly"),
+                                                       ("pcb1/pcb1-normal-001.jpg", "normal"),
+                                                       ("pcb1/pcb1-normal-002.jpg", "normal")]
+
+
 def test_fetch_visa_refuses_repo_output():
     mod = _load_tool("fetch_visa")
     with pytest.raises(SystemExit, match="저장소 밖"):

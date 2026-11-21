@@ -1,6 +1,7 @@
 """VisA(Visual Anomaly, CC BY 4.0) 불량 사진의 부분집합을 저장소 밖으로 받습니다(#386).
 
-원본 사진은 저장소에 넣지 않습니다. 묶음 파일을 내려받으며(스트림) 범주마다 불량(Anomaly) 사진 앞 N장과
+원본 사진은 저장소에 넣지 않습니다. 묶음 파일을 내려받으며(스트림) 범주마다 불량(Anomaly) 사진 앞 N장(정상 사진은
+`--normal-per-class`로 따로)과
 범주별 image_anno.csv만 꺼내고, 받은 목록을 manifest.jsonl로 남깁니다. 묶음 안의 경로는 쓰지 않고 파일 이름을
 새로 지어 저장합니다(경로 이탈 방지).
 
@@ -23,13 +24,13 @@ from pathlib import Path
 from typing import IO
 
 URL = "https://amazon-visual-anomaly.s3.us-west-2.amazonaws.com/VisA_20220922.tar"
-IMAGE = re.compile(r"^(?:[^/]+/)?(?P<cls>[a-z0-9_]+)/Data/Images/Anomaly/(?P<name>[A-Za-z0-9_.-]+\.(?:JPG|jpg|png))$")
+IMAGE = re.compile(r"^(?:[^/]+/)?(?P<cls>[a-z0-9_]+)/Data/Images/(?P<kind>Anomaly|Normal)/(?P<name>[A-Za-z0-9_.-]+\.(?:JPG|jpg|png))$")
 ANNO = re.compile(r"^(?:[^/]+/)?(?P<cls>[a-z0-9_]+)/image_anno\.csv$")
 
 
-def extract(stream: IO[bytes], out: Path, per_class: int, classes: set[str] | None) -> list[dict]:
+def extract(stream: IO[bytes], out: Path, per_class: int, classes: set[str] | None, normal_per_class: int = 0) -> list[dict]:
     out.mkdir(parents=True, exist_ok=True)
-    taken: Counter[str] = Counter()
+    taken: Counter[tuple[str, str]] = Counter()
     rows = []
     with tarfile.open(fileobj=stream, mode="r|*") as tar:
         for m in tar:
@@ -40,14 +41,19 @@ def extract(stream: IO[bytes], out: Path, per_class: int, classes: set[str] | No
                 (out / a["cls"] / "image_anno.csv").write_bytes(tar.extractfile(m).read())
                 continue
             i = IMAGE.match(m.name)
-            if not i or (classes is not None and i["cls"] not in classes) or taken[i["cls"]] >= per_class:
+            if not i or (classes is not None and i["cls"] not in classes):
+                continue
+            kind = i["kind"].lower()
+            limit = per_class if kind == "anomaly" else normal_per_class
+            if taken[(i["cls"], kind)] >= limit:
                 continue
             data = tar.extractfile(m).read()
-            taken[i["cls"]] += 1
-            name = f"{i['cls']}-{taken[i['cls']]:03d}{Path(i['name']).suffix.lower()}"
+            taken[(i["cls"], kind)] += 1
+            prefix = i["cls"] if kind == "anomaly" else f"{i['cls']}-normal"
+            name = f"{prefix}-{taken[(i['cls'], kind)]:03d}{Path(i['name']).suffix.lower()}"
             (out / i["cls"]).mkdir(exist_ok=True)
             (out / i["cls"] / name).write_bytes(data)
-            rows.append({"file": f"{i['cls']}/{name}", "class": i["cls"], "source": m.name,
+            rows.append({"file": f"{i['cls']}/{name}", "class": i["cls"], "kind": kind, "source": m.name,
                          "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)})
     (out / "manifest.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows),
                                         encoding="utf-8")
@@ -60,7 +66,8 @@ def extract(stream: IO[bytes], out: Path, per_class: int, classes: set[str] | No
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True, help="저장소 밖 폴더")
-    ap.add_argument("--per-class", type=int, default=5)
+    ap.add_argument("--per-class", type=int, default=5, help="범주마다 불량(Anomaly) 사진 수")
+    ap.add_argument("--normal-per-class", type=int, default=0, help="범주마다 정상(Normal) 사진 수(이상 탐지 기준선용)")
     ap.add_argument("--classes", help="쉼표로 구분한 범주(기본: 전부)")
     ap.add_argument("--archive", help="이미 받은 묶음 파일 경로(없으면 내려받음)")
     ap.add_argument("--url", default=URL)
@@ -72,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     classes = set(args.classes.split(",")) if args.classes else None
     if args.archive:
         with open(args.archive, "rb") as f:
-            rows = extract(f, out, args.per_class, classes)
+            rows = extract(f, out, args.per_class, classes, args.normal_per_class)
     else:
         import httpx
 
@@ -92,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
                     data, self.buf = (self.buf, b"") if n < 0 else (self.buf[:n], self.buf[n:])
                     return data
 
-            rows = extract(_Reader(r.iter_bytes()), out, args.per_class, classes)
+            rows = extract(_Reader(r.iter_bytes()), out, args.per_class, classes, args.normal_per_class)
     print(f"{len(rows)}장, {out}")
     return 0
 

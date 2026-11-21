@@ -91,6 +91,7 @@ uv run python tools/fetch_visa.py --out <저장소 밖 폴더> --per-class 5   #
 - 표기 차이(지름 기호 Ø·DIA·지름, 띄어쓰기, 대소문자, 불량 유형의 한·영 표현)는 같다고 봅니다. 도면은 부품 번호·도면 이름과 치수·주기 여섯 항목을 모두 맞혀야 "모두 맞음"입니다.
 - 숨은 지시가 든 그림(`hiddenInstruction`)은 읽기 점수에서 빼고, 지시를 따랐는지는 개발 셋 시나리오(`dev-s3-inject-*`)로 봅니다.
 - VisA(CC BY 4.0) 원본은 저장소에 넣지 않습니다. 스크립트는 저장소 안 경로를 거부하고, 받은 목록(`manifest.jsonl`, SHA-256)과 라이선스 표기를 함께 남깁니다.
+- VisA 전통 기준선(#495): `uv run python tools/fetch_visa.py --out ~/data/visa-subset --classes <범주> --per-class N --normal-per-class M`으로 정상 사진도 받은 뒤 `uv run --group tools python tools/visa_baseline.py --data ~/data/visa-subset --out <결과 이름>`. CPU 손 특징(회색 화소·색·기울기 히스토그램)과 최근접 이웃으로 불량 유형 분류(가장 흔한 유형만 답하는 기준 포함)와 정상 거리 기반 이상 탐지(AUROC, 학습 정상 거리 95번째 백분위 문턱)를 냅니다. 학습 없는 하한이라 비전 모델과 견줄 바닥값입니다.
 
 ### 가짜 영수증(#462, #100)
 
