@@ -192,6 +192,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     if args.bundle:
         check_bundle_scenarios(Path(args.bundle), Path(args.scenarios))
     scenarios = load_scenarios(Path(args.scenarios))
+    if args.bundle:
+        with_files = [s["id"] for s in scenarios
+                      if any(isinstance(t, dict) and t.get("attachments") for t in s.get("turns", []))]
+        if with_files:
+            raise SystemExit("--bundle 실행은 아직 시나리오 첨부 파일을 묶음에서 읽거나 대조하지 않습니다. 첨부가 있는 "
+                             f"시나리오 {len(with_files)}개: {', '.join(with_files[:5])}")
     if args.only:
         wanted = set(args.only.split(","))
         scenarios = [s for s in scenarios if s["id"] in wanted]
@@ -225,6 +231,10 @@ def cmd_run(args: argparse.Namespace) -> int:
             if prior_meta.model_override != cfg["gateway"].get("modelOverride"):
                 raise SystemExit(f"앞선 회차의 모델 교체 값({prior_meta.model_override})이 지금 설정"
                                  f"({cfg['gateway'].get('modelOverride')})과 다릅니다. 다른 출력 이름으로 돌립니다")
+        other_bundles = {r.bundle for r in done} - {bundle}
+        if other_bundles:
+            raise SystemExit(f"앞선 회차 중 지금 묶음({bundle})과 다른 묶음에서 돈 회차가 있습니다: "
+                             f"{sorted(map(str, other_bundles))}. 다른 출력 이름으로 돌립니다")
         print(f"이어 돌리기: 끝난 회차 {len(done)}개를 건너뜁니다", flush=True)
         now = (_git("rev-parse", "HEAD"), cfg.get("stackCommit"), cfg.get("packStage"))
         other = {sig: n for sig, n in signature_counts(done).items() if sig != now}
@@ -247,7 +257,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                             model=cfg.get("model"), on_row=progress, done_rows=done,
                             max_runs=args.max_runs, started_at=started_at, health_check=health,
                             prior_cost_usd=prior_cost, pack_stage=cfg.get("packStage"),
-                            stack_commit=cfg.get("stackCommit"), injected_docs=injected)
+                            stack_commit=cfg.get("stackCommit"), injected_docs=injected, bundle=bundle)
     if not cfg["erp"].get("reset", True):
         meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.reset: false)")
     if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):

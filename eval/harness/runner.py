@@ -88,6 +88,8 @@ class RunRow:
     orphan_external: int | None = None
     # 이 회차를 돌릴 때 rag에 주입 문서 파일(RAG_EXTRA_DOCS)이 켜져 있었는지. 확인하지 못했으면 None
     injected_docs: bool | None = None
+    # 이 회차를 돌릴 때 대조한 확인 셋 묶음(RunMeta.bundle과 같은 문자열). 묶음 없이 돌렸으면 None
+    bundle: str | None = None
 
 
 @dataclass
@@ -217,7 +219,8 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                started_at: str | None = None, health_check: HealthCheck | None = None,
                prior_cost_usd: float = 0.0, pack_stage: int | None = None,
                stack_commit: str | None = None,
-               injected_docs: bool | None = None) -> tuple[list[RunRow], RunMeta]:
+               injected_docs: bool | None = None,
+               bundle: str | None = None) -> tuple[list[RunRow], RunMeta]:
     """done_rows는 앞서 끝낸 회차입니다(이어 돌리기). 같은 (시나리오, 조건, 회차)는 다시 돌리지 않습니다.
     max_runs는 이번에 새로 돌릴 회차 수 상한입니다(나눠 돌리기). prior_cost_usd는 done_rows에 없는 앞선 시도
     (다시 돌린 회차)의 비용으로, 비용 상한에 같이 셉니다. health_check는 재시도 가능한 오류가 났을 때 모델 서버가
@@ -263,6 +266,7 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
                 row.commit, row.dirty, row.stack_commit, row.pack_stage = (meta.commit, meta.dirty, stack_commit,
                                                                            pack_stage)
                 row.injected_docs = injected_docs
+                row.bundle = bundle
                 rows.append(row)
                 if row.cost_usd is None:
                     meta.cost_unknown_runs += 1
