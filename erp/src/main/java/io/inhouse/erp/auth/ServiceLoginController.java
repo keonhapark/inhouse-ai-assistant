@@ -12,6 +12,9 @@ import io.inhouse.erp.org.OrgService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -20,9 +23,14 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 서비스 로그인(gateway 전용, 슬랙 입구 #273·#291). gateway가 슬랙 사용자를 직원으로 확인한 뒤 그 직원의 짧은
  * 직원 JWT(amr slack)를 받습니다. 이 토큰으로는 사람 전용 기능을 부를 수 없습니다(ScopeGuard).
+ * 비밀값(ERP_SERVICE_LOGIN_SECRET)이 비어 있으면 빈을 만들지 않아 경로가 없습니다(404).
  */
 @RestController
+@ConditionalOnExpression("'${erp.service-login-secret:}'.trim().length() > 0")
 public class ServiceLoginController {
+
+    static final int MIN_SECRET_BYTES = 32;
+    private static final Logger log = LoggerFactory.getLogger(ServiceLoginController.class);
 
     private final EmployeeRepository employees;
     private final OrgService org;
@@ -38,6 +46,9 @@ public class ServiceLoginController {
         this.audit = audit;
         String s = props.serviceLoginSecret();
         this.secret = s == null || s.isBlank() ? null : s.getBytes(StandardCharsets.UTF_8);
+        if (secret != null && secret.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("ERP_SERVICE_LOGIN_SECRET은 " + MIN_SECRET_BYTES + "바이트 이상이어야 합니다");
+        }
     }
 
     /** 비밀값이 설정되지 않았으면 경로가 없는 것과 같이 404, 비밀값이 없거나 틀리면 401, 없는 직원이면 422입니다. */
@@ -51,6 +62,8 @@ public class ServiceLoginController {
         }
         byte[] g = given == null ? new byte[0] : given.getBytes(StandardCharsets.UTF_8);
         if (!MessageDigest.isEqual(secret, g)) {
+            // 비밀값은 남기지 않습니다. 시도가 잦으면 이 줄로 알아봅니다.
+            log.warn("서비스 로그인 비밀값 불일치(헤더 {})", given == null ? "없음" : "다름");
             throw new ApiException(401, "unauthorized", "서비스 비밀값이 틀렸습니다");
         }
         Bodies.check(body, Set.of("employeeId"), Set.of("employeeId"));

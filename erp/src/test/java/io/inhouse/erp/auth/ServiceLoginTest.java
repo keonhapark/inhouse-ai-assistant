@@ -88,6 +88,13 @@ class ServiceLoginTest extends ApiTestBase {
     }
 
     @Test
+    void shortSecretStopsStartup() {
+        assertThatThrownBy(() -> new ServiceLoginController(null, null, null,
+                new AuthProperties("x".repeat(32), 3600, "demo", null, "short"), null))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void pathIsOffWithoutSecret() {
         ServiceLoginController off = new ServiceLoginController(null, null, null,
                 new AuthProperties("x".repeat(32), 3600, "demo", null, " "), null);

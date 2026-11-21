@@ -29,7 +29,7 @@ export SPRING_DATASOURCE_USERNAME=iaa
 export SPRING_DATASOURCE_PASSWORD="$pg_password"
 export PACK_DIR="${PACK_DIR:-$root/packs/manufacturing}"
 # 행동 계약 시험의 서비스 로그인 비밀값(contracts/tests/conftest.py 기본값과 같음). 시험 전용 값입니다.
-export ERP_SERVICE_LOGIN_SECRET="${ERP_SERVICE_LOGIN_SECRET:-test-only-service-login-secret}"
+export ERP_SERVICE_LOGIN_SECRET="${ERP_SERVICE_LOGIN_SECRET:-test-only-service-login-secret-32bytes}"
 log="$root/erp/build/erp-${ERP_PORT}.log"
 nohup java -jar "$jar" > "$log" 2>&1 &
 echo $! > "$root/erp/build/erp-${ERP_PORT}.pid"
