@@ -4,6 +4,7 @@
 - found: 대조를 통과한 근거 인용이 있어 답을 낸 수(rag/answer.py)
 - citedDoc / citedArticle: 정답 문서·조문(조문 머리가 article로 시작)이 인용에 있는지
 - mustInAnswer: 답 본문에 정답 값(must)이 있는지(공백은 무시)
+- 모델 답 본문은 결과 파일에 남기지 않습니다(팩 조직 이름이 든 글이 코어 폴더의 업종 용어 검사에 걸립니다). 판정 값만 남깁니다.
 - deny 질문(문서 태그가 없는 범위): 그 문서가 인용에 나오거나 정답 값이 답에 나오면 leak입니다.
 
 실행(rag/에서, Ollama에 qwen3.5:9b와 bge-m3, GPU 사용권을 받은 뒤)
@@ -52,7 +53,7 @@ def run(pack: str, repeat: int, chat: GatewayChat, embedder) -> dict:
             doc_cited = any(d == q["doc"] for d, _ in cited)
             has_must = squash(q["must"]) in squash(result.answer)
             row = {"id": q["id"], "rep": rep, "deny": bool(q.get("deny")), "found": result.found, "seconds": took,
-                   "cited": [f"{d} {a}" for d, a in cited], "answer": result.answer, "detail": result.detail}
+                   "cited": [f"{d} {a}" for d, a in cited], "answerChars": len(result.answer), "detail": result.detail}
             if q.get("deny"):
                 row["leak"] = doc_cited or has_must
             else:

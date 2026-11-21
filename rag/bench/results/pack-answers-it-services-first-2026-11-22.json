@@ -146,12 +146,12 @@
    "cited": [
     "its-project-standards 제2조(공수 보고)"
    ],
-   "answer": "프로젝트에 투입된 임직원은 매주 월요일 정오까지 지난주 투입 시간을 공수 보고 양식으로 올립니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 54
   },
   {
    "id": "its-effort-cap",
@@ -162,12 +162,12 @@
    "cited": [
     "its-project-standards 제2조(공수 보고)"
    ],
-   "answer": "한 주에 투입 시간은 60시간을 넘길 수 없습니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 28
   },
   {
    "id": "its-change",
@@ -178,12 +178,12 @@
    "cited": [
     "its-project-standards 제4조(변경 관리)"
    ],
-   "answer": "아니요, 바로 작업해서는 안 됩니다. 고객사의 구두 요청은 변경 요청서를 받기 전에 작업하지 않습니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 57
   },
   {
    "id": "its-grade1",
@@ -194,12 +194,12 @@
    "cited": [
     "its-ops-runbook 제3조(장애 등급과 보고 시간)"
    ],
-   "answer": "1등급 장애는 15분 안에 대응을 시작해야 합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 28
   },
   {
    "id": "its-admin-account",
@@ -210,12 +210,12 @@
    "cited": [
     "its-ops-runbook 제5조(계정 발급)"
    ],
-   "answer": "관리자 권한 계정은 고객사 담당자의 승인과 팀장(PM)의 승인을 모두 받아야 발급합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 49
   },
   {
    "id": "its-report",
@@ -226,12 +226,12 @@
    "cited": [
     "its-ops-runbook 제4조(복구와 보고서)"
    ],
-   "answer": "장애 보고서는 복구 뒤 3영업일 안에 고객사에 냅니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 30
   },
   {
    "id": "its-sla",
@@ -242,12 +242,12 @@
    "cited": [
     "its-customer-contract-sample 제2조(서비스 수준)"
    ],
-   "answer": "월 가용률 목표는 99.5퍼센트입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 21
   },
   {
    "id": "its-penalty",
@@ -258,12 +258,12 @@
    "cited": [
     "its-customer-contract-sample 제3조(위약금)"
    ],
-   "answer": "월 가용률이 목표에 못 미치면 월 운영비의 5퍼센트를 깎아 줍니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 37
   },
   {
    "id": "its-terminate",
@@ -274,12 +274,12 @@
    "cited": [
     "its-customer-contract-sample 제4조(변경과 해지)"
    ],
-   "answer": "계약 해지는 종료 3 개월 전에 서면으로 알립니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 28
   },
   {
    "id": "its-leave",
@@ -290,12 +290,12 @@
    "cited": [
     "its-leave-rules 제4조(프로젝트 투입 중 휴가)"
    ],
-   "answer": "사용일 2주 전까지 신청해야 합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 20
   },
   {
    "id": "its-hours",
@@ -306,12 +306,12 @@
    "cited": [
     "its-work-rules 제2조(근로시간)"
    ],
-   "answer": "하루 근로시간은 8 시간입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 17
   },
   {
    "id": "its-deny-contract",
@@ -320,9 +320,9 @@
    "found": false,
    "seconds": 0.66,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "its-deny-runbook",
@@ -331,9 +331,9 @@
    "found": false,
    "seconds": 0.6,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "its-effort-due",
@@ -344,12 +344,12 @@
    "cited": [
     "its-project-standards 제2조(공수 보고)"
    ],
-   "answer": "프로젝트에 투입된 임직원은 매주 월요일 정오까지 지난주 투입 시간을 공수 보고 양식으로 올립니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 54
   },
   {
    "id": "its-effort-cap",
@@ -360,12 +360,12 @@
    "cited": [
     "its-project-standards 제2조(공수 보고)"
    ],
-   "answer": "한 주에 투입 시간은 60시간을 넘길 수 없습니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 28
   },
   {
    "id": "its-change",
@@ -376,12 +376,12 @@
    "cited": [
     "its-project-standards 제4조(변경 관리)"
    ],
-   "answer": "아니요, 바로 작업해서는 안 됩니다. 고객사의 구두 요청은 변경 요청서를 받기 전에 작업하지 않습니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 57
   },
   {
    "id": "its-grade1",
@@ -392,12 +392,12 @@
    "cited": [
     "its-ops-runbook 제3조(장애 등급과 보고 시간)"
    ],
-   "answer": "1등급 장애는 15분 안에 대응을 시작해야 합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 28
   },
   {
    "id": "its-admin-account",
@@ -408,12 +408,12 @@
    "cited": [
     "its-ops-runbook 제5조(계정 발급)"
    ],
-   "answer": "관리자 권한 계정은 고객사 담당자의 승인과 팀장(PM)의 승인을 모두 받아야 발급합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 49
   },
   {
    "id": "its-report",
@@ -424,12 +424,12 @@
    "cited": [
     "its-ops-runbook 제4조(복구와 보고서)"
    ],
-   "answer": "장애 보고서는 복구 뒤 3영업일 안에 고객사에 냅니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 30
   },
   {
    "id": "its-sla",
@@ -440,12 +440,12 @@
    "cited": [
     "its-customer-contract-sample 제2조(서비스 수준)"
    ],
-   "answer": "월 가용률 목표는 99.5퍼센트입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 21
   },
   {
    "id": "its-penalty",
@@ -456,12 +456,12 @@
    "cited": [
     "its-customer-contract-sample 제3조(위약금)"
    ],
-   "answer": "월 가용률이 목표에 못 미치면 월 운영비의 5퍼센트를 깎아 줍니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 37
   },
   {
    "id": "its-terminate",
@@ -472,12 +472,12 @@
    "cited": [
     "its-customer-contract-sample 제4조(변경과 해지)"
    ],
-   "answer": "계약 해지는 종료 3 개월 전에 서면으로 알립니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 28
   },
   {
    "id": "its-leave",
@@ -488,12 +488,12 @@
    "cited": [
     "its-leave-rules 제4조(프로젝트 투입 중 휴가)"
    ],
-   "answer": "사용일 2주 전까지 신청해야 합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 20
   },
   {
    "id": "its-hours",
@@ -504,12 +504,12 @@
    "cited": [
     "its-work-rules 제2조(근로시간)"
    ],
-   "answer": "하루 근로시간은 8 시간입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 17
   },
   {
    "id": "its-deny-contract",
@@ -518,9 +518,9 @@
    "found": false,
    "seconds": 0.63,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "its-deny-runbook",
@@ -529,9 +529,9 @@
    "found": false,
    "seconds": 0.64,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "its-effort-due",
@@ -542,12 +542,12 @@
    "cited": [
     "its-project-standards 제2조(공수 보고)"
    ],
-   "answer": "프로젝트에 투입된 임직원은 매주 월요일 정오까지 지난주 투입 시간을 공수 보고 양식으로 올립니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 54
   },
   {
    "id": "its-effort-cap",
@@ -558,12 +558,12 @@
    "cited": [
     "its-project-standards 제2조(공수 보고)"
    ],
-   "answer": "한 주에 투입 시간은 60시간을 넘길 수 없습니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 28
   },
   {
    "id": "its-change",
@@ -574,12 +574,12 @@
    "cited": [
     "its-project-standards 제4조(변경 관리)"
    ],
-   "answer": "아니요, 바로 작업해서는 안 됩니다. 고객사의 구두 요청은 변경 요청서를 받기 전에 작업하지 않습니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 57
   },
   {
    "id": "its-grade1",
@@ -590,12 +590,12 @@
    "cited": [
     "its-ops-runbook 제3조(장애 등급과 보고 시간)"
    ],
-   "answer": "1등급 장애는 15분 안에 대응을 시작해야 합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 28
   },
   {
    "id": "its-admin-account",
@@ -606,12 +606,12 @@
    "cited": [
     "its-ops-runbook 제5조(계정 발급)"
    ],
-   "answer": "관리자 권한 계정은 고객사 담당자의 승인과 팀장(PM)의 승인을 모두 받아야 발급합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 49
   },
   {
    "id": "its-report",
@@ -622,12 +622,12 @@
    "cited": [
     "its-ops-runbook 제4조(복구와 보고서)"
    ],
-   "answer": "장애 보고서는 복구 뒤 3영업일 안에 고객사에 냅니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 30
   },
   {
    "id": "its-sla",
@@ -638,12 +638,12 @@
    "cited": [
     "its-customer-contract-sample 제2조(서비스 수준)"
    ],
-   "answer": "월 가용률 목표는 99.5퍼센트입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 21
   },
   {
    "id": "its-penalty",
@@ -654,12 +654,12 @@
    "cited": [
     "its-customer-contract-sample 제3조(위약금)"
    ],
-   "answer": "월 가용률이 목표에 못 미치면 월 운영비의 5퍼센트를 깎아 줍니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 37
   },
   {
    "id": "its-terminate",
@@ -670,12 +670,12 @@
    "cited": [
     "its-customer-contract-sample 제4조(변경과 해지)"
    ],
-   "answer": "계약 해지는 종료 3 개월 전에 서면으로 알립니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 28
   },
   {
    "id": "its-leave",
@@ -686,12 +686,12 @@
    "cited": [
     "its-leave-rules 제4조(프로젝트 투입 중 휴가)"
    ],
-   "answer": "사용일 2주 전까지 신청해야 합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 20
   },
   {
    "id": "its-hours",
@@ -702,12 +702,12 @@
    "cited": [
     "its-work-rules 제2조(근로시간)"
    ],
-   "answer": "하루 근로시간은 8 시간입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 17
   },
   {
    "id": "its-deny-contract",
@@ -716,9 +716,9 @@
    "found": false,
    "seconds": 0.56,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "its-deny-runbook",
@@ -727,9 +727,9 @@
    "found": false,
    "seconds": 0.59,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   }
  ]
 }

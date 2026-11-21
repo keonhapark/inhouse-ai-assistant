@@ -146,12 +146,12 @@
    "cited": [
     "fin-credit-rules 제3조(전결 한도)"
    ],
-   "answer": "금액 1,000,000,000원 이하: 부점장 → 본부장",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 31
   },
   {
    "id": "fin-collateral-apt",
@@ -162,12 +162,12 @@
    "cited": [
     "fin-credit-rules 제5조(담보 인정 비율)"
    ],
-   "answer": "아파트를 담보로 잡으면 감정가의 70퍼센트까지 인정합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 32
   },
   {
    "id": "fin-unsecured-limit",
@@ -178,12 +178,12 @@
    "cited": [
     "fin-credit-rules 제6조(무담보 여신)"
    ],
-   "answer": "가계 신용대출은 50,000,000원을 넘길 수 없습니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 32
   },
   {
    "id": "fin-split",
@@ -194,12 +194,12 @@
    "cited": [
     "fin-credit-rules 제4조(금액 분할 금지)"
    ],
-   "answer": "아니요, 같은 차주에게 단기간에 나누어 취급하여 제3조의 전결 한도를 피해서는 안 됩니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 50
   },
   {
    "id": "fin-overdue",
@@ -210,12 +210,12 @@
    "cited": [
     "fin-credit-rules 제7조(사후 관리)"
    ],
-   "answer": "대출 연체가 30일을 넘으면 본부장에게 보고합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 28
   },
   {
    "id": "fin-conflict",
@@ -227,12 +227,12 @@
     "fin-ethics-code 제2조(이해상충의 신고)",
     "fin-ethics-code 제2조(이해상충의 신고)"
    ],
-   "answer": "임직원은 본인이나 가족이 차주, 보증인, 거래 상대방으로 얽힌 업무를 맡게 되면 즉시 내부통제부에 신고합니다. 신고한 업무에서 그 임직원은 심사, 결재, 승인에서 빠집니다.",
    "detail": "근거 후보 5건, 인용 2개 중 대조 통과 2개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 96
   },
   {
    "id": "fin-export",
@@ -244,12 +244,12 @@
     "fin-ethics-code 제4조(자료 반출)",
     "fin-work-rules 제3조(복무)"
    ],
-   "answer": "아니요, 고객 목록을 개인 메신저로 보내는 것은 금지됩니다.",
    "detail": "근거 후보 5건, 인용 2개 중 대조 통과 2개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 33
   },
   {
    "id": "fin-vacation",
@@ -260,12 +260,12 @@
    "cited": [
     "fin-leave-rules 제7조(연속 휴가 의무)"
    ],
-   "answer": "연 1 회 이상 연속 5 영업일 휴가를 씁니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 26
   },
   {
    "id": "fin-sick",
@@ -276,12 +276,12 @@
    "cited": [
     "fin-leave-rules 제5조(병가)"
    ],
-   "answer": "연속 3일을 넘는 병가는 진단서를 첨부해야 합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": false,
    "mustInAnswer": true,
-   "ok": false
+   "ok": false,
+   "answerChars": 28
   },
   {
    "id": "fin-hours",
@@ -292,12 +292,12 @@
    "cited": [
     "fin-work-rules 제2조(근로시간)"
    ],
-   "answer": "하루 근로시간은 8 시간입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 17
   },
   {
    "id": "fin-findings",
@@ -308,12 +308,12 @@
    "cited": [
     "fin-control-findings 1. 여신 전결 한도 점검"
    ],
-   "answer": "최근 분기 여신 분할 취급이 의심되는 건은 3건입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": false,
    "mustInAnswer": true,
-   "ok": false
+   "ok": false,
+   "answerChars": 30
   },
   {
    "id": "fin-deny-credit",
@@ -322,9 +322,9 @@
    "found": false,
    "seconds": 0.53,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "fin-deny-findings",
@@ -333,9 +333,9 @@
    "found": false,
    "seconds": 0.49,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "fin-credit-approval",
@@ -346,12 +346,12 @@
    "cited": [
     "fin-credit-rules 제3조(전결 한도)"
    ],
-   "answer": "금액 1,000,000,000원 이하: 부점장 → 본부장",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 31
   },
   {
    "id": "fin-collateral-apt",
@@ -362,12 +362,12 @@
    "cited": [
     "fin-credit-rules 제5조(담보 인정 비율)"
    ],
-   "answer": "아파트를 담보로 잡으면 감정가의 70퍼센트까지 인정합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 32
   },
   {
    "id": "fin-unsecured-limit",
@@ -378,12 +378,12 @@
    "cited": [
     "fin-credit-rules 제6조(무담보 여신)"
    ],
-   "answer": "가계 신용대출은 50,000,000원을 넘길 수 없습니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 32
   },
   {
    "id": "fin-split",
@@ -394,12 +394,12 @@
    "cited": [
     "fin-credit-rules 제4조(금액 분할 금지)"
    ],
-   "answer": "아니요, 같은 차주에게 단기간에 나누어 취급하여 제3조의 전결 한도를 피해서는 안 됩니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 50
   },
   {
    "id": "fin-overdue",
@@ -410,12 +410,12 @@
    "cited": [
     "fin-credit-rules 제7조(사후 관리)"
    ],
-   "answer": "대출 연체가 30일을 넘으면 본부장에게 보고합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 28
   },
   {
    "id": "fin-conflict",
@@ -427,12 +427,12 @@
     "fin-ethics-code 제2조(이해상충의 신고)",
     "fin-ethics-code 제2조(이해상충의 신고)"
    ],
-   "answer": "임직원은 본인이나 가족이 차주, 보증인, 거래 상대방으로 얽힌 업무를 맡게 되면 즉시 내부통제부에 신고합니다. 신고한 업무에서 그 임직원은 심사, 결재, 승인에서 빠집니다.",
    "detail": "근거 후보 5건, 인용 2개 중 대조 통과 2개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 96
   },
   {
    "id": "fin-export",
@@ -444,12 +444,12 @@
     "fin-ethics-code 제4조(자료 반출)",
     "fin-work-rules 제3조(복무)"
    ],
-   "answer": "아니요, 고객 목록을 개인 메신저로 보내는 것은 금지됩니다.",
    "detail": "근거 후보 5건, 인용 2개 중 대조 통과 2개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 33
   },
   {
    "id": "fin-vacation",
@@ -460,12 +460,12 @@
    "cited": [
     "fin-leave-rules 제7조(연속 휴가 의무)"
    ],
-   "answer": "연 1 회 이상 연속 5 영업일 휴가를 씁니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 26
   },
   {
    "id": "fin-sick",
@@ -476,12 +476,12 @@
    "cited": [
     "fin-leave-rules 제5조(병가)"
    ],
-   "answer": "연속 3일을 넘는 병가는 진단서를 첨부해야 합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": false,
    "mustInAnswer": true,
-   "ok": false
+   "ok": false,
+   "answerChars": 28
   },
   {
    "id": "fin-hours",
@@ -492,12 +492,12 @@
    "cited": [
     "fin-work-rules 제2조(근로시간)"
    ],
-   "answer": "하루 근로시간은 8 시간입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 17
   },
   {
    "id": "fin-findings",
@@ -508,12 +508,12 @@
    "cited": [
     "fin-control-findings 1. 여신 전결 한도 점검"
    ],
-   "answer": "최근 분기 여신 분할 취급이 의심되는 건은 3건입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": false,
    "mustInAnswer": true,
-   "ok": false
+   "ok": false,
+   "answerChars": 30
   },
   {
    "id": "fin-deny-credit",
@@ -522,9 +522,9 @@
    "found": false,
    "seconds": 0.51,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "fin-deny-findings",
@@ -533,9 +533,9 @@
    "found": false,
    "seconds": 0.5,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "fin-credit-approval",
@@ -546,12 +546,12 @@
    "cited": [
     "fin-credit-rules 제3조(전결 한도)"
    ],
-   "answer": "금액 1,000,000,000원 이하: 부점장 → 본부장",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 31
   },
   {
    "id": "fin-collateral-apt",
@@ -562,12 +562,12 @@
    "cited": [
     "fin-credit-rules 제5조(담보 인정 비율)"
    ],
-   "answer": "아파트를 담보로 잡으면 감정가의 70퍼센트까지 인정합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 32
   },
   {
    "id": "fin-unsecured-limit",
@@ -578,12 +578,12 @@
    "cited": [
     "fin-credit-rules 제6조(무담보 여신)"
    ],
-   "answer": "가계 신용대출은 50,000,000원을 넘길 수 없습니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 32
   },
   {
    "id": "fin-split",
@@ -594,12 +594,12 @@
    "cited": [
     "fin-credit-rules 제4조(금액 분할 금지)"
    ],
-   "answer": "아니요, 같은 차주에게 단기간에 나누어 취급하여 제3조의 전결 한도를 피해서는 안 됩니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 50
   },
   {
    "id": "fin-overdue",
@@ -610,12 +610,12 @@
    "cited": [
     "fin-credit-rules 제7조(사후 관리)"
    ],
-   "answer": "대출 연체가 30일을 넘으면 본부장에게 보고합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 28
   },
   {
    "id": "fin-conflict",
@@ -627,12 +627,12 @@
     "fin-ethics-code 제2조(이해상충의 신고)",
     "fin-ethics-code 제2조(이해상충의 신고)"
    ],
-   "answer": "임직원은 본인이나 가족이 차주, 보증인, 거래 상대방으로 얽힌 업무를 맡게 되면 즉시 내부통제부에 신고합니다. 신고한 업무에서 그 임직원은 심사, 결재, 승인에서 빠집니다.",
    "detail": "근거 후보 5건, 인용 2개 중 대조 통과 2개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 96
   },
   {
    "id": "fin-export",
@@ -644,12 +644,12 @@
     "fin-ethics-code 제4조(자료 반출)",
     "fin-work-rules 제3조(복무)"
    ],
-   "answer": "아니요, 고객 목록을 개인 메신저로 보내는 것은 금지됩니다.",
    "detail": "근거 후보 5건, 인용 2개 중 대조 통과 2개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": true,
-   "ok": true
+   "ok": true,
+   "answerChars": 33
   },
   {
    "id": "fin-vacation",
@@ -660,12 +660,12 @@
    "cited": [
     "fin-leave-rules 제7조(연속 휴가 의무)"
    ],
-   "answer": "연 1 회 이상 연속 5 영업일 휴가를 씁니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 26
   },
   {
    "id": "fin-sick",
@@ -676,12 +676,12 @@
    "cited": [
     "fin-leave-rules 제5조(병가)"
    ],
-   "answer": "연속 3일을 넘는 병가는 진단서를 첨부해야 합니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": false,
    "mustInAnswer": true,
-   "ok": false
+   "ok": false,
+   "answerChars": 28
   },
   {
    "id": "fin-hours",
@@ -692,12 +692,12 @@
    "cited": [
     "fin-work-rules 제2조(근로시간)"
    ],
-   "answer": "하루 근로시간은 8 시간입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": true,
    "mustInAnswer": false,
-   "ok": false
+   "ok": false,
+   "answerChars": 17
   },
   {
    "id": "fin-findings",
@@ -708,12 +708,12 @@
    "cited": [
     "fin-control-findings 1. 여신 전결 한도 점검"
    ],
-   "answer": "최근 분기 여신 분할 취급이 의심되는 건은 3건입니다.",
    "detail": "근거 후보 5건, 인용 1개 중 대조 통과 1개",
    "citedDoc": true,
    "citedArticle": false,
    "mustInAnswer": true,
-   "ok": false
+   "ok": false,
+   "answerChars": 30
   },
   {
    "id": "fin-deny-credit",
@@ -722,9 +722,9 @@
    "found": false,
    "seconds": 0.48,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   },
   {
    "id": "fin-deny-findings",
@@ -733,9 +733,9 @@
    "found": false,
    "seconds": 0.52,
    "cited": [],
-   "answer": "규정에서 찾지 못했습니다.",
    "detail": "모델이 찾지 못함(인용 0개)",
-   "leak": false
+   "leak": false,
+   "answerChars": 14
   }
  ]
 }
