@@ -81,10 +81,13 @@ def service_from_env(registry: Registry, audit_log: AuditLog) -> ToolService:
     catalog = Catalog.load(contracts / "mcp" / "tools.json", contracts / "openapi", registry)
     erp = os.environ.get("ERP_BASE_URL", "http://localhost:8040/api/v1")
     rag = os.environ.get("RAG_BASE_URL", "http://localhost:8030")
+    # incident는 compose 밖 호스트 로컬 도구입니다(PORT_BASE + 70). 모델을 부르므로 rag처럼 넉넉히 기다립니다.
+    incident = os.environ.get("INCIDENT_BASE_URL", "http://host.docker.internal:8070")
     backends = {
         # 계약 경로에 /api/v1이 들어 있으므로 erp는 호스트까지만 씁니다.
         "erp": httpx.AsyncClient(base_url=_origin(erp), timeout=30),
         "rag": httpx.AsyncClient(base_url=rag.rstrip("/"), timeout=120),
+        "incident": httpx.AsyncClient(base_url=incident.rstrip("/"), timeout=120),
     }
     return ToolService(catalog, registry, TokenVerifier.from_env(), backends, audit_log)
 

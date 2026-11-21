@@ -1,6 +1,7 @@
 """도구 출력의 신뢰 등급.
 
 - rag(policy_search): 인용 문서가 모두 팩 docs.yaml에서 trust=trusted면 신뢰, 하나라도 아니면(모르는 문서 포함) 신뢰 불가
+- incident(incident_analyze): 항상 신뢰 불가(근거 로그 줄·이유는 로그와 모델이 만든 글)
 - erp: 다른 사람이 쓴 자유 문장(사유·제목·의견 등)이 있으면 신뢰 불가. 작성자 필드가 요청자와 같으면 본인이 쓴 글로 봅니다.
   작성자를 알 수 없는 자유 문장도 신뢰 불가입니다.
 """
@@ -26,6 +27,9 @@ def trusted_docs(pack_dir: Path) -> frozenset[str]:
 
 
 def output_trusted(service: str, data: Any, requester_id: str, trusted_doc_ids: frozenset[str]) -> bool:
+    if service == "incident":
+        # 근거 로그 줄과 이유는 로그·모델이 만든 글입니다(contracts/openapi/incident.yaml).
+        return False
     if service == "rag":
         cites = data.get("citations", []) if isinstance(data, dict) else []
         return all(isinstance(c, dict) and c.get("docId") in trusted_doc_ids for c in cites)

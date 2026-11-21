@@ -18,7 +18,7 @@ class ToolSpec:
     meta: ToolMeta
     description: str
     input_schema: dict[str, Any]
-    service: str  # 출력 신뢰 판단용(erp, rag)
+    service: str  # 출력 신뢰 판단용(erp, rag, incident)
 
     @property
     def name(self) -> str:
@@ -69,7 +69,7 @@ def spec_from_mcp(name: str, description: str, input_schema: dict[str, Any], met
         meta=ToolMeta(name, meta.get("risk", "irreversible"), meta.get("trustRequired", "user_direct")),
         description=description,
         input_schema=dict(input_schema),
-        service="rag" if meta.get("service") == "rag" else "erp",
+        service=meta.get("service") if meta.get("service") in ("rag", "incident") else "erp",
     )
 
 

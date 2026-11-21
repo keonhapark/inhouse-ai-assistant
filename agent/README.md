@@ -45,7 +45,7 @@ Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·�
 - 위임 토큰은 HTTP 헤더 `X-Delegation-Token`으로만 받습니다. ES256 서명(gateway 공개 키), `iss=gateway`, `aud`에 `mcp`, 만료를 확인합니다.
 - 토큰이 맞으면 `tools/list`는 그 토큰으로 부를 수 있는 도구만 돌려줍니다. 토큰이 없으면 노출된 도구 전부를 설명용으로 돌려줍니다.
 - 호출을 막는 경우: 토큰 없음·틀림, 토큰 `tools`에 없음, 토큰 에이전트(`agt`)의 등록부에 없음, `trust_required=user_direct`인데 요청 `_meta.trustLevel`이 `user_direct`가 아님, 입력 스키마 위반. 결과는 `isError`와 `urn:problem:<코드>`입니다.
-- erp에는 토큰을 `Authorization: Bearer`로, rag에는 `X-Delegation-Token`으로 넘깁니다. erp의 scope 검사 결과(403 등)는 그대로 돌려줍니다.
+- erp에는 토큰을 `Authorization: Bearer`로, rag와 incident에는 `X-Delegation-Token`으로 넘깁니다. incident(`incident_analyze`)는 compose 밖 호스트 로컬 도구라 `INCIDENT_BASE_URL`(기본 `http://host.docker.internal:8070`, PORT_BASE + 70)로 부르고, 결과(근거 로그 줄·이유)는 항상 신뢰 불가 출력으로 다룹니다. erp의 scope 검사 결과(403 등)는 그대로 돌려줍니다.
 - 쓰기 도구는 `_meta.dryRun=true`면 erp 미리보기(`?dryRun=true`)를, 아니면 `_meta.idempotencyKey`를 `Idempotency-Key`로 넘겨 실행합니다.
 - 도구 메타데이터: `annotations.readOnlyHint`(read), `annotations.destructiveHint`(irreversible), `_meta`의 `risk`, `trustRequired`, `requiredScope`, `stage`
 - 사람 화면 전용 operation(`x-human-only`, 결재 승인·반려)에 묶인 도구가 있으면 시작하지 않습니다.

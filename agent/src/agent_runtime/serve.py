@@ -2,7 +2,7 @@
 
 실행: uv run python -m agent_runtime.serve
 환경 변수: AGENT_PORT(기본 8000), MCP_PORT(기본 8001), AGENT_HOST(기본 0.0.0.0)와
-app.py·mcp_server/server.py의 변수(PACK_DIR, CONTRACTS_DIR, ERP_BASE_URL, RAG_BASE_URL,
+app.py·mcp_server/server.py의 변수(PACK_DIR, CONTRACTS_DIR, ERP_BASE_URL, RAG_BASE_URL, INCIDENT_BASE_URL,
 DELEGATION_TOKEN_PUBLIC_KEY 또는 DELEGATION_JWKS_URL 등)
 """
 
