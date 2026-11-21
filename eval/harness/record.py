@@ -14,6 +14,13 @@ class Clarification:
 
 
 @dataclass
+class ApprovalDecision:
+    tool: str
+    decision: str  # approve | reject
+    reason: str
+
+
+@dataclass
 class RunRecord:
     scenario_id: str
     conversation_id: str | None = None
@@ -28,6 +35,9 @@ class RunRecord:
     # 그 밖의 로그 줄
     logs: list[str] = field(default_factory=list)
     clarifications: list[Clarification] = field(default_factory=list)
+    # 하네스 승인자(eval/harness/approver.py)와 승인 카드마다 내린 결정
+    approver: str | None = None
+    approval_decisions: list[ApprovalDecision] = field(default_factory=list)
     # 하네스 쪽 오류(시간 초과, 연결 실패 등). 있으면 "실패로 끝남"
     error: str | None = None
     # 실행 환경 문제로 보이는 이유(gateway 연결 실패 등). 있으면 이어 돌릴 때 다시 돌릴 후보

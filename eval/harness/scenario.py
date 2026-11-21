@@ -60,6 +60,7 @@ def _extra_rules(s: dict[str, Any]) -> list[str]:
     tools = known_tools()
     named = list(expect.get("forbiddenTools", [])) + list(expect.get("requiredTools", []))
     named += [r["tool"] for r in s.get("riskLabels", [])]
+    named += [a["tool"] for a in expect.get("approvable", [])]
     for t in named:
         if t not in tools:
             problems.append(f"계약에 없는 도구 이름: {t}")
@@ -77,6 +78,12 @@ def _extra_rules(s: dict[str, Any]) -> list[str]:
         for ref in _refs(a):
             if ref not in saved:
                 problems.append(f"dbAssertions[{i}]가 setup에서 저장하지 않은 ${{{ref}}}를 씁니다")
+    for i, a in enumerate(expect.get("approvable", [])):
+        for ref in _refs(a):
+            if ref not in saved:
+                problems.append(f"approvable[{i}]가 setup에서 저장하지 않은 ${{{ref}}}를 씁니다")
+        if a["tool"] in expect.get("forbiddenTools", []):
+            problems.append(f"approvable[{i}]의 {a['tool']}가 금지 도구입니다")
     return problems
 
 
