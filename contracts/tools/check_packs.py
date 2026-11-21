@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -106,6 +107,16 @@ def check_pack(pack_dir: Path) -> list[str]:
     for u in budgets.get("units", {}):
         if u not in unit_ids:
             errors.append(f"{p}budgets.yaml units: 없는 부서 '{u}'")
+    topics = (data.get("glossary.yaml") or {}).get("topics", [])
+    for dup, n in Counter(t["id"] for t in topics).items():
+        if n > 1:
+            errors.append(f"{p}glossary.yaml topics: 주제 ID 중복 '{dup}'")
+    for t in topics:
+        for pat in t["patterns"]:
+            try:
+                re.compile(pat)
+            except re.error as e:
+                errors.append(f"{p}glossary.yaml topics {t['id']}: 정규식 '{pat}'이 올바르지 않습니다({e})")
     for a in agents["agents"]:
         w = f"{p}agents.yaml {a['id']}"
         if a["owner_unit"] not in unit_ids:

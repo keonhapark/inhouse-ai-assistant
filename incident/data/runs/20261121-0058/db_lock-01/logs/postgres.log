@@ -1,0 +1,186 @@
+2026-11-20T16:00:15.873740626Z 2026-11-20 16:00:15.873 UTC [155] LOG:  connection received: host=[local]
+2026-11-20T16:00:15.874393001Z 2026-11-20 16:00:15.874 UTC [155] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:15.874402417Z 2026-11-20 16:00:15.874 UTC [155] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:15.875646584Z 2026-11-20 16:00:15.875 UTC [155] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:18.904846960Z 2026-11-20 16:00:18.904 UTC [162] LOG:  connection received: host=[local]
+2026-11-20T16:00:18.905680252Z 2026-11-20 16:00:18.905 UTC [162] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:18.905710335Z 2026-11-20 16:00:18.905 UTC [162] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:18.906908627Z 2026-11-20 16:00:18.906 UTC [162] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:21.931470420Z 2026-11-20 16:00:21.931 UTC [169] LOG:  connection received: host=[local]
+2026-11-20T16:00:21.932381087Z 2026-11-20 16:00:21.932 UTC [169] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:21.932401962Z 2026-11-20 16:00:21.932 UTC [169] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:21.933916462Z 2026-11-20 16:00:21.933 UTC [169] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:24.972477797Z 2026-11-20 16:00:24.972 UTC [176] LOG:  connection received: host=[local]
+2026-11-20T16:00:24.973166505Z 2026-11-20 16:00:24.973 UTC [176] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:24.973178880Z 2026-11-20 16:00:24.973 UTC [176] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:24.974414672Z 2026-11-20 16:00:24.974 UTC [176] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:28.002501840Z 2026-11-20 16:00:28.002 UTC [184] LOG:  connection received: host=[local]
+2026-11-20T16:00:28.003055590Z 2026-11-20 16:00:28.002 UTC [184] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:28.003060840Z 2026-11-20 16:00:28.002 UTC [184] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:28.004073256Z 2026-11-20 16:00:28.003 UTC [184] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:00:31.038463966Z 2026-11-20 16:00:31.038 UTC [191] LOG:  connection received: host=[local]
+2026-11-20T16:00:31.044454216Z 2026-11-20 16:00:31.044 UTC [191] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:31.045270758Z 2026-11-20 16:00:31.044 UTC [191] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:31.045973550Z 2026-11-20 16:00:31.045 UTC [191] LOG:  disconnection: session time: 0:00:00.007 user=iaa database=erp host=[local]
+2026-11-20T16:00:33.048676759Z 2026-11-20 16:00:33.048 UTC [199] LOG:  connection received: host=[local]
+2026-11-20T16:00:33.049289842Z 2026-11-20 16:00:33.049 UTC [199] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:33.049297634Z 2026-11-20 16:00:33.049 UTC [199] LOG:  connection authorized: user=iaa database=erp application_name=psql
+2026-11-20T16:00:34.071764968Z 2026-11-20 16:00:34.071 UTC [206] LOG:  connection received: host=[local]
+2026-11-20T16:00:34.072280218Z 2026-11-20 16:00:34.072 UTC [206] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:34.072308634Z 2026-11-20 16:00:34.072 UTC [206] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:34.073356926Z 2026-11-20 16:00:34.073 UTC [206] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:00:34.250695468Z 2026-11-20 16:00:34.250 UTC [39] LOG:  process 39 still waiting for AccessShareLock on relation 16480 of database 16384 after 1001.038 ms
+2026-11-20T16:00:34.250743551Z 2026-11-20 16:00:34.250 UTC [39] DETAIL:  Process holding the lock: 199. Wait queue: 39.
+2026-11-20T16:00:34.250748509Z 2026-11-20 16:00:34.250 UTC [39] STATEMENT:  select ad1_0.id,ad1_0.amount,ad1_0.created_at,ad1_0.current_step,ad1_0.fields,ad1_0.form_id,ad1_0.leave_days,ad1_0.requester_id,ad1_0.status,ad1_0.title,ad1_0.updated_at,ad1_0.version from approval_document ad1_0 where ad1_0.requester_id=$1 and ($2 is null or ad1_0.status=$3) order by ad1_0.created_at desc fetch first $4 rows only
+2026-11-20T16:00:37.097964802Z 2026-11-20 16:00:37.097 UTC [213] LOG:  connection received: host=[local]
+2026-11-20T16:00:37.098650677Z 2026-11-20 16:00:37.098 UTC [213] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:37.098675802Z 2026-11-20 16:00:37.098 UTC [213] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:37.099827177Z 2026-11-20 16:00:37.099 UTC [213] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:40.124057762Z 2026-11-20 16:00:40.123 UTC [220] LOG:  connection received: host=[local]
+2026-11-20T16:00:40.124595387Z 2026-11-20 16:00:40.124 UTC [220] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:40.124603346Z 2026-11-20 16:00:40.124 UTC [220] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:40.125588887Z 2026-11-20 16:00:40.125 UTC [220] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:00:42.718893180Z 2026-11-20 16:00:42.718 UTC [39] LOG:  process 39 still waiting for AccessShareLock on relation 16480 of database 16384 after 9469.313 ms
+2026-11-20T16:00:42.718942805Z 2026-11-20 16:00:42.718 UTC [39] DETAIL:  Process holding the lock: 199. Wait queue: 39.
+2026-11-20T16:00:42.718946097Z 2026-11-20 16:00:42.718 UTC [39] STATEMENT:  select ad1_0.id,ad1_0.amount,ad1_0.created_at,ad1_0.current_step,ad1_0.fields,ad1_0.form_id,ad1_0.leave_days,ad1_0.requester_id,ad1_0.status,ad1_0.title,ad1_0.updated_at,ad1_0.version from approval_document ad1_0 where ad1_0.requester_id=$1 and ($2 is null or ad1_0.status=$3) order by ad1_0.created_at desc fetch first $4 rows only
+2026-11-20T16:00:43.151706889Z 2026-11-20 16:00:43.151 UTC [227] LOG:  connection received: host=[local]
+2026-11-20T16:00:43.152442514Z 2026-11-20 16:00:43.152 UTC [227] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:43.152460972Z 2026-11-20 16:00:43.152 UTC [227] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:43.153902639Z 2026-11-20 16:00:43.153 UTC [227] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:44.264897208Z 2026-11-20 16:00:44.264 UTC [40] LOG:  process 40 still waiting for AccessShareLock on relation 16439 of database 16384 after 1003.379 ms
+2026-11-20T16:00:44.264926917Z 2026-11-20 16:00:44.264 UTC [40] DETAIL:  Process holding the lock: 199. Wait queue: 40.
+2026-11-20T16:00:44.264928583Z 2026-11-20 16:00:44.264 UTC [40] STATEMENT:  select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:00:46.194898293Z 2026-11-20 16:00:46.194 UTC [234] LOG:  connection received: host=[local]
+2026-11-20T16:00:46.195757584Z 2026-11-20 16:00:46.195 UTC [234] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:46.195790668Z 2026-11-20 16:00:46.195 UTC [234] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:46.197610793Z 2026-11-20 16:00:46.197 UTC [234] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:00:49.221118586Z 2026-11-20 16:00:49.220 UTC [242] LOG:  connection received: host=[local]
+2026-11-20T16:00:49.221653669Z 2026-11-20 16:00:49.221 UTC [242] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:49.221661586Z 2026-11-20 16:00:49.221 UTC [242] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:49.222588669Z 2026-11-20 16:00:49.222 UTC [242] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:00:52.241595504Z 2026-11-20 16:00:52.241 UTC [249] LOG:  connection received: host=[local]
+2026-11-20T16:00:52.242078254Z 2026-11-20 16:00:52.241 UTC [249] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:52.242095879Z 2026-11-20 16:00:52.241 UTC [249] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:52.242922670Z 2026-11-20 16:00:52.242 UTC [249] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:00:53.256324254Z 2026-11-20 16:00:53.256 UTC [40] LOG:  process 40 still waiting for AccessShareLock on relation 16439 of database 16384 after 9994.831 ms
+2026-11-20T16:00:53.256358796Z 2026-11-20 16:00:53.256 UTC [40] DETAIL:  Process holding the lock: 199. Wait queue: 40.
+2026-11-20T16:00:53.256364879Z 2026-11-20 16:00:53.256 UTC [40] STATEMENT:  select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:00:54.270733421Z 2026-11-20 16:00:54.268 UTC [41] LOG:  process 41 still waiting for AccessShareLock on relation 17222 of database 16384 after 1001.068 ms at character 220
+2026-11-20T16:00:54.271728380Z 2026-11-20 16:00:54.268 UTC [41] DETAIL:  Process holding the lock: 199. Wait queue: 41.
+2026-11-20T16:00:54.271734005Z 2026-11-20 16:00:54.268 UTC [41] STATEMENT:  select t1_0.id,t1_0.category,(select count(*) from ticket_comment c where c.ticket_id = t1_0.id),t1_0.created_at,t1_0.description,t1_0.priority,t1_0.requester_id,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.version from ticket t1_0 where ($1 is null or t1_0.requester_id=$2) and ($3 is null or t1_0.status=$4) order by t1_0.updated_at desc,t1_0.id desc fetch first $5 rows only
+2026-11-20T16:00:55.270602672Z 2026-11-20 16:00:55.270 UTC [256] LOG:  connection received: host=[local]
+2026-11-20T16:00:55.271314922Z 2026-11-20 16:00:55.271 UTC [256] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:55.271325547Z 2026-11-20 16:00:55.271 UTC [256] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:55.272449047Z 2026-11-20 16:00:55.272 UTC [256] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:00:58.300290590Z 2026-11-20 16:00:58.300 UTC [263] LOG:  connection received: host=[local]
+2026-11-20T16:00:58.301004007Z 2026-11-20 16:00:58.300 UTC [263] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:00:58.301011465Z 2026-11-20 16:00:58.300 UTC [263] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:00:58.302248798Z 2026-11-20 16:00:58.302 UTC [263] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:01:01.331608008Z 2026-11-20 16:01:01.331 UTC [270] LOG:  connection received: host=[local]
+2026-11-20T16:01:01.332396925Z 2026-11-20 16:01:01.332 UTC [270] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:01.332418175Z 2026-11-20 16:01:01.332 UTC [270] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:01.333731883Z 2026-11-20 16:01:01.333 UTC [270] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:01:04.269581509Z 2026-11-20 16:01:04.269 UTC [42] LOG:  process 42 still waiting for AccessShareLock on relation 17202 of database 16384 after 1000.113 ms at character 31
+2026-11-20T16:01:04.269644676Z 2026-11-20 16:01:04.269 UTC [42] DETAIL:  Process holding the lock: 199. Wait queue: 42.
+2026-11-20T16:01:04.269649676Z 2026-11-20 16:01:04.269 UTC [42] STATEMENT:  select count(rr1_0.id)>0 from room_reservation rr1_0 where rr1_0.room_id=$1 and rr1_0.status='confirmed' and rr1_0.id<>$2 and rr1_0.starts_at<$3 and $4<rr1_0.ends_at
+2026-11-20T16:01:04.360087468Z 2026-11-20 16:01:04.359 UTC [277] LOG:  connection received: host=[local]
+2026-11-20T16:01:04.360733259Z 2026-11-20 16:01:04.360 UTC [277] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:04.360744009Z 2026-11-20 16:01:04.360 UTC [277] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:04.361957260Z 2026-11-20 16:01:04.361 UTC [277] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:01:07.391013761Z 2026-11-20 16:01:07.390 UTC [284] LOG:  connection received: host=[local]
+2026-11-20T16:01:07.391612678Z 2026-11-20 16:01:07.391 UTC [284] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:07.391654094Z 2026-11-20 16:01:07.391 UTC [284] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:07.392869219Z 2026-11-20 16:01:07.392 UTC [284] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:01:10.418484012Z 2026-11-20 16:01:10.418 UTC [292] LOG:  connection received: host=[local]
+2026-11-20T16:01:10.419205971Z 2026-11-20 16:01:10.419 UTC [292] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:10.419215971Z 2026-11-20 16:01:10.419 UTC [292] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:10.420723471Z 2026-11-20 16:01:10.420 UTC [292] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:01:13.265444805Z 2026-11-20 16:01:13.265 UTC [42] LOG:  process 42 still waiting for AccessShareLock on relation 17202 of database 16384 after 9995.975 ms at character 31
+2026-11-20T16:01:13.265483180Z 2026-11-20 16:01:13.265 UTC [42] DETAIL:  Process holding the lock: 199. Wait queue: 42.
+2026-11-20T16:01:13.265485472Z 2026-11-20 16:01:13.265 UTC [42] STATEMENT:  select count(rr1_0.id)>0 from room_reservation rr1_0 where rr1_0.room_id=$1 and rr1_0.status='confirmed' and rr1_0.id<>$2 and rr1_0.starts_at<$3 and $4<rr1_0.ends_at
+2026-11-20T16:01:13.447543500Z 2026-11-20 16:01:13.447 UTC [299] LOG:  connection received: host=[local]
+2026-11-20T16:01:13.448084416Z 2026-11-20 16:01:13.447 UTC [299] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:13.448102750Z 2026-11-20 16:01:13.447 UTC [299] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:13.449040125Z 2026-11-20 16:01:13.448 UTC [299] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:01:14.781330667Z 2026-11-20 16:01:14.781 UTC [43] LOG:  process 43 still waiting for AccessShareLock on relation 16480 of database 16384 after 1000.527 ms at character 190
+2026-11-20T16:01:14.781361917Z 2026-11-20 16:01:14.781 UTC [43] DETAIL:  Process holding the lock: 199. Wait queue: 39, 43.
+2026-11-20T16:01:14.781363625Z 2026-11-20 16:01:14.781 UTC [43] STATEMENT:  select ad1_0.id,ad1_0.amount,ad1_0.created_at,ad1_0.current_step,ad1_0.fields,ad1_0.form_id,ad1_0.leave_days,ad1_0.requester_id,ad1_0.status,ad1_0.title,ad1_0.updated_at,ad1_0.version from approval_document ad1_0 where ad1_0.requester_id=$1 and ($2 is null or ad1_0.status=$3) order by ad1_0.created_at desc fetch first $4 rows only
+2026-11-20T16:01:16.477697334Z 2026-11-20 16:01:16.477 UTC [306] LOG:  connection received: host=[local]
+2026-11-20T16:01:16.478537959Z 2026-11-20 16:01:16.478 UTC [306] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:16.478547626Z 2026-11-20 16:01:16.478 UTC [306] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:16.480050084Z 2026-11-20 16:01:16.479 UTC [306] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:01:19.502756544Z 2026-11-20 16:01:19.502 UTC [313] LOG:  connection received: host=[local]
+2026-11-20T16:01:19.503161877Z 2026-11-20 16:01:19.503 UTC [313] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:19.503165419Z 2026-11-20 16:01:19.503 UTC [313] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:19.504012169Z 2026-11-20 16:01:19.503 UTC [313] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:01:22.529206337Z 2026-11-20 16:01:22.529 UTC [320] LOG:  connection received: host=[local]
+2026-11-20T16:01:22.529930462Z 2026-11-20 16:01:22.529 UTC [320] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:22.529940004Z 2026-11-20 16:01:22.529 UTC [320] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:22.531372796Z 2026-11-20 16:01:22.531 UTC [320] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:01:24.810590213Z 2026-11-20 16:01:24.810 UTC [44] LOG:  process 44 still waiting for AccessShareLock on relation 16439 of database 16384 after 1001.427 ms at character 100
+2026-11-20T16:01:24.810660672Z 2026-11-20 16:01:24.810 UTC [44] DETAIL:  Process holding the lock: 199. Wait queue: 40, 44.
+2026-11-20T16:01:24.810666547Z 2026-11-20 16:01:24.810 UTC [44] STATEMENT:  select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:01:25.558187797Z 2026-11-20 16:01:25.558 UTC [327] LOG:  connection received: host=[local]
+2026-11-20T16:01:25.558684297Z 2026-11-20 16:01:25.558 UTC [327] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:25.558696714Z 2026-11-20 16:01:25.558 UTC [327] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:25.559669839Z 2026-11-20 16:01:25.559 UTC [327] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:01:26.052291922Z 2026-11-20 16:01:26.051 UTC [45] LOG:  process 45 still waiting for AccessShareLock on relation 16439 of database 16384 after 1003.623 ms at character 100
+2026-11-20T16:01:26.052407964Z 2026-11-20 16:01:26.051 UTC [45] DETAIL:  Process holding the lock: 199. Wait queue: 40, 44, 45.
+2026-11-20T16:01:26.052411089Z 2026-11-20 16:01:26.051 UTC [45] STATEMENT:  select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:01:28.585327882Z 2026-11-20 16:01:28.585 UTC [335] LOG:  connection received: host=[local]
+2026-11-20T16:01:28.585786215Z 2026-11-20 16:01:28.585 UTC [335] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:28.585800340Z 2026-11-20 16:01:28.585 UTC [335] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:28.586505590Z 2026-11-20 16:01:28.586 UTC [335] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:01:31.615664717Z 2026-11-20 16:01:31.615 UTC [342] LOG:  connection received: host=[local]
+2026-11-20T16:01:31.616460633Z 2026-11-20 16:01:31.616 UTC [342] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:31.616485300Z 2026-11-20 16:01:31.616 UTC [342] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:31.617775342Z 2026-11-20 16:01:31.617 UTC [342] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:01:33.062706634Z 2026-11-20 16:01:33.059 UTC [44] LOG:  process 44 acquired AccessShareLock on relation 16439 of database 16384 after 9250.378 ms at character 100
+2026-11-20T16:01:33.062772134Z 2026-11-20 16:01:33.059 UTC [44] STATEMENT:  select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:01:33.062783634Z 2026-11-20 16:01:33.059 UTC [199] LOG:  duration: 60008.424 ms  statement: begin; lock table approval_document, room_reservation, leave_balance, ticket in access exclusive mode; select pg_sleep(60); commit;
+2026-11-20T16:01:33.062793051Z 2026-11-20 16:01:33.059 UTC [42] LOG:  process 42 acquired AccessShareLock on relation 17202 of database 16384 after 29789.867 ms at character 31
+2026-11-20T16:01:33.062801384Z 2026-11-20 16:01:33.059 UTC [42] STATEMENT:  select count(rr1_0.id)>0 from room_reservation rr1_0 where rr1_0.room_id=$1 and rr1_0.status='confirmed' and rr1_0.id<>$2 and rr1_0.starts_at<$3 and $4<rr1_0.ends_at
+2026-11-20T16:01:33.062804717Z 2026-11-20 16:01:33.059 UTC [45] LOG:  process 45 acquired AccessShareLock on relation 16439 of database 16384 after 8010.878 ms at character 100
+2026-11-20T16:01:33.062807092Z 2026-11-20 16:01:33.059 UTC [45] STATEMENT:  select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:01:33.062809592Z 2026-11-20 16:01:33.059 UTC [39] LOG:  process 39 acquired AccessShareLock on relation 16480 of database 16384 after 59809.913 ms
+2026-11-20T16:01:33.062812592Z 2026-11-20 16:01:33.059 UTC [39] STATEMENT:  select ad1_0.id,ad1_0.amount,ad1_0.created_at,ad1_0.current_step,ad1_0.fields,ad1_0.form_id,ad1_0.leave_days,ad1_0.requester_id,ad1_0.status,ad1_0.title,ad1_0.updated_at,ad1_0.version from approval_document ad1_0 where ad1_0.requester_id=$1 and ($2 is null or ad1_0.status=$3) order by ad1_0.created_at desc fetch first $4 rows only
+2026-11-20T16:01:33.062815634Z 2026-11-20 16:01:33.059 UTC [40] LOG:  process 40 acquired AccessShareLock on relation 16439 of database 16384 after 49798.085 ms
+2026-11-20T16:01:33.062819717Z 2026-11-20 16:01:33.059 UTC [40] STATEMENT:  select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:01:33.062822217Z 2026-11-20 16:01:33.059 UTC [43] LOG:  process 43 acquired AccessShareLock on relation 16480 of database 16384 after 19278.853 ms at character 190
+2026-11-20T16:01:33.062824884Z 2026-11-20 16:01:33.059 UTC [43] STATEMENT:  select ad1_0.id,ad1_0.amount,ad1_0.created_at,ad1_0.current_step,ad1_0.fields,ad1_0.form_id,ad1_0.leave_days,ad1_0.requester_id,ad1_0.status,ad1_0.title,ad1_0.updated_at,ad1_0.version from approval_document ad1_0 where ad1_0.requester_id=$1 and ($2 is null or ad1_0.status=$3) order by ad1_0.created_at desc fetch first $4 rows only
+2026-11-20T16:01:33.062877342Z 2026-11-20 16:01:33.059 UTC [41] LOG:  process 41 acquired AccessShareLock on relation 17222 of database 16384 after 39791.871 ms at character 220
+2026-11-20T16:01:33.062882134Z 2026-11-20 16:01:33.059 UTC [41] STATEMENT:  select t1_0.id,t1_0.category,(select count(*) from ticket_comment c where c.ticket_id = t1_0.id),t1_0.created_at,t1_0.description,t1_0.priority,t1_0.requester_id,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.version from ticket t1_0 where ($1 is null or t1_0.requester_id=$2) and ($3 is null or t1_0.status=$4) order by t1_0.updated_at desc,t1_0.id desc fetch first $5 rows only
+2026-11-20T16:01:33.062884801Z 2026-11-20 16:01:33.060 UTC [39] LOG:  duration: 59810.717 ms  bind S_5: select ad1_0.id,ad1_0.amount,ad1_0.created_at,ad1_0.current_step,ad1_0.fields,ad1_0.form_id,ad1_0.leave_days,ad1_0.requester_id,ad1_0.status,ad1_0.title,ad1_0.updated_at,ad1_0.version from approval_document ad1_0 where ad1_0.requester_id=$1 and ($2 is null or ad1_0.status=$3) order by ad1_0.created_at desc fetch first $4 rows only
+2026-11-20T16:01:33.062890967Z 2026-11-20 16:01:33.060 UTC [39] DETAIL:  Parameters: $1 = 'E0007', $2 = NULL, $3 = NULL, $4 = '20'
+2026-11-20T16:01:33.062898009Z 2026-11-20 16:01:33.060 UTC [45] LOG:  duration: 8012.518 ms  parse <unnamed>: select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:01:33.062901676Z 2026-11-20 16:01:33.060 UTC [44] LOG:  duration: 9252.285 ms  parse <unnamed>: select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:01:33.062906384Z 2026-11-20 16:01:33.061 UTC [42] LOG:  duration: 29792.254 ms  parse <unnamed>: select count(rr1_0.id)>0 from room_reservation rr1_0 where rr1_0.room_id=$1 and rr1_0.status='confirmed' and rr1_0.id<>$2 and rr1_0.starts_at<$3 and $4<rr1_0.ends_at
+2026-11-20T16:01:33.062913551Z 2026-11-20 16:01:33.062 UTC [43] LOG:  duration: 19282.363 ms  parse <unnamed>: select ad1_0.id,ad1_0.amount,ad1_0.created_at,ad1_0.current_step,ad1_0.fields,ad1_0.form_id,ad1_0.leave_days,ad1_0.requester_id,ad1_0.status,ad1_0.title,ad1_0.updated_at,ad1_0.version from approval_document ad1_0 where ad1_0.requester_id=$1 and ($2 is null or ad1_0.status=$3) order by ad1_0.created_at desc fetch first $4 rows only
+2026-11-20T16:01:33.063187509Z 2026-11-20 16:01:33.063 UTC [40] LOG:  duration: 49801.767 ms  bind S_5: select lb1_0.employee_id,lb1_0.year,lb1_0.annual_pending,lb1_0.annual_total,lb1_0.annual_used from leave_balance lb1_0 where lb1_0.employee_id=$1 order by lb1_0.year desc
+2026-11-20T16:01:33.063210426Z 2026-11-20 16:01:33.063 UTC [40] DETAIL:  Parameters: $1 = 'E0007'
+2026-11-20T16:01:33.063222342Z 2026-11-20 16:01:33.063 UTC [199] LOG:  disconnection: session time: 0:01:00.014 user=iaa database=erp host=[local]
+2026-11-20T16:01:33.064929467Z 2026-11-20 16:01:33.063 UTC [41] LOG:  duration: 39796.163 ms  parse <unnamed>: select t1_0.id,t1_0.category,(select count(*) from ticket_comment c where c.ticket_id = t1_0.id),t1_0.created_at,t1_0.description,t1_0.priority,t1_0.requester_id,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.version from ticket t1_0 where ($1 is null or t1_0.requester_id=$2) and ($3 is null or t1_0.status=$4) order by t1_0.updated_at desc,t1_0.id desc fetch first $5 rows only
+2026-11-20T16:01:33.113222759Z 2026-11-20 16:01:33.113 UTC [349] LOG:  connection received: host=[local]
+2026-11-20T16:01:33.113684301Z 2026-11-20 16:01:33.113 UTC [349] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:33.113689009Z 2026-11-20 16:01:33.113 UTC [349] LOG:  connection authorized: user=iaa database=erp application_name=psql
+2026-11-20T16:01:33.119081217Z 2026-11-20 16:01:33.118 UTC [349] LOG:  disconnection: session time: 0:00:00.005 user=iaa database=erp host=[local]
+2026-11-20T16:01:34.640334176Z 2026-11-20 16:01:34.640 UTC [356] LOG:  connection received: host=[local]
+2026-11-20T16:01:34.640849343Z 2026-11-20 16:01:34.640 UTC [356] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:34.640853426Z 2026-11-20 16:01:34.640 UTC [356] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:34.641730301Z 2026-11-20 16:01:34.641 UTC [356] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:01:37.669425844Z 2026-11-20 16:01:37.669 UTC [363] LOG:  connection received: host=[local]
+2026-11-20T16:01:37.670087594Z 2026-11-20 16:01:37.669 UTC [363] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:37.670367886Z 2026-11-20 16:01:37.669 UTC [363] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:37.671032803Z 2026-11-20 16:01:37.670 UTC [363] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:01:40.697270513Z 2026-11-20 16:01:40.697 UTC [370] LOG:  connection received: host=[local]
+2026-11-20T16:01:40.697878471Z 2026-11-20 16:01:40.697 UTC [370] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:40.697892346Z 2026-11-20 16:01:40.697 UTC [370] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:40.698930596Z 2026-11-20 16:01:40.698 UTC [370] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
+2026-11-20T16:01:43.730712583Z 2026-11-20 16:01:43.730 UTC [377] LOG:  connection received: host=[local]
+2026-11-20T16:01:43.731469458Z 2026-11-20 16:01:43.731 UTC [377] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:43.731474750Z 2026-11-20 16:01:43.731 UTC [377] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:43.732806375Z 2026-11-20 16:01:43.732 UTC [377] LOG:  disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]
+2026-11-20T16:01:46.761969043Z 2026-11-20 16:01:46.761 UTC [384] LOG:  connection received: host=[local]
+2026-11-20T16:01:46.762591251Z 2026-11-20 16:01:46.762 UTC [384] LOG:  connection authenticated: user="iaa" method=trust (/var/lib/postgresql/data/pg_hba.conf:117)
+2026-11-20T16:01:46.762615334Z 2026-11-20 16:01:46.762 UTC [384] LOG:  connection authorized: user=iaa database=erp application_name=pg_isready
+2026-11-20T16:01:46.763628751Z 2026-11-20 16:01:46.763 UTC [384] LOG:  disconnection: session time: 0:00:00.001 user=iaa database=erp host=[local]
