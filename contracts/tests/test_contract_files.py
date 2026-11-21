@@ -208,3 +208,18 @@ def test_pack_amount_product_of_is_checked(tmp_path) -> None:
     forms.write_text(text.replace("amount_product_of: [quantity, unit_price]", "amount_product_of: [quantity, reason]"),
                      encoding="utf-8")
     assert any("amount_product_of 'reason'" in e for e in check_pack(pack))
+
+
+def test_glossary_topics_reject_bad_regex_and_duplicates(tmp_path: Path, capsys) -> None:
+    import shutil
+
+    from tools import check_packs
+
+    pack = tmp_path / "manufacturing"
+    shutil.copytree(PACKS / "manufacturing", pack)
+    g = load(pack / "glossary.yaml")
+    g["topics"] = [{"id": "a", "action": "local_only", "patterns": ["(열림"]},
+                   {"id": "a", "action": "local_only", "patterns": ["ok"]}]
+    (pack / "glossary.yaml").write_text(json.dumps(g, ensure_ascii=False), encoding="utf-8")
+    errors = check_packs.check_pack(pack)
+    assert any("정규식" in e for e in errors) and any("중복" in e for e in errors)

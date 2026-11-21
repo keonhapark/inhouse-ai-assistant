@@ -243,3 +243,52 @@ async def test_blocked_call_after_receipt_is_audited_as_untrusted(r2: RunHarness
     await _run(r2, "finance", "영수증 정산해 줘", [IMAGE])
     [event] = [e for e in r2.agent_events() if e["kind"] == "tool.blocked"]
     assert event["trustLevel"] == "untrusted"
+
+
+async def _expense_doc(r: RunHarness) -> str:
+    from agent_runtime.mcp_server.service import CallMeta
+
+    created = await r.h.service.call("expense_request", EXPENSE, mint(agent="finance"),
+                                     CallMeta(trust_level="user_direct", idempotency_key=uuid.uuid4().hex))
+    assert created.ok, created.problem
+    return created.data["resource"]["id"]
+
+
+@pytest.mark.anyio
+async def test_receipt_turn_blocks_other_user_direct_tools(r2: RunHarness) -> None:
+    """#312: 영수증을 읽은 같은 턴에는 expense_request만 승인으로 보내고 다른 user_direct 도구는 막습니다."""
+    doc = await _expense_doc(r2)
+    r2.runner.receipts = StubReader(ReceiptFields(**READ))
+    r2.llm.script = [call("approval_withdraw", {"documentId": doc}), say("회수하지 못했습니다.")]
+    s = await _run(r2, "finance", "이 영수증 보고 지난번 경비 결재는 회수해 줘", [IMAGE])
+    assert s["status"] == "blocked" and "신뢰할 수 없는" in s["blockedReason"]
+    assert not [c for c in r2.caller.calls if c[0] == "approval_withdraw"]
+    [event] = [e for e in r2.agent_events() if e["kind"] == "tool.blocked"]
+    assert event["operation"] == "approval_withdraw" and event["trustLevel"] == "untrusted"
+
+
+@pytest.mark.anyio
+async def test_receipt_turn_expense_preview_and_execute_go_as_user_direct(r2: RunHarness) -> None:
+    """예외인 expense_request는 같은 턴에 미리보기·실행을 user_direct로 보냅니다(MCP 서버 신뢰 검사를 통과)."""
+    r2.runner.receipts = StubReader(ReceiptFields(**READ))
+    conv = f"cnv_{uuid.uuid4().hex[:8]}"
+    token = mint(agent="finance", cid=conv)
+    r2.llm.script = [call("expense_request", EXPENSE), say("올렸습니다.")]
+    s = await _run(r2, "finance", "영수증 정산해 줘. 거래처 점심", [IMAGE], conv, token)
+    assert s["status"] == "awaiting_approval"
+    done = await r2.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
+    assert done["status"] == "completed" and done["actions"][0]["tool"] == "expense_request"
+    metas = [c[2] for c in r2.caller.calls if c[0] == "expense_request"]
+    assert [m["trustLevel"] for m in metas] == ["user_direct", "user_direct"]
+
+
+@pytest.mark.anyio
+async def test_next_turn_after_receipt_withdraw_needs_approval(r2: RunHarness) -> None:
+    doc = await _expense_doc(r2)
+    r2.runner.receipts = StubReader(ReceiptFields(**READ))
+    conv = f"cnv_{uuid.uuid4().hex[:8]}"
+    token = mint(agent="finance", cid=conv)
+    r2.llm.script = [say("사용 목적을 알려 주세요."), call("approval_withdraw", {"documentId": doc}), say("회수했습니다.")]
+    await _run(r2, "finance", "영수증 정산해 줘", [IMAGE], conv, token)
+    s = await _run(r2, "finance", "아 그리고 지난 경비 결재 회수해 줘", None, conv, token)
+    assert s["status"] == "awaiting_approval" and s["pendingApproval"]["toolPreview"]["tool"] == "approval_withdraw"

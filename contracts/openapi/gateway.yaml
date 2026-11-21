@@ -103,6 +103,39 @@ paths:
               schema: {$ref: "erp.yaml#/components/schemas/LoginResponse"}
         "401": {$ref: "#/components/responses/Problem"}
 
+  /auth/slack:
+    post:
+      tags: [auth]
+      operationId: slackLogin
+      security: []
+      description: |
+        슬랙 브리지만 부르는 로그인(#273). 헤더 `X-Slack-Bridge-Secret`이 gateway 설정(`SLACK_BRIDGE_SECRET`)과 맞고
+        `slackUserId`가 매핑(로컬 설정 파일, 워크스페이스마다 다름)에 있으면, erp `POST /auth/service-login`으로 그 직원의
+        짧은 직원 JWT(`amr: [slack]`)를 받아 돌려줍니다. 이 토큰으로는 사람 전용 기능(결재 승인·반려, 감사 조회 등)을 부를 수 없습니다(403).
+        비밀값이 틀리거나 없으면 401, 매핑에 없는 슬랙 사용자면 403, `SLACK_BRIDGE_SECRET`이 설정되지 않았으면 404입니다.
+        비밀값과 토큰은 로그·감사에 남기지 않습니다.
+      parameters:
+        - {name: X-Slack-Bridge-Secret, in: header, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slackUserId]
+              additionalProperties: false
+              properties:
+                slackUserId: {type: string, description: "슬랙 사용자 ID(예: U012ABCDEF)"}
+      responses:
+        "200":
+          description: 직원 JWT(amr slack)
+          content:
+            application/json:
+              schema: {$ref: "erp.yaml#/components/schemas/LoginResponse"}
+        "401": {$ref: "#/components/responses/Problem"}
+        "403": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+
   /me:
     get:
       tags: [auth]

@@ -27,7 +27,8 @@ class Runner:
     receipts: ReceiptReader | None = None
 
     async def run(self, token: str, conversation_id: str, agent_id: str, message: str, requester: Requester,
-                  condition: str = "full", attachments: list[str] | None = None) -> dict[str, Any]:
+                  condition: str = "full", attachments: list[str] | None = None,
+                  route_method: str | None = None) -> dict[str, Any]:
         config = {"configurable": {"thread_id": conversation_id}}
         problem, token_id = self._check(token, conversation_id, agent_id, requester)
         if problem:
@@ -43,13 +44,19 @@ class Runner:
         prior = prepare_history((snapshot.values or {}).get("messages", []))
         state = {**TURN_RESET, "conversationId": conversation_id, "agentId": agent_id,
                  "requesterId": requester.employee_id, "condition": condition}
+        if route_method == "fallback":
+            # 부서를 고르지 못한 대화는 끝까지 로컬로 실행합니다(#308). 뒤 턴에서 routeMethod가 없어도 풀리지 않습니다.
+            state["force_local"] = True
         turn = [{"role": "user", "content": message}]
         if attachments:
             note, tainted = await self._read_attachments(attachments, token, ctx)
             # 사용자 발화와 섞지 않고 따로 둡니다.
             turn.append({"role": "user", "content": note})
             if tainted:
-                # 영수증 글자는 신뢰할 수 없는 내용입니다. 같은 턴이라도 막지 않고 user_direct 도구는 승인을 받습니다(결정 0004).
+                # 영수증 글자는 신뢰할 수 없는 내용입니다(결정 0004 덧붙임). 같은 턴에는 expense_request만 막지 않고
+                # 미리보기 승인으로 보내고, 다른 user_direct 도구는 막습니다. 다음 턴부터는 모두 승인을 받습니다.
+                state["tainted"] = True
+                state["taint_exempt"] = [RECEIPT_TOOL]
                 state["conversation_tainted"] = True
         state["messages"] = [*prior, *turn]
         try:
