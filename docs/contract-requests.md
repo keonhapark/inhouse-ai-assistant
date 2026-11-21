@@ -30,4 +30,5 @@
 | 2026-11-21 | erp | #252 | 팩 forms 선택 항목 `amount_product_of`(금액 필드 = 필드들의 곱, 다르면 422 form-validation-failed), 제조 팩 구매 양식 `[quantity, unit_price]` | 합계를 틀리게 적어 고액 확인·결재선을 비켜 감 | 직접 PR |
 | 2026-11-21 | gateway | #289 | gateway `GET /audit-events` 선택 파라미터 `order`(asc|desc, 기본 asc) | #276 관리자 콘솔에서 최근 감사 이벤트 보기 | contract/gateway-audit-order PR |
 | 2026-11-21 | agent | #286 | agent.yaml `Attachment`, `/run` `attachments`; gateway.yaml 대화 메시지 `attachments`(413·415) | #281 영수증 이미지를 대화로 받아 로컬 비전으로 읽음 | contract/agent-attachments PR. gateway 전달 구현은 gateway 이슈 |
+| 2026-11-21 | agent | #309 | agent.yaml `/run` 선택 필드 `routeMethod`(llm·keyword·fallback·explicit) | #308 fallback 대화가 전사 비서 정책(external)으로 외부에 나감. fallback이면 대화 끝까지 로컬 | contract/agent-route-method PR. gateway 전달은 gateway 이슈 |
 | 2026-11-21 | gateway | #304 | 팩 glossary.yaml 선택 항목 `topics`(id·action·reason·patterns 정규식, 대화 내용만 봄), 제조 팩 hr-attendance | #304 인사 정보 로컬 강제(#308 두 번째 방어선) | contract/gateway-local-topics PR |

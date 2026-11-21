@@ -1,0 +1,84 @@
+2026-11-20T16:06:44.672155292Z INFO:     127.0.0.1:50076 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:06:49.750772503Z INFO:     127.0.0.1:47980 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:06:54.882029338Z INFO:     127.0.0.1:48056 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:06:59.977276216Z INFO:     127.0.0.1:53642 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:07:00.337731383Z INFO:     Shutting down
+2026-11-20T16:07:00.439254508Z INFO:     Waiting for application shutdown.
+2026-11-20T16:07:00.439488966Z INFO:     Application shutdown complete.
+2026-11-20T16:07:00.439633799Z INFO:     Finished server process [10]
+2026-11-20T16:07:01.648267258Z Traceback (most recent call last):
+2026-11-20T16:07:01.648315467Z   File "/repo/rag/.venv/bin/uvicorn", line 10, in <module>
+2026-11-20T16:07:01.648318633Z     sys.exit(main())
+2026-11-20T16:07:01.648319842Z              ^^^^^^
+2026-11-20T16:07:01.648321050Z   File "/repo/rag/.venv/lib/python3.12/site-packages/click/core.py", line 1653, in __call__
+2026-11-20T16:07:01.649037425Z     return self.main(*args, **kwargs)
+2026-11-20T16:07:01.649058925Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.649060550Z   File "/repo/rag/.venv/lib/python3.12/site-packages/click/core.py", line 1560, in main
+2026-11-20T16:07:01.649208383Z     rv = self.invoke(ctx)
+2026-11-20T16:07:01.649213050Z          ^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.649214217Z   File "/repo/rag/.venv/lib/python3.12/site-packages/click/core.py", line 1414, in invoke
+2026-11-20T16:07:01.649379800Z     return ctx.invoke(self.callback, **ctx.params)
+2026-11-20T16:07:01.649384300Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.649385508Z   File "/repo/rag/.venv/lib/python3.12/site-packages/click/core.py", line 911, in invoke
+2026-11-20T16:07:01.649516508Z     return callback(*args, **kwargs)
+2026-11-20T16:07:01.649524425Z            ^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.649526008Z   File "/repo/rag/.venv/lib/python3.12/site-packages/uvicorn/main.py", line 448, in main
+2026-11-20T16:07:01.650307550Z     run(
+2026-11-20T16:07:01.650314258Z   File "/repo/rag/.venv/lib/python3.12/site-packages/uvicorn/main.py", line 632, in run
+2026-11-20T16:07:01.650510967Z     server.run()
+2026-11-20T16:07:01.650523300Z   File "/repo/rag/.venv/lib/python3.12/site-packages/uvicorn/server.py", line 86, in run
+2026-11-20T16:07:01.650858592Z     return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+2026-11-20T16:07:01.650872717Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.650913092Z   File "/usr/local/lib/python3.12/asyncio/runners.py", line 195, in run
+2026-11-20T16:07:01.650991967Z     return runner.run(main)
+2026-11-20T16:07:01.650996258Z            ^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.650997217Z   File "/usr/local/lib/python3.12/asyncio/runners.py", line 118, in run
+2026-11-20T16:07:01.651000800Z     return self._loop.run_until_complete(task)
+2026-11-20T16:07:01.651042717Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.651054842Z   File "/usr/local/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+2026-11-20T16:07:01.651236050Z     return future.result()
+2026-11-20T16:07:01.651252175Z            ^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.651253175Z   File "/repo/rag/.venv/lib/python3.12/site-packages/uvicorn/server.py", line 90, in serve
+2026-11-20T16:07:01.651311633Z     await self._serve(sockets)
+2026-11-20T16:07:01.651316592Z   File "/repo/rag/.venv/lib/python3.12/site-packages/uvicorn/server.py", line 97, in _serve
+2026-11-20T16:07:01.651317842Z     config.load()
+2026-11-20T16:07:01.651348008Z   File "/repo/rag/.venv/lib/python3.12/site-packages/uvicorn/config.py", line 514, in load
+2026-11-20T16:07:01.651685883Z     self.loaded_app = self.loaded_app()
+2026-11-20T16:07:01.651693050Z                       ^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.651694258Z   File "/repo/rag/rag/app.py", line 184, in from_env
+2026-11-20T16:07:01.652034425Z     index = build_index(embedder_from_env(cache), stage, edition_policy(dict(os.environ)), purge_list.ids())
+2026-11-20T16:07:01.652038050Z                         ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.652039133Z   File "/repo/rag/rag/embed.py", line 192, in embedder_from_env
+2026-11-20T16:07:01.652452592Z     return CachedEmbedder(inner, cache_dir)
+2026-11-20T16:07:01.652463092Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.652464258Z   File "/repo/rag/rag/embed.py", line 138, in __init__
+2026-11-20T16:07:01.652568217Z     json.loads(self._path.read_text(encoding="utf-8")) if self._path.exists() else {}
+2026-11-20T16:07:01.652599133Z     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.652605383Z   File "/usr/local/lib/python3.12/json/__init__.py", line 346, in loads
+2026-11-20T16:07:01.653026050Z     return _default_decoder.decode(s)
+2026-11-20T16:07:01.653029092Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.653030258Z   File "/usr/local/lib/python3.12/json/decoder.py", line 338, in decode
+2026-11-20T16:07:01.654004300Z     obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+2026-11-20T16:07:01.654015592Z                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.654016675Z   File "/usr/local/lib/python3.12/json/decoder.py", line 354, in raw_decode
+2026-11-20T16:07:01.654084258Z     obj, end = self.scan_once(s, idx)
+2026-11-20T16:07:01.654087508Z                ^^^^^^^^^^^^^^^^^^^^^^
+2026-11-20T16:07:01.654088467Z json.decoder.JSONDecodeError: Unterminated string starting at: line 1 column 2 (char 1)
+2026-11-20T16:08:25.793187172Z INFO:     Started server process [9]
+2026-11-20T16:08:25.793263464Z INFO:     Waiting for application startup.
+2026-11-20T16:08:25.794371672Z INFO:     Application startup complete.
+2026-11-20T16:08:25.794735130Z INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-11-20T16:08:26.557919297Z INFO:     127.0.0.1:45736 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:08:31.636217050Z INFO:     127.0.0.1:45814 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:08:36.732548344Z INFO:     127.0.0.1:37740 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:08:41.819313263Z INFO:     127.0.0.1:37806 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:08:46.888184043Z INFO:     127.0.0.1:52950 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:08:51.965709170Z INFO:     127.0.0.1:52994 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:08:57.038429089Z INFO:     127.0.0.1:54396 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:09:02.112225800Z INFO:     127.0.0.1:54458 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:09:07.243160511Z INFO:     127.0.0.1:45678 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:09:12.346804597Z INFO:     127.0.0.1:45742 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:09:17.471216501Z INFO:     127.0.0.1:49476 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:09:20.236605044Z INFO:     172.21.0.5:45928 - "POST /answer HTTP/1.1" 200 OK
+2026-11-20T16:09:22.547010629Z INFO:     127.0.0.1:49544 - "GET /health HTTP/1.1" 200 OK
+2026-11-20T16:09:27.660308840Z INFO:     127.0.0.1:57238 - "GET /health HTTP/1.1" 200 OK
