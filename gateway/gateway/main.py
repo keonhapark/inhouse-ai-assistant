@@ -133,9 +133,12 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     app.include_router(ops.build_router(erp, audit, registry, settings.audit_event_files, egress.budget),
                        prefix="/api")
     app.include_router(audit_query.build_router(erp, audit, settings.audit_event_files), prefix="/api")
+    app.state.slack_limits = slack_login.SlackLimits(settings.slack_login_per_user_per_minute,
+                                                     settings.slack_login_per_minute)
     app.include_router(slack_login.build_router(erp, audit, bridge_secret=settings.slack_bridge_secret,
                                                 users_file=settings.slack_users_file,
-                                                service_secret=settings.erp_service_login_secret), prefix="/api")
+                                                service_secret=settings.erp_service_login_secret,
+                                                limits=app.state.slack_limits), prefix="/api")
 
     # LLM 출구는 OpenAI 호환 경로라 /api 밖에 둡니다(agent·rag의 GATEWAY_LLM_URL=http://gateway:8000/v1).
     @app.post("/v1/chat/completions")

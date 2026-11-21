@@ -736,7 +736,7 @@ def test_service_login_issues_short_slack_token(api: Api, org: Org) -> None:
     assert jwt.decode(token, options={"verify_signature": False})["amr"] == ["slack"]
     me = api.req("GET", "/me", token=token)
     assert me.status_code == 200 and me.json()["id"] == emp
-    for secret in (None, "wrong-secret"):
+    for secret in (None, "", "wrong-secret"):
         bad = _service_login(api, emp, secret)
         assert bad.status_code == 401
         assert problem_code(bad) == "unauthorized"

@@ -60,7 +60,8 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
     pack_dir = pack_dir or Path(os.environ.get("PACK_DIR", ROOT / "packs/manufacturing"))
     secret = jwt_secret or os.environ.get("ERP_JWT_SECRET") or DEFAULT_SECRET
     password = demo_password or os.environ.get("ERP_DEMO_PASSWORD") or "demo"
-    service_secret = service_login_secret or os.environ.get("ERP_SERVICE_LOGIN_SECRET") or None
+    # 비었거나 공백뿐인 값은 설정되지 않은 것으로 봅니다(compose가 빈 문자열을 넘김).
+    service_secret = (service_login_secret or os.environ.get("ERP_SERVICE_LOGIN_SECRET") or "").strip() or None
     if delegation_public_key is None and os.environ.get("DELEGATION_TOKEN_PUBLIC_KEY"):
         p = Path(os.environ["DELEGATION_TOKEN_PUBLIC_KEY"])
         if not p.is_absolute():
