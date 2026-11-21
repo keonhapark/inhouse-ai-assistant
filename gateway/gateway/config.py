@@ -39,6 +39,8 @@ class Settings:
     slack_bridge_secret: str | None = None      # SLACK_BRIDGE_SECRET: 없으면 /auth/slack 꺼짐(404, #273)
     slack_users_file: Path = REPO_ROOT / "infra/slack/slack-users.json"  # SLACK_USERS_FILE: 슬랙 사용자 ID → 직원 ID
     erp_service_login_secret: str | None = None  # ERP_SERVICE_LOGIN_SECRET: erp /auth/service-login 비밀값
+    slack_login_per_user_per_minute: int = 10    # SLACK_LOGIN_PER_USER_PER_MINUTE: 슬랙 사용자 ID별 분당 상한(#331)
+    slack_login_per_minute: int = 60             # SLACK_LOGIN_PER_MINUTE: /auth/slack 전체 분당 상한(틀린 비밀값 포함)
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -63,5 +65,7 @@ class Settings:
             slack_bridge_secret=os.environ.get("SLACK_BRIDGE_SECRET") or None,
             slack_users_file=_path(os.environ.get("SLACK_USERS_FILE"), REPO_ROOT / "infra/slack/slack-users.json"),
             erp_service_login_secret=os.environ.get("ERP_SERVICE_LOGIN_SECRET") or None,
+            slack_login_per_user_per_minute=int(os.environ.get("SLACK_LOGIN_PER_USER_PER_MINUTE") or 10),
+            slack_login_per_minute=int(os.environ.get("SLACK_LOGIN_PER_MINUTE") or 60),
             audit_event_files=tuple(x.strip() for x in os.environ.get("AUDIT_EVENT_FILES", "").split(",") if x.strip()),
         )

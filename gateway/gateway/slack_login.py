@@ -16,7 +16,11 @@ from __future__ import annotations
 import hmac
 import json
 import logging
+import math
 import re
+import time
+from collections import deque
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +69,44 @@ def check_service_login(token: str, method: str, path: str) -> None:
     raise ProblemError(403, "service-login-not-allowed", "슬랙 로그인 토큰으로는 부를 수 없는 기능입니다")
 
 
+class RateLimiter:
+    """키마다 최근 `window`초 안의 요청 시각을 세는 미끄러지는 창. 한 프로세스 안에서만 셉니다."""
+
+    def __init__(self, limit: int, window: float = 60.0, clock: Callable[[], float] = time.monotonic):
+        self.limit, self.window, self.clock = limit, window, clock
+        self._hits: dict[str, deque[float]] = {}
+
+    def hit(self, key: str) -> int | None:
+        """요청을 셉니다. 상한 안이면 None, 넘으면 다시 시도할 수 있을 때까지 초(올림, 요청은 세지 않음)."""
+        now = self.clock()
+        q = self._hits.setdefault(key, deque())
+        while q and q[0] <= now - self.window:
+            q.popleft()
+        if len(q) >= self.limit:
+            return max(1, math.ceil(q[0] + self.window - now))
+        q.append(now)
+        return None
+
+
+class SlackLimits:
+    """`/auth/slack`의 전체·슬랙 사용자별 상한(#331). 429 감사는 같은 키에 창마다 한 번만 남깁니다(감사 파일이 불어나지 않게)."""
+
+    def __init__(self, per_user: int, total: int):
+        self.user = RateLimiter(per_user)
+        self.total = RateLimiter(total)
+        self._audited: dict[str, float] = {}
+
+    def set_clock(self, clock: Callable[[], float]) -> None:
+        self.user.clock = self.total.clock = clock
+
+    def should_audit(self, key: str) -> bool:
+        now = self.user.clock()
+        if now - self._audited.get(key, -math.inf) < self.user.window:
+            return False
+        self._audited[key] = now
+        return True
+
+
 def load_users(path: Path) -> dict[str, str]:
     """매핑 파일 `{"users": {슬랙 사용자 ID: 직원 ID}}`. 파일이 없으면 아무도 매핑되지 않은 것으로 봅니다."""
     if not path.exists():
@@ -78,8 +120,15 @@ def load_users(path: Path) -> dict[str, str]:
 
 
 def build_router(erp: ErpClient, audit: AuditLog, *, bridge_secret: str | None, users_file: Path,
-                 service_secret: str | None) -> APIRouter:
+                 service_secret: str | None, limits: SlackLimits | None = None) -> APIRouter:
     api = APIRouter()
+    limits = limits or SlackLimits(10, 60)
+
+    def limited(key: str, retry_after: int) -> ProblemError:
+        if limits.should_audit(key):
+            record("denied", problem="rate-limited", why=f"요청 횟수 제한({'전체' if key == '*' else '슬랙 사용자별'})")
+        return ProblemError(429, "rate-limited", "요청이 너무 많습니다. 잠시 뒤 다시 시도해 주세요",
+                            headers={"Retry-After": str(retry_after)})
 
     def record(result: str, employee_id: str | None = None, problem: str | None = None, why: str = "") -> None:
         audit.event("auth.login", employee_id=employee_id, agent_id=None, via_token=False, result=result,
@@ -90,6 +139,9 @@ def build_router(erp: ErpClient, audit: AuditLog, *, bridge_secret: str | None, 
     async def slack_login(request: Request) -> JSONResponse:
         if not bridge_secret:
             raise ProblemError(404, "not-found", "없는 경로입니다")
+        # 전체 상한은 비밀값 확인 전에 셉니다: 비밀값을 맞혀 보는 요청과 감사 파일 불리기를 함께 막습니다.
+        if (wait := limits.total.hit("*")) is not None:
+            raise limited("*", wait)
         given = request.headers.get("x-slack-bridge-secret", "")
         if not hmac.compare_digest(given.encode(), bridge_secret.encode()):
             record("denied", problem="unauthorized", why="브리지 비밀값이 틀림")
@@ -100,6 +152,8 @@ def build_router(erp: ErpClient, audit: AuditLog, *, bridge_secret: str | None, 
             body = None
         if not isinstance(body, dict) or set(body) != {"slackUserId"} or not isinstance(body["slackUserId"], str):
             raise ProblemError(422, "validation", "slackUserId만 받습니다")
+        if (wait := limits.user.hit(body["slackUserId"])) is not None:
+            raise limited(body["slackUserId"], wait)
         employee_id = load_users(users_file).get(body["slackUserId"])
         if employee_id is None:
             record("denied", problem="forbidden", why="매핑에 없는 슬랙 사용자")
