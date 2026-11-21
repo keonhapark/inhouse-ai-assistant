@@ -301,6 +301,22 @@ select {
   background: var(--surface);
 }
 
+.msg__attached {
+  display: block;
+  margin-top: var(--sp-4);
+  font-size: var(--fs-12);
+  opacity: 0.85;
+}
+
+.attach__errors:empty {
+  display: none;
+}
+
+.attach__errors {
+  display: grid;
+  gap: var(--sp-4);
+}
+
 .attach {
   display: flex;
   flex-wrap: wrap;

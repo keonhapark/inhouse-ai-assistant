@@ -176,6 +176,7 @@ function receipt(c: Conv): Draft[] {
         tool: 'expense_request',
         toolLabel: '경비 정산',
         risk: 'reversible_write',
+        fromAttachments: true,
         expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
         preview: {
           dryRun: true,
@@ -266,10 +267,30 @@ export const chatHandlers = [
     if (attachments.some((a) => !/^data:image\/(jpeg|png);base64,/.test(a.dataUrl))) {
       return problem(415, 'unsupported-media-type', 'JPEG·PNG 이미지만 받습니다.')
     }
-    if (attachments.some((a) => ((a.dataUrl.length - a.dataUrl.indexOf(',') - 1) * 3) / 4 > 5 * 1024 * 1024)) {
+    // base64 디코딩 크기: 4글자당 3바이트에서 끝의 패딩(=) 수를 뺍니다.
+    const decoded = (u: string) => {
+      const b64 = u.slice(u.indexOf(',') + 1)
+      return (b64.length * 3) / 4 - (b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0)
+    }
+    if (attachments.some((a) => decoded(a.dataUrl) > 5 * 1024 * 1024)) {
       return problem(413, 'payload-too-large', '이미지 한 장은 5MB까지입니다.')
     }
-    conv.events.push({ type: 'user_message', content, at: now() })
+    // 기록에는 첨부 본문 없이 메타만 남깁니다(계약 AttachmentMeta). sha256은 모의 값입니다.
+    conv.events.push({
+      type: 'user_message',
+      content,
+      at: now(),
+      ...(attachments.length
+        ? {
+            attachments: attachments.map((a) => ({
+              kind: 'image' as const,
+              mediaType: a.dataUrl.startsWith('data:image/png') ? ('image/png' as const) : ('image/jpeg' as const),
+              bytes: Math.round(decoded(a.dataUrl)),
+              sha256: '0'.repeat(64),
+            })),
+          }
+        : {}),
+    })
     conv.summary.title ??= content.slice(0, 30)
     conv.summary.updatedAt = now()
     const events = stamp(conv, attachments.length ? receipt(conv) : scenario(conv, content))

@@ -512,6 +512,8 @@ export interface components {
                 content: string;
                 /** Format: date-time */
                 at: string;
+                /** @description 이 메시지에 붙인 이미지의 메타 정보. 이미지 본문(data URL)은 저장하지 않으므로 돌려주지 않습니다(감사에 남기는 값과 같음) */
+                attachments?: components["schemas"]["AttachmentMeta"][];
             } | components["schemas"]["ChatEvent"])[];
         };
         /** @description SSE 이벤트 하나. type마다 쓰는 필드가 다릅니다 */
@@ -552,6 +554,8 @@ export interface components {
                 preview: components["schemas"]["WritePreview"];
                 /** Format: date-time */
                 expiresAt?: string;
+                /** @description 이 턴에 agent가 첨부 이미지를 읽었는지(agent ToolPreview.fromAttachments를 그대로 넘김). true면 미리보기 값 일부가 이미지에서 읽은 신뢰 불가 값이라 화면이 "확인 필요"를 표시합니다(결정 0004). 없으면 화면은 첨부를 보낸 턴의 카드로 추정합니다 */
+                fromAttachments?: boolean;
             };
             /** @description type=approval_decided */
             decision?: {
@@ -777,6 +781,16 @@ export interface components {
             complete: boolean;
             /** @description 본문에 summary가 있는지(#328 전 보고서는 false) */
             hasSummary: boolean;
+        };
+        /** @description 대화 기록에 남는 첨부 정보(본문 없음) */
+        AttachmentMeta: {
+            /** @enum {string} */
+            kind: "image";
+            /** @enum {string} */
+            mediaType: "image/jpeg" | "image/png";
+            /** @description 디코딩한 크기 */
+            bytes: number;
+            sha256: string;
         };
         EmployeeSummary: {
             id: string;

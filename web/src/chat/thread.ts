@@ -9,11 +9,14 @@ type Model = NonNullable<ChatEvent['model']>
 export type Route = NonNullable<ChatEvent['route']>
 
 export type ThreadItem =
-  /** images는 이번 화면에서 보낸 사진(미리보기용 data URL). 복원한 기록에는 없습니다. */
-  | { kind: 'user'; key: string; text: string; images?: { name: string; dataUrl: string }[] }
+  /**
+   * images는 이 화면에서 보낸 사진(표시용 object URL). attachmentCount는 붙인 사진 수로, 복원한 기록에서는
+   * 메타 정보(본문 없음)로만 알 수 있어 images 없이 수만 있습니다.
+   */
+  | { kind: 'user'; key: string; text: string; images?: { name: string; url: string }[]; attachmentCount?: number }
   | { kind: 'assistant'; key: string; text: string; streaming: boolean; model?: Model; citations?: Citation[] }
   | { kind: 'tool'; key: string; call: NonNullable<ChatEvent['toolCall']> }
-  /** fromImage: 사진을 붙인 턴에 나온 카드. 값 일부가 사진에서 읽은 것일 수 있어 확인 필요를 표시합니다. */
+  /** fromImage: 값 일부가 첨부 사진에서 읽은 것일 수 있는 카드. 확인 필요를 표시합니다. */
   | { kind: 'approval'; key: string; approval: Approval; decision?: 'approve' | 'reject'; closed?: 'expired' | 'failed'; fromImage?: boolean }
   | { kind: 'action'; key: string; action: Action; undone: boolean }
   | { kind: 'blocked'; key: string; reason: string; code?: string }
@@ -31,7 +34,7 @@ export type ThreadState = {
 
 export type ThreadAction =
   | { type: 'reset'; events?: HistoryEvent[] }
-  | { type: 'user'; text: string; images?: { name: string; dataUrl: string }[] }
+  | { type: 'user'; text: string; images?: { name: string; url: string }[]; attachmentCount?: number }
   | { type: 'event'; event: ChatEvent }
   | { type: 'stream-start' }
   | { type: 'stream-end' }
@@ -45,11 +48,15 @@ export const emptyThread: ThreadState = { items: [], lastSeq: -1, streaming: fal
 let localKey = 0
 const nextKey = (p: string) => `${p}-${++localKey}`
 
-/** 지금 턴(마지막 사용자 메시지)에 사진을 붙였는지 */
-function turnHasImages(items: ThreadItem[]): boolean {
+/**
+ * gateway가 fromAttachments를 주지 않을 때의 추정: 마지막 카드(미리보기·실행한 일) 뒤에 사진을 붙인 사용자 메시지가 있었는지.
+ * 사진을 보낸 뒤 되묻는 질문에 글로 답한 턴의 카드도 사진에서 읽은 값을 쓸 수 있어 보수적으로 봅니다.
+ */
+function imagesSinceLastCard(items: ThreadItem[]): boolean {
   for (let i = items.length - 1; i >= 0; i--) {
     const it = items[i]
-    if (it.kind === 'user') return !!it.images?.length
+    if (it.kind === 'approval' || it.kind === 'action') return false
+    if (it.kind === 'user' && (it.attachmentCount ?? it.images?.length ?? 0) > 0) return true
   }
   return false
 }
@@ -118,7 +125,13 @@ function applyEvent(s: ThreadState, e: ChatEvent): ThreadState {
       return e.toolCall ? { ...st, items: [...items, { kind: 'tool', key: `t-${e.seq}`, call: e.toolCall }] } : st
     case 'approval_required':
       return e.approval
-        ? { ...st, items: [...items, { kind: 'approval', key: e.approval.approvalId, approval: e.approval, fromImage: turnHasImages(items) }] }
+        ? {
+            ...st,
+            items: [
+              ...items,
+              { kind: 'approval', key: e.approval.approvalId, approval: e.approval, fromImage: e.approval.fromAttachments ?? imagesSinceLastCard(items) },
+            ],
+          }
         : st
     case 'approval_decided': {
       const d = e.decision
@@ -176,7 +189,10 @@ export function threadReducer(s: ThreadState, a: ThreadAction): ThreadState {
     case 'reset': {
       let st = emptyThread
       for (const e of a.events ?? []) {
-        st = e.type === 'user_message' ? threadReducer(st, { type: 'user', text: e.content }) : applyEvent(st, e)
+        st =
+          e.type === 'user_message'
+            ? threadReducer(st, { type: 'user', text: e.content, attachmentCount: e.attachments?.length })
+            : applyEvent(st, e)
       }
       return { ...st, streaming: false }
     }
@@ -184,7 +200,16 @@ export function threadReducer(s: ThreadState, a: ThreadAction): ThreadState {
       return {
         ...s,
         pendingCitations: undefined,
-        items: [...s.items, { kind: 'user', key: nextKey('u'), text: a.text, ...(a.images?.length ? { images: a.images } : {}) }],
+        items: [
+          ...s.items,
+          {
+            kind: 'user',
+            key: nextKey('u'),
+            text: a.text,
+            ...(a.images?.length ? { images: a.images } : {}),
+            ...((a.attachmentCount ?? a.images?.length ?? 0) > 0 ? { attachmentCount: a.attachmentCount ?? a.images?.length } : {}),
+          },
+        ],
       }
     case 'event':
       return applyEvent(s, a.event)
