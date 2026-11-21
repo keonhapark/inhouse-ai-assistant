@@ -1,0 +1,36 @@
+{
+  "incidentId": "llm_timeout-01",
+  "runId": "20261121-0058",
+  "fault": "llm_timeout",
+  "title": "LLM 출구 응답 없음",
+  "rootService": "litellm",
+  "kind": "dependency_timeout",
+  "window": {
+    "start": "2026-11-21T01:03:42.861117+09:00",
+    "end": "2026-11-21T01:06:01.246606+09:00"
+  },
+  "injectedAt": "2026-11-21T01:04:02.864513+09:00",
+  "recoverStartedAt": "2026-11-21T01:05:32.920429+09:00",
+  "recoveredAt": "2026-11-21T01:05:39.131759+09:00",
+  "ticket": {
+    "id": "tkt_61b5be18268d",
+    "requesterId": "E0047",
+    "title": "AI 비서가 답을 안 합니다",
+    "description": "질문을 보내면 답이 오지 않고 계속 기다리기만 합니다. ERP 화면은 정상입니다.",
+    "createdAt": "2026-11-21T01:06:01.293209466+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 182,
+    "logs/erp.log": 1007,
+    "logs/rag.log": 27,
+    "logs/agent.log": 37,
+    "logs/litellm.log": 134,
+    "logs/gateway.log": 38,
+    "audit/gateway_egress.jsonl": 1,
+    "audit/gateway_audit.jsonl": 7,
+    "audit/agent.jsonl": 3,
+    "audit/erp.jsonl": 2
+  },
+  "trafficErrors": 1,
+  "trafficTotal": 974
+}
