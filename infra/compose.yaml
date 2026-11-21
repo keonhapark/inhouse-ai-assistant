@@ -146,11 +146,13 @@ services:
       GATEWAY_PACK_STAGE: ${PACK_STAGE:-}
       SLACK_BRIDGE_SECRET: ${SLACK_BRIDGE_SECRET:-}
       SLACK_USERS_FILE: /slack/slack-users.json
+      GATEWAY_EVAL_REPORTS_DIR: /eval-reports
       ERP_SERVICE_LOGIN_SECRET: ${ERP_SERVICE_LOGIN_SECRET:-}
     volumes:
       - ../infra/dev-keys:/keys:ro
       - audit:/audit
       - ../infra/slack:/slack:ro
+      - ../eval/reports:/eval-reports:ro
     ports:
       - "127.0.0.1:${PORT_GATEWAY:-8010}:8000"
     depends_on:
