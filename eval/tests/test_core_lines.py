@@ -50,12 +50,15 @@ def test_counts_core_lines_in_pack_commits(tmp_path):
     assert "코어 코드 합계: 2줄(목표 0)" in md and "- `agent/runtime.py`" in md
 
 
-def test_extra_commit_must_be_in_ref(monkeypatch):
+def test_extra_commit_must_be_in_ref(tmp_path, monkeypatch):
     import pytest
 
-    monkeypatch.setattr(cl, "pack_commits", lambda pack, ref, cwd=cl.ROOT: ["x"])
-    head = subprocess.run(["git", "-C", str(cl.ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-    first = subprocess.run(["git", "-C", str(cl.ROOT), "rev-list", "--max-parents=0", "HEAD"], capture_output=True,
-                           text=True).stdout.split()[0]
+    commit = _repo(tmp_path)
+    commit({"packs/bank/org.yaml": "x\n"}, "pack: 뼈대")
+    subprocess.run(["git", "-C", str(tmp_path), "switch", "-q", "-c", "side"], check=True)
+    commit({"rag/templates/bank-a.md": "t\n"}, "작업 브랜치 커밋")
+    side = subprocess.run(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    monkeypatch.setattr(cl, "ROOT", tmp_path)
     with pytest.raises(SystemExit, match="이력에 없습니다"):
-        cl.main(["--pack", "p", "--ref", first, "--extra", head])
+        cl.main(["--pack", "bank", "--ref", "main", "--extra", side])
+    assert cl.main(["--pack", "bank", "--ref", "side", "--extra", side]) == 0

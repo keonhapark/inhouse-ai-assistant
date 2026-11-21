@@ -39,11 +39,11 @@ class CommitLines:
         return sum(self.core_code.values())
 
 
-def git(*args: str, cwd: Path = ROOT) -> str:
-    return subprocess.run(["git", "-C", str(cwd), *args], capture_output=True, text=True, check=True).stdout
+def git(*args: str, cwd: Path | None = None) -> str:
+    return subprocess.run(["git", "-C", str(cwd or ROOT), *args], capture_output=True, text=True, check=True).stdout
 
 
-def pack_commits(pack: str, ref: str, cwd: Path = ROOT) -> list[str]:
+def pack_commits(pack: str, ref: str, cwd: Path | None = None) -> list[str]:
     """ref까지의 이력에서 packs/<pack>을 바꾼 커밋(오래된 것부터)."""
     out = git("log", "--format=%H", "--reverse", ref, "--", f"packs/{pack}", cwd=cwd)
     return [x for x in out.splitlines() if x]
@@ -61,7 +61,7 @@ def classify(path: str) -> tuple[str, str | None]:
     return "other", None
 
 
-def count_commit(sha: str, cwd: Path = ROOT) -> CommitLines:
+def count_commit(sha: str, cwd: Path | None = None) -> CommitLines:
     subject = git("show", "-s", "--format=%s", sha, cwd=cwd).strip()
     c = CommitLines(sha=sha, subject=subject)
     for line in git("show", "--numstat", "--format=", sha, cwd=cwd).splitlines():
@@ -111,7 +111,8 @@ def main(argv: list[str] | None = None) -> int:
         shas += [s for s in pack_commits(p, args.ref) if s not in shas]
     for extra in args.extra:
         sha = git("rev-parse", extra).strip()
-        if subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", sha, args.ref]).returncode != 0:
+        if subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", sha, args.ref],
+                          capture_output=True).returncode != 0:
             raise SystemExit(f"--extra {extra}가 {args.ref} 이력에 없습니다(작업 브랜치 커밋이 아니라 병합된 커밋을 줍니다)")
         if sha not in shas:
             shas.append(sha)
