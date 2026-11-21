@@ -315,6 +315,23 @@ def test_fake_erp_treats_blank_service_login_secret_as_unset() -> None:
             assert r.status_code == 404, r.text
 
 
+def test_pack_model_policy_override_is_local_only_or_absent(tmp_path: Path) -> None:
+    import shutil
+
+    import yaml
+
+    from tools import check_packs
+
+    for value, ok in (("local_only", True), ("external_allowed", False)):
+        pack = tmp_path / value / "manufacturing"
+        shutil.copytree(PACKS / "manufacturing", pack)
+        doc = yaml.safe_load((pack / "pack.yaml").read_text(encoding="utf-8"))
+        doc["model_policy_override"] = value
+        (pack / "pack.yaml").write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+        errors = check_packs.check_pack(pack)
+        assert (not errors) is ok, errors
+
+
 def test_pack_image_reading_is_checked(tmp_path) -> None:
     """선택 항목 agents.yaml image_reading(#382): 초안 도구·항목 이름·정규식·pattern 쓰임을 검사합니다."""
     import shutil
