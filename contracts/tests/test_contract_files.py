@@ -205,6 +205,23 @@ def test_eval_report_summary_example() -> None:
         validate_file("eval/report.schema.json", {**report, "summary": bad})
 
 
+def test_chat_attachment_examples_follow_schema() -> None:
+    """대화 기록의 첨부 메타(본문 없음)와 미리보기 카드의 fromAttachments(#385)."""
+    approval = {"type": "approval_required", "conversationId": "c1", "seq": 2, "approval": {
+        "approvalId": "ap1", "tool": "expense_request", "risk": "reversible_write", "fromAttachments": True,
+        "preview": {"dryRun": True, "operation": "createExpenseRequest", "summary": "경비 정산", "changes": [], "undoable": True}}}
+    validate("openapi/gateway.yaml", "ChatEvent", approval)
+    conv = {"conversationId": "c1", "status": "active", "createdAt": "2026-11-21T10:00:00+09:00", "events": [
+        {"type": "user_message", "content": "영수증", "at": "2026-11-21T10:00:00+09:00",
+         "attachments": [{"kind": "image", "mediaType": "image/png", "bytes": 15360, "sha256": "a" * 64}]},
+        approval]}
+    validate("openapi/gateway.yaml", "Conversation", conv)
+    bad = {**conv, "events": [{**conv["events"][0], "attachments": [{"kind": "image", "mediaType": "image/gif",
+                                                                      "bytes": 1, "sha256": "a" * 64}]}]}
+    with pytest.raises(AssertionError):
+        validate("openapi/gateway.yaml", "Conversation", bad)
+
+
 def test_no_human_only_operation_is_a_tool() -> None:
     ops = openapi_operations(load(CONTRACTS / "openapi/erp.yaml"))
     for t in load(CONTRACTS / "mcp/tools.json")["tools"]:
