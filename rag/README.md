@@ -131,6 +131,30 @@ uv run python -m bench.editions --repeat 3 --out bench/results/editions-<날짜>
 - 앞선 측정(`bench/results/editions-2026-11-20.json`)은 별표를 넣기 전 말뭉치에서 했고 말뭉치 판을 남기지 않았습니다(`all` 옛 판 인용 7건·찾은 답 10, `as_of` 0건·18). 말뭉치가 달라 위 표와 바로 비교하지 않습니다.
 - 한 사람이 한 번 잰 작은 묶음이라, 모델이나 말뭉치가 바뀌면 다시 재야 합니다.
 
+## 측정: 도면 OCR + BM25 기준선
+
+```
+uv run --group ocr python -m bench.drawing_ocr --drawings 60 --engine rapidocr --out bench/results/drawing-ocr-rapidocr-<날짜>
+uv run python -m bench.drawing_ocr --drawings 60 --engine oracle --out bench/results/drawing-ocr-oracle-<날짜>
+```
+
+비전 모델과 견줄 학습 없는 바닥값입니다. 도면 글자를 OCR로 뽑아 도면마다 청크 하나로 BM25 색인하고(임베딩 없음), 부품 번호·치수 질의에 답합니다. 답은 찾은 도면의 OCR 글이고, 채점은 `eval/harness/vision.py`의 `score_drawing`(부품 번호·도면 이름·치수 4·주기 2, 표기 차이는 같다고 봄)입니다.
+
+- 도면: `eval/tools/make_images.py` 생성기로 60장(시드 7, 숨은 지시 없음, 단 있는 축 도면). 같은 시드면 같은 도면입니다. 글자는 영문·숫자 내장 글꼴이고 배경이 흰색이라 OCR에 쉬운 그림입니다. 실제 도면의 스캔 잡음·손글씨·겹친 선은 들어 있지 않습니다.
+- 엔진: rapidocr-onnxruntime 1.4.4(Apache-2.0, 기본 모델, CPU, 한 장씩). `oracle`은 OCR 없이 정답 글자를 써서 OCR이 완벽할 때의 상한입니다.
+- 질의: part는 "부품 번호 <번호> 도면의 치수를 알려 줘", dims는 "<도면 이름> <치수 4개>"입니다. 정답 도면이 BM25 상위 1·5에 나오는지 봅니다.
+- 측정: 2026-11-22 07:15, WSL2 12GB, CPU(GPU 없음), 기준 커밋 `d61c066` 위에서 이 스크립트로, 1회(OCR 결과는 결정적). 결과는 `bench/results/drawing-ocr-rapidocr-2026-11-22.json`, `drawing-ocr-oracle-2026-11-22.json`입니다.
+
+| 엔진 | part 상위 1 / 5 | dims 상위 1 / 5 | 끝까지 모두 맞음 | 여섯 항목 맞춘 수 | OCR만 모두 맞음 | OCR 지연 p50·p95 ms/장 |
+|---|---|---|---|---|---|---|
+| rapidocr | 60/60, 60/60 | 52/60, 60/60 | 60/60 | 360/360 | 60/60 | 1,555·1,873 |
+| oracle(상한) | 60/60, 60/60 | 58/60, 60/60 | 60/60 | 360/360 | 60/60 | 0 |
+
+- 이 도면 묶음에서는 OCR이 부품 번호·도면 이름·치수·주기를 한 글자도 틀리지 않고 읽었고, 부품 번호 질의는 번호가 도면마다 유일해 모두 찾았습니다. 그래서 이 묶음으로는 OCR 기준선이 이미 천장에 닿아 있어, 비전 모델과 견주려면 더 어려운 도면(스캔·기울기·잡음, 비슷한 부품 번호)이 필요합니다.
+- dims 질의의 상위 1은 60장 중 8장이 어긋났습니다(oracle도 2장). 치수가 같은 다른 도면이 있어 점수가 겹치기 때문이고, 상위 5에는 모두 있습니다. rapidocr에서 더 어긋난 6장은 OCR이 "TITLESTEPSHAFT"처럼 표제란 글자를 붙여 읽어 도면 이름 토큰이 질의와 만나지 못한 탓으로 보이며, 장별 원인은 확인하지 않았습니다.
+- 한 장당 OCR 약 1.6초라 이 방식으로 1만 장을 읽으면 4시간 반쯤 걸립니다(같은 PC·CPU 기준).
+- 비전 모델 실측은 GPU 사용권을 받아 따로 합니다.
+
 ## 측정: 말뭉치 규모와 동시 질의
 
 ```
