@@ -343,6 +343,21 @@
       "required": ["terms"],
       "additionalProperties": false,
       "properties": {
+        "topics": {
+          "description": "선택. 업무 주제(예: 인사·근태 정보). 용어(terms)와 달리 정규식으로 대화 내용만 봅니다: messages 중 system이 아닌 것의 content와 도구 호출 인자. 시스템 프롬프트와 도구 정의는 보지 않습니다(에이전트 설명·도구 설명에 주제어가 있어도 걸리지 않게). 걸리면 에이전트 모델 정책과 관계없이 action대로 합니다(#304).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "action", "patterns"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "감사 detail에 남는 이름(패턴·걸린 문장은 남기지 않음)"},
+              "action": {"enum": ["local_only", "block"]},
+              "reason": {"type": "string"},
+              "patterns": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "정규식(Python re). 대소문자 무시, 하나라도 맞으면 걸림"}
+            }
+          }
+        },
         "terms": {
           "type": "array",
           "items": {
