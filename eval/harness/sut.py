@@ -33,7 +33,8 @@ class Collected:
 class ChatSystem(Protocol):
     def start(self, requester: str) -> str: ...
 
-    def send(self, conversation_id: str, text: str) -> list[dict[str, Any]]: ...
+    def send(self, conversation_id: str, text: str,
+             attachments: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]: ...
 
     def decide(self, conversation_id: str, approval_id: str, decision: str) -> list[dict[str, Any]]: ...
 
@@ -168,9 +169,12 @@ class GatewayChat:
         self._owner[cid] = requester
         return cid
 
-    def send(self, conversation_id: str, text: str) -> list[dict[str, Any]]:
-        return self._stream(self._owner[conversation_id], f"/conversations/{conversation_id}/messages",
-                            {"content": text})
+    def send(self, conversation_id: str, text: str,
+             attachments: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+        body: dict[str, Any] = {"content": text}
+        if attachments:
+            body["attachments"] = attachments
+        return self._stream(self._owner[conversation_id], f"/conversations/{conversation_id}/messages", body)
 
     def decide(self, conversation_id: str, approval_id: str, decision: str) -> list[dict[str, Any]]:
         return self._stream(self._owner[conversation_id], f"/execution-approvals/{approval_id}",

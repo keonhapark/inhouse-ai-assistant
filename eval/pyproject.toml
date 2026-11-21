@@ -18,6 +18,9 @@ dev = [
   "pyjwt[crypto]==2.15.1",
   "faker==40.54.0",
 ]
+tools = [
+    "pillow==11.3.0",
+]
 
 [tool.uv]
 package = false

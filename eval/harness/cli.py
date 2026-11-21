@@ -21,7 +21,7 @@ import httpx
 import yaml
 
 from harness.erp import ErpClient
-from harness.paths import ROOT
+from harness.paths import EVAL_DIR, ROOT
 from harness.report import render, summarize
 from harness.runner import (MAX_RETRIES, RUN_CONDITIONS, HealthCheck, RunRow, _git, count_retries, load_rows_jsonl,
                             load_run, run_matrix, save_run, signature_counts, system_condition)
@@ -294,6 +294,29 @@ def cmd_toolcall_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_vision_run(args: argparse.Namespace) -> int:
+    """이미지 읽기 측정: 그림마다 gateway 대화를 열어 같은 질문과 함께 붙이고 답을 채점합니다(#110, #386)."""
+    from harness import vision
+
+    truths = vision.load_truth(Path(args.truth))
+    if args.kind:
+        truths = [t for t in truths if t["kind"] == args.kind]
+
+    def system() -> GatewayChat:
+        return GatewayChat(httpx.Client(base_url=args.gateway_url, timeout=args.timeout), auditor=None,
+                           condition=args.condition)
+
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    rows = vision.run_items(truths, system, on_row=lambda r: print(r["id"], r["allCorrect"], r["error"] or "",
+                                                                    flush=True))
+    data = {"meta": {"truth": args.truth, "condition": args.condition, "notes": list(args.note or [])},
+            "summary": vision.summarize(rows), "rows": rows}
+    out.with_suffix(".json").write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(json.dumps(data["summary"], ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="harness.cli")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -336,9 +359,18 @@ def main(argv: list[str] | None = None) -> int:
     tp = sub.add_parser("toolcall-report", help="도구 호출 기록을 지금 규칙으로 다시 채점")
     tp.add_argument("run")
     tp.add_argument("--items", default=str(DEV_TOOLCALL))
+    vr = sub.add_parser("vision-run", help="이미지 읽기 측정(도면·불량 사진, images/truth.jsonl)")
+    vr.add_argument("--gateway-url", required=True)
+    vr.add_argument("--out", required=True)
+    vr.add_argument("--truth", default=str(EVAL_DIR / "images/truth.jsonl"))
+    vr.add_argument("--kind", choices=["drawing", "defect"])
+    vr.add_argument("--condition", default="full")
+    vr.add_argument("--timeout", type=float, default=300)
+    vr.add_argument("--note", action="append")
     args = p.parse_args(argv)
     return {"validate": cmd_validate, "run": cmd_run, "report": cmd_report, "toolcall-validate": cmd_toolcall_validate,
-            "toolcall-run": cmd_toolcall_run, "toolcall-report": cmd_toolcall_report}[args.cmd](args)
+            "toolcall-run": cmd_toolcall_run, "toolcall-report": cmd_toolcall_report,
+            "vision-run": cmd_vision_run}[args.cmd](args)
 
 
 if __name__ == "__main__":
