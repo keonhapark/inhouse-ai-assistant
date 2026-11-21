@@ -49,7 +49,7 @@ class Runner:
             state["force_local"] = True
         turn = [{"role": "user", "content": message}]
         if attachments:
-            note, tainted, draft_tool = await self._read_attachments(attachments, token, agent, ctx)
+            note, tainted, draft_tool = await self._read_attachments(attachments, token, agent, requester, ctx)
             # 사용자 발화와 섞지 않고 따로 둡니다.
             turn.append({"role": "user", "content": note})
             if tainted:
@@ -89,14 +89,14 @@ class Runner:
             return _failed(conversation_id, agent_id, f"실행 중 오류({type(e).__name__})")
         return self._view(conversation_id, agent_id, await self.graph.aget_state(config))
 
-    async def _read_attachments(self, data_urls: list[str], token: str, agent: Agent,
+    async def _read_attachments(self, data_urls: list[str], token: str, agent: Agent, requester: Requester,
                                 ctx: RunContext) -> tuple[str, bool, str | None]:
         """(사용자 발화 뒤에 둘 글, 읽은 값이 있는지, 같은 턴 예외 도구). 이미지 본문은 상태에 넣지 않습니다.
 
         팩에 image_reading이 없는 에이전트, 요청자가 부를 수 없어 도구가 없는 대화는 읽지 않습니다.
         """
         spec = ImageSpec.from_agent(agent)
-        if self.images is None or spec is None or not ctx.tools:
+        if self.images is None or spec is None or not agent.callable_for(requester):
             return f"[첨부 이미지 {len(data_urls)}장은 이 에이전트에서 읽지 않았습니다]", False, None
         results = await self.images.read_all(data_urls, token, spec)
         draft = spec.draft_tool if spec.draft_tool and ctx.spec(spec.draft_tool) else None

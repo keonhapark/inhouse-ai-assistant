@@ -377,3 +377,19 @@ def test_router_does_not_hand_rnd_to_sales(stub_chat) -> None:
     d = Router(reg3, chat).route("연구소 사람인데 신형 감속기 도면 좀 보여 줘", SALES)
     assert d.method == "fallback" and d.agent_id == reg3.fallback_agent_id and d.suggested_agent_id == "rnd"
     assert Router(reg3, chat).route("신형 감속기 도면 좀 보여 줘", RND).agent_id == "rnd"
+
+
+def test_format_and_allowed_values_reach_the_model() -> None:
+    bno = next(f for f in RECEIPT.fields if f.name == "business_no")
+    assert bno.pattern in RECEIPT.schema()["properties"]["business_no"]["description"]
+    assert bno.pattern in RECEIPT.prompt()
+    kind = FieldSpec("kind", "string", "유형", enum=("scratch", "dent"))
+    assert kind.json_type()["enum"] == ["scratch", "dent", None]
+    assert "scratch/dent" in ImageSpec("불량 사진", (kind,)).prompt()
+
+
+def test_patterned_value_is_checked_before_cutting() -> None:
+    """형식이 있는 값은 자르지 않고 검사합니다. 잘라서 형식에 맞아 보이면 안 됩니다."""
+    spec = FieldSpec("bno", "string", "사업자번호", pattern=r"[0-9]{3}-[0-9]{2}-[0-9]{5}", max_length=12)
+    assert spec.clean("123-45-67890") == "123-45-67890"
+    assert spec.clean("123-45-678901") is None
