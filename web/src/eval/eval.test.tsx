@@ -8,6 +8,7 @@ import { tokenStore, type Schemas } from '../api/client'
 import { AuthProvider } from '../auth/AuthContext'
 import { server } from '../mocks/node'
 import { diffText, proportionText } from './labels'
+import stage1 from '../mocks/fixtures/eval-normal-stage1.json'
 
 function renderAt(path = '/eval', token = 'mock.emp-2008') {
   tokenStore.set(token)
@@ -68,7 +69,7 @@ describe('평가 리포트', () => {
     renderAt()
     expect(await screen.findByRole('heading', { name: '실행 조건' })).toBeInTheDocument()
     expect(screen.getByText('240/240')).toBeInTheDocument()
-    expect(screen.getByText('실행 메모 9개')).toBeInTheDocument()
+    expect(screen.getByText(`실행 메모 ${stage1.meta.notes.length}개`)).toBeInTheDocument()
     const normal = screen.getByRole('region', { name: '정상 셋' })
     const passTable = within(normal).getByRole('region', { name: '보호 지표 표' })
     expect(within(passTable).getByRole('row', { name: /전체/ })).toHaveTextContent('43/80 (53.8%, 42.2%~65.0%)')
