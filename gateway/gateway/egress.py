@@ -5,7 +5,7 @@
 2. `model`은 LiteLLM 설정의 별칭만 받습니다. 별칭마다 `model_info.location`(local·external)이 있습니다.
 3. 정책: 에이전트 model_policy가 local_only이거나 위임 토큰이 없으면 외부 별칭을 막습니다(403 model-policy).
 4. 본문에서 토큰 모양 문자열을 가립니다. 토큰 헤더는 넘기지 않습니다.
-5. 외부 별칭이면 사내 용어 사전(gateway/confidential.py)으로 기밀을 판정해 차단(403 confidential)하거나 로컬 별칭으로
+5. 외부 별칭이면 사내 용어 사전과 업무 주제(gateway/confidential.py, #304)로 기밀을 판정해 차단(403 confidential)하거나 로컬 별칭으로
    돌립니다. 그래도 외부로 나가면 한국어 개인정보를 가립니다(gateway/pii.py). 둘 다 감사 이벤트 llm.redacted를 남깁니다.
    로컬 모델로 가는 요청은 가리지 않습니다.
 6. 외부로 나간 요청은 가림 뒤 본문·가린 자리·응답을 egress.jsonl에(가림 전 원문은 저장하지 않음), 모든 요청은 감사 이벤트 llm.request로 남깁니다.
@@ -432,11 +432,13 @@ class Egress:
         verdict = self.glossary.check(body)
         if verdict is None:
             return body
+        found = ", ".join(([f"기밀 용어 {verdict.hits}개"] if verdict.hits else [])
+                          + ([f"업무 주제 {' '.join(verdict.topics)}"] if verdict.topics else []))
         if verdict.action == "block" or self.local_alias is None:
-            detail = f"기밀 용어 {verdict.hits}개: 차단"
+            detail = f"{found}: 차단"
             self._audit(caller, model, "denied", "urn:problem:confidential", detail)
             raise ProblemError(403, "confidential", "사내 기밀이 들어 있어 보낼 수 없습니다", verdict.reason)
-        self._audit(caller, model, "ok", detail=f"기밀 용어 {verdict.hits}개: 로컬 모델로 돌림", kind="llm.redacted")
+        self._audit(caller, model, "ok", detail=f"{found}: 로컬 모델로 돌림", kind="llm.redacted")
         model.update(name=self.local_alias, location="local")
         return {**body, "model": self.local_alias}
 
