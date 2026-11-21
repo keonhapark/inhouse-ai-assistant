@@ -36,12 +36,12 @@ def users_file(tmp_path, emp, auditor):
     return p
 
 
-def _app(settings, issuer, users_file, *, bridge=BRIDGE, service=SERVICE, erp_service=SERVICE):
+def _app(settings, issuer, users_file, *, bridge=BRIDGE, service=SERVICE, erp_service=SERVICE, agent_transport=None):
     erp = create_fake_erp(PACK, demo_password=PASSWORD, delegation_public_key=issuer.public_pem(),
                           service_login_secret=erp_service)
     s = dataclasses.replace(settings, slack_bridge_secret=bridge, slack_users_file=users_file,
                             erp_service_login_secret=service)
-    return create_app(s, erp_transport=httpx.ASGITransport(app=erp), issuer=issuer)
+    return create_app(s, erp_transport=httpx.ASGITransport(app=erp), issuer=issuer, agent_transport=agent_transport)
 
 
 @pytest.fixture

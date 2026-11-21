@@ -27,6 +27,9 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     (모델, 외부 전송 여부, 결과. 위임 토큰이 있으면 `actor.employeeId`·`agentId`는 토큰의 `sub`·`agt`),
     `egress.jsonl`에 외부로 나간 요청의 가림 뒤 본문, 가린 자리(종류·위치), 응답, 사용량·비용.
     가림 전 원문은 저장하지 않습니다(#211, `/ops/egress` 계약). 응답 본문이 들어 있어 접근을 제한해야 하는 파일입니다.
+  - 감사 이벤트의 `actor.channel`(#338)은 요청이 들어온 입구입니다. 대화·실행 승인·위임 토큰 발급·gateway가 남기는 라우팅은
+    직원 JWT면 `web`, 슬랙 로그인 토큰(`amr` slack)이면 `slack`, 슬랙 로그인 기록은 `slack`, 출구(`llm.request`·
+    `llm.redacted`)는 위임 토큰이 있으면 `agent`이고 토큰 없는 호출은 입구를 몰라 넣지 않습니다.
   - 토큰 없는 호출의 `llm.request`는 `actor.employeeId`·`agentId`가 null입니다(#276). 출구는 위임 토큰으로만 요청자를
     알기 때문입니다. 지금 이런 호출은 agent 입구 라우터의 분류 호출(에이전트를 고르기 전이라 토큰이 없음)과 도구 호출 측정
     스택(`GATEWAY_EVAL_TOOLCALL=1`)의 측정 호출(`purpose=eval-toolcall`)입니다. rag 질의 임베딩은 #191 뒤로 토큰을 붙입니다.
