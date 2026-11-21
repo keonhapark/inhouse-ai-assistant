@@ -140,3 +140,31 @@ def test_settings_read_slack_env(monkeypatch, tmp_path):
     assert (s.slack_bridge_secret, s.slack_users_file, s.erp_service_login_secret) == ("b", tmp_path / "u.json", "s")
     monkeypatch.setenv("SLACK_BRIDGE_SECRET", "")
     assert Settings.from_env().slack_bridge_secret is None
+
+
+@pytest.mark.parametrize("service", [None, ""])
+def test_missing_service_secret_never_calls_erp(settings, issuer, users_file, service):
+    calls = []
+    erp = create_fake_erp(PACK, demo_password=PASSWORD, delegation_public_key=issuer.public_pem(),
+                          service_login_secret=SERVICE)
+
+    async def spy(scope, receive, send):
+        calls.append(scope["path"])
+        await erp(scope, receive, send)
+    s = dataclasses.replace(settings, slack_bridge_secret=BRIDGE, slack_users_file=users_file,
+                            erp_service_login_secret=service)
+    with TestClient(create_app(s, erp_transport=httpx.ASGITransport(app=spy), issuer=issuer)) as c:
+        assert _login(c).status_code == 502
+    assert not any(p.endswith("/auth/service-login") for p in calls)
+
+
+@pytest.mark.parametrize("amr", ["slack", ["pwd", "slack"]])
+def test_reject_service_login_handles_string_and_list_amr(amr):
+    from gateway.problems import ProblemError
+    from gateway.slack_login import reject_service_login
+
+    tok = jwt.encode({"sub": "E1", "amr": amr}, "k" * 32, algorithm="HS256")
+    with pytest.raises(ProblemError) as e:
+        reject_service_login(tok)
+    assert e.value.status == 403
+    reject_service_login(jwt.encode({"sub": "E1", "amr": ["pwd"]}, "k" * 32, algorithm="HS256"))
