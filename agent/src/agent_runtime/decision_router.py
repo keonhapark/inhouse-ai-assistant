@@ -35,13 +35,28 @@ class Choice:
     input_tokens: int | None = None
 
 
-def criteria(registry: Registry, examples: int = 2) -> dict[str, str]:
-    """후보 에이전트 → 설명(맡은 일과 예시 문장). fallback 에이전트도 후보에 넣습니다."""
+CRITERIA_STYLES = ("desc_examples", "desc", "keywords")
+
+
+def criteria(registry: Registry, style: str = "desc_examples", examples: int = 2) -> dict[str, str]:
+    """후보 에이전트 → 선택지 설명. fallback 에이전트도 후보에 넣습니다.
+
+    - desc_examples: 맡은 일 + 예시 문장 두 개(LLM 라우터 프롬프트와 같은 정보)
+    - desc: 맡은 일만(Laya README 예처럼 짧은 설명)
+    - keywords: 등록부 routing.keywords 목록
+    laya 0.5.0은 desc_examples에서 거의 한 에이전트로만 고르는 것을 봤습니다(#303, 2026-11-21). 그래서 셋을 함께 잽니다.
+    """
+    if style not in CRITERIA_STYLES:
+        raise ValueError(f"모르는 criteria 구성: {style}")
     out = {}
     for a in registry.agents:
-        ex = (a.raw.get("routing") or {}).get("examples") or []
+        routing = a.raw.get("routing") or {}
+        if style == "keywords":
+            out[a.id] = ", ".join(routing.get("keywords") or []) or a.description
+            continue
         text = a.description
-        if ex[:examples]:
+        ex = routing.get("examples") or []
+        if style == "desc_examples" and ex[:examples]:
             text += " 예: " + " / ".join(ex[:examples])
         out[a.id] = text
     return out
@@ -84,8 +99,10 @@ class LayaChooser:
         latency = int((time.perf_counter() - started) * 1000)
         answer = (result.get("answers") or {}).get(QUESTION) or {}
         picked, probs, conf = _pick(answer, candidates)
+        # laya 0.5.0 답에는 route가 없고 confidence(확률 분포의 퍼짐)·probabilities가 옵니다(2026-11-21 확인).
         review = answer.get("route") == "review" or result.get("route") == "review"
-        return Choice(picked, probs, conf, review, latency, self.model_id)
+        tokens = (result.get("usage") or {}).get("input_tokens")
+        return Choice(picked, probs, conf, review, latency, self.model_id, tokens if isinstance(tokens, int) else None)
 
 
 class JevChooser:
