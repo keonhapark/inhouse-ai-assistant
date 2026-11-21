@@ -130,8 +130,11 @@ class GatewayChat:
     """gateway에 직원으로 로그인해 대화합니다. 감사 이벤트는 감사 역할 직원으로 읽습니다."""
 
     def __init__(self, client: httpx.Client, *, auditor: str | None, password: str | None = None,
-                 external_log: ExternalLog | None = None, condition: str | None = None) -> None:
+                 external_log: ExternalLog | None = None, condition: str | None = None,
+                 model_override: str | None = None) -> None:
         self.c = client
+        # 모델 교체 회귀(#107·#346). gateway가 GATEWAY_EVAL_MODE=1일 때만 X-Eval-Model-Override 헤더를 받습니다
+        self.model_override = model_override
         # 평가 조건. gateway가 GATEWAY_EVAL_MODE=1일 때만 X-Eval-Condition 헤더를 받습니다
         self.condition = condition
         self.auditor = auditor
@@ -163,6 +166,8 @@ class GatewayChat:
         headers = self._headers(requester)
         if self.condition:
             headers["X-Eval-Condition"] = self.condition
+        if self.model_override:
+            headers["X-Eval-Model-Override"] = self.model_override
         r = self.c.post("/conversations", json={}, headers=headers)
         r.raise_for_status()
         cid = r.json()["conversationId"]
