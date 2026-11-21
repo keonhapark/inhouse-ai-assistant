@@ -1,0 +1,375 @@
+{
+  "runs": [
+    "data/runs/20261121-0058",
+    "data/runs/20261121-0106",
+    "data/runs/20261121-0115"
+  ],
+  "reportDelayS": 45,
+  "windowS": 45,
+  "summary": {
+    "logs": {
+      "n": 7,
+      "top1": 0.429,
+      "top3": 0.857,
+      "msMedian": 14,
+      "errors": 0
+    },
+    "logs+tickets": {
+      "n": 7,
+      "top1": 0.429,
+      "top3": 0.857,
+      "msMedian": 15,
+      "errors": 0
+    },
+    "llm": {
+      "n": 7,
+      "top1": 0.571,
+      "top3": 0.714,
+      "msMedian": 10458,
+      "errors": 0
+    },
+    "ticket-only-llm": {
+      "n": 7,
+      "top1": 0.429,
+      "top3": 0.857,
+      "msMedian": 9307,
+      "errors": 0
+    }
+  },
+  "rows": [
+    {
+      "incidentId": "20261121-0058/db_down-01",
+      "truth": "postgres",
+      "logs": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "litellm"
+        ],
+        "ms": 8
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "litellm"
+        ],
+        "ms": 8
+      },
+      "llm": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "gateway"
+        ],
+        "kinds": [
+          "dependency_down",
+          "resource_exhaustion",
+          "dependency_timeout"
+        ],
+        "ms": 10458,
+        "raw": "{\"candidates\": [{\"service\": \"postgres\", \"kind\": \"dependency_down\", \"reason\": \"DB 연결 풀 고갈 및 관리자 명령으로 종료되어 ERP 가 데이터 저장을 못 함.\", \"evidence\": \"[1333] FATAL:  terminating connection due to administrator command\"}, {\"service\": \"erp\", \"kind\": \"resource_exhaustion\", \"reason\": \"DB 연결 시도 실패로 인해 애플리케이션 스레드가 대기하며 자원을 소진함.\", \"evidence\": \"HikariPool-1 - Connection is not available, request timed out after 30000ms (total=0, active=0, idle=0, waiting=4)\"}, {\"service\": \"gateway\", \"kind\": \"dependency_timeout\", \"reason\": \"ERP 에 연결 시도했으나 응답이 늦어져 게이트웨이에서 타임아웃 오류 발생.\", \"evidence\": \"INFO:     192.168.65.1:16949 - \\\"POST /api/conversations HTTP/1.1\\\" 504 Gateway Timeout\"}]"
+      },
+      "ticket-only-llm": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "gateway"
+        ],
+        "kinds": [
+          "resource_exhaustion",
+          "lock_contention",
+          "dependency_timeout"
+        ],
+        "ms": 7277,
+        "raw": "{\"candidates\": [{\"service\": \"erp\", \"kind\": \"resource_exhaustion\", \"reason\": \"Java 애플리케이션 메모리 부족으로 결재 및 휴가 처리 중 응답 불가\", \"evidence\": [\"결재함이 열리지 않습니다\"]}, {\"service\": \"postgres\", \"kind\": \"lock_contention\", \"reason\": \"ERP 트랜잭션 대기열 길어져 DB 락 경쟁으로 저장 실패\", \"evidence\": [\"휴가 신청도 저장이 안 됩니다\"]}, {\"service\": \"gateway\", \"kind\": \"dependency_timeout\", \"reason\": \"ERP 응답 지연으로 게이트웨이 타임아웃 발생하여 오류 화면 표시\", \"evidence\": [\"결재함을 누르면 한참 돌다가 오류 화면이 나옵니다\"]}]}"
+      }
+    },
+    {
+      "incidentId": "20261121-0058/db_lock-01",
+      "truth": "postgres",
+      "logs": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "litellm"
+        ],
+        "ms": 8
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "litellm",
+          "erp"
+        ],
+        "ms": 8
+      },
+      "llm": {
+        "ranking": [
+          "postgres",
+          "litellm"
+        ],
+        "kinds": [
+          "lock_contention",
+          "dependency_timeout"
+        ],
+        "ms": 7523,
+        "raw": "{\"candidates\": [{\"service\": \"postgres\", \"kind\": \"lock_contention\", \"reason\": \"연차 조회 시 AccessShareLock 대기 로그가 발생하여 트랜잭션이 멈춤.\", \"evidence\": \"[40] LOG:  process 40 still waiting for AccessShareLock on relation 16439 of database 16384 after 9994.831 ms\"}, {\"service\": \"postgres\", \"kind\": \"lock_contention\", \"reason\": \"다른 프로세스가 락을 잡고 있어 조회 쿼리가 대기 중으로 멈춤.\", \"evidence\": \"[42] DETAIL:  Process holding the lock: 199. Wait queue: 42.\"}, {\"service\": \"litellm\", \"kind\": \"dependency_timeout\", \"reason\": \"LLM 호출 실패로 인한 오류가 발생하여 응답이 지연되거나 끊김.\", \"evidence\": \"LiteLLM: model group 'external' failed with the error above. No fallback was attempted.\"}]"
+      },
+      "ticket-only-llm": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "litellm"
+        ],
+        "kinds": [
+          "resource_exhaustion",
+          "lock_contention",
+          "dependency_timeout"
+        ],
+        "ms": 8370,
+        "raw": "{\"candidates\": [{\"service\": \"erp\", \"kind\": \"resource_exhaustion\", \"reason\": \"Java 기반 ERP 서버에서 메모리 부족으로 응답 지연 발생\", \"evidence\": \"연차 조회 시 화면이 멈춘 것처럼 오래 걸림\"}, {\"service\": \"postgres\", \"kind\": \"lock_contention\", \"reason\": \"ERP 테이블에 대한 장시간 락 경쟁으로 쿼리 실행 지연\", \"evidence\": \"연차 잔여를 보려고 하면 화면이 멈춘 것처럼 오래 걸림\"}, {\"service\": \"litellm\", \"kind\": \"dependency_timeout\", \"reason\": \"로컬 LLM 호출 시 타임아웃 발생하여 응답 지연\", \"evidence\": \"연차 조회가 오래 걸립니다\"}]}"
+      }
+    },
+    {
+      "incidentId": "20261121-0058/erp_memory-01",
+      "truth": "erp",
+      "logs": {
+        "ranking": [
+          "erp",
+          "litellm",
+          "postgres"
+        ],
+        "ms": 8
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "litellm"
+        ],
+        "ms": 7
+      },
+      "llm": {
+        "ranking": [
+          "postgres",
+          "litellm",
+          "gateway"
+        ],
+        "kinds": [
+          "dependency_down",
+          "bad_config",
+          "dependency_timeout"
+        ],
+        "ms": 11913,
+        "raw": "{\"candidates\": [{\"service\": \"postgres\", \"kind\": \"dependency_down\", \"reason\": \"ERP 연결 끊김과 로그 분석 구간 불일치로 DB 세션 종료 의심\", \"evidence\": [\"- erp error 기준 160줄 → 분석 1 줄: 기준 구간 160줄(분석 구간 길이로 360 줄 기대) → 분석 구간 1 줄\"]}, {\"service\": \"litellm\", \"kind\": \"bad_config\", \"reason\": \"Anthropic API 키 누락으로 LLM 호출 실패 및 인증 오류 발생\", \"evidence\": [\"- litellm error 기준 0 줄 → 분석 1 줄: LiteLLM Proxy:ERROR: common_request_processing.py:1839 - litellm.proxy.proxy_server._handle_llm_api_exception(): Exception occured - litellm.AuthenticationError: Missing Anthropic API K\"]}, {\"service\": \"gateway\", \"kind\": \"dependency_timeout\", \"reason\": \"ERP 또는 LLM 백엔드 응답 지연으로 502 Bad Gateway 오류 발생\", \"evidence\": [\"- gateway error 기준 0 줄 → 분석 1 줄: INFO:     192.168.65.1:55407 - \\\"POST /api/conversations HTTP/1.1\\\" 502 Bad Gateway\"]}]"
+      },
+      "ticket-only-llm": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "gateway"
+        ],
+        "kinds": [
+          "resource_exhaustion",
+          "resource_exhaustion",
+          "dependency_timeout"
+        ],
+        "ms": 8703,
+        "raw": "{\"candidates\": [{\"service\": \"erp\", \"kind\": \"resource_exhaustion\", \"reason\": \"ERP 서버 자원이 고갈되어 연결이 끊기고 재시작을 요구함\", \"evidence\": [\"ERP가 갑자기 끊깁니다 쓰던 중에 연결이 끊겼다가 잠시 뒤 다시 로그인하라고 나옵니다.\"]}, {\"service\": \"postgres\", \"kind\": \"resource_exhaustion\", \"reason\": \"ERP와 연동된 DB 자원이 고갈되어 ERP 연결이 불안정해짐\", \"evidence\": [\"ERP가 갑자기 끊깁니다 쓰던 중에 연결이 끊겼다가 잠시 뒤 다시 로그인하라고 나옵니다.\"]}, {\"service\": \"gateway\", \"kind\": \"dependency_timeout\", \"reason\": \"ERP 장애로 인해 Gateway 에서 ERP 호출 시 타임아웃 발생\", \"evidence\": [\"ERP가 갑자기 끊깁니다 쓰던 중에 연결이 끊겼다가 잠시 뒤 다시 로그인하라고 나옵니다.\"]}]"
+      }
+    },
+    {
+      "incidentId": "20261121-0058/llm_timeout-01",
+      "truth": "litellm",
+      "logs": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "erp"
+        ],
+        "ms": 19
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "litellm",
+          "rag"
+        ],
+        "ms": 18
+      },
+      "llm": {
+        "ranking": [
+          "litellm",
+          "agent",
+          "gateway"
+        ],
+        "kinds": [
+          "dependency_timeout",
+          "dependency_timeout",
+          "dependency_timeout"
+        ],
+        "ms": 9004,
+        "raw": "{\"candidates\": [{\"service\": \"litellm\", \"kind\": \"dependency_timeout\", \"reason\": \"LLM 프록시에서 모델 응답이 지연되어 AI 비서 답변이 나오지 않음\", \"evidence\": [\"litellm error 기준 4 줄 → 분석 0 줄: 기준 구간 4 줄 (분석 구간 길이로 9 줄 기대) → 분석 구간 0 줄\"]}, {\"service\": \"agent\", \"kind\": \"dependency_timeout\", \"reason\": \"ERP 에는 정상 응답하나 AI 비서 호출 시 도구 연동 지연으로 응답 불가\", \"evidence\": [\"erp info 기준 154 줄 → 분석 328 줄: INFO 1 --- [erp] [nio-8080-exec-3] access : POST /api/v1/room-reservations 200 4ms\"]}, {\"service\": \"gateway\", \"kind\": \"dependency_timeout\", \"reason\": \"LLM 출구 앞단 게이트웨이에서 프록시 호출 대기 중 타임아웃 발생\", \"evidence\": [\"litellm error 기준 4 줄 → 분석 0 줄: 기준 구간 4 줄 (분석 구간 길이로 9 줄 기대) → 분석 구간 0 줄\"]}]"
+      },
+      "ticket-only-llm": {
+        "ranking": [
+          "litellm",
+          "agent",
+          "postgres"
+        ],
+        "kinds": [
+          "dependency_timeout",
+          "resource_exhaustion",
+          "lock_contention"
+        ],
+        "ms": 22437,
+        "raw": "{\"candidates\": [{\"service\": \"litellm\", \"kind\": \"dependency_timeout\", \"reason\": \"LLM 프록시 연결 끊김으로 응답 지연 발생\", \"evidence\": [\"질문을 보내면 답이 오지 않고 계속 기다리기만 합니다\"]}, {\"service\": \"agent\", \"kind\": \"resource_exhaustion\", \"reason\": \"도구 호출 로직에서 리소스 고갈로 처리 중단\", \"evidence\": [\"AI 비서가 답을 안 합니다\"]}, {\"service\": \"postgres\", \"kind\": \"lock_contention\", \"reason\": \"ERP 외 다른 트랜잭션으로 DB 락 경쟁 발생\", \"evidence\": [\"ERP 화면은 정상입니다\"]}]}"
+      }
+    },
+    {
+      "incidentId": "20261121-0106/gateway_bad_config-01",
+      "truth": "gateway",
+      "logs": {
+        "ranking": [
+          "litellm",
+          "agent",
+          "postgres"
+        ],
+        "ms": 27
+      },
+      "logs+tickets": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "agent"
+        ],
+        "ms": 21
+      },
+      "llm": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "rag"
+        ],
+        "kinds": [
+          "dependency_timeout",
+          "dependency_down",
+          "dependency_timeout"
+        ],
+        "ms": 13156,
+        "raw": "{\"candidates\": [{\"service\": \"litellm\", \"kind\": \"dependency_timeout\", \"reason\": \"LLM 프록시에서 DB 연결 실패로 인한 인증 오류 발생\", \"evidence\": [\"LiteLLM Proxy:ERROR: auth_exception_handler.py:207 - litellm.proxy.proxy_server.user_api_key_auth(): Exception occured - No connected db.\"]}, {\"service\": \"postgres\", \"kind\": \"dependency_down\", \"reason\": \"ERP 서비스의 DB 연결 시도 후 즉시 끊어짐으로 서버 다운 의심\", \"evidence\": [\"[1638] LOG: disconnection: session time: 0:00:00.002 user=iaa database=erp host=[local]\"]}, {\"service\": \"rag\", \"kind\": \"dependency_timeout\", \"reason\": \"규정 검색 시 임베딩 캐시 파일 부재로 외부 모델 호출 지연\", \"evidence\": [\"INFO: 172.21.0.7:60228 - \\\"POST /v1/chat/completions HTTP/1.1\\\" 400 Bad Request\"]}]}"
+      },
+      "ticket-only-llm": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "agent"
+        ],
+        "kinds": [
+          "resource_exhaustion",
+          "lock_contention",
+          "dependency_timeout"
+        ],
+        "ms": 12508,
+        "raw": "{\"candidates\": [{\"service\": \"litellm\", \"kind\": \"resource_exhaustion\", \"reason\": \"LLM 프록시 리소스 고갈로 모든 요청이 차단됨\", \"evidence\": \"[2024-01-15 10:00:01] litellm ERROR: Connection pool exhausted, max connections reached.\"}, {\"service\": \"postgres\", \"kind\": \"lock_contention\", \"reason\": \"ERP 트랜잭션 장시간 락 점유로 DB 응답 불가\", \"evidence\": \"[2024-01-15 10:00:05] postgres WARNING: Lock wait timeout exceeded for transaction id 12345.\"}, {\"service\": \"agent\", \"kind\": \"dependency_timeout\", \"reason\": \"ERP 호출 타임아웃으로 도구 실행 중단\", \"evidence\": \"[2024-01-15 10:00:10] agent ERROR: Tool execution failed after 30s timeout connecting to ERP.\"}]}"
+      }
+    },
+    {
+      "incidentId": "20261121-0106/rag_corrupt-01",
+      "truth": "rag",
+      "logs": {
+        "ranking": [
+          "litellm",
+          "rag",
+          "agent"
+        ],
+        "ms": 32
+      },
+      "logs+tickets": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "rag"
+        ],
+        "ms": 29
+      },
+      "llm": {
+        "ranking": [
+          "litellm",
+          "rag",
+          "agent"
+        ],
+        "kinds": [
+          "bad_config",
+          "dependency_down",
+          "resource_exhaustion"
+        ],
+        "ms": 17237,
+        "raw": "{\"candidates\": [{\"service\": \"litellm\", \"kind\": \"bad_config\", \"reason\": \"Anthropic API 키 설정 부재로 LLM 호출 실패\", \"evidence\": [\"litellm error 기준 0 줄 → 분석 1 줄: LiteLLM Proxy:ERROR: common_request_processing.py:1839 - litellm.proxy.proxy_server._handle_llm_api_exception(): Exception occured - litellm.AuthenticationError: Missing Anthropic API K\"]}, {\"service\": \"rag\", \"kind\": \"dependency_down\", \"reason\": \"API 호출 실패로 인해 서버가 정상 종료됨\", \"evidence\": [\"rag info 기준 0 줄 → 분석 1 줄: INFO:     Shutting down\"]}, {\"service\": \"agent\", \"kind\": \"resource_exhaustion\", \"reason\": \"LLM 응답 불가로 인한 도구 호출 로직 중단\", \"evidence\": [\"litellm info 기준 0 줄 → 분석 2 줄: LiteLLM: model group 'external' failed with the error above. No fallback was attempted.\"]}]"
+      },
+      "ticket-only-llm": {
+        "ranking": [
+          "rag",
+          "postgres",
+          "gateway"
+        ],
+        "kinds": [
+          "resource_exhaustion",
+          "dependency_timeout",
+          "bad_config"
+        ],
+        "ms": 9307,
+        "raw": "{\"candidates\": [{\"service\": \"rag\", \"kind\": \"resource_exhaustion\", \"reason\": \"임베딩 캐시 파일이 가득 차거나 손상되어 규정 검색이 실패함.\", \"evidence\": \"<로그가 끊김>\"}, {\"service\": \"postgres\", \"kind\": \"dependency_timeout\", \"reason\": \"ERP 시스템의 DB 연결 타임아웃으로 인해 규정 데이터 조회 불가.\", \"evidence\": \"<로그가 끊김>\"}, {\"service\": \"gateway\", \"kind\": \"bad_config\", \"reason\": \"LLM 프록시 설정 오류로 인해 rag 서비스 호출이 차단됨.\", \"evidence\": \"<로그가 끊김>\"}]}"
+      }
+    },
+    {
+      "incidentId": "20261121-0115/db_down-01",
+      "truth": "postgres",
+      "logs": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "gateway"
+        ],
+        "ms": 14
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "litellm"
+        ],
+        "ms": 15
+      },
+      "llm": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "gateway"
+        ],
+        "kinds": [
+          "dependency_down",
+          "resource_exhaustion",
+          "dependency_timeout"
+        ],
+        "ms": 9659,
+        "raw": "{\"candidates\": [{\"service\": \"postgres\", \"kind\": \"dependency_down\", \"reason\": \"DB 서버가 종료되어 ERP 가 데이터베이스 연결을 시도할 수 없습니다.\", \"evidence\": \"[container] die postgres exitCode=0\"}, {\"service\": \"erp\", \"kind\": \"resource_exhaustion\", \"reason\": \"데이터베이스 연결 풀이 모두 소진되어 새로운 요청을 처리할 수 없습니다.\", \"evidence\": \"HikariPool-1 - Connection is not available, request timed out after 30005ms (total=0, active=0, idle=0, waiting=3)\"}, {\"service\": \"gateway\", \"kind\": \"dependency_timeout\", \"reason\": \"ERP 에 대한 요청이 응답을 받지 못해 게이트웨이에서 타임아웃 오류를 반환합니다.\", \"evidence\": \"\\\"POST /api/conversations HTTP/1.1\\\" 504 Gateway Timeout\"}]"
+      },
+      "ticket-only-llm": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "gateway"
+        ],
+        "kinds": [
+          "resource_exhaustion",
+          "lock_contention",
+          "dependency_timeout"
+        ],
+        "ms": 10046,
+        "raw": "{\"candidates\": [{\"service\": \"erp\", \"kind\": \"resource_exhaustion\", \"reason\": \"Java 애플리케이션 메모리 부족으로 결재 및 휴가 처리 중 응답 불가\", \"evidence\": [\"결재함이 열리지 않습니다\"]}, {\"service\": \"postgres\", \"kind\": \"lock_contention\", \"reason\": \"ERP 트랜잭션 대기열 길어져 DB 락 경쟁으로 저장 실패\", \"evidence\": [\"휴가 신청도 저장이 안 됩니다\"]}, {\"service\": \"gateway\", \"kind\": \"dependency_timeout\", \"reason\": \"ERP 응답 지연으로 게이트웨이 타임아웃 발생하여 오류 화면 표시\", \"evidence\": [\"결재함을 누르면 한참 돌다가 오류 화면이 나옵니다\"]}]}"
+      }
+    }
+  ]
+}
