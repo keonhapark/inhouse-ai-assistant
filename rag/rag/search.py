@@ -14,8 +14,9 @@ from __future__ import annotations
 import math
 import re
 import threading
+from array import array
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
@@ -94,15 +95,28 @@ def _unit_rows(vectors: list[list[float]]) -> np.ndarray:
     return np.divide(m, norms, out=np.zeros_like(m), where=norms > 0)
 
 
-def _postings(tf: tuple[Counter[str], ...]) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """토큰 → (그 토큰이 있는 청크 번호, 빈도). BM25가 질의 토큰이 든 청크만 보게 합니다."""
-    acc: dict[str, tuple[list[int], list[int]]] = {}
-    for i, counts in enumerate(tf):
+_Postings = dict[str, tuple[np.ndarray, np.ndarray]]
+
+
+def _postings(texts: Iterable[str]) -> tuple[_Postings, np.ndarray]:
+    """토큰 → (그 토큰이 있는 청크 번호 int32, 빈도 float32)와 청크마다 토큰 수(int64).
+
+    BM25가 질의 토큰이 든 청크만 보게 합니다. 청크마다 Counter를 들고 있지 않고 토큰 하나가
+    array 두 개만 갖게 해, 청크 수가 늘어도 메모리가 (청크, 토큰) 쌍마다 8바이트만 늘게 합니다(#493).
+    """
+    acc: dict[str, tuple[array, array]] = {}
+    lens: list[int] = []
+    for i, text in enumerate(texts):
+        counts = Counter(tokenize(text))
+        lens.append(sum(counts.values()))
         for t, f in counts.items():
-            ids, freqs = acc.setdefault(t, ([], []))
+            ids, freqs = acc.setdefault(t, (array("i"), array("f")))
             ids.append(i)
             freqs.append(f)
-    return {t: (np.asarray(ids, dtype=np.int64), np.asarray(fs, dtype=np.float64)) for t, (ids, fs) in acc.items()}
+    postings = {
+        t: (np.frombuffer(ids, dtype=np.int32), np.frombuffer(freqs, dtype=np.float32)) for t, (ids, freqs) in acc.items()
+    }
+    return postings, np.asarray(lens, dtype=np.int64)
 
 
 @dataclass(frozen=True)
@@ -111,15 +125,22 @@ class _State:
     검색 도중 파기가 끼어도 청크 번호가 어긋나지 않습니다."""
 
     chunks: tuple[Chunk, ...]
-    tf: tuple[Counter[str], ...]
     lens: np.ndarray  # 청크마다 토큰 수(int64)
-    postings: dict[str, tuple[np.ndarray, np.ndarray]]
+    postings: _Postings
     vectors: np.ndarray | None  # 행마다 길이 1인 float32 (청크 수 × 차원)
 
-    @classmethod
-    def build(cls, chunks: tuple[Chunk, ...], tf: tuple[Counter[str], ...], vectors: np.ndarray | None) -> _State:
-        lens = np.asarray([sum(t.values()) for t in tf], dtype=np.int64)
-        return cls(chunks, tf, lens, _postings(tf), vectors)
+    def without(self, keep: np.ndarray) -> _State:
+        """keep(청크 번호 오름차순)만 남긴 새 벌. 역색인의 청크 번호를 새 번호로 바꿉니다."""
+        alive = np.zeros(len(self.chunks), dtype=bool)
+        alive[keep] = True
+        renumber = (np.cumsum(alive) - 1).astype(np.int32)
+        postings: _Postings = {}
+        for t, (ids, freqs) in self.postings.items():
+            sel = alive[ids]
+            if sel.any():
+                postings[t] = (renumber[ids[sel]], freqs[sel])
+        vectors = self.vectors[keep] if self.vectors is not None else None
+        return _State(tuple(self.chunks[i] for i in keep), self.lens[keep], postings, vectors)
 
 
 class SearchIndex:
@@ -138,11 +159,11 @@ class SearchIndex:
         self.embedder = embedder
         self.editions = editions
         self.today = today
-        tf = tuple(Counter(tokenize(index_text(c))) for c in chunks)
+        postings, lens = _postings(index_text(c) for c in chunks)
         vectors = _unit_rows(embedder.embed([index_text(c) for c in chunks])) if embedder and chunks else None
         if embedder and not chunks:
             vectors = np.zeros((0, 0), dtype=np.float32)
-        self._state = _State.build(tuple(chunks), tf, vectors)
+        self._state = _State(tuple(chunks), lens, postings, vectors)
         self._lock = threading.Lock()
         self.version = 0  # 파기할 때마다 1씩 늘어, 색인에서 따로 만든 것(판 대조표)을 다시 만들 때를 알립니다.
 
@@ -157,11 +178,7 @@ class SearchIndex:
             keep = [i for i, c in enumerate(st.chunks) if c.doc_id != doc_id]
             removed = [c for c in st.chunks if c.doc_id == doc_id]
             if removed:
-                self._state = _State.build(
-                    tuple(st.chunks[i] for i in keep),
-                    tuple(st.tf[i] for i in keep),
-                    st.vectors[np.asarray(keep, dtype=np.int64)] if st.vectors is not None else None,
-                )
+                self._state = st.without(np.asarray(keep, dtype=np.int64))
                 self.version += 1
             return removed
 
@@ -208,7 +225,7 @@ class SearchIndex:
                 continue
             post, freq = st.postings[t]
             keep = mask[post]
-            idx, f = post[keep], freq[keep]
+            idx, f = post[keep], freq[keep].astype(np.float64)
             df = len(idx)
             if not df:
                 continue

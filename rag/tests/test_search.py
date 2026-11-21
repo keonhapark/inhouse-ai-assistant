@@ -79,3 +79,17 @@ def test_하이브리드는_두_순위의_RRF_합이다(index):
 def test_임베딩_모델이_없으면_벡터_검색은_실패한다():
     with pytest.raises(RuntimeError):
         SearchIndex(CHUNKS).search("연가", {"public"}, "vector")
+
+
+def test_문서를_지운_색인은_처음부터_만든_색인과_같은_점수를_낸다():
+    """역색인의 청크 번호를 새로 매겨도 BM25 점수·순위가 남은 청크로 새로 만든 색인과 같습니다(#493)."""
+    scopes = {"public", "finance-policy", "hr-restricted"}
+    removed = SearchIndex(CHUNKS, HashEmbedder())
+    removed.remove_document("d2")
+    fresh = SearchIndex([c for c in CHUNKS if c.doc_id != "d2"], HashEmbedder())
+    for query in ["연가 보상비", "회의실 예약", "기본급 팀장", "숙박비"]:
+        for method in ("bm25", "vector", "hybrid"):
+            a = [(h.chunk.id, h.score) for h in removed.search(query, scopes, method, top_k=5)]
+            b = [(h.chunk.id, h.score) for h in fresh.search(query, scopes, method, top_k=5)]
+            assert a == b, (query, method)
+    assert removed.doc_ids() == {"d1", "d3", "d4"}
