@@ -60,7 +60,8 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
     pack_dir = pack_dir or Path(os.environ.get("PACK_DIR", ROOT / "packs/manufacturing"))
     secret = jwt_secret or os.environ.get("ERP_JWT_SECRET") or DEFAULT_SECRET
     password = demo_password or os.environ.get("ERP_DEMO_PASSWORD") or "demo"
-    service_secret = service_login_secret or os.environ.get("ERP_SERVICE_LOGIN_SECRET") or None
+    # 비었거나 공백뿐인 값은 설정되지 않은 것으로 봅니다(compose가 빈 문자열을 넘김).
+    service_secret = (service_login_secret or os.environ.get("ERP_SERVICE_LOGIN_SECRET") or "").strip() or None
     if delegation_public_key is None and os.environ.get("DELEGATION_TOKEN_PUBLIC_KEY"):
         p = Path(os.environ["DELEGATION_TOKEN_PUBLIC_KEY"])
         if not p.is_absolute():
@@ -96,9 +97,10 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
                 raise ProblemError(401, "unauthorized", str(e))
             if claims.get("sub") not in st.employees:
                 raise ProblemError(401, "unauthorized")
-            if human_only and "slack" in (claims.get("amr") or []):
+            slack = "slack" in (claims.get("amr") or [])
+            if human_only and slack:
                 raise ProblemError(403, "service-login-not-allowed")
-            return Principal(employee_id=claims["sub"])
+            return Principal(employee_id=claims["sub"], via_service_login=slack)
         if alg == "ES256" and delegation_public_key:
             try:
                 claims = jwt.decode(token, delegation_public_key, algorithms=["ES256"], audience="erp",
@@ -211,7 +213,7 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
         token = jwt.encode({"sub": emp_id, "aud": "erp", "iss": "erp", "iat": t, "exp": t + SERVICE_LOGIN_TTL,
                             "amr": ["slack"]}, secret, algorithm="HS256")
         with lock:
-            st.record_audit(Principal(emp_id), "auth.login", "serviceLogin", "ok")
+            st.record_audit(Principal(emp_id, via_service_login=True), "auth.login", "serviceLogin", "ok")
         return {"accessToken": token, "tokenType": "Bearer", "expiresIn": SERVICE_LOGIN_TTL,
                 "employee": st.employee_full(emp_id)}
 

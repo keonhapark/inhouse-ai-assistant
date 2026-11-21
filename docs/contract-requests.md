@@ -1,4 +1,5 @@
 
+| 2026-11-21 | erp | #291 | audit.schema actor 선택 필드 `channel`(web·slack·agent), erp가 채움(gateway 몫은 이슈) | 슬랙 토큰 쓰기·거절이 사람 화면과 구별되지 않음(보안 리뷰) | 직접 PR |
 | 2026-11-21 | erp | #291 | erp `POST /auth/service-login`(헤더 `X-Service-Login-Secret`, 본문 `{employeeId}`, 15분 직원 JWT `amr: [slack]`, 401·404·422), ProblemCode `service-login-not-allowed`(사람 전용 기능 403) | #273 슬랙 로그인 A안 | 직접 PR |
 모듈 세션이 계약(`contracts/`)이나 팩(`packs/`)을 바꿔야 할 때 한 줄 적고 `contract` 라벨 이슈를 엽니다. 프로젝트 리드가 `contract/*` PR로 반영하고 결과를 적습니다.
 
@@ -34,4 +35,5 @@
 | 2026-11-21 | agent | #309 | agent.yaml `/run` 선택 필드 `routeMethod`(llm·keyword·fallback·explicit) | #308 fallback 대화가 전사 비서 정책(external)으로 외부에 나감. fallback이면 대화 끝까지 로컬 | contract/agent-route-method PR. gateway 전달은 gateway 이슈 |
 | 2026-11-21 | gateway | #273 | gateway `POST /auth/slack`(헤더 `X-Slack-Bridge-Secret`, 본문 `{slackUserId}`, 응답 erp `LoginResponse`, 401·403·404), erp `POST /auth/service-login`(#291)을 부름 | #102 슬랙 입구 | contract/gateway-slack PR |
 | 2026-11-21 | gateway | #304 | 팩 glossary.yaml 선택 항목 `topics`(id·action·reason·patterns 정규식, 대화 내용만 봄), 제조 팩 hr-attendance | #304 인사 정보 로컬 강제(#308 두 번째 방어선) | contract/gateway-local-topics PR |
+| 2026-11-21 | gateway | #331 | gateway `POST /auth/slack` 429 `rate-limited`(`Retry-After`), 슬랙 사용자별·전체 분당 상한 | #331 브리지 비밀값이 새도 토큰을 마음대로 받지 못하게 | contract/gateway-slack-rate-limit PR |
 | 2026-11-21 | web | #214 | `contracts/eval/report.schema.json`(meta·rows·summary), gateway `GET /eval/reports`·`GET /eval/reports/{reportId}`(auditor만, eval/reports 읽기 전용) | 평가 리포트 화면. summary는 eval #328이 씀 | contract/web-eval-report PR, gateway 구현 이슈 |

@@ -280,3 +280,16 @@ def test_glossary_topics_reject_bad_regex_and_duplicates(tmp_path: Path, capsys)
     (pack / "glossary.yaml").write_text(json.dumps(g, ensure_ascii=False), encoding="utf-8")
     errors = check_packs.check_pack(pack)
     assert any("정규식" in e for e in errors) and any("중복" in e for e in errors)
+
+
+def test_fake_erp_treats_blank_service_login_secret_as_unset() -> None:
+    """compose는 ERP_SERVICE_LOGIN_SECRET이 없으면 빈 문자열을 넘깁니다. 그때 경로는 404이고 빈 헤더로 토큰을 받지 못합니다."""
+    from fastapi.testclient import TestClient
+
+    from fakes.erp.app import create_app
+
+    for blank in ("", "   "):
+        app = create_app(PACKS / "manufacturing", service_login_secret=blank)
+        with TestClient(app, base_url="http://fake/api/v1") as c:
+            r = c.post("/auth/service-login", headers={"X-Service-Login-Secret": blank}, json={"employeeId": "E0010"})
+            assert r.status_code == 404, r.text
