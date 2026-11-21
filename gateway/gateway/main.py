@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse, Response
 
 from gateway import redact
 from gateway.alerts import Alerter
-from gateway import audit_query, ops, slack_login
+from gateway import audit_query, eval_reports, ops, slack_login
 from gateway.chat import AgentClient, ChatService
 from gateway.chat import build_router as chat_router
 from gateway.audit import AuditLog, JsonlWriter
@@ -133,6 +133,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     app.include_router(ops.build_router(erp, audit, registry, settings.audit_event_files, egress.budget),
                        prefix="/api")
     app.include_router(audit_query.build_router(erp, audit, settings.audit_event_files), prefix="/api")
+    app.include_router(eval_reports.build_router(erp, settings.eval_reports_dir), prefix="/api")
     app.state.slack_limits = slack_login.SlackLimits(settings.slack_login_per_user_per_minute,
                                                      settings.slack_login_per_minute)
     app.include_router(slack_login.build_router(erp, audit, bridge_secret=settings.slack_bridge_secret,
