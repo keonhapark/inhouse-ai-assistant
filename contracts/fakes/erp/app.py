@@ -96,9 +96,10 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
                 raise ProblemError(401, "unauthorized", str(e))
             if claims.get("sub") not in st.employees:
                 raise ProblemError(401, "unauthorized")
-            if human_only and "slack" in (claims.get("amr") or []):
+            slack = "slack" in (claims.get("amr") or [])
+            if human_only and slack:
                 raise ProblemError(403, "service-login-not-allowed")
-            return Principal(employee_id=claims["sub"])
+            return Principal(employee_id=claims["sub"], via_service_login=slack)
         if alg == "ES256" and delegation_public_key:
             try:
                 claims = jwt.decode(token, delegation_public_key, algorithms=["ES256"], audience="erp",
@@ -211,7 +212,7 @@ def create_app(pack_dir: Path | None = None, *, jwt_secret: str | None = None,
         token = jwt.encode({"sub": emp_id, "aud": "erp", "iss": "erp", "iat": t, "exp": t + SERVICE_LOGIN_TTL,
                             "amr": ["slack"]}, secret, algorithm="HS256")
         with lock:
-            st.record_audit(Principal(emp_id), "auth.login", "serviceLogin", "ok")
+            st.record_audit(Principal(emp_id, via_service_login=True), "auth.login", "serviceLogin", "ok")
         return {"accessToken": token, "tokenType": "Bearer", "expiresIn": SERVICE_LOGIN_TTL,
                 "employee": st.employee_full(emp_id)}
 
