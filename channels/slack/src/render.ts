@@ -21,7 +21,9 @@ export function escape(text: string): string {
 
 /** 모델 답의 마크다운 굵게(**x**)를 슬랙 굵게(*x*)로 바꿉니다. 나머지는 그대로 둡니다. */
 export function toMrkdwn(text: string): string {
-  return escape(text).replace(/\*\*(.+?)\*\*/g, '*$1*')
+  // 슬랙은 굵게 기호 바로 앞뒤에 글자가 붙으면(예: '*회의실 A*를') 굵게로 그리지 않고 별표를 그대로 보입니다.
+  // 앞뒤에 폭 없는 공백(U+200B)을 넣어 단어 경계를 만듭니다.
+  return escape(text).replace(/\*\*(.+?)\*\*/g, '\u200b*$1*\u200b')
 }
 
 /** 슬랙 section 글 한도(3000자)보다 조금 작게 나눕니다. */
@@ -104,6 +106,9 @@ function citationLine(c: Citation): string {
   return `${head}${quote}`
 }
 
+/** 긴 값(JSON 등)은 카드에서 줄입니다. */
+const short = (v: string, max = 80) => (v.length > max ? `${v.slice(0, max - 1)}…` : v)
+
 function value(v: unknown): string {
   if (v === null || v === undefined) return '–'
   return typeof v === 'object' ? JSON.stringify(v) : String(v)
@@ -117,12 +122,14 @@ export function approvalCard(a: Approval, agentName: string | undefined, state?:
   if (p.summary) blocks.push(section(escape(p.summary)))
   const lines: string[] = []
   for (const c of p.changes ?? []) {
-    const before = (c.before ?? {}) as Record<string, unknown>
-    const after = (c.after ?? {}) as Record<string, unknown>
-    for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) {
-      const b = k in before ? value(before[k]) : null
-      const n = k in after ? value(after[k]) : null
-      lines.push(b !== null && n !== null && b !== n ? `\`${escape(k)}\` ~${escape(b)}~ → ${escape(n)}` : `\`${escape(k)}\` ${escape(n ?? b ?? '–')}`)
+    const before = (c.before ?? null) as Record<string, unknown> | null
+    const after = (c.after ?? null) as Record<string, unknown> | null
+    for (const k of new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})])) {
+      const b = before && k in before ? value(before[k]) : null
+      const n = after && k in after ? value(after[k]) : null
+      // 바꾸기(전·후가 다 있음)는 달라진 값만 보여 줍니다. 문서 전체가 오면 바뀌지 않은 필드가 카드를 덮기 때문입니다.
+      if (before && after && b === n) continue
+      lines.push(b !== null && n !== null ? `\`${escape(k)}\` ~${escape(short(b))}~ → ${escape(short(n))}` : `\`${escape(k)}\` ${escape(short(n ?? b ?? '–'))}`)
     }
   }
   if (lines.length) blocks.push(...sections(lines.join('\n')))
