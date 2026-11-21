@@ -36,6 +36,7 @@ TITLES = {
     "forbidden": "권한이 없습니다",
     "scope-missing": "위임 토큰에 필요한 scope가 없습니다",
     "delegation-token-not-allowed": "사람 화면 전용 기능입니다",
+    "service-login-not-allowed": "서비스 로그인 토큰으로는 부를 수 없는 사람 화면 전용 기능입니다",
     "not-found": "찾을 수 없습니다",
     "validation": "입력이 올바르지 않습니다",
     "form-validation-failed": "양식 입력이 올바르지 않습니다",

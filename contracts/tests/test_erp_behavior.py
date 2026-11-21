@@ -10,7 +10,10 @@ import threading
 import uuid
 from datetime import timedelta
 
-from tests.conftest import Api, Org, future_slot, future_weekday, now
+import jwt
+import pytest
+
+from tests.conftest import SERVICE_LOGIN_SECRET, Api, Org, future_slot, future_weekday, now
 from tests.schema_check import validate, validate_file
 
 ERP = "openapi/erp.yaml"
@@ -711,3 +714,47 @@ def test_purchase_total_must_equal_quantity_times_price(api: Api, org: Org) -> N
     assert r.status_code == 201, r.text
     # 500만 원을 넘으므로 팀장 + 본부장 두 단계입니다
     assert len(r.json()["resource"]["steps"]) == 2
+
+
+# ---------- 서비스 로그인(슬랙 입구) ----------
+
+def _service_login(api: Api, emp: str | None, secret: str | None = SERVICE_LOGIN_SECRET):
+    headers = {} if secret is None else {"X-Service-Login-Secret": secret}
+    r = api.c.post("/auth/service-login", headers=headers, json={"employeeId": emp})
+    if r.status_code == 404:
+        pytest.skip("erp에 ERP_SERVICE_LOGIN_SECRET이 설정되지 않아 서비스 로그인 경로가 꺼져 있습니다")
+    return r
+
+
+def test_service_login_issues_short_slack_token(api: Api, org: Org) -> None:
+    emp = org.members("sales")[3]
+    r = _service_login(api, emp)
+    assert r.status_code == 200, r.text
+    validate(ERP, "LoginResponse", r.json())
+    assert r.json()["expiresIn"] == 900
+    token = r.json()["accessToken"]
+    assert jwt.decode(token, options={"verify_signature": False})["amr"] == ["slack"]
+    me = api.req("GET", "/me", token=token)
+    assert me.status_code == 200 and me.json()["id"] == emp
+    for secret in (None, "wrong-secret"):
+        bad = _service_login(api, emp, secret)
+        assert bad.status_code == 401
+        assert problem_code(bad) == "unauthorized"
+    unknown = _service_login(api, "E9999")
+    assert unknown.status_code == 422
+    assert problem_code(unknown) == "validation"
+
+
+def test_service_login_token_cannot_use_human_only(api: Api, org: Org) -> None:
+    member, leader = org.members("quality")[1], org.leader("quality")
+    doc = api.request_leave(member, future_weekday())["resource"]
+    token = _service_login(api, leader).json()["accessToken"]
+    r = api.req("POST", f"/approval-documents/{doc['id']}/approve", token=token, json={"version": doc["version"]})
+    assert r.status_code == 403
+    assert problem_code(r) == "service-login-not-allowed"
+    auditor = next(e["id"] for e in org.all if e["grade"] == "ceo")
+    r = api.req("GET", "/audit-events", token=_service_login(api, auditor).json()["accessToken"])
+    assert r.status_code == 403
+    assert problem_code(r) == "service-login-not-allowed"
+    # 사람 전용이 아닌 일은 직원 JWT와 같이 됩니다(본인 결재함 조회)
+    assert api.req("GET", "/approval-documents", token=token, params={"box": "inbox"}).status_code == 200

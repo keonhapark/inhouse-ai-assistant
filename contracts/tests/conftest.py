@@ -4,6 +4,7 @@
 같은 시험을 돌립니다. 실제 erp는 아래 값으로 떠 있어야 합니다.
 - ERP_DEMO_PASSWORD: 시험이 쓰는 비밀번호와 같게
 - DELEGATION_TOKEN_PUBLIC_KEY: ERP_TEST_DELEGATION_PRIVATE_KEY의 짝(위임 토큰 시험용)
+- ERP_SERVICE_LOGIN_SECRET: 시험의 서비스 로그인 비밀값과 같게(없으면 서비스 로그인 시험은 건너뜀)
 """
 
 from __future__ import annotations
@@ -29,6 +30,8 @@ from tools.common import ROOT, load
 KST = ZoneInfo("Asia/Seoul")
 PACK = ROOT / "packs/manufacturing"
 PASSWORD = os.environ.get("ERP_DEMO_PASSWORD", "demo")
+# 실제 erp는 같은 값으로 떠 있어야 합니다(erp/ci/start.sh 기본값과 같음). 시험 전용 값입니다.
+SERVICE_LOGIN_SECRET = os.environ.get("ERP_SERVICE_LOGIN_SECRET", "test-only-service-login-secret")
 
 
 def _keys() -> tuple[str, str]:
@@ -84,7 +87,8 @@ def base_client():
 
     from fakes.erp.app import create_app
 
-    app = create_app(PACK, demo_password=PASSWORD, delegation_public_key=PUB)
+    app = create_app(PACK, demo_password=PASSWORD, delegation_public_key=PUB,
+                     service_login_secret=SERVICE_LOGIN_SECRET)
     with TestClient(app, base_url="http://fake/api/v1") as c:
         yield c
 
