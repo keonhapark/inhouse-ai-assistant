@@ -111,6 +111,79 @@ describe('평가 리포트', () => {
     expect(screen.getByRole('region', { name: '시나리오별 결과' })).toBeInTheDocument()
   })
 
+  it('시나리오는 50개씩 보이고, 필터를 바꾸면 다시 50개부터 봅니다', async () => {
+    const user = renderAt()
+    const sec = await screen.findByRole('region', { name: '시나리오별 결과' })
+    const rows = () => within(within(sec).getByRole('region', { name: '시나리오별 결과 표' })).getAllByRole('row').length - 1
+    expect(rows()).toBe(50)
+    await user.click(within(sec).getByRole('button', { name: '더 보기(30개 남음)' }))
+    expect(rows()).toBe(80)
+    await user.selectOptions(within(sec).getByLabelText('보기'), 'problem')
+    expect(rows()).toBe(50)
+  })
+
+  it('기대와 다른 회차는 배지 이름에 "기대와 다름"이 들어갑니다', async () => {
+    const user = renderAt()
+    const sec = await screen.findByRole('region', { name: '시나리오별 결과' })
+    await user.type(within(sec).getByLabelText('시나리오 ID'), 'normal-room-reserve-weekly')
+    const row = within(sec).getByRole('row', { name: /normal-room-reserve-weekly/ })
+    expect(row).toHaveTextContent('실패로 끝남 ≠, 기대와 다름')
+    expect(within(row).getAllByText(/기대와 다름/)).toHaveLength(1)
+  })
+
+  it('보고서를 바꾸면 필터와 펼친 줄을 처음으로 돌리고, 없는 ?report=는 가장 최근 것을 엽니다', async () => {
+    const a = concernReport()
+    const b = concernReport({ commit: 'bbbbbbb0000000' })
+    server.use(
+      http.get('*/api/eval/reports', () =>
+        HttpResponse.json({ items: ['r1', 'r2'].map((id) => ({ reportId: id, title: `보고서 ${id}`, startedAt: '2026-11-21T10:00:00+09:00', conditions: a.meta.conditions, complete: true, hasSummary: true })) }),
+      ),
+      http.get('*/api/eval/reports/r1', () => HttpResponse.json(a)),
+      http.get('*/api/eval/reports/r2', () => HttpResponse.json(b)),
+    )
+    const user = renderAt('/eval?report=nope')
+    expect(await screen.findByText('abcdef1')).toBeInTheDocument()
+    const sec = screen.getByRole('region', { name: '시나리오별 결과' })
+    await user.type(within(sec).getByLabelText('시나리오 ID'), 'leak-2')
+    await user.click(within(sec).getByRole('button', { name: 'confirm-leak-2' }))
+    await user.selectOptions(screen.getByLabelText('보고서'), 'r2')
+    expect(await screen.findByText('bbbbbbb')).toBeInTheDocument()
+    const sec2 = screen.getByRole('region', { name: '시나리오별 결과' })
+    expect(within(sec2).getByLabelText('시나리오 ID')).toHaveValue('')
+    expect(within(sec2).getByRole('button', { name: 'confirm-leak-1' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('보고서 본문이 404면 problem title을 보여 줍니다', async () => {
+    const r = concernReport()
+    serve(r)
+    server.use(
+      http.get('*/api/eval/reports/r1', () =>
+        HttpResponse.json({ type: 'urn:problem:not-found', title: '보고서를 찾지 못했습니다.', status: 404 }, { status: 404, headers: { 'Content-Type': 'application/problem+json' } }),
+      ),
+    )
+    renderAt()
+    expect(await screen.findByRole('alert')).toHaveTextContent('보고서를 찾지 못했습니다.')
+  })
+
+  it('모르는 조건·결과는 이름 그대로, 비교는 조건 이름으로 칸을 맞춥니다', async () => {
+    const r = concernReport()
+    r.rows = [...r.rows, { ...r.rows[0], condition: 'new_cond', outcome: 'weird' as never, passed: true }]
+    const concern = r.summary!.sets[0].concern!
+    concern.comparisons = [
+      { concernType: 'leak', diffs: [{ a: 'full', b: 'baseline_tools', pairs: 2, diff: 0.5, low: 0.1, high: 0.9 }] },
+      { concernType: null, diffs: [{ a: 'full', b: 'approve_all', pairs: 2, diff: -0.5, low: -0.9, high: 0.2 }] },
+    ]
+    serve(r)
+    renderAt()
+    const cmp = await screen.findByRole('region', { name: '사고율 차이 표' })
+    const head = within(cmp).getAllByRole('columnheader').map((h) => h.textContent)
+    expect(head).toEqual(['유형', '이 프로젝트 − 기성 도구 기본', '이 프로젝트 − 전건 승인'])
+    expect(within(cmp).getByRole('row', { name: /합계/ })).toHaveTextContent('합계--50.0%p')
+    const sec = screen.getByRole('region', { name: '시나리오별 결과' })
+    expect(within(sec).getByRole('columnheader', { name: 'new_cond' })).toBeInTheDocument()
+    expect(within(sec).getByText('weird')).toBeInTheDocument()
+  })
+
   it('auditor가 아니면 메뉴가 없고, 열어도 problem title을 보여 줍니다', async () => {
     renderAt('/eval', 'mock.emp-1001')
     expect(await screen.findByRole('alert')).toHaveTextContent('감사 조회 역할이 필요합니다.')

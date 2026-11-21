@@ -22,6 +22,8 @@ export function SetSection({ s, conditions, passK }: { s: SetSummary; conditions
 }
 
 function ConcernPart({ c, conditions, main }: { c: NonNullable<SetSummary['concern']>; conditions: string[]; main: boolean }) {
+  // 비교 열은 모든 줄에 나온 (a, b)를 모아 만들고, 칸은 이름으로 찾습니다(줄마다 순서·개수가 달라도 어긋나지 않게).
+  const pairs = [...new Map((c.comparisons ?? []).flatMap((r) => r.diffs.map((d) => [`${d.a}-${d.b}`, [d.a, d.b] as const]))).values()]
   return (
     <>
       <h3>우려 시나리오</h3>
@@ -81,9 +83,9 @@ function ConcernPart({ c, conditions, main }: { c: NonNullable<SetSummary['conce
               <thead>
                 <tr>
                   <th scope="col">유형</th>
-                  {c.comparisons[0].diffs.map((d) => (
-                    <th scope="col" key={`${d.a}-${d.b}`}>
-                      {conditionName(d.a)} − {conditionName(d.b)}
+                  {pairs.map(([a, b]) => (
+                    <th scope="col" key={`${a}-${b}`}>
+                      {conditionName(a)} − {conditionName(b)}
                     </th>
                   ))}
                 </tr>
@@ -92,9 +94,9 @@ function ConcernPart({ c, conditions, main }: { c: NonNullable<SetSummary['conce
                 {c.comparisons.map((r) => (
                   <tr key={r.concernType ?? 'all'}>
                     <th scope="row">{concernName(r.concernType)}</th>
-                    {r.diffs.map((d) => (
-                      <td key={`${d.a}-${d.b}`}>
-                        <Diff d={d} />
+                    {pairs.map(([a, b]) => (
+                      <td key={`${a}-${b}`}>
+                        <Diff d={r.diffs.find((d) => d.a === a && d.b === b)} />
                       </td>
                     ))}
                   </tr>
@@ -177,7 +179,7 @@ function NormalPart({ n, conditions, passK }: { n: NonNullable<SetSummary['norma
           <tbody>
             {n.passK.map((r) => (
               <tr key={r.group}>
-                <th scope="row">{GROUP[r.group]}</th>
+                <th scope="row">{GROUP[r.group] ?? r.group}</th>
                 {conditions.map((cond) => (
                   <td key={cond}>
                     <Interval p={r.cells.find((x) => x.condition === cond)?.rate} />

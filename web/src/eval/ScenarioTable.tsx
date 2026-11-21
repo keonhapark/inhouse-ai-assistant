@@ -10,7 +10,9 @@ type Scenario = { id: string; set: string; kind: string; concernType?: string | 
 const PAGE = 50
 
 /** 시나리오별 결과. 한 줄이 시나리오 하나이고, 조건 칸에 회차마다 결과 배지를 둡니다. 줄을 열면 사고·부족·오류를 봅니다. */
-export function ScenarioTable({ rows, conditions }: { rows: Row[]; conditions: string[] }) {
+export function ScenarioTable({ rows, conditions: declared }: { rows: Row[]; conditions: string[] }) {
+  // meta.conditions에 없는 조건의 회차도 칸으로 보여 줍니다(필터는 모든 회차를 봄).
+  const conditions = useMemo(() => [...new Set([...declared, ...rows.map((r) => r.condition)])], [declared, rows])
   const sets = useMemo(() => [...new Set(rows.map((r) => r.set))], [rows])
   const [set, setSet] = useState('')
   const [only, setOnly] = useState<'all' | 'problem'>('all')
@@ -65,7 +67,7 @@ export function ScenarioTable({ rows, conditions }: { rows: Row[]; conditions: s
         </label>
       </div>
       <p className="muted">
-        {filtered.length}개 시나리오 / 전체 {scenarios.length}개. 배지는 회차마다 하나이고, 테두리가 점선이면 기대(시나리오 expect)와 다른 회차입니다.
+        {filtered.length}개 시나리오 / 전체 {scenarios.length}개. 배지는 회차마다 하나이고, ≠ 표시(점선 테두리)는 기대(시나리오 expect)와 다른 회차입니다.
       </p>
       {filtered.length === 0 ? (
         <p className="muted">조건에 맞는 시나리오가 없습니다.</p>
@@ -86,9 +88,9 @@ export function ScenarioTable({ rows, conditions }: { rows: Row[]; conditions: s
             <tbody>
               {filtered.slice(0, shown).map((s) => (
                 <Fragment key={s.id}>
-                  <tr aria-current={open === s.id ? 'true' : undefined}>
+                  <tr className={open === s.id ? 'is-open' : undefined}>
                     <th scope="row">
-                      <button type="button" className="link" aria-expanded={open === s.id} onClick={() => setOpen(open === s.id ? null : s.id)}>
+                      <button type="button" className="link" aria-expanded={open === s.id} aria-controls={`run-${s.id}`} onClick={() => setOpen(open === s.id ? null : s.id)}>
                         {s.id}
                       </button>
                     </th>
@@ -103,8 +105,16 @@ export function ScenarioTable({ rows, conditions }: { rows: Row[]; conditions: s
                             .filter((r) => r.condition === c)
                             .sort((a, b) => a.repeat - b.repeat)
                             .map((r) => (
-                              <span key={r.repeat} className={r.passed ? undefined : 'eval__miss'} title={r.passed ? '기대와 같음' : '기대와 다름'}>
-                                <Badge tone={OUTCOME[r.outcome]?.tone ?? 'neutral'}>{OUTCOME[r.outcome]?.label ?? r.outcome}</Badge>
+                              <span key={r.repeat} className={r.passed ? undefined : 'eval__miss'}>
+                                <Badge tone={OUTCOME[r.outcome]?.tone ?? 'neutral'}>
+                                  {OUTCOME[r.outcome]?.label ?? r.outcome}
+                                  {!r.passed && (
+                                    <>
+                                      <span aria-hidden="true"> ≠</span>
+                                      <span className="visually-hidden">, 기대와 다름</span>
+                                    </>
+                                  )}
+                                </Badge>
                               </span>
                             ))}
                         </span>
@@ -112,7 +122,7 @@ export function ScenarioTable({ rows, conditions }: { rows: Row[]; conditions: s
                     ))}
                   </tr>
                   {open === s.id && (
-                    <tr className="eval__detail">
+                    <tr className="eval__detail" id={`run-${s.id}`}>
                       <td colSpan={2 + conditions.length}>
                         <RunDetails runs={s.runs} />
                       </td>

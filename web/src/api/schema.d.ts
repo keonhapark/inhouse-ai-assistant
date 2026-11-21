@@ -66,7 +66,12 @@ export interface paths {
         /**
          * @description 슬랙 브리지만 부르는 로그인(#273). 헤더 `X-Slack-Bridge-Secret`이 gateway 설정(`SLACK_BRIDGE_SECRET`)과 맞고
          *     `slackUserId`가 매핑(로컬 설정 파일, 워크스페이스마다 다름)에 있으면, erp `POST /auth/service-login`으로 그 직원의
-         *     짧은 직원 JWT(`amr: [slack]`)를 받아 돌려줍니다. 이 토큰으로는 사람 전용 기능(결재 승인·반려, 감사 조회 등)을 부를 수 없습니다(403).
+         *     짧은 직원 JWT(`amr: [slack]`)를 받아 돌려줍니다. 이 토큰은 gateway 사람 화면 경로 중 허용 목록만 부를 수 있습니다:
+         *     `GET /me`, `GET /notifications`, `GET·POST /conversations`, `GET /conversations/{id}`, `POST /conversations/{id}/messages`,
+         *     `POST /execution-approvals/{id}`, `POST /actions/{id}/undo`. 그 밖(대결, 결재함, 감사, 운영 지표 등)은 403
+         *     `service-login-not-allowed`입니다. erp도 자기 사람 전용 경로(`x-human-only`)를 막습니다.
+         *     요청 횟수 제한(#331): 슬랙 사용자 ID별과 경로 전체에 분당 상한이 있고, 넘으면 429(`urn:problem:rate-limited`,
+         *     `Retry-After` 초)입니다. 전체 상한은 비밀값이 틀린 요청까지 셉니다.
          *     비밀값이 틀리거나 없으면 401, 매핑에 없는 슬랙 사용자면 403, `SLACK_BRIDGE_SECRET`이 설정되지 않았으면 404입니다.
          *     비밀값과 토큰은 로그·감사에 남기지 않습니다.
          */
@@ -1002,6 +1007,11 @@ export interface components {
                 /** @description 요청한 직원. 시스템 동작이면 null */
                 employeeId: string | null;
                 viaDelegationToken?: boolean;
+                /**
+                 * @description 요청이 들어온 입구. web: 사람 화면(직원 JWT), slack: 서비스 로그인(amr slack) 토큰, agent: 위임 토큰. 없으면 모름(옛 이벤트)
+                 * @enum {unknown}
+                 */
+                channel?: "web" | "slack" | "agent" | null;
                 /** @description 위임 토큰으로 한 일이면 그 토큰의 jti(gateway 발급 이벤트의 토큰과 잇는 값) */
                 delegationTokenId?: string | null;
                 agentId?: string | null;
@@ -1656,6 +1666,17 @@ export interface operations {
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            /** @description 요청 횟수 제한을 넘음 */
+            429: {
+                headers: {
+                    /** @description 다시 시도할 수 있을 때까지 초 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getMe: {

@@ -84,6 +84,8 @@
   position: relative;
   display: inline-block;
   width: 96px;
+  /* 0%·100%의 점이 막대 밖으로 나가지 않게 양쪽에 점 반지름만큼 둡니다 */
+  margin: 0 4px;
   height: 10px;
   border-radius: 5px;
   background: var(--bg);
@@ -150,4 +152,19 @@
 .eval__line {
   margin-left: var(--sp-12);
   overflow-wrap: anywhere;
+}
+
+.eval .admin__field,
+.eval select {
+  max-width: 100%;
+}
+
+.eval__findings .ci {
+  flex-wrap: wrap;
+  white-space: normal;
+}
+
+.eval__runs tr.is-open th,
+.eval__runs tr.is-open td {
+  background: var(--bg);
 }
