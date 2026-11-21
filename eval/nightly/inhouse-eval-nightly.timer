@@ -1,5 +1,5 @@
 # 매일 03:30에 돕니다. 켜기: systemctl --user enable --now inhouse-eval-nightly.timer
-# cron이면: 30 3 * * * cd ~/portfolio/inhouse-ai-assistant/eval && uv run python tools/nightly.py --config conditions.local.yaml
+# cron이면: 30 3 * * * cd <저장소 경로>/eval && uv run python tools/nightly.py --config conditions.local.yaml
 [Unit]
 Description=inhouse-ai eval 야간 회귀 타이머
 
