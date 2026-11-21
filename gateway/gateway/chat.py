@@ -50,16 +50,21 @@ MAX_CONTENT = 4000
 MAX_ATTACHMENTS = 3  # contracts/openapi/gateway.yaml postMessage attachments maxItems
 
 
-def check_attachments(value: Any) -> list[dict[str, str]]:
-    """대화 첨부(#288)를 LLM 출구 이미지 입력(#261)과 같은 규칙으로 확인합니다(413·415·422). 본문은 그대로 돌려줍니다."""
+def check_attachments(value: Any) -> tuple[list[dict[str, str]], list[dict[str, Any]]]:
+    """대화 첨부(#288)를 LLM 출구 이미지 입력(#261)과 같은 규칙으로 확인합니다(413·415·422).
+
+    (agent에 넘길 본문 그대로, 대화 기록에 남길 메타(AttachmentMeta, #395))를 돌려줍니다. 메타에는 이미지 본문이 없습니다.
+    """
     if not isinstance(value, list) or not 1 <= len(value) <= MAX_ATTACHMENTS:
         raise ProblemError(422, "validation", f"attachments는 1~{MAX_ATTACHMENTS}개 배열이어야 합니다")
+    metas: list[dict[str, Any]] = []
     for i, a in enumerate(value, 1):
         if not isinstance(a, dict) or set(a) != {"kind", "dataUrl"} or a["kind"] != "image" \
                 or not isinstance(a["dataUrl"], str):
             raise ProblemError(422, "validation", "첨부는 {kind: image, dataUrl}만 받습니다", f"{i}번째 첨부")
-        inspect_data_url(a["dataUrl"], i)
-    return value
+        info = inspect_data_url(a["dataUrl"], i)
+        metas.append({"kind": "image", "mediaType": info.mime, "bytes": info.size, "sha256": info.sha256})
+    return value, metas
 
 
 def now() -> datetime:
@@ -233,9 +238,12 @@ class ChatService:
             ap = Approval(pending["approvalId"], c.id, who.id, tp["tool"], now() + APPROVAL_TTL)
             self.approvals[ap.id] = ap
             c.status, c.pending = "awaiting_approval", ap.id
-            out.append(c.event("approval_required", approval={
-                "approvalId": ap.id, "tool": tp["tool"], "risk": tp["risk"], "preview": tp["preview"],
-                "expiresAt": iso(ap.expires_at)}))
+            approval = {"approvalId": ap.id, "tool": tp["tool"], "risk": tp["risk"], "preview": tp["preview"],
+                        "expiresAt": iso(ap.expires_at)}
+            if isinstance(tp.get("fromAttachments"), bool):
+                # 이 턴에 agent가 첨부 이미지를 읽었는지(결정 0004). 화면이 "확인 필요"를 표시합니다(#395)
+                approval["fromAttachments"] = tp["fromAttachments"]
+            out.append(c.event("approval_required", approval=approval))
             self.audit.event("execution_approval.requested", employee_id=who.id, channel=who.channel, agent_id=c.agent_id,
                              via_token=False, result="pending", conversation_id=c.id, detail=f"approval={ap.id}")
         else:
@@ -253,7 +261,8 @@ class ChatService:
 
     # ---------- 메시지 ----------
     async def message_events(self, c: Conversation, who: Requester, content: str,
-                             attachments: list[dict[str, str]] | None = None) -> AsyncIterator[dict[str, Any]]:
+                             attachments: list[dict[str, str]] | None = None,
+                             metas: list[dict[str, Any]] | None = None) -> AsyncIterator[dict[str, Any]]:
         async with c.lock:
             if c.status == "awaiting_approval":
                 ap = self.approvals.get(c.pending or "")
@@ -265,7 +274,8 @@ class ChatService:
                 # 시간이 지난 승인은 거절로 처리해 agent의 대기를 풀고 새 메시지를 이어 갑니다.
                 for ev in await self._expire(ap, c, who):
                     yield ev
-            c.events.append({"type": "user_message", "content": content, "at": iso(now())})
+            c.events.append({"type": "user_message", "content": content, "at": iso(now()),
+                             **({"attachments": metas} if metas else {})})
             c.title = c.title or content[:40]
             if not c.routed:
                 if c.agent_id is None:
@@ -528,10 +538,10 @@ def build_router(chat: ChatService) -> APIRouter:
         if not isinstance(content, str) or not content.strip() or len(content) > MAX_CONTENT \
                 or set(body) - {"content", "attachments"}:
             raise ProblemError(422, "validation", f"content는 1~{MAX_CONTENT}자 문자열이어야 합니다")
-        attachments = check_attachments(body["attachments"]) if "attachments" in body else None
+        attachments, metas = check_attachments(body["attachments"]) if "attachments" in body else (None, None)
         if c.status == "awaiting_approval" and not chat.expired_pending(c):
             raise ProblemError(409, "invalid-state", "실행 승인을 기다리는 중입니다")
-        return stream(c, chat.message_events(c, who, content, attachments))
+        return stream(c, chat.message_events(c, who, content, attachments, metas))
 
     @api.post("/execution-approvals/{approval_id}")
     async def decide(request: Request, approval_id: str) -> StreamingResponse:

@@ -69,3 +69,33 @@ def test_bad_attachments_are_rejected_before_agent(chat, h, agent, attachments, 
     assert r.json()["type"] == f"urn:problem:{code}"
     assert [c for c in agent.calls if c[0] in ("/run", "/route")] == []
     assert "base64," not in r.text
+
+
+def test_user_message_keeps_attachment_meta_only(chat, h, agent):
+    """대화 기록의 user_message에 첨부 메타(kind, mediaType, bytes, sha256)만 남깁니다(#395, 계약 #396)."""
+    import hashlib
+
+    cid = _new(chat, h)
+    png = _png()
+    _post(chat, h, cid, attachments=[_att(_url(png)), _att(_url(JPEG, "image/jpeg"))])
+    _post(chat, h, cid)  # 첨부 없는 턴
+    conv = chat.get(f"/api/conversations/{cid}", headers=h).json()
+    schema_check.validate("openapi/gateway.yaml", "Conversation", conv)
+    users = [e for e in conv["events"] if e["type"] == "user_message"]
+    assert users[0]["attachments"] == [
+        {"kind": "image", "mediaType": "image/png", "bytes": len(png), "sha256": hashlib.sha256(png).hexdigest()},
+        {"kind": "image", "mediaType": "image/jpeg", "bytes": len(JPEG), "sha256": hashlib.sha256(JPEG).hexdigest()}]
+    assert "attachments" not in users[1]
+    assert "base64" not in json.dumps(conv)
+
+
+@pytest.mark.parametrize("extra,expected", [({"fromAttachments": True}, True), ({"fromAttachments": False}, False),
+                                            ({}, None)])
+def test_approval_carries_from_attachments(chat, h, agent, extra, expected):
+    agent.preview_extra = extra
+    cid = _new(chat, h)
+    ev = events(chat.post(f"/api/conversations/{cid}/messages", headers=h,
+                          json={"content": "회의실 예약해 줘", "attachments": [_att(_url(_png()))]}))
+    ap = next(e for e in ev if e["type"] == "approval_required")
+    schema_check.validate("openapi/gateway.yaml", "ChatEvent", ap)
+    assert ap["approval"].get("fromAttachments") is expected
