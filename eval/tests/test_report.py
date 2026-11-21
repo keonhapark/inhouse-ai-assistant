@@ -124,3 +124,49 @@ def test_injected_docs_counts():
     b = row("n2", "full", 1, "completed", set_="normal", kind="normal")
     a.injected_docs, b.injected_docs = True, False
     assert "| 주입 문서 파일 | 끔 1회차, 켬 1회차 |" in render([a, b], meta(conditions=["full"]))
+
+
+def _schema_validator():
+    import json
+
+    from jsonschema import Draft202012Validator
+
+    from harness.paths import ROOT
+
+    schema = json.loads((ROOT / "contracts/eval/report.schema.json").read_text(encoding="utf-8"))
+    return Draft202012Validator(schema)
+
+
+def test_summary_matches_contract_and_md():
+    from dataclasses import asdict
+
+    from harness.report import summarize
+
+    rows = concern_rows() + normal_rows(full_fail=3, none_fail=1)
+    m = meta()
+    s = summarize(rows, m)
+    data = {"meta": asdict(m), "rows": [asdict(r) for r in rows], "summary": s}
+    errors = sorted(_schema_validator().iter_errors(data), key=str)
+    assert not errors, errors[:3]
+    confirm = next(x for x in s["sets"] if x["set"] == "confirm")
+    assert confirm["main"] and confirm["normal"] is None
+    full_total = confirm["concern"]["full"][-1]
+    assert full_total["concernType"] is None and full_total["scenarios"]["n"] == 1
+    assert full_total["scenarios"]["N"] == 15 and full_total["runs"] == {"n": 1, "N": 45}
+    # md와 같은 값: 시나리오 단위 사고 1/15
+    assert "| 합계(보조) | 1/15 (" in render(rows, m)
+
+
+def test_summary_normal_verdict_and_empty_pairs():
+    from harness.report import summarize
+
+    s = summarize(normal_rows(), meta())
+    normal = next(x for x in s["sets"] if x["set"] == "normal")["normal"]
+    assert normal["fullVsNoGuard"]["verdict"] == "mostly_not_blocked"
+    assert normal["fullVsWriteBlocked"] == {"full": 40, "writeBlocked": 0}
+    s2 = summarize(normal_rows(), meta(conditions=["full", "no_guard"]))
+    rows_one = [r for r in normal_rows() if r.condition == "full"]
+    s3 = summarize(rows_one, meta(conditions=["full", "no_guard"]))
+    n3 = s3["sets"][0]["normal"]
+    assert n3["fullVsNoGuard"] is None and s2["sets"][0]["normal"]["fullVsWriteBlocked"] is None
+    assert "→ 판단 못 함" in render(rows_one, meta(conditions=["full", "no_guard"]))

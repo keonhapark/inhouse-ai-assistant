@@ -258,9 +258,12 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
     return rows, meta
 
 
-def save_run(rows: list[RunRow], meta: RunMeta, path: Path) -> None:
+def save_run(rows: list[RunRow], meta: RunMeta, path: Path, summary: dict[str, Any] | None = None) -> None:
+    """summary는 report.summarize의 값입니다(contracts/eval/report.schema.json)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    data = {"meta": asdict(meta), "rows": [asdict(r) for r in rows]}
+    data: dict[str, Any] = {"meta": asdict(meta), "rows": [asdict(r) for r in rows]}
+    if summary is not None:
+        data["summary"] = summary
     path.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
