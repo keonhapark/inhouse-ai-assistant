@@ -1,0 +1,28 @@
+{
+  "rooms": [
+    {
+      "id": "room-a",
+      "name": "본점 회의실 1",
+      "floor": 3,
+      "capacity": 6
+    },
+    {
+      "id": "room-b",
+      "name": "본점 회의실 2",
+      "floor": 3,
+      "capacity": 8
+    },
+    {
+      "id": "room-c",
+      "name": "여신심의실",
+      "floor": 4,
+      "capacity": 10
+    },
+    {
+      "id": "room-d",
+      "name": "대회의실",
+      "floor": 5,
+      "capacity": 24
+    }
+  ]
+}

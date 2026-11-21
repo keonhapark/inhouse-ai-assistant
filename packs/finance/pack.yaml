@@ -1,0 +1,20 @@
+# 업종 팩: 금융(가상 지방 은행). 회사와 사람은 모두 지어낸 것입니다(#114, docs/design/stage3-and-packs.md 2절).
+id: finance
+name: 금융(가상 지방 은행)
+version: 0.1.0
+company:
+  name: 가상누리은행
+  description: 본점(여신·내부통제·IT)과 지점 세 곳을 둔 가상의 지방 은행입니다. 실제 회사와 관계없습니다.
+  headcount: 30
+  timezone: Asia/Seoul
+locale: ko-KR
+requires_erp_features:
+  - org
+  - approval_documents
+  - delegations
+  - leave
+  - rooms
+  - doc_access
+stage: 1
+# 망분리 흉내: 팩 전체에서 외부 LLM을 쓰지 않습니다. gateway가 출구에서 강제합니다(#384).
+model_policy_override: local_only

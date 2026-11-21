@@ -1,0 +1,30 @@
+# 사내 용어 사전(선택). 이 팩은 pack.yaml로 외부 LLM을 아예 쓰지 않아 local_only 용어는 의미가 작고,
+# block 용어는 로컬 모델에도 보내지 않을 내용이 아니라 "외부로 보내지 않는다"는 뜻이라 같은 효과입니다.
+# 팩 항목을 빼도 기밀이 지켜지도록 남겨 둡니다. 모두 지어낸 이름입니다.
+terms:
+  - term: 신용평가 등급표
+    aliases: [내부 신용등급표, CRS 등급표]
+    level: confidential
+    action: block
+    reason: 내부 신용평가 기준은 외부로 보낼 수 없습니다
+  - term: 여신 전결 한도표
+    aliases: [전결 한도표]
+    level: internal
+    action: local_only
+    reason: 전결 한도는 사내 모델로만 다룹니다
+
+# 업무 주제(#304). 고객 신용정보는 라우터가 잘못 보내도 사내 모델로만 다룹니다.
+topics:
+  - id: customer-credit
+    action: local_only
+    reason: 고객 신용정보(대출 잔액·연체·신용등급)는 사내 모델로만 다룹니다
+    patterns:
+      - 대출 ?잔액|연체|신용 ?등급|신용 ?점수|담보 ?평가
+  - id: hr-attendance
+    action: local_only
+    reason: 인사·근태 정보는 사내 모델로만 다룹니다
+    patterns:
+      - 병가|연차|연가|반차|휴가|조퇴|결근|근태
+      - 대결
+      - 결재.{0,40}(맡겨|맡길|위임)
+      - 급여|기본급|연봉|입사일|인사 ?평가

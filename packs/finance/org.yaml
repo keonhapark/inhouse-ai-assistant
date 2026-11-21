@@ -1,0 +1,142 @@
+# 조직도, 직급, 역할, 문서 접근 태그(가상 지방 은행)
+# 직급 id는 erp 결재선 단계(team_leader·division_head·ceo)와 맞추고 이름만 은행 말로 씁니다.
+grades:
+  - id: staff
+    name: 행원
+    rank: 1
+  - id: team_leader
+    name: 부점장
+    rank: 2
+  - id: division_head
+    name: 본부장
+    rank: 3
+  - id: ceo
+    name: 은행장
+    rank: 4
+
+units:
+  - id: bank-ceo
+    name: 은행장실
+    kind: division
+  - id: credit-div
+    name: 여신본부
+    kind: division
+    parent: bank-ceo
+  - id: credit-review
+    name: 여신심사부
+    kind: team
+    parent: credit-div
+  - id: credit-mgmt
+    name: 여신관리부
+    kind: team
+    parent: credit-div
+  - id: admin-div
+    name: 경영관리본부
+    kind: division
+    parent: bank-ceo
+  - id: compliance
+    name: 내부통제부
+    kind: team
+    parent: admin-div
+  - id: people
+    name: 인사총무부
+    kind: team
+    parent: admin-div
+  - id: it-dept
+    name: 정보시스템부
+    kind: team
+    parent: admin-div
+  - id: branch-div
+    name: 영업점본부
+    kind: division
+    parent: bank-ceo
+  - id: branch-east
+    name: 동부지점
+    kind: team
+    parent: branch-div
+  - id: branch-west
+    name: 서부지점
+    kind: team
+    parent: branch-div
+  - id: branch-north
+    name: 북부지점
+    kind: team
+    parent: branch-div
+
+# 역할은 직급과 별개로 붙는 권한 묶음입니다.
+roles:
+  - id: employee
+    name: 직원
+    grant: all
+  - id: hr_staff
+    name: 인사 담당
+    grant:
+      units: [people]
+  - id: credit_officer
+    name: 여신 담당
+    grant:
+      units: [credit-review, credit-mgmt, branch-east, branch-west, branch-north]
+  - id: compliance_officer
+    name: 내부통제 담당
+    grant:
+      units: [compliance]
+  - id: it_admin
+    name: 전산 관리자
+    grant:
+      units: [it-dept]
+  - id: auditor
+    name: 감사 조회
+    grant:
+      units: [compliance]
+      grades: [ceo]
+
+# erp 코어가 권한 판단에 쓰는 역할(코어는 역할 이름을 모르고 이것을 읽습니다).
+erp_roles:
+  hr: hr_staff
+  auditor: auditor
+  ticket_handler: it_admin
+
+# 문서 접근 태그. rag와 erp가 같은 태그를 씁니다(docs.yaml의 acl_tags).
+access_tags:
+  - id: public
+    name: 전행 공개
+    grant:
+      roles: [employee]
+  - id: hr-policy
+    name: 인사 규정
+    grant:
+      roles: [employee]
+  - id: hr-restricted
+    name: 인사 제한
+    grant:
+      roles: [hr_staff]
+  - id: credit-policy
+    name: 여신 규정
+    grant:
+      roles: [credit_officer]
+  - id: internal-rules
+    name: 내부 규정
+    grant:
+      roles: [employee]
+  - id: compliance-restricted
+    name: 내부통제 제한
+    grant:
+      roles: [compliance_officer]
+
+# 결재선에서 쓰는 결재자 해석 규칙
+approver_resolution:
+  team_leader: 요청자 부점의 부점장. 요청자가 부점장이면 상위 본부장
+  division_head: 요청자 본부의 본부장. 요청자가 본부장이거나 본부가 없으면 은행장
+  ceo: 은행장
+
+# 결재 대결 규칙(제조 팩과 같은 틀, 금액 기준만 은행 규모로)
+delegation_policy:
+  max_period_days: 30
+  registrable_by: [self, hr_staff]
+  allow_redelegation: false
+  allow_self_approval: false
+  scope_units: [form_type, max_amount]
+  wide_scope:
+    period_days_over: 7
+    max_amount_over: 100000000
+    all_form_types: true
