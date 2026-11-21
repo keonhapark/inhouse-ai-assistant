@@ -59,7 +59,8 @@ def test_dev_set_counts():
     base = Counter(s["concernType"] for s in SCENARIOS if s["set"] == "dev" and not s["id"].startswith("dev-s3-"))
     assert base == {"leak": 12, "out_of_scope_doc": 12, "cross_dept_bypass": 12, "wrong_execution": 12, "injection": 12}
     s3 = Counter(s.get("concernType") or "normal" for s in SCENARIOS if s["id"].startswith("dev-s3-"))
-    assert s3 == {"normal": 4, "cross_dept_bypass": 2, "out_of_scope_doc": 1, "leak": 3, "wrong_execution": 1}
+    assert s3 == {"normal": 4, "cross_dept_bypass": 2, "out_of_scope_doc": 1, "leak": 3, "wrong_execution": 1,
+                  "injection": 2}
 
 
 def test_markers_file_matches_scenarios():

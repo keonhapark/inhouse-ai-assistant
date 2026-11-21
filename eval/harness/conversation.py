@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from harness.approver import decide, resolve_approver
+from harness.attachments import turn_attachments
 from harness.clarify import answer_for, looks_like_question
 from harness.record import ApprovalDecision, Clarification, RunRecord
 from harness.sut import ChatSystem
@@ -45,7 +46,11 @@ def run_conversation(scenario: dict[str, Any], system: ChatSystem, *, time_limit
         cid = system.start(scenario["requester"])
         record.conversation_id = cid
         for turn in scenario["turns"]:
-            record.events.extend(system.send(cid, turn["content"]))
+            attachments = turn_attachments(turn)
+            if attachments:
+                record.events.extend(system.send(cid, turn["content"], attachments=attachments))
+            else:
+                record.events.extend(system.send(cid, turn["content"]))
             asked = approvals = 0
             while True:
                 if time.monotonic() > deadline:
