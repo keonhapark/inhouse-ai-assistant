@@ -1,0 +1,167 @@
+{
+  "runs": [
+    "data/runs/20261121-0058",
+    "data/runs/20261121-0106",
+    "data/runs/20261121-0115"
+  ],
+  "reportDelayS": 45,
+  "windowS": 45,
+  "summary": {
+    "logs": {
+      "n": 7,
+      "top1": 0.429,
+      "top3": 0.857,
+      "msMedian": 14,
+      "errors": 0
+    },
+    "logs+tickets": {
+      "n": 7,
+      "top1": 0.286,
+      "top3": 0.857,
+      "msMedian": 14,
+      "errors": 0
+    }
+  },
+  "rows": [
+    {
+      "incidentId": "20261121-0058/db_down-01",
+      "truth": "postgres",
+      "logs": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "litellm"
+        ],
+        "ms": 7
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "litellm"
+        ],
+        "ms": 8
+      }
+    },
+    {
+      "incidentId": "20261121-0058/db_lock-01",
+      "truth": "postgres",
+      "logs": {
+        "ranking": [
+          "postgres",
+          "erp",
+          "litellm"
+        ],
+        "ms": 8
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "litellm",
+          "erp"
+        ],
+        "ms": 8
+      }
+    },
+    {
+      "incidentId": "20261121-0058/erp_memory-01",
+      "truth": "erp",
+      "logs": {
+        "ranking": [
+          "erp",
+          "litellm",
+          "postgres"
+        ],
+        "ms": 6
+      },
+      "logs+tickets": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "erp"
+        ],
+        "ms": 6
+      }
+    },
+    {
+      "incidentId": "20261121-0058/llm_timeout-01",
+      "truth": "litellm",
+      "logs": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "erp"
+        ],
+        "ms": 14
+      },
+      "logs+tickets": {
+        "ranking": [
+          "postgres",
+          "litellm",
+          "rag"
+        ],
+        "ms": 15
+      }
+    },
+    {
+      "incidentId": "20261121-0106/gateway_bad_config-01",
+      "truth": "gateway",
+      "logs": {
+        "ranking": [
+          "litellm",
+          "agent",
+          "postgres"
+        ],
+        "ms": 16
+      },
+      "logs+tickets": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "agent"
+        ],
+        "ms": 17
+      }
+    },
+    {
+      "incidentId": "20261121-0106/rag_corrupt-01",
+      "truth": "rag",
+      "logs": {
+        "ranking": [
+          "litellm",
+          "rag",
+          "agent"
+        ],
+        "ms": 17
+      },
+      "logs+tickets": {
+        "ranking": [
+          "litellm",
+          "postgres",
+          "rag"
+        ],
+        "ms": 19
+      }
+    },
+    {
+      "incidentId": "20261121-0115/db_down-01",
+      "truth": "postgres",
+      "logs": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "gateway"
+        ],
+        "ms": 17
+      },
+      "logs+tickets": {
+        "ranking": [
+          "erp",
+          "postgres",
+          "litellm"
+        ],
+        "ms": 14
+      }
+    }
+  ]
+}
