@@ -37,7 +37,7 @@ public class EvalResetController {
     @Transactional
     public ResponseEntity<Void> reset() {
         jdbc.execute("truncate approval_step, approval_document, delegation, room_reservation, notification, "
-                + "ticket_status_change, ticket_comment, ticket, action, idempotency_record, audit_event, leave_balance "
+                + "ticket_status_change, ticket_comment, ticket, defect_report, quote, action, idempotency_record, audit_event, leave_balance "
                 + "restart identity");
         seeder.run(null);
         return ResponseEntity.noContent().build();
