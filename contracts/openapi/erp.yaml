@@ -12,6 +12,7 @@ info:
       `approval:request`는 양식별로 좁힐 수 있습니다: 토큰에 `approval:request:<formId>`가 있으면 그 양식만 상신합니다.
       scope 목록은 `contracts/auth/scopes.json`입니다. 없는 scope면 403 scope-missing.
     - `x-human-only: true`인 operation은 위임 토큰으로 부를 수 없습니다(403 `delegation-token-not-allowed`). MCP 도구로 노출하지 않습니다.
+      서비스 로그인(`POST /auth/service-login`)으로 받은 직원 JWT(`amr`에 `slack`)로도 부를 수 없습니다(403 `service-login-not-allowed`).
     - 쓰기(`x-write: true`)는 모두 `?dryRun=true`(미리보기, 상태 불변, 200 `WritePreview`)를 받습니다.
       실제 실행은 `Idempotency-Key`가 필요하고 201 `ActionResult`를 돌려줍니다. 같은 키·같은 본문이면 처음 응답을 그대로,
       같은 키·다른 본문이면 422 `idempotency-key-reused`입니다. 키는 24시간 보관합니다.
@@ -83,6 +84,40 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/LoginResponse"}
         "401": {$ref: "#/components/responses/Problem"}
+
+  /auth/service-login:
+    post:
+      tags: [auth]
+      operationId: serviceLogin
+      security: []
+      summary: 서비스 로그인(gateway 전용, 슬랙 입구)
+      description: |
+        gateway만 부릅니다(#273, #291). 헤더 `X-Service-Login-Secret`이 erp 설정(`ERP_SERVICE_LOGIN_SECRET`)과 맞으면
+        `employeeId` 직원의 짧은 직원 JWT(15분, `amr: [slack]`)를 돌려줍니다. 비밀값은 상수 시간으로 비교합니다.
+        이 토큰으로는 사람 전용 기능(`x-human-only`)을 부를 수 없습니다(403 `service-login-not-allowed`). 그 밖의 기능은 직원 JWT와 같습니다.
+        비밀값이 없거나 틀리면 401, `ERP_SERVICE_LOGIN_SECRET`이 설정되지 않았으면 경로가 없는 것과 같이 404, 없는 직원이면 422 validation.
+        로그인 감사 이벤트(`auth.login`)의 operation은 `serviceLogin`입니다. 비밀값과 토큰은 로그·감사에 남기지 않습니다.
+      parameters:
+        - {name: X-Service-Login-Secret, in: header, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeId]
+              additionalProperties: false
+              properties:
+                employeeId: {type: string, examples: [E0010]}
+      responses:
+        "200":
+          description: 직원 JWT(amr slack, 15분)
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/LoginResponse"}
+        "401": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "422": {$ref: "#/components/responses/Problem"}
 
   /me:
     get:
@@ -918,6 +953,7 @@ components:
         - forbidden
         - scope-missing
         - delegation-token-not-allowed
+        - service-login-not-allowed
         - not-found
         - validation
         - form-validation-failed

@@ -1,4 +1,5 @@
 
+| 2026-11-21 | erp | #291 | erp `POST /auth/service-login`(헤더 `X-Service-Login-Secret`, 본문 `{employeeId}`, 15분 직원 JWT `amr: [slack]`, 401·404·422), ProblemCode `service-login-not-allowed`(사람 전용 기능 403) | #273 슬랙 로그인 A안 | 직접 PR |
 모듈 세션이 계약(`contracts/`)이나 팩(`packs/`)을 바꿔야 할 때 한 줄 적고 `contract` 라벨 이슈를 엽니다. 프로젝트 리드가 `contract/*` PR로 반영하고 결과를 적습니다.
 
 | 날짜 | 요청 모듈 | 이슈 | 바꿀 것 | 이유 | 결과 |
