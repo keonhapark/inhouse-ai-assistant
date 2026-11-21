@@ -1,0 +1,38 @@
+{
+  "incidentId": "rag_corrupt-02",
+  "runId": "20261122-0752",
+  "fault": "rag_corrupt",
+  "title": "rag 임베딩 캐시 손상",
+  "rootService": "rag",
+  "kind": "data_corruption",
+  "window": {
+    "start": "2026-11-22T08:14:53.106818+09:00",
+    "end": "2026-11-22T08:18:15.431768+09:00"
+  },
+  "injectedAt": "2026-11-22T08:15:38.109909+09:00",
+  "recoverStartedAt": "2026-11-22T08:16:41.277354+09:00",
+  "recoveredAt": "2026-11-22T08:17:30.305803+09:00",
+  "ticket": {
+    "id": "tkt_1eb36d5223ce",
+    "requesterId": "E0037",
+    "title": "규정 검색이 안 됩니다",
+    "description": "AI 비서에게 출장비 규정을 물으면 문서를 찾을 수 없다는 오류가 납니다.",
+    "createdAt": "2026-11-22T08:18:15.465447093+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 0,
+    "logs/erp.log": 1528,
+    "logs/rag.log": 85,
+    "logs/agent.log": 77,
+    "logs/litellm.log": 172,
+    "logs/gateway.log": 82,
+    "audit/gateway_egress.jsonl": 2,
+    "audit/gateway_audit.jsonl": 34,
+    "audit/rag.jsonl": 1,
+    "audit/agent.jsonl": 11,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 10
+  },
+  "trafficErrors": 2,
+  "trafficTotal": 1474
+}

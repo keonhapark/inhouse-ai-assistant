@@ -1,0 +1,38 @@
+{
+  "incidentId": "db_lock-02",
+  "runId": "20261122-0752",
+  "fault": "db_lock",
+  "title": "업무 표 배타 잠금",
+  "rootService": "postgres",
+  "kind": "lock_contention",
+  "window": {
+    "start": "2026-11-22T08:09:39.788833+09:00",
+    "end": "2026-11-22T08:11:56.733556+09:00"
+  },
+  "injectedAt": "2026-11-22T08:10:24.791851+09:00",
+  "recoverStartedAt": "2026-11-22T08:11:25.034422+09:00",
+  "recoveredAt": "2026-11-22T08:11:26.733015+09:00",
+  "ticket": {
+    "id": "tkt_67e5224ed919",
+    "requesterId": "E0023",
+    "title": "회의실 예약 화면이 멈춥니다",
+    "description": "예약 버튼을 누르면 1분 가까이 기다리다 실패합니다. 조회는 가끔 됩니다.",
+    "createdAt": "2026-11-22T08:11:56.771086386+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 56,
+    "logs/erp.log": 647,
+    "logs/rag.log": 28,
+    "logs/agent.log": 43,
+    "logs/litellm.log": 89,
+    "logs/gateway.log": 44,
+    "audit/gateway_egress.jsonl": 1,
+    "audit/gateway_audit.jsonl": 13,
+    "audit/rag.jsonl": 1,
+    "audit/agent.jsonl": 5,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 0
+  },
+  "trafficErrors": 6,
+  "trafficTotal": 612
+}

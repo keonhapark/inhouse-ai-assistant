@@ -1,0 +1,38 @@
+{
+  "incidentId": "llm_timeout-02",
+  "runId": "20261122-0752",
+  "fault": "llm_timeout",
+  "title": "LLM 출구 응답 없음",
+  "rootService": "litellm",
+  "kind": "dependency_timeout",
+  "window": {
+    "start": "2026-11-22T08:11:58.230742+09:00",
+    "end": "2026-11-22T08:14:51.614057+09:00"
+  },
+  "injectedAt": "2026-11-22T08:12:43.233728+09:00",
+  "recoverStartedAt": "2026-11-22T08:14:13.449894+09:00",
+  "recoveredAt": "2026-11-22T08:14:21.613470+09:00",
+  "ticket": {
+    "id": "tkt_b94d5e47e5f4",
+    "requesterId": "E0013",
+    "title": "사내 비서 응답 없음",
+    "description": "회의실 물어봤는데 1분 넘게 아무 답이 없다가 오류가 났습니다.",
+    "createdAt": "2026-11-22T08:14:51.648301267+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 2,
+    "logs/erp.log": 1401,
+    "logs/rag.log": 35,
+    "logs/agent.log": 52,
+    "logs/litellm.log": 145,
+    "logs/gateway.log": 53,
+    "audit/gateway_egress.jsonl": 1,
+    "audit/gateway_audit.jsonl": 13,
+    "audit/rag.jsonl": 1,
+    "audit/agent.jsonl": 5,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 3
+  },
+  "trafficErrors": 2,
+  "trafficTotal": 1360
+}

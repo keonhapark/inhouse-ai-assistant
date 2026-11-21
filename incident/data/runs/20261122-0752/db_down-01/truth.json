@@ -1,0 +1,38 @@
+{
+  "incidentId": "db_down-01",
+  "runId": "20261122-0752",
+  "fault": "db_down",
+  "title": "PostgreSQL 중단",
+  "rootService": "postgres",
+  "kind": "dependency_down",
+  "window": {
+    "start": "2026-11-22T07:52:48.525106+09:00",
+    "end": "2026-11-22T07:55:23.364829+09:00"
+  },
+  "injectedAt": "2026-11-22T07:53:33.528883+09:00",
+  "recoverStartedAt": "2026-11-22T07:54:34.909779+09:00",
+  "recoveredAt": "2026-11-22T07:54:42.373071+09:00",
+  "ticket": {
+    "id": "tkt_ab1678af2d16",
+    "requesterId": "E0031",
+    "title": "결재함이 열리지 않습니다",
+    "description": "결재함을 누르면 한참 돌다가 오류 화면이 나옵니다. 휴가 신청도 저장이 안 됩니다.",
+    "createdAt": "2026-11-22T07:55:23.42982953+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 26,
+    "logs/erp.log": 1334,
+    "logs/rag.log": 31,
+    "logs/agent.log": 48,
+    "logs/litellm.log": 93,
+    "logs/gateway.log": 50,
+    "audit/gateway_egress.jsonl": 1,
+    "audit/gateway_audit.jsonl": 13,
+    "audit/rag.jsonl": 1,
+    "audit/agent.jsonl": 5,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 5
+  },
+  "trafficErrors": 9,
+  "trafficTotal": 606
+}
