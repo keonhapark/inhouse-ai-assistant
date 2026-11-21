@@ -135,18 +135,18 @@ access_tags:
     name: IT 운영 규정
     grant:
       roles: [employee]
+  - id: quality-policy
+    name: 품질 규정
+    grant:
+      units: [production-div, production-control, quality]
+  - id: sales-policy
+    name: 영업 규정
+    grant:
+      units: [sales-div, sales]
   - id: rnd-confidential
     name: 연구 기밀
     grant:
       units: [rnd-center, rnd]
-  - id: quality-policy
-    name: 품질 규정
-    grant:
-      roles: [employee]
-  - id: sales-policy
-    name: 영업 규정
-    grant:
-      roles: [sales_staff]
 
 # 결재선에서 쓰는 결재자 해석 규칙
 approver_resolution:

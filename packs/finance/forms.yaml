@@ -26,6 +26,10 @@ forms:
   - id: loan
     name: 여신 품의
     stage: 1
+    # 팩 양식 도구(#397): 공용 tools.json을 바꾸지 않고 이 양식을 올리는 도구를 만듭니다.
+    tool:
+      name: loan_request
+      description: 여신 품의 결재를 올립니다. 금액에 따라 전결권자(부점장, 본부장, 은행장)까지 결재선은 erp가 정합니다. 실행 전에 미리보기를 보여 줍니다.
     fields:
       type: object
       required: [borrower, product, amount, term_months, collateral, purpose]

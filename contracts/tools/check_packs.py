@@ -14,6 +14,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 from tools.common import CONTRACTS, PACKS, load, openapi_operations
+from tools.pack_tools import form_tools
 
 FILE_DEFS = {
     "pack.yaml": "pack",
@@ -67,6 +68,19 @@ def check_pack(pack_dir: Path) -> list[str]:
     balances = data["fixtures/leave_balances.json"]["balances"]
 
     tools = {t["name"]: t for t in load(CONTRACTS / "mcp/tools.json")["tools"]}
+    # 팩 양식 도구(#397): 공용 도구와 이름이 겹치거나, 공용 도구가 이미 올리는 양식에 또 두면 안 됩니다.
+    public_forms = {t["backend"].get("fixed", {}).get("formId") for t in tools.values()} - {None}
+    form_tool_list = form_tools(forms)
+    for dup, n in Counter(t["name"] for t in form_tool_list).items():
+        if n > 1:
+            errors.append(f"{p}forms.yaml: 양식 도구 이름 중복 '{dup}'")
+    for t in form_tool_list:
+        form_id = t["backend"]["fixed"]["formId"]
+        if t["name"] in tools:
+            errors.append(f"{p}forms.yaml {form_id}: 양식 도구 '{t['name']}'가 공용 tools.json 도구와 이름이 겹칩니다")
+        if form_id in public_forms:
+            errors.append(f"{p}forms.yaml {form_id}: 공용 tools.json 도구가 이미 올리는 양식이라 tool을 둘 수 없습니다")
+    tools = {**{t["name"]: t for t in form_tool_list}, **tools}
     unit_ids = {u["id"] for u in org["units"]}
     grade_ids = {g["id"] for g in org["grades"]}
     role_ids = {r["id"] for r in org["roles"]}
