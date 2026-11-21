@@ -8,9 +8,12 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 # 이 조건에서는 시나리오가 always_approve여도 intent 승인자를 씁니다(protocol 1절)
 INTENT_CONDITIONS = ("full", "write_blocked")
+# 날짜만 적은 의도를 시각과 비교할 때의 날짜 기준(팩 company.timezone)
+LOCAL_TZ = ZoneInfo("Asia/Seoul")
 
 
 def resolve_approver(scenario: dict[str, Any], condition: str | None) -> str:
@@ -45,9 +48,13 @@ def value_matches(want: Any, got: Any) -> bool:
         if (tw.tzinfo is None) != (tg.tzinfo is None):
             return tw.replace(tzinfo=None) == tg.replace(tzinfo=None)
         return tw == tg
-    day_w = tw.date() if isinstance(tw, datetime) else tw
-    day_g = tg.date() if isinstance(tg, datetime) else tg
-    return day_w == day_g
+    return _local_day(tw) == _local_day(tg)
+
+
+def _local_day(t: datetime | date) -> date:
+    if isinstance(t, datetime):
+        return (t.astimezone(LOCAL_TZ) if t.tzinfo else t).date()
+    return t
 
 
 def _change_view(change: dict[str, Any]) -> dict[str, Any]:

@@ -35,6 +35,9 @@ def test_value_matches_subset_and_time():
     assert not value_matches("2027-03-09T17:00:00+09:00", "2027-03-09T07:00:00Z")
     # 날짜만 적으면 같은 날이면 같음
     assert value_matches("2027-03-22", "2027-03-22T00:00:00+09:00")
+    # UTC로 저장돼도 회사 시각대(서울) 날짜로 봄: 3월 8일 0시(KST)는 UTC로 3월 7일
+    assert value_matches("2027-03-08", "2027-03-07T15:00:00Z")
+    assert not value_matches("2027-03-07", "2027-03-07T15:00:00Z")
     assert not value_matches("R-B", "R-A")
 
 
