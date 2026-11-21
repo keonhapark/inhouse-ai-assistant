@@ -92,32 +92,56 @@ def read_events(path: Path) -> list[Line]:
 
 
 # 외부 모델 키를 일부러 비운 스택(세션 스택)에서는 외부 별칭 호출이 평소에도 LiteLLM에서 "Missing Anthropic API Key"
-# 예외와 401로 끝납니다. 예외 한 건이 litellm에 오류 줄·스택 추적·"model group ... failed"·401 접근 로그로 찍히고,
-# gateway가 같은 401을 접근 로그로 남깁니다. 실제 운영에서 키가 빠졌다면 장애이므로 이 표시는 끌 수 있습니다.
+# 예외와 401로 끝납니다. 예외 한 건은 litellm에 [오류 줄(키 없음) → model group 'external' 줄 → 스택 추적 → 예외 줄
+# (키 없음) → model group 줄 → 401 접근 로그] 순서로 찍히고, gateway가 같은 401을 접근 로그로 남깁니다.
+# 실제 운영에서 키가 빠졌다면 장애이므로 이 표시는 끌 수 있습니다.
 KEYLESS = re.compile(r"Missing \w+ API Key")
 KEYLESS_SPAN = timedelta(seconds=1)
-KEYLESS_BLOCK = re.compile(r"model group '[^']*' failed with the error above")
-ACCESS_401 = re.compile(r"\" 401\b")
+# gateway/litellm/config.yaml의 외부 별칭(external, external-sonnet 등)만. 로컬 별칭(local...) 실패는 장애 신호입니다.
+KEYLESS_GROUP = re.compile(r"model group 'external[\w-]*' failed with the error above")
+CHAT_401 = re.compile(r'"POST /v1/chat/completions HTTP/[\d.]+" 401\b')
 
 
 def mark_keyless_noise(lines: list[Line]) -> list[Line]:
-    """키 없는 외부 호출 예외(litellm)와 그 앞뒤 1초 안의 같은 예외 묶음 줄, gateway 401 접근 로그를 noise로 바꿉니다.
+    """키 없는 외부 호출 예외 한 건마다 그 묶음 줄과 401 접근 로그(litellm·gateway 각 한 줄)를 noise로 바꿉니다.
+
+    - 묶음: litellm에서 키 없음 줄로 시작해 1초 안의 마지막 키 없음 줄까지. 그 사이에서는 스택 추적과 외부 별칭
+      model group 줄만 묶음으로 보고, 다른 오류(로컬 모델 실패 등)는 그대로 둡니다. 끝 줄 바로 뒤의 외부 별칭
+      model group 줄도 묶음입니다.
+    - 401: 묶음 시작부터 끝 1초 뒤까지의 POST /v1/chat/completions 401 접근 로그를 서비스마다 하나씩만.
     잘못된 키로 gateway를 배포한 장애(litellm 'No connected db', 키 확인 실패)는 이 무늬가 아니라 그대로 둡니다."""
-    anchors = [x.at for x in lines if x.service == "litellm" and x.level != "heartbeat" and KEYLESS.search(x.text)]
-    if not anchors:
-        return lines
-
-    def near(t: datetime) -> bool:
-        return any(abs(t - a) <= KEYLESS_SPAN for a in anchors)
-
-    out = []
-    for x in lines:
-        if x.level in ("error", "warn", "info") and near(x.at) and (
-                (x.service == "litellm" and (x.level != "info" or KEYLESS_BLOCK.search(x.text)))
-                or (x.service == "gateway" and ACCESS_401.search(x.text))):
-            x = replace(x, level="noise")
-        out.append(x)
-    return out
+    lite = [i for i, x in enumerate(lines) if x.service == "litellm" and x.level != "heartbeat"]
+    noise: set[int] = set()
+    events: list[tuple[datetime, datetime]] = []
+    k = 0
+    while k < len(lite):
+        first = lines[lite[k]]
+        if not KEYLESS.search(first.text):
+            k += 1
+            continue
+        last = k
+        for j in range(k + 1, len(lite)):
+            if lines[lite[j]].at - first.at > KEYLESS_SPAN:
+                break
+            if KEYLESS.search(lines[lite[j]].text):
+                last = j
+        for j in range(k, last + 1):
+            t = lines[lite[j]].text
+            if KEYLESS.search(t) or t.startswith("Traceback") or KEYLESS_GROUP.search(t):
+                noise.add(lite[j])
+        end = lines[lite[last]].at
+        k = last + 1
+        if k < len(lite) and KEYLESS_GROUP.search(lines[lite[k]].text) and lines[lite[k]].at - end <= KEYLESS_SPAN:
+            noise.add(lite[k])
+            k += 1
+        events.append((first.at, end))
+    for svc in ("litellm", "gateway"):
+        for start, end in events:
+            hit = next((i for i, x in enumerate(lines) if i not in noise and x.service == svc
+                        and start <= x.at <= end + KEYLESS_SPAN and CHAT_401.search(x.text)), None)
+            if hit is not None:
+                noise.add(hit)
+    return [replace(x, level="noise") if i in noise else x for i, x in enumerate(lines)]
 
 
 def read_bundle(bundle: Path, keyless_noise: bool = True) -> list[Line]:

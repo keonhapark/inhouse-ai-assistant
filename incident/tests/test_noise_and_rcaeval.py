@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from incident import rcaeval_stats
+from incident.app import DockerLogs, keyless_noise_on
 from incident.baseline import rank
 from incident.logs import Line, mark_keyless_noise, read_bundle
 
@@ -76,6 +77,49 @@ def test_keyless_401_line_is_noise() -> None:
     assert [x.level for x in mark_keyless_noise(lines)] == ["noise", "noise", "error"]
 
 
+def test_real_failures_inside_keyless_window_are_kept() -> None:
+    """키 없음 묶음 1초 안이라도 로컬 모델 실패, 500, 경로가 다른 401, 두 번째 401은 그대로 둡니다."""
+    lines = [
+        Line(at(0), "litellm", "error", f"LiteLLM Proxy:ERROR: ... {MISSING}"),
+        Line(at(0.0001), "litellm", "info", "LiteLLM: model group 'external' failed with the error above."),
+        Line(at(0.0002), "litellm", "error", "OllamaException - Connection refused"),
+        Line(at(0.0003), "litellm", "info", "LiteLLM: model group 'local' failed with the error above."),
+        Line(at(0.0004), "litellm", "error", "Traceback (most recent call last): | File ..."),
+        Line(at(0.0005), "litellm", "error", f"litellm.exceptions.AuthenticationError: {MISSING}"),
+        Line(at(0.001), "litellm", "warn", '"POST /v1/chat/completions HTTP/1.1" 401 Unauthorized'),
+        Line(at(0.4), "litellm", "error", '"POST /v1/chat/completions HTTP/1.1" 500 Internal Server Error'),
+        Line(at(0.5), "litellm", "warn", '"POST /v1/chat/completions HTTP/1.1" 401 Unauthorized'),
+        Line(at(0.002), "gateway", "warn", '"POST /v1/chat/completions HTTP/1.1" 401 Unauthorized'),
+        Line(at(0.3), "gateway", "warn", '"GET /api/v1/tickets HTTP/1.1" 401 Unauthorized'),
+        Line(at(0.6), "gateway", "warn", '"POST /v1/chat/completions HTTP/1.1" 401 Unauthorized'),
+    ]
+    levels = [x.level for x in mark_keyless_noise(sorted(lines, key=lambda x: x.at))]
+    by_text = {(x.service, x.text, x.at): lv for x, lv in zip(sorted(lines, key=lambda x: x.at), levels)}
+    assert [by_text[(x.service, x.text, x.at)] for x in lines] == [
+        "noise", "noise", "error", "info", "noise", "noise", "noise", "error", "warn",
+        "noise", "warn", "warn"]
+
+
+class _FakeStack:
+    project = "iaa-s1"
+
+    def logs(self, service: str, since: str, until: str) -> str:
+        return "\n".join(_keyless_block(10)) + "\n" if service == "litellm" else ""
+
+
+def test_docker_logs_marks_noise_unless_turned_off() -> None:
+    on = DockerLogs(_FakeStack()).lines(at(0), at(60))
+    off = DockerLogs(_FakeStack(), keyless_noise=False).lines(at(0), at(60))
+    assert sum(x.level == "noise" for x in on) == 5
+    assert all(x.level != "noise" for x in off)
+
+
+@pytest.mark.parametrize(("value", "on"), [(None, True), ("1", True), ("0", False), ("false", False),
+                                           (" OFF ", False), ("no", False)])
+def test_keyless_noise_env(value: str | None, on: bool) -> None:
+    assert keyless_noise_on({} if value is None else {"INCIDENT_KEYLESS_NOISE": value}) is on
+
+
 def test_noise_does_not_count_as_template_increase() -> None:
     steady = [Line(at(s), svc, "info", "GET /api/v1/tickets 200 3ms") for s in range(0, 150, 3)
               for svc in ("erp", "litellm")]
@@ -118,3 +162,14 @@ def test_rank_puts_new_error_service_first(method: str) -> None:
 def test_rank_needs_both_sides() -> None:
     lines = [Line(at(s), "erp", "info", "x") for s in range(0, 30)]
     assert rcaeval_stats.rank(lines, at(60), "baro").ranking == []
+
+
+def test_nsigma_and_baro_scale_differently() -> None:
+    """평소 칸 [0,0,0,0,10,0], 장애 칸 [20,20]: N-Sigma 평균 1.667·표준편차 3.727 → 4.919, BARO 중앙값 0·IQR 0(→1) → 20."""
+    per_bin = [0, 0, 0, 0, 10, 0, 20, 20]
+    lines = [Line(at(s), "gateway", "info", "POST /chat 200") for s in range(0, 120, 15)]  # 칸 범위만 정함(상수)
+    for b, n in enumerate(per_bin):
+        lines += [Line(at(b * 15 + i * 0.5), "erp", "error", "HikariPool-1 - Connection is not available") for i in range(n)]
+    scores = {m: rcaeval_stats.rank(lines, at(90), m).columns for m in ("nsigma", "baro")}
+    assert scores["nsigma"][0][1] == 4.919
+    assert scores["baro"][0][1] == 20.0

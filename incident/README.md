@@ -109,10 +109,10 @@ cd incident && INCIDENT_SESSION=1 uv run uvicorn --factory incident.app:from_env
 
 외부 키 없는 호출 한 건은 litellm에 오류 줄, "model group 'external' failed", 스택 추적, `AuthenticationError: Missing Anthropic API Key`, 401 접근 로그로 찍히고, gateway에도 401 접근 로그가 남습니다. 개발용 7건에서는 묶음마다 한 번 있었고, 분석 구간에 걸리면 "늘어난 오류"로 잡혀 litellm을 원인으로 골랐습니다.
 
-- `logs.mark_keyless_noise`가 litellm의 `Missing <공급자> API Key` 줄을 기준으로 앞뒤 1초 안의 같은 예외 묶음 줄(litellm 오류·경고와 model group 줄)과 gateway 401 접근 로그를 `noise` 수준으로 바꿉니다.
+- `logs.mark_keyless_noise`가 litellm의 `Missing <공급자> API Key` 줄로 시작해 1초 안의 마지막 같은 줄까지를 예외 한 건으로 묶고, 그 안의 스택 추적·외부 별칭(`external...`) model group 줄, 끝 줄 바로 뒤의 model group 줄, 그리고 `POST /v1/chat/completions` 401 접근 로그를 litellm·gateway에서 한 줄씩 `noise` 수준으로 바꿉니다. 개발용 묶음에서는 예외 한 건이 litellm 6줄과 gateway 1줄이었고, 잘못된 키 장애 묶음에서는 0줄이었습니다.
+- 같은 1초 안이라도 로컬 별칭(`local...`) 실패, 5xx, 다른 경로의 401, 두 번째 401은 그대로 둡니다.
 - `noise` 줄은 템플릿 변화와 RCAEval 계열 시계열에서 빠지고, 로그 끊김을 볼 때는 셉니다(서비스가 살아 있다는 줄이므로).
 - 잘못된 키로 gateway를 배포한 장애(litellm `user_api_key_auth ... No connected db`)는 이 무늬가 아니라 그대로 남습니다.
-- 같은 1초 안에 실제 litellm 오류가 겹치면 함께 빠집니다.
 
 ### 개발용 측정(7건)
 

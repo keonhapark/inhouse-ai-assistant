@@ -19,6 +19,7 @@ import os
 import re
 import tempfile
 import threading
+from collections.abc import Mapping
 from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -218,6 +219,11 @@ def _at(value: Any, ticket: dict[str, Any] | None) -> datetime:
     return at
 
 
+def keyless_noise_on(env: Mapping[str, str]) -> bool:
+    """INCIDENT_KEYLESS_NOISE: 없으면 켬. 0·false·off·no(대소문자 무관)면 끔."""
+    return env.get("INCIDENT_KEYLESS_NOISE", "1").strip().lower() not in ("0", "false", "off", "no")
+
+
 def from_env() -> FastAPI:
     session = int(os.environ.get("INCIDENT_SESSION", "1"))
     base = 8000 + 100 * session
@@ -229,7 +235,7 @@ def from_env() -> FastAPI:
                                  or f"http://localhost:{base + 10}/api/.well-known/jwks.json")
     hist = os.environ.get("INCIDENT_HISTORY_DIR")
     # 세션 스택은 외부 모델 키를 비워 띄우므로 기본으로 401 잡음을 뺍니다. 키를 넣은 스택에서는 0으로 끕니다.
-    keyless = os.environ.get("INCIDENT_KEYLESS_NOISE", "1") != "0"
+    keyless = keyless_noise_on(os.environ)
     return create_app(DockerLogs(Stack(session), Path(os.environ["INCIDENT_TMP"]) if os.environ.get("INCIDENT_TMP") else None,
                                  keyless),
                       verifier, os.environ.get("INCIDENT_ERP_URL", f"http://localhost:{base + 40}/api/v1"),
