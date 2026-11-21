@@ -5,5 +5,5 @@ Description=inhouse-ai eval 야간 회귀(개발 셋 부분집합)
 
 [Service]
 Type=oneshot
-WorkingDirectory=%h/portfolio/inhouse-ai-assistant/eval
+WorkingDirectory=%h/<저장소 경로>/eval
 ExecStart=/usr/bin/env uv run python tools/nightly.py --config conditions.local.yaml
