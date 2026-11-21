@@ -38,6 +38,16 @@ public class OrgService {
         return hasRole(employeeId, roles.ticketHandler());
     }
 
+    /** 품질 확인(팩 erp_roles.quality_reviewer). 전체 불량 보고서 조회, 확정. */
+    public boolean isQualityReviewer(String employeeId) {
+        return hasRole(employeeId, roles.qualityReviewer());
+    }
+
+    /** 영업(팩 erp_roles.sales_rep). 견적 작성·전체 조회·발행, 고객사 연락처. */
+    public boolean isSalesRep(String employeeId) {
+        return hasRole(employeeId, roles.salesRep());
+    }
+
     /** 감사 조회(팩 erp_roles.auditor). */
     public boolean isAuditor(String employeeId) {
         return hasRole(employeeId, roles.auditor());

@@ -38,6 +38,9 @@ public final class PackLoader {
         JsonNode bals = read(JSON, dir.resolve("fixtures/leave_balances.json"));
         Path ticketsFile = dir.resolve("fixtures/tickets.json");
         JsonNode tickets = Files.exists(ticketsFile) ? read(JSON, ticketsFile) : JSON.createObjectNode();
+        JsonNode items = optional(dir, "fixtures/items.json");
+        JsonNode customers = optional(dir, "fixtures/customers.json");
+        JsonNode defects = optional(dir, "fixtures/defect_reports.json");
 
         String tz = pack.path("company").path("timezone").asText("Asia/Seoul");
         JsonNode policy = org.path("delegation_policy");
@@ -59,7 +62,9 @@ public final class PackLoader {
                         t.path("name").asText(), grant(t.path("grant")))),
                 new Pack.ErpRoles(org.path("erp_roles").path("hr").asText(Pack.ErpRoles.DEFAULT.hr()),
                         org.path("erp_roles").path("auditor").asText(Pack.ErpRoles.DEFAULT.auditor()),
-                        org.path("erp_roles").path("ticket_handler").asText(Pack.ErpRoles.DEFAULT.ticketHandler())),
+                        org.path("erp_roles").path("ticket_handler").asText(Pack.ErpRoles.DEFAULT.ticketHandler()),
+                        org.path("erp_roles").path("quality_reviewer").asText(Pack.ErpRoles.DEFAULT.qualityReviewer()),
+                        org.path("erp_roles").path("sales_rep").asText(Pack.ErpRoles.DEFAULT.salesRep())),
                 new Pack.DelegationPolicy(policy.path("max_period_days").asInt(30),
                         strings(policy.path("registrable_by"))),
                 list(forms.path("forms"), PackLoader::form),
@@ -72,7 +77,34 @@ public final class PackLoader {
                 list(bals.path("balances"), b -> new Pack.BalanceDef(b.path("employee_id").asText(),
                         b.path("year").asInt(), b.path("annual_total").asDouble(),
                         b.path("annual_used").asDouble())),
-                list(tickets.path("tickets"), PackLoader::ticket));
+                list(tickets.path("tickets"), PackLoader::ticket),
+                set(pack.path("requires_erp_features")),
+                list(items.path("items"), PackLoader::item),
+                list(customers.path("customers"), c -> new Pack.CustomerDef(c.path("id").asText(),
+                        c.path("name").asText(), c.path("contact_name").asText(), c.path("contact_email").asText(),
+                        c.path("contact_phone").asText())),
+                list(defects.path("defect_reports"), d -> new Pack.DefectReportDef(d.path("id").asText(),
+                        d.path("created_by").asText(), d.path("item_code").asText(), d.path("defect_type").asText(),
+                        d.path("severity").asText(), d.path("quantity").asInt(), textOrNull(d, "location"),
+                        textOrNull(d, "lot_no"), d.path("description").asText(), d.path("status").asText(),
+                        textOrNull(d, "confirmed_by"), OffsetDateTime.parse(d.path("created_at").asText()))));
+    }
+
+    /** 단가·재고가 0 이상 정수가 아니면 시작을 멈춥니다(견적 합계를 잘못 내지 않게). */
+    private static Pack.ItemDef item(JsonNode i) {
+        JsonNode price = i.path("unit_price");
+        JsonNode stock = i.path("stock");
+        if (!price.isIntegralNumber() || price.asLong() < 0 || !stock.isIntegralNumber() || stock.asInt() < 0) {
+            throw new IllegalStateException("fixtures/items.json " + i.path("code").asText()
+                    + ": unit_price·stock은 0 이상 정수여야 합니다");
+        }
+        return new Pack.ItemDef(i.path("code").asText(), i.path("name").asText(), i.path("unit").asText(),
+                price.asLong(), stock.asInt());
+    }
+
+    private static JsonNode optional(Path dir, String rel) {
+        Path f = dir.resolve(rel);
+        return Files.exists(f) ? read(JSON, f) : JSON.createObjectNode();
     }
 
     private static Pack.TicketDef ticket(JsonNode t) {

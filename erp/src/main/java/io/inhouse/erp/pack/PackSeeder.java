@@ -11,6 +11,7 @@ import io.inhouse.erp.org.OrgUnit;
 import io.inhouse.erp.org.OrgUnitRepository;
 import io.inhouse.erp.room.Room;
 import io.inhouse.erp.room.RoomRepository;
+import io.inhouse.erp.quality.DefectReportService;
 import io.inhouse.erp.ticket.TicketFixtures;
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -39,10 +40,11 @@ public class PackSeeder implements ApplicationRunner {
     private final RoomRepository rooms;
     private final LeaveBalanceRepository balances;
     private final TicketFixtures tickets;
+    private final DefectReportService defects;
 
     public PackSeeder(Pack pack, OrgPolicy policy, OrgUnitRepository units, EmployeeRepository employees,
                       ApprovalFormRepository forms, RoomRepository rooms, LeaveBalanceRepository balances,
-                      TicketFixtures tickets) {
+                      TicketFixtures tickets, DefectReportService defects) {
         this.pack = pack;
         this.policy = policy;
         this.units = units;
@@ -51,6 +53,7 @@ public class PackSeeder implements ApplicationRunner {
         this.rooms = rooms;
         this.balances = balances;
         this.tickets = tickets;
+        this.defects = defects;
     }
 
     @Override
@@ -95,8 +98,9 @@ public class PackSeeder implements ApplicationRunner {
             }
         }
         int newTickets = tickets.seed(pack.tickets());
-        log.info("팩 {} 적재: 조직 {}, 직원 {}, 양식 {}, 회의실 {}, 새 연차 잔여 {}, 새 티켓 {}", pack.id(),
-                pack.units().size(), pack.employees().size(), pack.forms().size(), pack.rooms().size(), added,
-                newTickets);
+        int newDefects = defects.seed(pack.defectReports());
+        log.info("팩 {} 적재: 조직 {}, 직원 {}, 양식 {}, 회의실 {}, 새 연차 잔여 {}, 새 티켓 {}, 새 불량 보고서 {}",
+                pack.id(), pack.units().size(), pack.employees().size(), pack.forms().size(), pack.rooms().size(),
+                added, newTickets, newDefects);
     }
 }
