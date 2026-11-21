@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -113,20 +114,33 @@ def _texts(body: dict[str, Any]) -> str:
 
 
 def _conversation_texts(body: dict[str, Any]) -> str:
-    """system이 아닌 메시지의 content(문자열·text 부분)와 도구 호출 인자만 모읍니다. 도구 정의는 보지 않습니다."""
+    """system이 아닌 메시지 안의 모든 문자열(content, 도구 호출 인자, 레거시 function_call 등)을 모읍니다.
+
+    도구 정의(`tools`)와 system 메시지는 보지 않습니다. JSON 문자열(도구 인자·결과)은 풀어서 다시 써 `\\uXXXX`
+    이스케이프를 없애고, 한글은 NFC로 맞춥니다(자모로 나뉜 NFD 입력도 걸리게).
+    """
     out: list[str] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, str):
+            out.append(_unescaped(node))
+        elif isinstance(node, list):
+            for x in node:
+                walk(x)
+        elif isinstance(node, dict):
+            for v in node.values():
+                walk(v)
+
     for m in body.get("messages", []):
-        if not isinstance(m, dict) or m.get("role") == "system":
-            continue
-        content = m.get("content")
-        if isinstance(content, str):
-            out.append(content)
-        elif isinstance(content, list):
-            out.extend(p["text"] for p in content if isinstance(p, dict) and isinstance(p.get("text"), str))
-        for call in m.get("tool_calls") or []:
-            args = (call.get("function") or {}).get("arguments") if isinstance(call, dict) else None
-            if isinstance(args, str):
-                out.append(args)
-            elif args is not None:
-                out.append(json.dumps(args, ensure_ascii=False))
-    return "\n".join(out)
+        if isinstance(m, dict) and m.get("role") != "system":
+            walk({k: v for k, v in m.items() if k != "role"})
+    return unicodedata.normalize("NFC", "\n".join(out))
+
+
+def _unescaped(text: str) -> str:
+    if "\\u" not in text:
+        return text
+    try:
+        return json.dumps(json.loads(text), ensure_ascii=False)
+    except ValueError:
+        return text

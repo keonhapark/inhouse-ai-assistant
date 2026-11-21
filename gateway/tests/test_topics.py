@@ -101,3 +101,47 @@ def test_external_allowed_agent_non_hr_request_still_goes_external(client, app, 
     r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
                     json={"model": "external", "messages": [{"role": "user", "content": NOT_HR[1]}]})
     assert r.status_code == 200 and r.headers["x-egress-location"] == "external"
+
+
+@pytest.mark.parametrize("message", [
+    # ensure_ascii=True로 만든 도구 인자(\uXXXX만 남음)
+    {"role": "assistant", "content": None, "tool_calls": [
+        {"id": "c1", "type": "function", "function": {"name": "x", "arguments": json.dumps({"kind": "병가"})}}]},
+    # 도구 결과도 이스케이프된 JSON일 수 있음
+    {"role": "tool", "tool_call_id": "c1", "content": json.dumps({"leave": "연차 7일"})},
+    # 레거시 function_call
+    {"role": "assistant", "content": None, "function_call": {"name": "x", "arguments": "{\"kind\": \"반차\"}"}},
+    # tool content 리스트
+    {"role": "tool", "tool_call_id": "c1", "content": [{"type": "text", "text": "휴가 잔여"}]},
+    # 자모로 나뉜 NFD 한글
+    {"role": "user", "content": __import__("unicodedata").normalize("NFD", "내일 병가 신청해 줘")},
+])
+def test_topics_survive_escaped_legacy_and_nfd_shapes(pack_glossary, message):
+    body = {"model": "external", "messages": [{"role": "user", "content": "그거 처리해 줘"}, message]}
+    v = pack_glossary.check(body)
+    assert v is not None and v.topics == ("hr-attendance",)
+
+
+def test_earlier_turn_keeps_conversation_local(pack_glossary):
+    body = {"model": "external", "messages": [
+        {"role": "user", "content": "다음 주 금요일 연차 쓸게"}, {"role": "assistant", "content": "날짜를 확인할게요"},
+        {"role": "user", "content": "응 그렇게 해 줘"}]}
+    assert pack_glossary.check(body).topics == ("hr-attendance",)
+
+
+def test_stream_hr_request_goes_local(client, app, token_for, litellm):
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "stream": True, "messages": [{"role": "user", "content": INCIDENTS[0]}]})
+    assert r.status_code == 200 and litellm.last_body()["model"] == "local"
+
+
+def test_block_topic_is_403_without_sentence_in_audit(client, app, token_for, litellm):
+    app.state.egress.glossary = Glossary.from_doc({"terms": [], "topics": [
+        {"id": "pay", "action": "block", "reason": "급여는 외부로 보내지 않습니다", "patterns": ["급여"]}]})
+    _, external_ok = _agent_ids(app)
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": [{"role": "user", "content": "김철수 급여 명세 요약"}]})
+    assert r.status_code == 403 and r.json()["type"] == "urn:problem:confidential" and litellm.requests == []
+    ev = _audit(app)[-1]
+    assert ev["detail"] == "업무 주제 pay: 차단" and "김철수" not in json.dumps(_audit(app), ensure_ascii=False)
