@@ -549,7 +549,8 @@ class Egress:
                          agent_id=caller.agent.id if caller.agent else None, via_token=caller.via_token,
                          conversation_id=caller.conversation_id,
                          model=public_model(model), result=result,
-                         problem_type=problem_type, detail=detail, delegation_token_id=caller.token_id)
+                         problem_type=problem_type, detail=detail, delegation_token_id=caller.token_id,
+                         channel="agent" if caller.via_token else None)
 
     def _estimate_cost(self, alias: str, usage: dict[str, int] | None) -> float | None:
         """LiteLLM 비용 머리글이 없을 때(스트림) 별칭 단가와 usage로 계산합니다. 모르면 None."""

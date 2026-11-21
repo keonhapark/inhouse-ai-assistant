@@ -44,7 +44,9 @@ class AuditLog:
     def event(self, kind: str, *, employee_id: str | None, agent_id: str | None, via_token: bool,
               result: str, conversation_id: str | None = None, model: dict[str, Any] | None = None,
               problem_type: str | None = None, detail: str | None = None,
-              delegation_token_id: str | None = None, routing: dict[str, Any] | None = None) -> str:
+              delegation_token_id: str | None = None, routing: dict[str, Any] | None = None,
+              channel: str | None = None) -> str:
+        """channel은 요청이 들어온 입구(web·slack·agent, 계약 #339). 모르면 None이고 actor에 넣지 않습니다."""
         event_id = "evt_" + uuid.uuid4().hex
         self.events.write({
             "eventId": event_id,
@@ -52,7 +54,7 @@ class AuditLog:
             "source": "gateway",
             "kind": kind,
             "actor": {"employeeId": employee_id, "viaDelegationToken": via_token, "agentId": agent_id,
-                      "delegationTokenId": delegation_token_id},
+                      "delegationTokenId": delegation_token_id, **({"channel": channel} if channel else {})},
             "conversationId": conversation_id,
             "model": model,
             "result": result,

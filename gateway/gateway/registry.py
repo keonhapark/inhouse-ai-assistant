@@ -36,6 +36,7 @@ class Requester:
     grade: str
     roles: tuple[str, ...]
     access_tags: tuple[str, ...]
+    channel: str = "web"   # 요청이 들어온 입구(web·slack). 감사 actor.channel(#338)
 
 
 def grant_matches(grant: Any, who: Requester) -> bool:

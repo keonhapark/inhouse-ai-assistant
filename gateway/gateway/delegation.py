@@ -5,14 +5,20 @@ from __future__ import annotations
 from gateway.erp_client import ErpClient
 from gateway.problems import ProblemError
 from gateway.registry import Registry, Requester, grant_matches
+from gateway.slack_login import is_service_login_token
 from gateway.tokens import DelegationTokenIssuer, IssuedToken
+
+
+def channel_of(employee_jwt: str) -> str:
+    """사람용 경로에 온 직원 JWT의 입구. 슬랙 로그인 토큰(amr slack)이면 slack, 아니면 web(위임 토큰은 사람용 경로에서 이미 403)."""
+    return "slack" if is_service_login_token(employee_jwt) else "web"
 
 
 async def load_requester(erp: ErpClient, employee_jwt: str) -> Requester:
     me = await erp.get_json("/me", employee_jwt)
     tags = await erp.get_json("/me/access-tags", employee_jwt)
     return Requester(id=me["id"], unit_id=me["unitId"], grade=me["grade"], roles=tuple(me.get("roles", [])),
-                     access_tags=tuple(tags.get("tags", [])))
+                     access_tags=tuple(tags.get("tags", [])), channel=channel_of(employee_jwt))
 
 
 class DelegationService:

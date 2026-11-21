@@ -131,7 +131,7 @@ def build_router(erp: ErpClient, audit: AuditLog, *, bridge_secret: str | None, 
                             headers={"Retry-After": str(retry_after)})
 
     def record(result: str, employee_id: str | None = None, problem: str | None = None, why: str = "") -> None:
-        audit.event("auth.login", employee_id=employee_id, agent_id=None, via_token=False, result=result,
+        audit.event("auth.login", employee_id=employee_id, agent_id=None, via_token=False, result=result, channel=SOURCE,
                     problem_type=f"urn:problem:{problem}" if problem else None,
                     detail=f"출처 {SOURCE}" + (f": {why}" if why else ""))
 

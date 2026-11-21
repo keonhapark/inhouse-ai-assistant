@@ -183,7 +183,7 @@ class ChatService:
     def _token(self, who: Requester, c: Conversation) -> str:
         c.unit_id = who.unit_id
         issued = self.delegation.issue_for(who, c.agent_id, c.id, wide=c.condition in WIDE_TOKEN_CONDITIONS)
-        self.audit.event("auth.delegation_token_issued", employee_id=who.id, agent_id=c.agent_id, via_token=False,
+        self.audit.event("auth.delegation_token_issued", employee_id=who.id, channel=who.channel, agent_id=c.agent_id, via_token=False,
                          result="ok", conversation_id=c.id, detail=f"jti={issued.claims['jti']}")
         return issued.token
 
@@ -225,7 +225,7 @@ class ChatService:
             out.append(c.event("approval_required", approval={
                 "approvalId": ap.id, "tool": tp["tool"], "risk": tp["risk"], "preview": tp["preview"],
                 "expiresAt": iso(ap.expires_at)}))
-            self.audit.event("execution_approval.requested", employee_id=who.id, agent_id=c.agent_id,
+            self.audit.event("execution_approval.requested", employee_id=who.id, channel=who.channel, agent_id=c.agent_id,
                              via_token=False, result="pending", conversation_id=c.id, detail=f"approval={ap.id}")
         else:
             c.status, c.pending = "active", None
@@ -278,7 +278,7 @@ class ChatService:
                              "reason": "직원이 골랐습니다", "suggestedAgentId": None}
                 if not grant_matches(agent.callable_by, who):
                     # 운영 지표의 차단 수(agent_not_callable)에 들어가도록 거절한 라우팅도 감사 이벤트로 남깁니다.
-                    self.audit.event("route.decided", employee_id=who.id, agent_id=agent.id, via_token=False,
+                    self.audit.event("route.decided", employee_id=who.id, channel=who.channel, agent_id=agent.id, via_token=False,
                                      result="denied", conversation_id=c.id,
                                      problem_type="urn:problem:agent-not-callable",
                                      routing={"agentId": agent.id, "method": route["method"],
@@ -290,7 +290,7 @@ class ChatService:
                 c.agent_id, c.routed, c.route_method = agent.id, True, route["method"]
                 if route["method"] == "explicit":
                     # 직원이 고른 대화는 agent 라우터를 거치지 않아 gateway가 route.decided를 남깁니다(운영 지표 호출 수).
-                    self.audit.event("route.decided", employee_id=who.id, agent_id=agent.id, via_token=False,
+                    self.audit.event("route.decided", employee_id=who.id, channel=who.channel, agent_id=agent.id, via_token=False,
                                      result="ok", conversation_id=c.id,
                                      routing={"agentId": agent.id, "method": "explicit", "reason": route["reason"]})
                 yield c.event("route", route=route)
@@ -323,7 +323,7 @@ class ChatService:
     async def _expire(self, ap: Approval, c: Conversation, who: Requester) -> list[dict[str, Any]]:
         ap.decided = "reject"
         out = [c.event("approval_decided", decision={"approvalId": ap.id, "decision": "reject"})]
-        self.audit.event("execution_approval.decided", employee_id=who.id, agent_id=c.agent_id, via_token=False,
+        self.audit.event("execution_approval.decided", employee_id=who.id, channel=who.channel, agent_id=c.agent_id, via_token=False,
                          result="ok", conversation_id=c.id, detail=f"approval={ap.id} decision=reject(expired)")
         try:
             await self.agent.resume(self._token(who, c), {"conversationId": c.id, "approvalId": ap.id,
@@ -358,7 +358,7 @@ class ChatService:
                               comment: str | None) -> AsyncIterator[dict[str, Any]]:
         async with c.lock:
             yield c.event("approval_decided", decision={"approvalId": ap.id, "decision": decision})
-            self.audit.event("execution_approval.decided", employee_id=who.id, agent_id=c.agent_id,
+            self.audit.event("execution_approval.decided", employee_id=who.id, channel=who.channel, agent_id=c.agent_id,
                              via_token=False, result="ok", conversation_id=c.id,
                              detail=f"approval={ap.id} decision={decision}")
             body = {"conversationId": c.id, "approvalId": ap.id, "decision": decision}
