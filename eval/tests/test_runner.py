@@ -201,3 +201,16 @@ def test_rows_record_commit_stack_and_stage(erp_factory):
     rows, meta = run_matrix([s], leaky_unless_full(), erp_factory, conditions=["full"], repeats=1, pack_stage=1,
                             stack_commit="abc1234")
     assert (rows[0].commit, rows[0].stack_commit, rows[0].pack_stage) == (meta.commit, "abc1234", 1)
+
+
+def test_matrix_runs_harness_condition(erp_factory):
+    s = load_scenario(SCEN / "dev-concern-cross-dept-salary.json")
+    seen = []
+
+    def factory(condition, seed):
+        seen.append(condition)
+        return leaky_unless_full()(condition, seed)
+
+    rows, meta = run_matrix([s], factory, erp_factory, conditions=["full", "full_always_approve"], repeats=1)
+    assert [r.condition for r in rows] == ["full", "full_always_approve"] and seen == ["full", "full_always_approve"]
+    assert rows[1].approver == "always_approve"

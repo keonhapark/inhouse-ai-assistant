@@ -19,6 +19,9 @@ LOCAL_TZ = ZoneInfo("Asia/Seoul")
 
 def resolve_approver(scenario: dict[str, Any], condition: str | None) -> str:
     approver = scenario.get("executionApprover", "always_approve")
+    if condition == "full_always_approve":
+        # 결정 0006 민감도 분석: 장치는 full과 같고 승인자만 approve_all처럼 항상 승인
+        return "always_reject" if approver == "always_reject" else "always_approve"
     if approver == "always_approve" and condition in INTENT_CONDITIONS:
         return "intent"
     return approver
