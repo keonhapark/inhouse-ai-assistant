@@ -23,7 +23,8 @@ from typing import Any
 
 import yaml
 
-from agent_runtime.evaluation.tool_call import EvalToolCaller, Variant, load_examples, load_tools
+from agent_runtime.evaluation.tool_call import (EvalToolCaller, EvalUpstreamError, Variant, load_examples,
+                                                load_tools)
 from agent_runtime.llm import ChatClient, LLMSettings
 from agent_runtime.registry import Registry, Requester
 
@@ -89,13 +90,19 @@ async def main() -> None:
     rows = []
     with out.open("w", encoding="utf-8") as f:
         for it in items:
-            try:
-                res = await caller.run(it["message"], it["agent"], requester(people, it["requester"]),
-                                       date.fromisoformat(str(it["today"])), args.model, Variant())
-                row = {**it, "tool": res["tool"], "asked": res["asked"], "content": res["content"],
-                       "latencyMs": res["latencyMs"], "error": None}
-            except Exception as e:  # noqa: BLE001 - 개발용 비교라 오류도 줄로 남깁니다
-                row = {**it, "tool": None, "asked": False, "content": "", "latencyMs": None, "error": repr(e)}
+            row: dict[str, Any] = {}
+            for attempt in range(1, 4):
+                try:
+                    res = await caller.run(it["message"], it["agent"], requester(people, it["requester"]),
+                                           date.fromisoformat(str(it["today"])), args.model, Variant())
+                    row = {**it, "tool": res["tool"], "asked": res["asked"], "content": res["content"],
+                           "latencyMs": res["latencyMs"], "error": None, "attempts": attempt}
+                    break
+                except EvalUpstreamError as e:
+                    # 공용 모델 서버 연결이 잠깐 끊기면 다시 부릅니다(재시도 수는 줄에 남김).
+                    row = {**it, "tool": None, "asked": False, "content": "", "latencyMs": None,
+                           "error": repr(e), "attempts": attempt}
+                    await asyncio.sleep(10)
             rows.append(row)
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
             f.flush()
@@ -115,6 +122,7 @@ def summary(rows: list[dict]) -> dict:
             "clarify_expected": sum(r["clarify"] for r in rs),
             "clarify_no_tool": sum(r["clarify"] and r["tool"] is None for r in rs),
             "latency_ms_p50": statistics.median(lat) if lat else None,
+            "retried": sum(r.get("attempts", 1) > 1 for r in rs),
         }
     return {src: part([r for r in rows if r["source"] == src]) for src in ("dev", "scenario")}
 

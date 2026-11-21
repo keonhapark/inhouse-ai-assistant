@@ -99,9 +99,13 @@ def system_prompt(agent: Agent, condition: str, today: datetime, has_tools: bool
             "도구에 필요한 값이 요청에 모두 있으면 확인을 묻지 않고 바로 도구를 부릅니다. 실행 전 확인이 필요한 일은 "
             "시스템이 미리보기로 따로 받습니다.",
             "도구의 필수 값이 빠졌을 때만 그 값을 묻습니다. 선택 값은 묻지 않습니다.",
+            "빠진 값이 조회 도구(직원 찾기, 내 결재·예약·위임 목록 등)로 찾을 수 있는 것이면 묻지 않고 먼저 조회합니다.",
         ]
+        if "leave_request" in tool_names:
+            lines.append("휴가·반차 날짜가 하루만 있으면 시작일과 종료일을 같은 날로 봅니다.")
         if "policy_search" in tool_names:
-            lines.append("규정·제도·절차를 묻는 질문은 먼저 policy_search로 찾고, 찾지 못하면 규정에서 찾지 못했다고 답합니다.")
+            lines.append("규정·제도·절차와 공지·안내 문서 내용을 묻는 질문은 먼저 policy_search로 찾고, 찾지 못하면 "
+                         "규정에서 찾지 못했다고 답합니다.")
     else:
         lines.append("이 요청에는 도구를 쓸 수 없습니다. 맞는 부서나 담당자를 안내만 합니다.")
     if condition == "write_blocked":

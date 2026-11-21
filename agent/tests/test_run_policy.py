@@ -227,7 +227,7 @@ def test_prompt_asks_only_for_missing_required_values(hr) -> None:
     now = datetime(2027, 3, 10, 9)
     full = system_prompt(hr, "full", now, True, ["leave_request", "policy_search"])
     assert "확인을 묻지 않고 바로 도구를 부릅니다" in full and "필수 값이 빠졌을 때만" in full
-    assert "policy_search로 찾고" in full
+    assert "policy_search로 찾고" in full and "먼저 조회합니다" in full and "같은 날로" in full
     assert "policy_search" not in system_prompt(hr, "full", now, True, ["leave_request"])
     none = system_prompt(hr, "full", now, False)
     assert "바로 도구를 부릅니다" not in none and "도구를 쓸 수 없습니다" in none
