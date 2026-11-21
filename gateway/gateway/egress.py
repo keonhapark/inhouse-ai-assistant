@@ -14,6 +14,7 @@
    외부 별칭 요청을 로컬로 돌린 호출(이미지·팩 금지·기밀 판정·비용 상한·외부 장애 폴백)에 reasoning_effort·think가 없으면
    reasoning_effort를 채워 생각 단계를 끕니다(#427, 기본 none). 외부 모델용 시간 제한 안에 로컬이 길게 생각하다 끊기지 않게 합니다.
 7. 시간 초과(504)·연결 실패(502)·LiteLLM 5xx(502)는 실패 알림을 보냅니다.
+8. 의미 캐시(gateway/cache.py, #465)를 켰으면 정책·기밀 판정·가림이 끝난 본문으로 찾고, 적중하면 LLM을 부르지 않습니다(X-Cache).
 """
 
 from __future__ import annotations
@@ -37,6 +38,7 @@ from fastapi.responses import Response, StreamingResponse
 from gateway.alerts import Alerter
 from gateway.audit import AuditLog, JsonlWriter, now_iso
 from gateway.budgets import BudgetLedger
+from gateway.cache import Probe, SemanticCache
 from gateway.confidential import Glossary
 from gateway.problems import ProblemError
 from gateway.redact import scrub
@@ -72,6 +74,7 @@ LOCAL_ONLY_FIELDS = frozenset({"think"})
 EVAL_TOOLCALL_PURPOSE = "eval-toolcall"
 # 외부 장애로 보고 로컬로 폴백하는 오류(시간 초과, 연결 실패, LiteLLM 5xx). 미지원(400)·정책 거절은 폴백하지 않습니다.
 FALLBACK_CODES = frozenset({"llm-timeout", "llm-unavailable", "llm-upstream-error"})
+EMBED_TIMEOUT_SECONDS = 2.0  # 의미 캐시 임베딩(#465)
 EMBEDDING_FIELDS = frozenset({"model", "input", "encoding_format", "dimensions"})
 
 
@@ -180,6 +183,8 @@ class Caller:
     agent: AgentEntry | None
     conversation_id: str | None
     token_id: str | None = None  # 위임 토큰 jti. 감사 이벤트 actor.delegationTokenId로 발급 기록과 잇습니다
+    scopes: tuple[str, ...] = ()      # 위임 토큰 scopes·doc_scopes. 의미 캐시 키의 권한 범위(#465)
+    doc_scopes: tuple[str, ...] = ()
 
     @property
     def via_token(self) -> bool:
@@ -211,7 +216,8 @@ class Egress:
                  prices: dict[str, tuple[float, float]] | None = None,
                  provider_models: dict[str, str] | None = None,
                  vision_alias: str | None = None, eval_toolcall: bool = False,
-                 local_reasoning_effort: str | None = None):
+                 local_reasoning_effort: str | None = None,
+                 embed_alias: str | None = None):
         self.locations = locations
         # 외부 별칭 요청을 로컬로 돌릴 때 채울 reasoning_effort(#427). None이면 채우지 않습니다.
         self.local_reasoning_effort = local_reasoning_effort
@@ -236,6 +242,9 @@ class Egress:
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
         # 평가 대화의 별칭 바꿔 끼우기(X-Eval-Model-Override, #346): cid → {"local": 별칭, "external": 별칭}
         self.override_of: Callable[[str | None], dict[str, str]] = lambda _cid: {}
+        # 의미 캐시(#465). None이면 끔(기본, 평가 모드). main이 GATEWAY_SEMANTIC_CACHE=1일 때 붙입니다.
+        self.cache: SemanticCache | None = None
+        self.embed_alias = embed_alias  # 의미 캐시 임베딩에 쓸 로컬 별칭(model_info.mode: embedding)
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._http = httpx.AsyncClient(base_url=base_url, transport=transport, headers=headers,
                                        timeout=httpx.Timeout(timeout, connect=5.0))
@@ -260,7 +269,8 @@ class Egress:
         agent = self.registry.get(claims["agt"])
         if agent is None:
             raise ProblemError(403, "forbidden", "등록부에 없는 에이전트입니다", claims["agt"])
-        return Caller(claims["sub"], agent, claims["cid"], claims.get("jti"))
+        return Caller(claims["sub"], agent, claims["cid"], claims.get("jti"),
+                      tuple(sorted(claims.get("scopes") or ())), tuple(sorted(claims.get("doc_scopes") or ())))
 
     @staticmethod
     async def _body(request: Request) -> dict[str, Any]:
@@ -391,8 +401,23 @@ class Egress:
         if "response_format" in sent and model["name"] in self.no_response_format:
             raise ProblemError(400, "unsupported-parameter", "이 모델은 response_format(구조화 출력)을 지원하지 않습니다",
                                f"{model['name']}. 형식은 도구 호출이나 프롬프트 지시로 맞출 수 있습니다")
+        probe = await self._cache_probe(caller, model, sent, bool(images))
+        if probe is not None:
+            hit = self.cache.lookup(probe)
+            if hit is not None:
+                # LLM을 부르지 않으므로 외부 전송·비용·외부 기록이 없습니다. 사용 모델은 그 답을 만든 별칭(키에 들어 있음)입니다.
+                self.usage.record(caller.conversation_id, model["name"], model["location"])
+                note = (f"{note}; " if note else "") + f"의미 캐시 적중(유사도 {hit.similarity:.3f})"
+                self._audit(caller, model, "ok", None, note)
+                return Response(hit.entry.content, status_code=200, media_type=hit.entry.media_type,
+                                headers={**egress_headers(model), "X-Cache": "hit"})
         try:
-            return await self._dispatch(caller, model, before, sent, note=note)
+            response = await self._dispatch(caller, model, before, sent, note=note)
+            if probe is not None:
+                response.headers["X-Cache"] = "miss"
+                if response.status_code == 200:
+                    self.cache.store(probe, response.body, response.media_type or "application/json")
+            return response
         except ProblemError as e:
             fallback = self._fallback_body(model, before, e, self._local_for(caller))
             if fallback is None:
@@ -403,6 +428,26 @@ class Egress:
             note = (f"{note}; " if note else "") + f"외부 장애({e.code})로 로컬 폴백"
             fallback, note = self._quiet_local(local["name"], fallback, note)
             return await self._dispatch(caller, local, before, fallback, note=note)
+
+    async def _cache_probe(self, caller: Caller, model: dict, sent: dict, has_images: bool) -> Probe | None:
+        """의미 캐시 키. 위임 토큰이 있고 스트림·이미지·평가 조건이 아닌 호출만. 임베딩이 실패하면 캐시 없이 갑니다."""
+        if (self.cache is None or self.embed_alias is None or caller.agent is None or sent.get("stream") or has_images
+                or self.condition_of(caller.conversation_id) is not None):
+            return None
+        scope = (caller.agent.id, caller.scopes, caller.doc_scopes, model["name"])
+        try:
+            return await self.cache.probe(scope, sent)
+        except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as e:
+            log.warning("의미 캐시 임베딩 실패(%s), 캐시 없이 보냅니다", type(e).__name__)
+            return None
+
+    async def embed_text(self, text: str) -> list[float]:
+        """의미 캐시용 임베딩(로컬 임베딩 별칭). gateway 내부 호출이라 감사 이벤트를 남기지 않습니다."""
+        # 임베딩이 멈춰도 모든 요청이 LLM 시간 제한만큼 기다리지 않게 짧게 끊고 캐시 없이 갑니다.
+        r = await self._http.post("/v1/embeddings", json={"model": self.embed_alias, "input": text},
+                                  timeout=httpx.Timeout(EMBED_TIMEOUT_SECONDS))
+        r.raise_for_status()
+        return [float(x) for x in r.json()["data"][0]["embedding"]]
 
     def _quiet_local(self, alias: str, sent: dict, note: str | None) -> tuple[dict, str | None]:
         """외부 별칭 요청을 로컬로 돌린 본문에 reasoning_effort를 채우고 감사 detail에 적습니다(#427).
