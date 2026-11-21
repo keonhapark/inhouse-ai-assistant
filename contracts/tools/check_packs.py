@@ -136,6 +136,21 @@ def check_pack(pack_dir: Path) -> list[str]:
                 errors.append(f"{w}: 도구 '{name}'의 위험 등급 {t['risk']}가 risk_policy에서 deny입니다")
             if t["stage"] > a["stage"]:
                 errors.append(f"{w}: 도구 '{name}'(stage {t['stage']})가 에이전트 stage {a['stage']}보다 늦습니다")
+        ir = a.get("image_reading") or {}
+        if ir.get("draft_tool") and ir["draft_tool"] not in a["tools"]:
+            errors.append(f"{w}: image_reading.draft_tool '{ir['draft_tool']}'가 tools에 없습니다")
+        names = [f["name"] for f in ir.get("fields", [])]
+        for dup, n in Counter(names).items():
+            if n > 1:
+                errors.append(f"{w}: image_reading 항목 이름 중복 '{dup}'")
+        for f in ir.get("fields", []):
+            if "pattern" in f:
+                try:
+                    re.compile(f["pattern"])
+                except re.error as e:
+                    errors.append(f"{w}: image_reading {f['name']} 정규식이 올바르지 않습니다({e})")
+            if ("pattern" in f or "enum" in f) and f["type"] != "string":
+                errors.append(f"{w}: image_reading {f['name']}: pattern·enum은 string 항목에만 씁니다")
         for o in a["risk_policy"].get("overrides", []):
             if o["tool"] not in a["tools"]:
                 errors.append(f"{w}: risk_policy override 도구 '{o['tool']}'가 tools에 없습니다")

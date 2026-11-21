@@ -330,3 +330,28 @@ def test_pack_model_policy_override_is_local_only_or_absent(tmp_path: Path) -> N
         (pack / "pack.yaml").write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
         errors = check_packs.check_pack(pack)
         assert (not errors) is ok, errors
+
+
+def test_pack_image_reading_is_checked(tmp_path) -> None:
+    """선택 항목 agents.yaml image_reading(#382): 초안 도구·항목 이름·정규식·pattern 쓰임을 검사합니다."""
+    import shutil
+
+    import yaml
+
+    from tools.check_packs import check_pack
+
+    pack = tmp_path / "manufacturing"
+    shutil.copytree(PACKS / "manufacturing", pack)
+    path = pack / "agents.yaml"
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    rnd = next(a for a in doc["agents"] if a["id"] == "rnd")
+    rnd["image_reading"]["draft_tool"] = "expense_request"
+    rnd["image_reading"]["fields"] += [{"name": "part_no", "type": "string", "description": "중복"},
+                                      {"name": "bad", "type": "string", "description": "x", "pattern": "["},
+                                      {"name": "count", "type": "integer", "description": "x", "enum": ["1"]}]
+    path.write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+    errs = " ".join(check_pack(pack))
+    assert "draft_tool" in errs and "중복 'part_no'" in errs and "bad 정규식" in errs and "count: pattern·enum" in errs
+    rnd["image_reading"] = {"purpose": "도면", "fields": [{"name": "Part", "type": "string", "description": "x"}]}
+    path.write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+    assert check_pack(pack)  # 항목 이름 형식(스키마)

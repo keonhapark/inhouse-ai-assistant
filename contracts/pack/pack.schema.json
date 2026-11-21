@@ -230,6 +230,33 @@
                   "keywords": {"type": "array", "items": {"type": "string"}},
                   "examples": {"type": "array", "items": {"type": "string"}}
                 }
+              },
+              "image_reading": {
+                "type": "object",
+                "description": "이 에이전트 대화에 붙인 이미지에서 읽을 항목(#382). agent가 로컬 비전으로 읽고, 읽은 값은 신뢰할 수 없는 내용으로 대화에 넣습니다(결정 0004). 없으면 이 에이전트는 첨부 이미지를 읽지 않습니다",
+                "required": ["purpose", "fields"],
+                "additionalProperties": false,
+                "properties": {
+                  "purpose": {"type": "string", "description": "무엇이 찍힌 이미지인지(모델 지시에 씀). 예: 영수증, 불량 사진, 도면"},
+                  "fields": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["name", "type", "description"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+                        "type": {"enum": ["string", "integer", "date", "string_list"]},
+                        "description": {"type": "string"},
+                        "pattern": {"type": "string", "description": "string 값이 맞아야 하는 정규식. 안 맞으면 읽지 못한 값(null)으로 봄"},
+                        "enum": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "string 값의 허용 목록"},
+                        "max_length": {"type": "integer", "minimum": 1, "description": "string·string_list 항목의 최대 길이(넘으면 자름)"}
+                      }
+                    }
+                  },
+                  "draft_tool": {"type": "string", "description": "읽은 값으로 초안을 만드는 user_direct 도구. 이미지를 읽은 같은 턴에도 막지 않고 미리보기 승인을 받습니다(결정 0004 덧붙임). 이 에이전트의 tools에 있어야 함"}
+                }
               }
             }
           }
