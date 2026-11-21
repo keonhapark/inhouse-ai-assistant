@@ -203,3 +203,70 @@ agents:
         - {name: title, type: string, description: 도면 이름, max_length: 60}
         - {name: dimensions, type: string_list, description: 치수(단위 포함), max_length: 40}
         - {name: notes, type: string_list, description: 주기·비고, max_length: 80}
+
+  - id: quality
+    name: 품질
+    version: 0.1.0
+    stage: 3
+    owner_unit: quality
+    description: 불량 사진으로 불량 보고서 초안 쓰기, 불량 보고서 조회, 품질 규정 질의를 맡습니다. 보고서 확정은 품질 담당자가 erp 화면에서 합니다.
+    callable_by:
+      roles: [employee]
+    tools:
+      - defect_report_draft
+      - defect_report_list
+      - defect_report_get
+      - policy_search
+    allowed_risk: [read, reversible_write]
+    doc_scopes: [public, quality-policy]
+    model_policy:
+      mode: external_allowed
+      reason: 불량 보고서와 품질 규정은 기밀이 아닙니다. 사진은 gateway가 로컬 비전으로만 보냅니다.
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: deny
+    routing:
+      keywords: [불량, 품질, 결함, 부적합, 검사, 클레임, 로트]
+      examples:
+        - 사출 라인에서 나온 불량 사진이야, 불량 보고서 초안 써 줘
+        - 지난주에 쓴 불량 보고서 어떻게 됐어?
+    image_reading:
+      purpose: 불량 사진
+      draft_tool: defect_report_draft
+      fields:
+        - {name: item_code, type: string, description: 품목 코드(라벨이 보이면), max_length: 32}
+        - {name: defect_type, type: string, description: 불량 유형(예 긁힘·찍힘·균열·변색), max_length: 50}
+        - {name: location, type: string, description: 불량 위치, max_length: 100}
+        - {name: severity, type: string, description: 심각도, enum: [minor, major, critical]}
+
+  - id: sales
+    name: 영업
+    version: 0.1.0
+    stage: 3
+    owner_unit: sales
+    description: 견적 초안 쓰기와 조회, 품목·고객사 찾기, 영업 규정 질의를 맡습니다. 견적 발행은 영업 담당자가 erp 화면에서 합니다.
+    callable_by:
+      roles: [sales_staff]
+    tools:
+      - quote_draft
+      - quote_list
+      - quote_get
+      - item_search
+      - customer_search
+      - policy_search
+    allowed_risk: [read, reversible_write]
+    doc_scopes: [public, sales-policy]
+    model_policy:
+      mode: external_allowed
+      reason: 견적은 기밀이 아닙니다. 고객 담당자 개인정보는 gateway가 가립니다.
+    risk_policy:
+      read: auto
+      reversible_write: auto_with_undo
+      irreversible: deny
+    routing:
+      keywords: [견적, 고객사, 영업, 수주, 견적서]
+      examples:
+        - 가온테크에 평기어 GR-M2-40 50개 견적 초안 써 줘
+        - 이번 달 내가 쓴 견적 목록 보여 줘
+
