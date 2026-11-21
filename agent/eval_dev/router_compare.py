@@ -76,7 +76,7 @@ def requester(people: dict[str, dict], emp_id: str) -> Requester:
 class Methods:
     def __init__(self, reg: Registry, args: argparse.Namespace) -> None:
         self.reg = reg
-        self.cands = criteria(reg)
+        self.cands = criteria(reg, args.criteria)
         self.llm_router = None
         if args.llm_base_url:
             chat = ChatClient(LLMSettings(base_url=args.llm_base_url.rstrip("/"), model=args.llm_model, timeout_s=300))
@@ -109,8 +109,9 @@ def summary(rows: list[dict[str, Any]], reg: Registry, jev_threshold: float) -> 
     for method in sorted({r["method"] for r in rows}):
         rs = [r for r in rows if r["method"] == method and r["error"] is None]
         for r in rs:
-            if method == "jev":
-                r["ambiguous"] = r["confidence"] is not None and r["confidence"] < jev_threshold
+            if method in ("jev", "laya"):
+                low = r["confidence"] is not None and r["confidence"] < jev_threshold
+                r["ambiguous"] = bool(r.get("ambiguous")) or low
         leak = [r for r in rs if policy.get(r["expected"]) == "local_only"
                 and policy.get(r["agent"]) == "external_allowed"]
         lat = sorted(r["latencyMs"] for r in rs)
@@ -131,6 +132,7 @@ def summary(rows: list[dict[str, Any]], reg: Registry, jev_threshold: float) -> 
             "latency_ms_p95": lat[max(0, int(len(lat) * 0.95) - 1)] if lat else None,
             "input_tokens": tokens,
             "cost_usd": round(tokens / 1e6 * JEV_USD_PER_MTOK, 6) if method == "jev" else 0.0,
+            "ambiguity_threshold": jev_threshold if method in ("jev", "laya") else None,
         }
     return out
 
@@ -146,7 +148,9 @@ def main() -> None:
     ap.add_argument("--llm-model", default="qwen3.5:9b")
     ap.add_argument("--laya-model", default="convaiinnovations/laya-multilingual")
     ap.add_argument("--jev-model", default="jev-1.14.0")
-    ap.add_argument("--jev-threshold", type=float, default=0.5)
+    ap.add_argument("--criteria", default="desc_examples", help="laya·jev 선택지 구성: desc_examples, desc, keywords")
+    # Laya·Jev의 confidence가 이 값보다 낮으면 애매로 셉니다. 줄에 확률을 남기므로 eval이 다시 정할 수 있습니다.
+    ap.add_argument("--decision-threshold", "--jev-threshold", dest="jev_threshold", type=float, default=0.5)
     ap.add_argument("--allow-external", action="store_true")
     args = ap.parse_args()
     args.methods = [m.strip() for m in args.methods.split(",") if m.strip()]
@@ -168,7 +172,8 @@ def main() -> None:
                 for it in items:
                     try:
                         res = methods.run(method, it["message"], requester(people, it["requester"]))
-                        row = {**it, "method": method, "repeat": rep, **res, "error": None}
+                        row = {**it, "method": method, "repeat": rep, **res, "error": None,
+                               "criteria": args.criteria if method in ("laya", "jev") else None}
                     except Exception as e:  # noqa: BLE001 - 비교용이라 오류도 줄로 남깁니다
                         row = {**it, "method": method, "repeat": rep, "agent": None, "fallback": False,
                                "ambiguous": False, "confidence": None, "probabilities": {}, "audit": None,

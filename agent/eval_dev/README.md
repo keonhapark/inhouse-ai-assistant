@@ -61,13 +61,31 @@ uv run python eval_dev/first_call_run.py --base-url http://<ollama>:11434/v1 --m
 
 - 입력: eval 정상 셋 80개의 첫 발화와 `expectedAgent`, 2단계 라우터 시험 문장 17개(`router_cases.jsonl`), "대결"을 "대리 결재"로 바꾼 변형. 확인 셋 원문은 쓰지 않습니다
 - 방법: `keyword`(모델 없음), `llm`(지금 라우터, `--llm-base-url`), `laya`(로컬 인코더), `jev`(외부 API, `--allow-external`과 `TYPESAFE_API_KEY`가 있어야 돎. 지어낸 문장만 보냄)
-- 집계: 정답 수(출처별), 인사·기밀(`local_only`) 요청을 외부 허용 에이전트로 보낸 수, 애매한 비율(LLM·키워드는 fallback, Laya는 `route=review`, Jev는 `confidence < --jev-threshold`)과 애매할 때 로컬로 보냈다면 남는 유출, 혼동, 지연 p50·p95, Jev 입력 토큰·비용(입력 100만 토큰당 0.042달러, 2026-11-21 docs.typesafe.ai)
-- Laya 준비: `bash eval_dev/install_laya.sh`(laya 0.5.0, 가중치와 리비전 기록). agent 의존성에는 넣지 않고 `uv run --with laya==0.5.0 …`으로 얹습니다
+- 집계: 정답 수(출처별), 인사·기밀(`local_only`) 요청을 외부 허용 에이전트로 보낸 수, 애매한 비율(LLM·키워드는 fallback, Laya·Jev는 `confidence < --decision-threshold`(기본 0.5, laya 0.5.0 답에는 `route`가 없음))과 애매할 때 로컬로 보냈다면 남는 유출, 혼동, 지연 p50·p95, Jev 입력 토큰·비용(입력 100만 토큰당 0.042달러, 2026-11-21 docs.typesafe.ai)
+- Laya 준비: `bash eval_dev/install_laya.sh`(laya 0.5.0, torch CPU 판, 저장소 밖 가상환경 `~/.cache/iaa-laya-venv`에 laya와 agent를 넣고 가중치와 리비전을 `runs/laya-install.json`에 기록). agent 의존성(uv.lock)에는 넣지 않습니다
 
 ```bash
 uv run python eval_dev/router_compare.py --methods keyword --out eval_dev/runs/<이름>.jsonl
-uv run --with laya==0.5.0 python eval_dev/router_compare.py --methods keyword,llm,laya --repeats 3 \
+uv run python eval_dev/router_compare.py --methods llm --repeats 3 \
   --llm-base-url http://<ollama>:11434/v1 --llm-model qwen3.5:9b --out eval_dev/runs/<이름>.jsonl
+CUDA_VISIBLE_DEVICES= ~/.cache/iaa-laya-venv/bin/python eval_dev/router_compare.py --methods laya --repeats 3 \
+  --out eval_dev/runs/<이름>.jsonl
 ```
 
-키워드만 먼저 돌린 결과(2026-11-21, 105문장 1회): 정답 89(정상 셋 69/80, 변형 5/8, 2단계 문장 15/17), `local_only` 요청을 외부 허용 에이전트로 보낸 수 10, 모두 fallback(애매)이라 fallback 대화를 로컬로 실행하면(#308) 0.
+### 실측(2026-11-21, 105문장 × 3회, Jev 제외)
+
+조건: 데스크탑. llm은 RTX 4070 SUPER의 Ollama 0.40.15 `qwen3.5:9b`(GGUF Q4_K_M, digest 56671c2ab938)를 바로 부름(gateway 거치지 않음, 생각 단계 기본값=운영과 같음, 온도 0), 14:19~15:33. Laya는 GPU를 평가 측정이 써서 CPU(torch 2.15.0+cpu, `OMP_NUM_THREADS=8`), laya 0.5.0, 모델 리비전 `runs/laya-install.json`. 공용 모델 서버라 llm 지연은 참고만 합니다. 문장: 정상 셋 80, "대리 결재" 변형 8, 2단계 문장 17.
+
+| 방법 | 정답(315) | 정상 셋(240) | 변형(24) | 2단계(51) | 세 번 모두 맞은 문장(105) | `local_only`→외부 허용 | 애매(기준) | 애매를 로컬로 보내면 남는 유출 | 지연 p50 / p95 |
+|---|---|---|---|---|---|---|---|---|---|
+| llm(`runs/2026-11-21-router-llm.jsonl`) | 284 | 217 | 16 | 51 | 93 | 4 | 2(fallback) | 3 | 13.0초 / 30.8초 |
+| keyword(`…-router-keyword.jsonl`) | 267 | 207 | 15 | 45 | 89 | 30 | 45(fallback) | 0 | 0 |
+| Laya 키워드 목록(`…-laya-cpu-keywords.jsonl`) | 231 | 177 | 12 | 42 | 77 | 18 | 99(confidence<0.5) | 6 | 0.24초 / 0.31초 |
+| Laya 설명만(`…-laya-cpu-desc.jsonl`) | 174 | 120 | 12 | 42 | 58 | 24 | 159 | 0 | 0.27초 / 0.34초 |
+| Laya 설명+예시(`…-laya-cpu-desc_examples.jsonl`) | 45 | 21 | 0 | 24 | 15 | 0 | 39 | 0 | 0.30초 / 0.45초 |
+
+- llm은 반복 간 결과가 다른 문장이 4/105이고, Laya·keyword는 반복마다 같습니다
+- llm 오분류는 대부분 전사 비서 ↔ 인사(`assistant->hr` 22, `hr->assistant` 4)입니다. `local_only` 요청을 외부 허용 에이전트로 보낸 4건 중 3건은 확신도가 높아 애매로 잡히지 않습니다
+- Laya는 선택지 구성에 따라 크게 달랐습니다. 설명+예시(LLM 라우터와 같은 정보)에서는 거의 모두 재무로 골랐고(선택지 한도 `head_max_len`을 1024로 올려도 같음), 이 구성의 유출 0은 재무로만 보낸 결과입니다. 구성은 40문장 표본으로 먼저 견줘 보고 정해, 셋을 모두 남깁니다
+- "대리 결재" 변형은 모든 방법에서 원문보다 정답이 줄었습니다
+- 판단과 보고는 eval이 합니다(#303). Jev는 외부 전송이라 사용자 확인 뒤에 돌립니다

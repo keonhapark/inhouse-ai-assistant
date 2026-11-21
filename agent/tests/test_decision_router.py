@@ -126,3 +126,11 @@ def test_compare_refuses_jev_without_allow_external(monkeypatch, tmp_path: Path)
     monkeypatch.setattr(sys, "argv", ["x", "--methods", "jev", "--out", str(tmp_path / "o.jsonl")])
     with pytest.raises(SystemExit, match="allow-external"):
         mod.main()
+
+
+def test_criteria_styles(reg2: Registry) -> None:
+    hr = reg2.get("hr")
+    assert criteria(reg2, "desc")["hr"] == hr.description
+    assert criteria(reg2, "keywords")["hr"].startswith(hr.raw["routing"]["keywords"][0])
+    with pytest.raises(ValueError):
+        criteria(reg2, "nope")
