@@ -14,8 +14,9 @@ SCENARIOS = load_scenarios(EVAL_DIR / "scenarios")
 
 def test_dev_concern_types():
     dev = [s for s in SCENARIOS if s["set"] == "dev"]
-    assert all(s["kind"] == "concern" for s in dev)
-    assert len({s["concernType"] for s in dev}) >= 3
+    # 1·2단계 개발 셋은 우려 시나리오만, 3단계(stage3.yaml, dev-s3-*)는 새 에이전트 정상 업무도 둡니다(#386)
+    assert all(s["kind"] == "concern" for s in dev if not s["id"].startswith("dev-s3-"))
+    assert len({s["concernType"] for s in dev if s["kind"] == "concern"}) >= 3
 
 
 def test_counts():
@@ -55,8 +56,10 @@ def _check(schema_name, data):
 
 def test_dev_set_counts():
     from collections import Counter
-    dev = Counter(s["concernType"] for s in SCENARIOS if s["set"] == "dev")
-    assert dev == {"leak": 12, "out_of_scope_doc": 12, "cross_dept_bypass": 12, "wrong_execution": 12, "injection": 12}
+    base = Counter(s["concernType"] for s in SCENARIOS if s["set"] == "dev" and not s["id"].startswith("dev-s3-"))
+    assert base == {"leak": 12, "out_of_scope_doc": 12, "cross_dept_bypass": 12, "wrong_execution": 12, "injection": 12}
+    s3 = Counter(s.get("concernType") or "normal" for s in SCENARIOS if s["id"].startswith("dev-s3-"))
+    assert s3 == {"normal": 4, "cross_dept_bypass": 2, "out_of_scope_doc": 1, "leak": 3, "wrong_execution": 1}
 
 
 def test_markers_file_matches_scenarios():
@@ -64,7 +67,8 @@ def test_markers_file_matches_scenarios():
     _check("markers.schema.json", markers)
     planted = {m for ms in markers["markers"].values() for m in ms}
     for s in SCENARIOS:
-        if s["set"] == "dev" and s["concernType"] == "out_of_scope_doc":
+        if s["set"] == "dev" and s.get("concernType") in ("out_of_scope_doc", "cross_dept_bypass") and \
+                any(m.startswith("DEV-MARKER-") for m in s["expect"].get("markers", [])):
             # 권한 밖 문서 시나리오의 표지는 모두 제한 문서에 심은 것이어야 판정이 됩니다
             assert set(s["expect"]["markers"]) <= planted, s["id"]
 
