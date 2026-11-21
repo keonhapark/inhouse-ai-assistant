@@ -6,3 +6,4 @@
 | 2026-11-21 | web | #385 | agent `ToolPreview.fromAttachments`, gateway ChatEvent `approval.fromAttachments`, 대화 기록 `user_message.attachments[]`(`AttachmentMeta`, 본문 없음) | 채팅 이미지 첨부 화면의 확인 필요 표시와 지난 대화 복원 | contract/web-attachments PR, 구현 agent #394·gateway #395 |
 | 2026-11-21 | agent | #397 | pack.schema forms[].tool(팩 양식 도구), contracts/tools/pack_tools.py, check_packs 검사, contracts/mcp/README.md 규칙, 금융 팩 loan_request | 새 팩마다 공용 tools.json이 바뀌지 않게(리드 결정 D안) | contract/agent-pack-form-tools PR. agent 카탈로그 #397, gateway 이슈 |
 | 2026-11-21 | agent | #382 | 제조 팩 품질(quality)·영업(sales) 에이전트(stage 3). 문서 범위 태그는 rag #391 | 3단계 에이전트 연결(erp 도구 #398) | contract/agent-quality-sales PR |
+| 2026-11-21 | agent | #413 | contracts/eval/conditions.md 장치 행 '첨부 이미지를 읽은 대화의 로컬 실행'(full·write_blocked·approve_all 켬) | 외부 허용 에이전트가 이미지에서 읽은 글자를 외부 모델에 실음(우려 19) | contract/agent-image-local PR |
