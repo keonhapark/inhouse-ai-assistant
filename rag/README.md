@@ -143,7 +143,7 @@ uv run python -m bench.drawing_ocr --drawings 60 --engine oracle --out bench/res
 - 도면: `eval/tools/make_images.py` 생성기로 60장(시드 7, 숨은 지시 없음, 단 있는 축 도면). 같은 시드면 같은 도면입니다. 글자는 영문·숫자 내장 글꼴이고 배경이 흰색이라 OCR에 쉬운 그림입니다. 실제 도면의 스캔 잡음·손글씨·겹친 선은 들어 있지 않습니다.
 - 엔진: rapidocr-onnxruntime 1.4.4(Apache-2.0, 기본 모델, CPU, 한 장씩). `oracle`은 OCR 없이 정답 글자를 써서 OCR이 완벽할 때의 상한입니다.
 - 질의: part는 "부품 번호 <번호> 도면의 치수를 알려 줘", dims는 "<도면 이름> <치수 4개>"입니다. 정답 도면이 BM25 상위 1·5에 나오는지 봅니다.
-- 측정: 2026-11-22 07:15, WSL2 12GB, CPU(GPU 없음), 커밋 `d61c066`, 1회(OCR 결과는 결정적). 결과는 `bench/results/drawing-ocr-rapidocr-2026-11-22.json`, `drawing-ocr-oracle-2026-11-22.json`입니다.
+- 측정: 2026-11-22 07:15, WSL2 12GB, CPU(GPU 없음), 기준 커밋 `d61c066` 위에서 이 스크립트로, 1회(OCR 결과는 결정적). 결과는 `bench/results/drawing-ocr-rapidocr-2026-11-22.json`, `drawing-ocr-oracle-2026-11-22.json`입니다.
 
 | 엔진 | part 상위 1 / 5 | dims 상위 1 / 5 | 끝까지 모두 맞음 | 여섯 항목 맞춘 수 | OCR만 모두 맞음 | OCR 지연 p50·p95 ms/장 |
 |---|---|---|---|---|---|---|
