@@ -178,7 +178,13 @@ GATEWAY_EXTERNAL_LOG=/audit/gateway/external.jsonl docker compose -f infra/compo
 |---|---|
 | ![정상 셋](docs/images/eval-normal-light.png) | ![시나리오별 결과](docs/images/eval-scenarios-light.png) |
 
-평가 리포트의 모의 데이터(`src/mocks/fixtures/eval-normal-stage1.json`)는 실제 1단계 보고서(`eval/reports/2026-11-20-normal-stage1.json`)에 하네스의 통계 함수(`eval/harness/report.py`·`stats.py`)로 summary를 붙인 것입니다. 하네스가 summary를 직접 쓰는 것(#328)과 gateway 경로(#332) 전이라 모의 서버 화면입니다. 막대는 0~100%(차이는 -100~+100%p, 가운데 선이 0) 위에 구간을 선으로, 비율을 점으로 그리고 값은 옆 글자로 읽게 했습니다.
+평가 리포트의 모의 데이터(`src/mocks/fixtures/eval-normal-stage1.json`)는 실제 1단계 보고서(`eval/reports/2026-11-20-normal-stage1.json`)를 그대로 옮긴 것입니다. summary는 하네스가 md와 같은 계산으로 씁니다(#345). 막대는 0~100%(차이는 -100~+100%p, 가운데 선이 0) 위에 구간을 선으로, 비율을 점으로 그리고 값은 옆 글자로 읽게 했습니다.
+
+실제 스택(gateway `/eval/reports`, compose가 `eval/reports`를 읽기 전용으로 마운트)에 `E0057`(auditor)로 로그인해 찍은 화면입니다(2026-11-21).
+
+| 실제: 실행 조건과 보호 지표 | 실제: 시나리오별 결과 |
+|---|---|
+| ![실제 평가 리포트](docs/images/real-eval-report.png) | ![실제 시나리오별 결과](docs/images/real-eval-scenarios.png) |
 
 | 로그인 오류 | 디자인 부품 |
 |---|---|

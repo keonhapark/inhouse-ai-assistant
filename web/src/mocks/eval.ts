@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import type { Schemas } from '../api/client'
 import { employeeForToken } from './data'
 import { problem } from './problem'
-// 실제 1단계 보고서(eval/reports/2026-11-20-normal-stage1.json)에 하네스 통계 함수로 summary를 붙인 것입니다.
+// 실제 1단계 보고서(eval/reports/2026-11-20-normal-stage1.json)를 그대로 옮긴 것입니다(summary는 하네스가 씀, #345).
 import stage1 from './fixtures/eval-normal-stage1.json'
 
 // openapi-typescript가 JSON Schema의 $defs를 속성으로 옮겨 적어 뺍니다(응답 본문에는 없음).
