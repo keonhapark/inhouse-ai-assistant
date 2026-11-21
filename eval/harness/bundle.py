@@ -4,6 +4,9 @@
 객체(`{경로: sha256}`) 둘 다 읽습니다. 묶음 해시는 `files`를 경로 순으로 `<sha256>  <경로>` 줄로 이어 붙인
 문자열의 SHA-256입니다. 끝 줄바꿈이 있는 계산과 없는 계산을 둘 다 하고, 계약 표와 맞는 쪽을 씁니다.
 각 파일의 실제 SHA-256도 다시 계산해 manifest와 다르면 멈춥니다.
+
+`run --bundle`은 실제로 읽는 시나리오 파일이 모두 manifest `files`에 있는지(`unlisted`), rag가 읽는 주입 문서
+파일의 해시가 manifest 파일 중 하나와 같은지(`manifest_sha256s`)도 봅니다.
 """
 
 from __future__ import annotations
@@ -11,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -91,6 +95,17 @@ def check(bundle: Path, name: str | None = None, table: Path = TABLE) -> BundleC
             bad.append(path)
     return BundleCheck(name=name, expected=expected, actual=actual, newline=newline, files=len(files),
                        mismatched_files=sorted(bad))
+
+
+def unlisted(bundle: Path, paths: Iterable[Path]) -> list[str]:
+    """manifest `files`에 없는 파일(묶음 밖 파일 포함)의 경로입니다."""
+    root = bundle.resolve()
+    listed = {(root / p).resolve() for p in manifest_files(load_manifest(bundle))}
+    return sorted(str(p) for p in paths if p.resolve() not in listed)
+
+
+def manifest_sha256s(bundle: Path) -> set[str]:
+    return set(manifest_files(load_manifest(bundle)).values())
 
 
 def describe(c: BundleCheck) -> str:

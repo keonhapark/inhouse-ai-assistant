@@ -129,12 +129,17 @@ def load_scenario(path: Path) -> dict[str, Any]:
     return validate_scenario(_read(path), str(path))
 
 
+def scenario_paths(directory: Path) -> list[Path]:
+    """load_scenarios가 읽는 파일 목록입니다."""
+    return sorted(p for p in directory.rglob("*") if p.suffix in (".json", ".yaml", ".yml"))
+
+
 def load_scenarios(directory: Path) -> list[dict[str, Any]]:
     """폴더 아래 시나리오를 모두 읽습니다. 파일 하나에 시나리오 하나(객체)나 여러 개(목록)를 둡니다.
 
     하나라도 틀리면 전부 모아 ScenarioError로 알립니다.
     """
-    files = sorted(p for p in directory.rglob("*") if p.suffix in (".json", ".yaml", ".yml"))
+    files = scenario_paths(directory)
     out: list[dict[str, Any]] = []
     problems: list[str] = []
     ids: dict[str, str] = {}

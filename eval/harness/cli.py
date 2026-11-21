@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -113,6 +114,49 @@ def rag_injected_docs(cfg: dict[str, Any]) -> bool | None:
     return bool(r.stdout.strip())
 
 
+def rag_file_sha256(cfg: dict[str, Any], env: str) -> str | None:
+    """rag 컨테이너의 환경 변수 env가 가리키는 파일의 SHA-256을 docker exec로 구합니다. 변수가 비었거나 docker를
+    부르지 못하면 None."""
+    import subprocess
+
+    container = cfg.get("rag", {}).get("container")
+    if not container:
+        return None
+    try:
+        r = subprocess.run(["docker", "exec", container, "sh", "-c", f'f="${env}"; [ -z "$f" ] || sha256sum "$f"'],
+                           capture_output=True, text=True, timeout=30, check=True)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    got = r.stdout.split()
+    return got[0] if got and re.fullmatch(r"[0-9a-f]{64}", got[0]) else None
+
+
+def check_bundle_scenarios(bundle: Path, scenarios: Path) -> None:
+    """--bundle일 때 실제로 읽는 시나리오 파일이 모두 대조한 묶음의 manifest에 있는지 봅니다(#432). 내용 해시는
+    check_bundle이 이미 manifest와 대조했습니다."""
+    from harness.bundle import unlisted
+    from harness.scenario import scenario_paths
+
+    paths = scenario_paths(scenarios)
+    if not paths:
+        raise SystemExit(f"--scenarios {scenarios}에 시나리오 파일이 없습니다")
+    bad = unlisted(bundle, paths)
+    if bad:
+        raise SystemExit(f"--bundle을 주면 시나리오는 묶음 manifest의 파일에서만 읽습니다. manifest에 없는 파일 "
+                         f"{len(bad)}개: {', '.join(bad[:5])}")
+
+
+def check_bundle_injected_docs(bundle: Path, cfg: dict[str, Any]) -> None:
+    """rag가 읽는 주입 문서 파일(RAG_EXTRA_DOCS)의 해시가 묶음 manifest 파일 중 하나와 같은지 봅니다(#432)."""
+    from harness.bundle import manifest_sha256s
+
+    sha = rag_file_sha256(cfg, "RAG_EXTRA_DOCS")
+    if sha is None:
+        raise SystemExit("rag의 주입 문서 파일 해시를 구하지 못했습니다(rag.container, docker exec)")
+    if sha not in manifest_sha256s(bundle):
+        raise SystemExit(f"rag가 읽는 주입 문서 파일({sha[:12]})이 묶음 manifest의 어느 파일과도 해시가 다릅니다")
+
+
 def cmd_validate(args: argparse.Namespace) -> int:
     try:
         got = load_scenarios(Path(args.dir))
@@ -145,7 +189,15 @@ def cmd_bundle_check(args: argparse.Namespace) -> int:
 def cmd_run(args: argparse.Namespace) -> int:
     cfg = load_config(Path(args.config))
     bundle = check_bundle(args.bundle, args.bundle_name) if args.bundle else None
+    if args.bundle:
+        check_bundle_scenarios(Path(args.bundle), Path(args.scenarios))
     scenarios = load_scenarios(Path(args.scenarios))
+    if args.bundle:
+        with_files = [s["id"] for s in scenarios
+                      if any(isinstance(t, dict) and t.get("attachments") for t in s.get("turns", []))]
+        if with_files:
+            raise SystemExit("--bundle 실행은 아직 시나리오 첨부 파일을 묶음에서 읽거나 대조하지 않습니다. 첨부가 있는 "
+                             f"시나리오 {len(with_files)}개: {', '.join(with_files[:5])}")
     if args.only:
         wanted = set(args.only.split(","))
         scenarios = [s for s in scenarios if s["id"] in wanted]
@@ -158,6 +210,11 @@ def cmd_run(args: argparse.Namespace) -> int:
     if args.injected_docs and injected is not None and injected != (args.injected_docs == "only"):
         raise SystemExit(f"--injected-docs {args.injected_docs}인데 rag의 주입 문서 파일이 "
                          f"{'켜져' if injected else '꺼져'} 있습니다. 스택 설정(RAG_EXTRA_DOCS)을 맞춥니다")
+    if args.bundle and injected is None:
+        raise SystemExit("--bundle이면 rag의 주입 문서 파일을 확인해야 합니다. 설정에 rag.container를 두고 docker를 "
+                         "부를 수 있게 합니다")
+    if args.bundle and injected:
+        check_bundle_injected_docs(Path(args.bundle), cfg)
     system, erp = make_factories(cfg)
     out = Path(args.out)
     rows_file = out.with_suffix(".rows.jsonl")
@@ -174,6 +231,10 @@ def cmd_run(args: argparse.Namespace) -> int:
             if prior_meta.model_override != cfg["gateway"].get("modelOverride"):
                 raise SystemExit(f"앞선 회차의 모델 교체 값({prior_meta.model_override})이 지금 설정"
                                  f"({cfg['gateway'].get('modelOverride')})과 다릅니다. 다른 출력 이름으로 돌립니다")
+        other_bundles = {r.bundle for r in done} - {bundle}
+        if other_bundles:
+            raise SystemExit(f"앞선 회차 중 지금 묶음({bundle})과 다른 묶음에서 돈 회차가 있습니다: "
+                             f"{sorted(map(str, other_bundles))}. 다른 출력 이름으로 돌립니다")
         print(f"이어 돌리기: 끝난 회차 {len(done)}개를 건너뜁니다", flush=True)
         now = (_git("rev-parse", "HEAD"), cfg.get("stackCommit"), cfg.get("packStage"))
         other = {sig: n for sig, n in signature_counts(done).items() if sig != now}
@@ -196,7 +257,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                             model=cfg.get("model"), on_row=progress, done_rows=done,
                             max_runs=args.max_runs, started_at=started_at, health_check=health,
                             prior_cost_usd=prior_cost, pack_stage=cfg.get("packStage"),
-                            stack_commit=cfg.get("stackCommit"), injected_docs=injected)
+                            stack_commit=cfg.get("stackCommit"), injected_docs=injected, bundle=bundle)
     if not cfg["erp"].get("reset", True):
         meta.notes.append("회차 사이에 erp를 초기화하지 않았습니다(erp.reset: false)")
     if not (cfg["gateway"].get("externalLog") or cfg["gateway"].get("externalLogDocker")):
