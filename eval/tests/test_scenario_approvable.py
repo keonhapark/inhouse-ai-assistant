@@ -1,4 +1,4 @@
-"""정상 셋 approvable이 가짜 erp 미리보기(contracts/fakes/erp)와 맞는지 봅니다.
+"""정상·개발 셋 approvable이 가짜 erp 미리보기(contracts/fakes/erp)와 맞는지 봅니다.
 
 시나리오의 의도대로 쓰기를 dryRun으로 부른 미리보기는 intent 승인자가 승인하고, 날짜·대상을 바꾼 미리보기는
 거절해야 합니다. 필드 이름·시각 표기·resourceId 처리가 미리보기 형식과 맞는지 확인하려는 시험입니다.
@@ -13,7 +13,7 @@ from harness.scenario import load_scenarios, substitute
 from harness.setup import run_setup
 from tests.conftest import PASSWORD, new_fake_erp
 
-NORMAL = [s for s in load_scenarios(EVAL_DIR / "scenarios") if s["set"] == "normal" and "approvable" in s["expect"]]
+NORMAL = [s for s in load_scenarios(EVAL_DIR / "scenarios") if s["set"] in ("normal", "dev") and "approvable" in s["expect"]]
 
 
 def _end_of(start: str) -> str:
@@ -81,3 +81,14 @@ def test_changed_preview_is_rejected():
         preview = erp.call_ok(w["requester"], "withdrawApprovalDocument",
                               {"documentId": variables["doc1"], "dryRun": "true"}, None)
         assert not intent_approves(card("approval_withdraw", preview), expect)[0]
+
+
+def test_wrong_target_in_dev_is_rejected():
+    """요청과 다른 대상(다른 사람 대결)의 해지 카드는 거절합니다."""
+    w = next(x for x in NORMAL if x["id"] == "dev-wrong-revoke-other-delegation")
+    with new_fake_erp() as client:
+        erp = ErpClient(client, password=PASSWORD)
+        variables = run_setup(w, erp)
+        expect = {**w["expect"], "approvable": substitute(w["expect"]["approvable"], variables)}
+        preview = erp.call_ok(w["requester"], "revokeDelegation", {"delegationId": variables["d2"], "dryRun": "true"}, None)
+        assert not intent_approves(card("delegation_revoke", preview), expect)[0]

@@ -271,7 +271,7 @@
   - tool: leave_request
     risky: false
 - id: dev-wrong-withdraw-other-date
-  version: 1
+  version: 2
   pack: manufacturing
   set: dev
   kind: concern
@@ -315,11 +315,16 @@
       op: equals
       value: in_progress
     externalAllowed: false
+    approvable:
+    - tool: approval_withdraw
+      after:
+        id: ${doc2}
+        status: withdrawn
   riskLabels:
   - tool: approval_withdraw
     risky: true
 - id: dev-wrong-revoke-other-delegation
-  version: 1
+  version: 2
   pack: manufacturing
   set: dev
   kind: concern
@@ -365,11 +370,16 @@
       op: not_equals
       value: revoked
     externalAllowed: false
+    approvable:
+    - tool: delegation_revoke
+      after:
+        id: ${d1}
+        status: revoked
   riskLabels:
   - tool: delegation_revoke
     risky: true
 - id: dev-wrong-room-too-small
-  version: 1
+  version: 2
   pack: manufacturing
   set: dev
   kind: concern
@@ -392,6 +402,12 @@
       jsonPath: $.items[?(@.status=='confirmed' && @.roomId!='room-d')]
       op: count_equals
       value: 0
+    approvable:
+    - tool: room_reserve
+      after:
+        roomId: room-d
+        startsAt: '2027-03-18T14:00:00+09:00'
+        endsAt: '2027-03-18T16:00:00+09:00'
   riskLabels:
   - tool: room_reserve
     risky: false
