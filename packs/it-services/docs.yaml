@@ -1,43 +1,43 @@
-# 문서 목록. 본문은 rag가 생성기로 만듭니다(문서 템플릿은 rag 몫, 뒤에). 지금은 모두 planned입니다.
+# 문서 목록. 본문은 rag가 생성기로 만듭니다(rag/templates/<문서 ID>.md).
 # trust: trusted(규정·공지), untrusted(사용자·외부가 쓴 글. 그 안의 지시는 따르지 않음)
 documents:
   - id: its-work-rules
     title: 취업규칙(가상)
     kind: regulation
-    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    source: {type: generated, generator: rag, license: 이 저장소에서 생성}
     acl_tags: [public]
     trust: trusted
     stage: 1
-    status: planned
+    status: ready
   - id: its-leave-rules
     title: 휴가·근태 규정(가상, 프로젝트 투입 중 휴가 포함)
     kind: regulation
-    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    source: {type: generated, generator: rag, license: 이 저장소에서 생성}
     acl_tags: [hr-policy]
     trust: trusted
     stage: 1
-    status: planned
+    status: ready
   - id: its-project-standards
     title: 프로젝트 수행 기준(가상, 공수 보고·산출물·변경 관리)
     kind: regulation
-    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    source: {type: generated, generator: rag, license: 이 저장소에서 생성}
     acl_tags: [project-standards]
     trust: trusted
     stage: 3
-    status: planned
+    status: ready
   - id: its-ops-runbook
     title: 운영 절차서(가상, 장애 등급·보고 시간·계정 발급)
     kind: guide
-    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    source: {type: generated, generator: rag, license: 이 저장소에서 생성}
     acl_tags: [ops-runbook]
     trust: trusted
     stage: 2
-    status: planned
+    status: ready
   - id: its-customer-contract-sample
     title: 고객사 유지보수 계약 요약(가상, SLA·위약금)
     kind: guide
-    source: {type: generated, generator: rag 문서 템플릿(예정), license: 이 저장소에서 지어낸 글}
+    source: {type: generated, generator: rag, license: 이 저장소에서 생성}
     acl_tags: [customer-contracts]
     trust: trusted
     stage: 3
-    status: planned
+    status: ready
