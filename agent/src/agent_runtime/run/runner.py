@@ -9,7 +9,8 @@ from langgraph.types import Command
 
 from agent_runtime.mcp_server.tokens import TokenError, TokenVerifier
 from agent_runtime.registry import Agent, Registry, Requester
-from agent_runtime.run.graph import TURN_RESET, RunContext, prepare_history
+from agent_runtime.run.graph import TURN_RESET, UNTRUSTED_NOTE, RunContext, prepare_history
+from agent_runtime.run.receipt import RECEIPT_TOOL, ReceiptReader, attachment_note
 from agent_runtime.run.tools import ToolCaller
 
 
@@ -23,9 +24,10 @@ class Runner:
     graph: Any
     caller: ToolCaller
     verifier: TokenVerifier | None = None
+    receipts: ReceiptReader | None = None
 
     async def run(self, token: str, conversation_id: str, agent_id: str, message: str, requester: Requester,
-                  condition: str = "full") -> dict[str, Any]:
+                  condition: str = "full", attachments: list[str] | None = None) -> dict[str, Any]:
         config = {"configurable": {"thread_id": conversation_id}}
         problem, token_id = self._check(token, conversation_id, agent_id, requester)
         if problem:
@@ -40,8 +42,16 @@ class Runner:
             return _failed(conversation_id, agent_id, f"도구 목록을 가져오지 못했습니다({type(e).__name__})")
         prior = prepare_history((snapshot.values or {}).get("messages", []))
         state = {**TURN_RESET, "conversationId": conversation_id, "agentId": agent_id,
-                 "requesterId": requester.employee_id, "condition": condition,
-                 "messages": [*prior, {"role": "user", "content": message}]}
+                 "requesterId": requester.employee_id, "condition": condition}
+        turn = [{"role": "user", "content": message}]
+        if attachments:
+            note, tainted = await self._read_attachments(attachments, token, ctx)
+            # 사용자 발화와 섞지 않고 따로 둡니다.
+            turn.append({"role": "user", "content": note})
+            if tainted:
+                # 영수증 글자는 신뢰할 수 없는 내용입니다. 같은 턴이라도 막지 않고 user_direct 도구는 승인을 받습니다(결정 0004).
+                state["conversation_tainted"] = True
+        state["messages"] = [*prior, *turn]
         try:
             await self.graph.ainvoke(state, config, context=ctx)
         except Exception as e:  # noqa: BLE001 - 그래프 오류는 failed 상태로 돌려줍니다
@@ -71,6 +81,13 @@ class Runner:
         except Exception as e:  # noqa: BLE001
             return _failed(conversation_id, agent_id, f"실행 중 오류({type(e).__name__})")
         return self._view(conversation_id, agent_id, await self.graph.aget_state(config))
+
+    async def _read_attachments(self, data_urls: list[str], token: str, ctx: RunContext) -> tuple[str, bool]:
+        """(사용자 메시지에 붙일 글, 읽은 값이 있는지). 이미지 본문은 상태에 넣지 않습니다."""
+        if self.receipts is None or ctx.spec(RECEIPT_TOOL) is None:
+            return f"[첨부 이미지 {len(data_urls)}장은 이 에이전트에서 읽지 않았습니다]", False
+        results = await self.receipts.read_all(data_urls, token)
+        return attachment_note(results, UNTRUSTED_NOTE), any(r is not None for r in results)
 
     def _check(self, token: str, conversation_id: str, agent_id: str, requester: Requester,
                check_callable: bool = True) -> tuple[str | None, str | None]:

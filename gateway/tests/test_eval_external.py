@@ -1,4 +1,4 @@
-"""평가 모드에서만 토큰 없는 외부 호출을 받습니다(#268, 도구 호출 측정 #103의 외부 기준)."""
+"""GATEWAY_EVAL_TOOLCALL=1일 때만 토큰 없는 외부 호출을 받습니다(#268·#294, 도구 호출 측정 #103의 외부 기준)."""
 
 import json
 
@@ -10,7 +10,7 @@ from .test_egress import EXT_SCHEMA, MSG, PII_MSG, _audit, ext_log, glossary, to
 
 @pytest.fixture
 def eval_mode(app):
-    app.state.egress.eval_mode = True
+    app.state.egress.eval_toolcall = True
 
 
 def test_outside_eval_mode_tokenless_external_is_still_403(client, app, litellm):
@@ -55,14 +55,31 @@ def test_eval_mode_does_not_loosen_local_only_agents(client, app, litellm, eval_
     assert r.status_code == 403
 
 
-def test_app_reads_eval_mode_from_settings(settings, fake_erp, issuer):
+def test_app_reads_eval_toolcall_flag_separately_from_eval_mode(settings, fake_erp, issuer, litellm):
+    """GATEWAY_EVAL_MODE만 켠 스택(정상·확인 셋)은 토큰 없는 외부 호출을 지금처럼 403으로 막습니다(#294)."""
     import dataclasses
 
     import httpx
+    from fastapi.testclient import TestClient
 
     from gateway.main import create_app
 
-    on = create_app(dataclasses.replace(settings, eval_mode=True), erp_transport=httpx.ASGITransport(app=fake_erp),
-                    issuer=issuer)
-    off = create_app(settings, erp_transport=httpx.ASGITransport(app=fake_erp), issuer=issuer)
-    assert on.state.egress.eval_mode is True and off.state.egress.eval_mode is False
+    def build(**kw):
+        return create_app(dataclasses.replace(settings, **kw), erp_transport=httpx.ASGITransport(app=fake_erp),
+                          issuer=issuer, llm_transport=httpx.MockTransport(litellm))
+
+    for kw, status in (({"eval_mode": True}, 403), ({"eval_toolcall": True}, 200),
+                       ({"eval_mode": True, "eval_toolcall": True}, 200)):
+        with TestClient(build(**kw)) as c:
+            r = c.post("/v1/chat/completions", json={"model": "external", "messages": MSG})
+            assert r.status_code == status, (kw, r.text)
+
+
+def test_settings_read_flag_from_env(monkeypatch):
+    from gateway.config import Settings
+
+    monkeypatch.setenv("GATEWAY_EVAL_MODE", "1")
+    monkeypatch.delenv("GATEWAY_EVAL_TOOLCALL", raising=False)
+    assert Settings.from_env().eval_toolcall is False
+    monkeypatch.setenv("GATEWAY_EVAL_TOOLCALL", "1")
+    assert Settings.from_env().eval_toolcall is True
