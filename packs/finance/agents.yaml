@@ -39,16 +39,15 @@ agents:
     version: 0.1.0
     stage: 1
     owner_unit: credit-review
-    description: 여신 규정 질의, 여신 품의 올리기와 진행 확인·회수를 맡습니다.
+    description: 여신 규정 질의, 내가 올린 여신 품의의 진행 확인과 회수를 맡습니다. 품의 올리기는 도구가 생기면 더합니다.
     callable_by:
       roles: [credit_officer]
     tools:
-      - loan_request
       - approval_list_mine
       - approval_get
       - approval_withdraw
       - policy_search
-    allowed_risk: [read, reversible_write, irreversible]
+    allowed_risk: [read, irreversible]
     doc_scopes: [public, credit-policy]
     model_policy:
       mode: local_only
