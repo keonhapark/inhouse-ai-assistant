@@ -6,7 +6,7 @@ import json
 import pytest
 import yaml
 
-from harness.bundle import bundle_hashes, check, describe, recorded_hashes
+from harness.bundle import bundle_hash, check, describe, recorded_hashes
 from harness.cli import main
 
 
@@ -15,7 +15,7 @@ def test_recorded_hashes_reads_contract_table():
     assert set(got) >= {"confirm-v1", "toolcall-v1"} and all(len(v) == 64 for v in got.values())
 
 
-def make_bundle(tmp_path, form="list", newline=True, name="b-v1", fmt="json"):
+def make_bundle(tmp_path, form="list", name="b-v1", fmt="json", want=None):
     root = tmp_path / "bundle"
     (root / "scenarios").mkdir(parents=True)
     files = {"scenarios/a.yaml": b"- id: a\n", "markers.yaml": b"markers: {}\n"}
@@ -29,20 +29,35 @@ def make_bundle(tmp_path, form="list", newline=True, name="b-v1", fmt="json"):
         (root / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     else:
         (root / "manifest.yaml").write_text(yaml.safe_dump(manifest), encoding="utf-8")
-    want = bundle_hashes(shas)["있음" if newline else "없음"]
+    want = want or bundle_hash(shas)
     table = tmp_path / "table.md"
     table.write_text(f"| 묶음 | 쓰임 | 구성 | bundleSha256 | 날 |\n|---|---|---|---|---|\n"
                      f"| {name} | x | y | `{want}` | 2026-11-22 |\n", encoding="utf-8")
     return root, table
 
 
-@pytest.mark.parametrize("form, newline, fmt", [("list", True, "json"), ("dict", False, "json"),
-                                                ("list", False, "yaml"), ("dict", True, "yaml")])
-def test_check_matches_either_form_and_newline(tmp_path, form, newline, fmt):
-    root, table = make_bundle(tmp_path, form, newline, fmt=fmt)
+@pytest.mark.parametrize("form, fmt", [("list", "json"), ("dict", "json"), ("list", "yaml"), ("dict", "yaml")])
+def test_check_matches_contract_rule(tmp_path, form, fmt):
+    root, table = make_bundle(tmp_path, form, fmt=fmt)
     c = check(root, table=table)
-    assert c.ok and c.files == 2 and c.newline == ("있음" if newline else "없음")
-    assert "= 계약 표(파일 2개, 끝 줄바꿈 " in describe(c)
+    assert c.ok and c.files == 2
+    assert "= 계약 표(파일 2개, 끝 줄바꿈 있음)" in describe(c)
+
+
+def test_bundle_hash_puts_newline_after_every_line():
+    files = {"b.yaml": "2" * 64, "a.yaml": "1" * 64}
+    body = f"{'1' * 64}  a.yaml\n{'2' * 64}  b.yaml\n"
+    assert bundle_hash(files) == hashlib.sha256(body.encode()).hexdigest()
+
+
+def test_check_refuses_hash_without_trailing_newline(tmp_path):
+    """#439 규칙(모든 줄 끝 줄바꿈)만 받습니다. 끝 줄바꿈 없는 계산으로 적힌 표는 맞지 않습니다."""
+    shas = {"scenarios/a.yaml": hashlib.sha256(b"- id: a\n").hexdigest(),
+            "markers.yaml": hashlib.sha256(b"markers: {}\n").hexdigest()}
+    body = "\n".join(f"{sha}  {path}" for path, sha in sorted(shas.items()))
+    root, table = make_bundle(tmp_path, want=hashlib.sha256(body.encode()).hexdigest())
+    c = check(root, table=table)
+    assert not c.ok and "와 다릅니다" in describe(c)
 
 
 def test_check_finds_changed_file_and_wrong_table(tmp_path):

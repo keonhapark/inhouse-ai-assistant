@@ -1,8 +1,9 @@
 """확인 셋 묶음 해시 확인(contracts/eval/confirm-sets.md, eval/protocol.md 7절).
 
 묶음 폴더의 manifest(`manifest.json` 또는 `manifest.yaml`)에 `files`가 있습니다. 목록(`[{path, sha256}]`)과
-객체(`{경로: sha256}`) 둘 다 읽습니다. 묶음 해시는 `files`를 경로 순으로 `<sha256>  <경로>` 줄로 이어 붙인
-문자열의 SHA-256입니다. 끝 줄바꿈이 있는 계산과 없는 계산을 둘 다 하고, 계약 표와 맞는 쪽을 씁니다.
+객체(`{경로: sha256}`) 둘 다 읽습니다. 묶음 해시는 `files`를 경로 순으로 `<sha256>  <경로>` 줄로 만들고
+마지막 줄을 포함한 모든 줄 끝에 줄바꿈을 붙여 이어 붙인 문자열의 SHA-256입니다(계약 표 머리말, #439). 다른 계산은
+받지 않습니다.
 각 파일의 실제 SHA-256도 다시 계산해 manifest와 다르면 멈춥니다.
 
 `run --bundle`은 실제로 읽는 시나리오 파일이 모두 manifest `files`에 있는지(`unlisted`), rag가 읽는 주입 문서
@@ -35,14 +36,14 @@ class BundleCheck:
     name: str | None
     expected: str | None
     actual: str
-    # 표와 맞은 계산(끝 줄바꿈 "있음"·"없음"), 맞지 않으면 None
-    newline: str | None
+    # 계산한 해시가 계약 표와 같은지
+    matched: bool
     files: int
     mismatched_files: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
-        return self.newline is not None and not self.mismatched_files
+        return self.matched and not self.mismatched_files
 
 
 def recorded_hashes(table: Path = TABLE) -> dict[str, str]:
@@ -73,10 +74,9 @@ def manifest_files(manifest: dict) -> dict[str, str]:
     raise BundleError("manifest의 files가 목록도 객체도 아닙니다")
 
 
-def bundle_hashes(files: dict[str, str]) -> dict[str, str]:
-    body = "\n".join(f"{sha}  {path}" for path, sha in sorted(files.items()))
-    return {"없음": hashlib.sha256(body.encode()).hexdigest(),
-            "있음": hashlib.sha256((body + "\n").encode()).hexdigest()}
+def bundle_hash(files: dict[str, str]) -> str:
+    body = "".join(f"{sha}  {path}\n" for path, sha in sorted(files.items()))
+    return hashlib.sha256(body.encode()).hexdigest()
 
 
 def check(bundle: Path, name: str | None = None, table: Path = TABLE) -> BundleCheck:
@@ -84,16 +84,14 @@ def check(bundle: Path, name: str | None = None, table: Path = TABLE) -> BundleC
     name = name or manifest.get("name") or manifest.get("bundle")
     files = manifest_files(manifest)
     expected = recorded_hashes(table).get(name) if name else None
-    hashes = bundle_hashes(files)
-    newline = next((k for k, v in hashes.items() if v == expected), None)
-    actual = hashes[newline] if newline else hashes["없음"]
+    actual = bundle_hash(files)
     bad = []
     for path, sha in files.items():
         p = (bundle / path).resolve()
         if bundle.resolve() not in p.parents or not p.is_file() or \
                 hashlib.sha256(p.read_bytes()).hexdigest() != sha:
             bad.append(path)
-    return BundleCheck(name=name, expected=expected, actual=actual, newline=newline, files=len(files),
+    return BundleCheck(name=name, expected=expected, actual=actual, matched=actual == expected, files=len(files),
                        mismatched_files=sorted(bad))
 
 
@@ -110,11 +108,11 @@ def manifest_sha256s(bundle: Path) -> set[str]:
 
 def describe(c: BundleCheck) -> str:
     if c.ok:
-        return f"{c.name} `{c.actual}` = 계약 표(파일 {c.files}개, 끝 줄바꿈 {c.newline})"
+        return f"{c.name} `{c.actual}` = 계약 표(파일 {c.files}개, 끝 줄바꿈 있음)"
     parts = [f"{c.name or '이름 없음'} `{c.actual}`"]
     if c.expected is None:
         parts.append("계약 표에 이 묶음이 없습니다")
-    elif c.newline is None:
+    elif not c.matched:
         parts.append(f"계약 표 `{c.expected}`와 다릅니다")
     if c.mismatched_files:
         parts.append(f"manifest와 내용이 다른 파일 {len(c.mismatched_files)}개")
