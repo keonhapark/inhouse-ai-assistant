@@ -176,7 +176,7 @@ DENIED = [("GET", "/api/agents", None), ("GET", "/api/agent-registry", None), ("
           ("GET", "/api/inbox?box=inbox", None), ("POST", "/api/inbox/d_x/approve", {"version": 1}),
           ("POST", "/api/inbox/d_x/reject", {"version": 1}), ("GET", "/api/delegations?role=delegator", None),
           ("POST", "/api/delegations", {}), ("POST", "/api/delegations/dl_x/revoke", None),
-          ("GET", "/api/audit-events", None), ("GET", "/api/ops/metrics", None), ("GET", "/api/ops/egress", None),
+          ("GET", "/api/audit-events", None), ("GET", "/api/ops/metrics", None), ("GET", "/api/ops/egress", None), ("GET", "/api/eval/reports", None),
           ("DELETE", "/api/conversations/conv_x", None)]
 
 

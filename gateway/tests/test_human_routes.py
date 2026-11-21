@@ -35,6 +35,8 @@ ROUTES = [
     ("GET", "/api/approval-forms", None),
     ("GET", "/api/org/units", None),
     ("GET", "/api/agent-registry", None),
+    ("GET", "/api/eval/reports", None),
+    ("GET", "/api/eval/reports/x", None),
     ("GET", "/api/audit-events", None),
 ]
 

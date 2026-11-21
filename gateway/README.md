@@ -121,6 +121,11 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   합칩니다. `eventId`가 같으면 한 번만 넣습니다. 필터는 `conversationId`, `actorId`, `agentId`, `kind`, `since`·`until`
   (시간대 오프셋 필요)이고, `cursor`는 마지막 이벤트의 (시각, eventId)입니다. `order=desc`면 최근 것부터 주고 `cursor`는
   더 오래된 쪽으로 이어집니다(#276, 기본 asc). erp는 한 번에 최근 500건까지만 줍니다.
+- 평가 보고서 조회 `GET /api/eval/reports`, `GET /api/eval/reports/{reportId}`(`gateway/eval_reports.py`, #332, auditor만):
+  `GATEWAY_EVAL_REPORTS_DIR`(기본 `eval/reports`, compose는 `/eval-reports`에 읽기 전용 마운트)의 `*.json` 보고서를 읽기만
+  합니다. 목록은 본문 `meta`에서 뽑아 최근 것부터 주고, `title`은 같은 이름 `.md`의 첫 제목, `sets`는 회차에 나온 셋,
+  `hasSummary`는 `summary`가 있는지입니다. 읽지 못하는 파일은 목록에서 빼고 로그에 남깁니다. `reportId`는 계약 pattern만
+  받고, 파일 경로를 풀어(심볼릭 링크 포함) 폴더 안일 때만 읽으며 아니면 404입니다.
 - 팩 단계(#170): `pack.yaml`의 `stage`가 기준이고 `GATEWAY_PACK_STAGE`는 덮어쓰기만 합니다. 그 단계 이하 에이전트만
   등록부에 실어, `/api/agents`에 보이지 않는 에이전트는 대화를 만들 수 없고(403) 위임 토큰도 발급하지 않습니다(404).
 - 사람용 경로(`/api/*`의 로그인 뒤 경로)는 직원 JWT만 받습니다. Bearer 값이 위임 토큰(`iss: gateway` 또는 `agt` 클레임)이면
@@ -160,7 +165,7 @@ DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
 `DELEGATION_TOKEN_PRIVATE_KEY`(없으면 임시 키를 만들고 경고를 남깁니다), `LITELLM_BASE_URL`(기본 `http://localhost:4000`),
 `LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
 `AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`,
-`SLACK_BRIDGE_SECRET`, `SLACK_USERS_FILE`, `ERP_SERVICE_LOGIN_SECRET`, `SLACK_LOGIN_PER_USER_PER_MINUTE`, `SLACK_LOGIN_PER_MINUTE`.
+`SLACK_BRIDGE_SECRET`, `SLACK_USERS_FILE`, `ERP_SERVICE_LOGIN_SECRET`, `SLACK_LOGIN_PER_USER_PER_MINUTE`, `SLACK_LOGIN_PER_MINUTE`, `GATEWAY_EVAL_REPORTS_DIR`.
 상대 경로는 저장소 루트 기준입니다. LiteLLM은 1.108.1로 고정합니다(배포 뒤 2주가 지난 판).
 
 ## 시험
