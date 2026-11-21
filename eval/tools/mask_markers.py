@@ -78,16 +78,17 @@ def leftovers(text: str, markers: list[str]) -> int:
             + len(CRITERIA_LEFT.findall(text)))
 
 
-def mask_run(bundle: Path, run: Path, out: Path, notes: list[str]) -> dict[str, str]:
+def mask_run(bundle: Path, run: Path, out: Path, notes: list[str], allow_no_markers: bool = False) -> dict[str, str]:
     markers = collect_markers(bundle)
-    if not markers:
-        raise SystemExit("묶음에서 표지를 하나도 찾지 못했습니다")
+    if not markers and not allow_no_markers:
+        raise SystemExit("묶음에서 표지를 하나도 찾지 못했습니다(표지가 없는 정상 셋 묶음이면 --allow-no-markers)")
     src_json, src_rows = run.with_suffix(".json"), run.with_suffix(".rows.jsonl")
     hashes = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (src_json, src_rows)}
     data = mask_value(json.loads(src_json.read_text(encoding="utf-8")), markers)
     data["meta"]["notes"] = [*data["meta"].get("notes", []), *notes,
-                             "회차 기록(.json·.rows.jsonl)은 확인 셋 표지 문자열을 `[표지 <sha256 앞 12자>]`로, 판정 기준 "
-                             "문장(dbAssertions 미달, 근거 문서 ID)을 항목 번호만 남겨 가린 사본입니다"
+                             ("회차 기록(.json·.rows.jsonl)은 확인 셋 표지 문자열을 `[표지 <sha256 앞 12자>]`로, 판정 기준 "
+                              if markers else "회차 기록(.json·.rows.jsonl)은 판정 기준 ")
+                             + "문장(dbAssertions 미달, 근거 문서 ID)을 항목 번호만 남겨 가린 사본입니다"
                              "(eval/tools/mask_markers.py). 가리지 않은 원본은 저장소 밖에 둡니다: "
                              + ", ".join(f"{n} sha256 {h}" for n, h in hashes.items())]
     json_text = json.dumps(data, ensure_ascii=False, indent=1) + "\n"
@@ -108,10 +109,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--run", required=True, type=Path, help="원본 실행 기록 이름(확장자 없이)")
     ap.add_argument("--out", required=True, type=Path, help="가린 사본 이름(확장자 없이)")
     ap.add_argument("--note", action="append", default=[], help="meta.notes에 더할 한 줄")
+    ap.add_argument("--allow-no-markers", action="store_true", help="표지가 없는 묶음(정상 셋 v2 등): 판정 기준 문장만 가림")
     args = ap.parse_args(argv)
     if args.run.resolve() == args.out.resolve():
         raise SystemExit("원본과 같은 이름으로는 쓰지 않습니다")
-    hashes = mask_run(args.bundle, args.run, args.out, args.note)
+    hashes = mask_run(args.bundle, args.run, args.out, args.note, args.allow_no_markers)
     print(f"표지 {len(collect_markers(args.bundle))}개를 가렸습니다. 원본 " +
           ", ".join(f"{n} {h}" for n, h in hashes.items()))
     return 0

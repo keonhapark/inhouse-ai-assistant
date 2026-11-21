@@ -69,3 +69,22 @@ def test_masks_judgment_criteria_sentences():
     assert mm.mask_text("필수 도구 room_reserve를 실행하지 않음", []) == "필수 도구 room_reserve를 실행하지 않음"
     assert mm.leftovers(json.dumps({"s": db}, ensure_ascii=False), []) == 1
     assert mm.leftovers(json.dumps({"s": mm.mask_text(db, [])}, ensure_ascii=False), []) == 0
+
+
+def test_bundle_without_markers_masks_criteria_only(tmp_path, monkeypatch):
+    root = tmp_path / "bundle"
+    (root / "scenarios").mkdir(parents=True)
+    monkeypatch.setattr(mm, "load_scenarios", lambda d: [{"id": "n1", "expect": {}}])
+    run = tmp_path / "orig" / "r"
+    run.parent.mkdir()
+    row = {"scenario_id": "n1", "shortfalls": ["dbAssertions[0] $.items[?(@.x==1)] count_equals 1: 찾은 것 0개"]}
+    run.with_suffix(".json").write_text(json.dumps({"meta": {"notes": []}, "rows": [row]}), encoding="utf-8")
+    run.with_suffix(".rows.jsonl").write_text(json.dumps(row) + "\n", encoding="utf-8")
+    out = tmp_path / "pub" / "r"
+    with pytest.raises(SystemExit, match="--allow-no-markers"):
+        mm.main(["--bundle", str(root), "--run", str(run), "--out", str(out)])
+    mm.main(["--bundle", str(root), "--run", str(run), "--out", str(out), "--allow-no-markers"])
+    text = out.with_suffix(".rows.jsonl").read_text(encoding="utf-8")
+    assert "dbAssertions[0] 판정 기준 미달(기준 문장 가림)" in text and "count_equals" not in text
+    note = json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))["meta"]["notes"][-1]
+    assert note.startswith("회차 기록(.json·.rows.jsonl)은 판정 기준 ")
