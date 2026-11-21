@@ -553,3 +553,35 @@ def test_등록부_예시_질문에_구매_규정을_근거로_답한다(stage2_
     [cit] = body["citations"]
     assert cit["docId"] == "gen-purchase-rule" and cit["verified"] is True
     assert cit["quote"] == "- 합계 5,000,000원 초과: 팀장 → 본부장"
+
+
+# ---------------------------------------------------------------- 품질·연구·영업 문서(#383)
+
+STAGE3 = [
+    ("불량 사진 없이 올린 불량 보고서는 어떻게 되나요", "quality-policy", "gen-quality-rule", "제2조(불량 신고)"),
+    ("중대 불량이 나오면 같은 로트 출하는 어떻게 해?", "quality-policy", "gen-quality-rule", "제5조(격리와 처리)"),
+    ("연구 도면 문서 번호는 어떻게 붙여?", "rnd-confidential", "gen-rnd-guide", "제3조(문서 번호)"),
+    ("연구 기밀 문서를 협력사에 보내려면 어떻게 해?", "rnd-confidential", "gen-rnd-guide", "제6조(외부 반출)"),
+    ("할인율 15퍼센트 견적은 누가 승인해?", "sales-policy", "gen-sales-rule", "제4조(할인 승인)"),
+    ("견적 유효 기간은 며칠이야?", "sales-policy", "gen-sales-rule", "제2조(견적 작성)"),
+]
+
+
+@pytest.fixture(scope="module")
+def stage3_index():
+    return build_index(HashEmbedder(), stage=3)
+
+
+@pytest.mark.parametrize("question,tag,doc_id,article", STAGE3)
+def test_3단계_문서는_해당_태그_범위에서_질문에_맞는_조문이_상위에_나온다(stage3_index, question, tag, doc_id, article):
+    top = stage3_index.search(question, {"public", tag}, "hybrid", top_k=3)
+    assert (doc_id, article) in [(h.chunk.doc_id, h.chunk.article) for h in top]
+
+
+@pytest.mark.parametrize("tag,doc_id", [("quality-policy", "gen-quality-rule"), ("rnd-confidential", "gen-rnd-guide"),
+                                         ("sales-policy", "gen-sales-rule")])
+def test_3단계_문서는_다른_부서_범위에서는_찾지_않는다(stage3_index, tag, doc_id):
+    others = {"public", "hr-policy", "finance-policy", "purchase-policy", "it-policy"} | (
+        {"quality-policy", "rnd-confidential", "sales-policy"} - {tag})
+    for q, *_ in STAGE3:
+        assert all(h.chunk.doc_id != doc_id for h in stage3_index.search(q, others, "hybrid", top_k=50))
