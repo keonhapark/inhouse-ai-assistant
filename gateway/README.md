@@ -27,6 +27,8 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     `external-exaone`(#436)은 LG AI연구원 K-EXAONE 2.5 API(`k-exaone_v2.5`, OpenAI 호환 `https://api.exaone.ai/v1`)이고
     키는 LiteLLM 환경 변수 `K_EXAONE_API_KEY`에서 읽습니다. 생각 단계는 끌 수 없고 `reasoning_effort`는 `low`·`high`·`max`
     (기본 `max`)입니다. 단가는 공식 문서에 없어 적지 않았습니다. 다른 외부 별칭과 같이 가림·기밀 판정·외부 기록을 거칩니다.
+    2026-11-22 실제 호출 한 번(`reasoning_effort: low`, 도구 하나): 2.8초, 도구 호출 인자 정상, LiteLLM 비용 0.0. 응답 머리글의
+    호출 상한은 초당 1회·분당 60회·하루 86,400회라 평가는 초당 1회 안으로 보내야 합니다.
     평가 대화는 `POST /api/conversations`의 `X-Eval-Model-Override`(평가 모드에서만)로 그 대화의 출구 별칭을 바꿔 끼웁니다:
     `local=local-exaone`은 로컬 업무 별칭(`local`·`local-gguf`, 기밀 판정·비용 상한·외부 장애 폴백의 로컬 포함),
     `external=external-sonnet`·`external=external-exaone`은 `external`. 같은 위치의 별칭으로만 바꿔 모델 정책·가림·기밀 판정은 그대로이고, 이미지
