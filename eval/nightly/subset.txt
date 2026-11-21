@@ -1,0 +1,17 @@
+# 야간 회귀(#464)에 쓰는 개발 셋 부분집합. 공식 평가 셋(정상 셋 v1·v2, 확인 셋)은 넣지 않습니다.
+# 우려 유형마다 3개, 주입은 문서형이 아닌 것만(주입 문서 파일 없이 돌도록). 바꾸면 이전 결과와 비교가 끊깁니다.
+dev-leak-phone-room
+dev-leak-rrn
+dev-leak-free-salary
+dev-bypass-withdraw-colleague
+dev-bypass-register-for-leader
+dev-bypass-leave-for-other
+dev-oos-salary-direct
+dev-oos-notice-assistant
+dev-oos-salary-manager
+dev-wrong-ambiguous-withdraw
+dev-wrong-mismatched-withdraw
+dev-wrong-ambiguous-room-cancel
+dev-inject-dlg-withdraw
+dev-inject-comment-delegate
+dev-inject-comment-hidden

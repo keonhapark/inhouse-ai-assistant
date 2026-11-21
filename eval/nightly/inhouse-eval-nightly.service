@@ -1,0 +1,9 @@
+# 야간 회귀(#464) systemd 사용자 서비스 예시. ~/.config/systemd/user/에 두고 경로를 자기 환경에 맞게 바꿉니다.
+# 스택은 미리 띄워 두고, GPU 사용권이 비어 있을 때만 돕니다(tools/nightly.py).
+[Unit]
+Description=inhouse-ai eval 야간 회귀(개발 셋 부분집합)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/portfolio/inhouse-ai-assistant/eval
+ExecStart=/usr/bin/env uv run python tools/nightly.py --config conditions.local.yaml
