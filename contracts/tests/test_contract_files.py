@@ -313,3 +313,20 @@ def test_fake_erp_treats_blank_service_login_secret_as_unset() -> None:
         with TestClient(app, base_url="http://fake/api/v1") as c:
             r = c.post("/auth/service-login", headers={"X-Service-Login-Secret": blank}, json={"employeeId": "E0010"})
             assert r.status_code == 404, r.text
+
+
+def test_pack_model_policy_override_is_local_only_or_absent(tmp_path: Path) -> None:
+    import shutil
+
+    import yaml
+
+    from tools import check_packs
+
+    for value, ok in (("local_only", True), ("external_allowed", False)):
+        pack = tmp_path / value / "manufacturing"
+        shutil.copytree(PACKS / "manufacturing", pack)
+        doc = yaml.safe_load((pack / "pack.yaml").read_text(encoding="utf-8"))
+        doc["model_policy_override"] = value
+        (pack / "pack.yaml").write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+        errors = check_packs.check_pack(pack)
+        assert (not errors) is ok, errors
