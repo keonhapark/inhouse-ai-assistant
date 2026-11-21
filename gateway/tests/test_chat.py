@@ -26,6 +26,7 @@ class FakeAgent:
     def __init__(self):
         self.calls: list[tuple[str, dict, str | None]] = []
         self.route_to = "assistant"
+        self.route_method = "keyword"
         self.down = False
         self.waiting: dict[str, str] = {}   # approvalId -> conversationId
         self.broken_resume = False          # True면 /resume이 계약에 맞지 않는 RunState를 돌려줌
@@ -39,7 +40,7 @@ class FakeAgent:
         token = request.headers.get("x-delegation-token")
         self.calls.append((request.url.path, body, token))
         if request.url.path == "/route":
-            return self._ok("RouteDecision", {"agentId": self.route_to, "method": "keyword", "reason": "키워드 일치",
+            return self._ok("RouteDecision", {"agentId": self.route_to, "method": self.route_method, "reason": "키워드 일치",
                                               "confidence": None, "suggestedAgentId": None})
         agent_id = jwt.decode(token, options={"verify_signature": False})["agt"]
         if self.usage is not None:
