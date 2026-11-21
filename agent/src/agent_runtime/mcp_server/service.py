@@ -63,11 +63,14 @@ class ToolResult:
 
 
 class Blocked(Exception):
-    def __init__(self, code: str, detail: str, result: str = "denied") -> None:
+    def __init__(self, code: str, detail: str, result: str = "denied", audit_detail: str | None = None,
+                 errors: list[dict[str, str]] | None = None) -> None:
         super().__init__(detail)
         self.code = code
         self.detail = detail
         self.result = result
+        self.audit_detail = audit_detail  # 감사 기록용(인자 값 없이 이름과 규칙만)
+        self.errors = errors
 
 
 class ToolService:
@@ -107,7 +110,9 @@ class ToolService:
             errors = sorted(Draft202012Validator(tool.input_schema, format_checker=FormatChecker())
                             .iter_errors(arguments), key=lambda e: list(e.path))
             if errors:
-                raise Blocked("validation", "; ".join(e.message for e in errors[:5]), "error")
+                found = [_schema_error(e) for e in errors[:10]]
+                raise Blocked("validation", "; ".join(e.message for e in errors[:5]), "error",
+                              _validation_detail(found), found)
             try:
                 req = build_request(tool, arguments)
             except CatalogError as e:
@@ -115,14 +120,18 @@ class ToolService:
         except Blocked as b:
             problem = {"type": f"urn:problem:{b.code}", "status": 403 if b.result == "denied" else 422,
                        "detail": b.detail}
-            self._audit("tool.blocked", name, tool, arguments, delegation, meta, b.result, problem["type"], None)
+            if b.errors:
+                problem["errors"] = b.errors
+            self._audit("tool.blocked", name, tool, arguments, delegation, meta, b.result, problem["type"], None,
+                        b.audit_detail)
             return ToolResult(False, problem=problem)
 
         result = await self._send(tool, req, token or "", meta)
         action_id = result.data.get("actionId") if result.ok else None
         outcome = "ok" if result.ok else _result_for(result.problem)
         self._audit("tool.called", name, tool, arguments, delegation, meta, outcome,
-                    None if result.ok else result.problem.get("type"), action_id)
+                    None if result.ok else result.problem.get("type"), action_id,
+                    None if result.ok else _backend_error_detail(result.problem))
         return result
 
     def _allowed(self, d: Delegation, name: str) -> bool:
@@ -163,7 +172,7 @@ class ToolService:
 
     def _audit(self, kind: str, name: str, tool: Tool | None, arguments: dict[str, Any],
                d: Delegation | None, meta: CallMeta, result: str, problem_type: str | None,
-               action_id: str | None) -> None:
+               action_id: str | None, detail: str | None = None) -> None:
         self.audit_log.write({
             "eventId": str(uuid.uuid4()),
             "occurredAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
@@ -183,7 +192,8 @@ class ToolService:
             "trustLevel": meta.trust_level,
             "result": result,
             "problemType": problem_type,
-            "detail": "dryRun" if (tool and tool.is_write and meta.dry_run) else None,
+            "detail": "; ".join(x for x in ("dryRun" if (tool and tool.is_write and meta.dry_run) else None, detail)
+                                if x) or None,
         })
 
 
@@ -199,3 +209,29 @@ def _result_for(problem: dict[str, Any] | None) -> str:
     if status == 409:
         return "conflict"
     return "error"
+
+
+def _schema_error(e: Any) -> dict[str, str]:
+    """입력 검증 오류 하나를 {field, rule}로. 인자 값은 넣지 않습니다(#426)."""
+    field = "/".join(str(p) for p in e.absolute_path) or "(root)"
+    if e.validator == "required" and isinstance(e.validator_value, list) and isinstance(e.instance, dict):
+        missing = [k for k in e.validator_value if k not in e.instance]
+        field = ",".join(missing) or field
+    elif e.validator == "additionalProperties" and isinstance(e.instance, dict):
+        allowed = set((e.schema or {}).get("properties", {}))
+        field = ",".join(sorted(k for k in e.instance if k not in allowed)) or field
+    return {"field": field, "rule": str(e.validator)}
+
+
+def _validation_detail(errors: list[dict[str, str]]) -> str:
+    return "입력 검증 실패: " + ", ".join(f"{x['field']}({x['rule']})" for x in errors)
+
+
+def _backend_error_detail(problem: dict[str, Any] | None) -> str | None:
+    """erp·rag 문제 응답의 errors에서 항목 이름만 감사 기록에 남깁니다(값·문장은 넣지 않음)."""
+    errors = (problem or {}).get("errors")
+    if not isinstance(errors, list):
+        return None
+    fields = [str(x.get("field")) for x in errors if isinstance(x, dict) and x.get("field")]
+    return ("백엔드 검증 실패: " + ", ".join(fields[:10])) if fields else None
+
