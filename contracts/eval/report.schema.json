@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "report.schema.json",
+  "title": "평가 보고서 JSON(eval/reports/<이름>.json)",
+  "description": "eval 하네스(eval/harness/runner.py RunMeta·RunRow)가 실행마다 쓰는 기계용 보고서입니다. 사람용 md와 같은 실행에서 나오고, web 평가 리포트 화면(#214)이 읽습니다. 필드를 더하는 것은 하위 호환이므로 additionalProperties를 막지 않습니다.",
+  "type": "object",
+  "required": ["meta", "rows"],
+  "properties": {
+    "meta": {"$ref": "#/$defs/meta"},
+    "rows": {"type": "array", "items": {"$ref": "#/$defs/row"}}
+  },
+  "$defs": {
+    "nullableString": {"type": ["string", "null"]},
+    "meta": {
+      "type": "object",
+      "description": "실행 조건과 진행 상태",
+      "required": ["commit", "dirty", "machine", "started_at", "conditions", "repeats", "planned_runs", "done_runs", "complete"],
+      "properties": {
+        "commit": {"type": "string", "description": "보고서를 쓴 하네스 커밋(git HEAD)"},
+        "dirty": {"type": "boolean", "description": "커밋하지 않은 변경이 있었는지"},
+        "machine": {"type": "string", "description": "하네스를 돌린 기기(platform)"},
+        "started_at": {"type": "string", "format": "date-time"},
+        "finished_at": {"type": "string", "description": "끝난 시각. 끝나지 않았으면 빈 문자열"},
+        "model": {"$ref": "#/$defs/nullableString", "description": "설정에 적은 모델 설명"},
+        "pack": {"$ref": "#/$defs/nullableString"},
+        "pack_version": {"$ref": "#/$defs/nullableString", "description": "packs/<id>/pack.yaml의 version(\"id 버전\")"},
+        "pack_stage": {"type": ["integer", "null"], "description": "대상 시스템을 띄운 팩 단계"},
+        "conditions": {"type": "array", "items": {"type": "string"}, "description": "평가 조건(contracts/eval/conditions.md)"},
+        "repeats": {"type": "integer", "minimum": 1},
+        "base_seed": {"type": "integer"},
+        "cost_cap_usd": {"type": ["number", "null"]},
+        "cost_spent_usd": {"type": "number", "minimum": 0},
+        "cost_unknown_runs": {"type": "integer", "minimum": 0},
+        "retried_runs": {"type": "integer", "minimum": 0, "description": "실행 환경 문제로 다시 돌린 횟수"},
+        "planned_runs": {"type": "integer", "minimum": 0},
+        "done_runs": {"type": "integer", "minimum": 0},
+        "complete": {"type": "boolean"},
+        "stopped_reason": {"$ref": "#/$defs/nullableString"},
+        "notes": {"type": "array", "items": {"type": "string"}, "description": "보고서 머리말에 붙는 실행 조건 설명(사람이 씀)"}
+      }
+    },
+    "row": {
+      "type": "object",
+      "description": "회차 하나(시나리오 × 조건 × 반복)의 판정",
+      "required": ["scenario_id", "set", "kind", "condition", "repeat", "seed", "outcome", "passed"],
+      "properties": {
+        "scenario_id": {"type": "string"},
+        "set": {"type": "string", "description": "dev, confirm, normal 등 시나리오 셋"},
+        "kind": {"type": "string", "description": "normal 또는 우려 시나리오 종류(scenario.schema.json kind)"},
+        "concern_type": {"$ref": "#/$defs/nullableString", "description": "우려 유형. 정상 시나리오는 null"},
+        "reactive": {"type": ["boolean", "null"], "description": "정상 시나리오 중 장치가 반응하는 정당한 요청인지"},
+        "author": {"type": "string"},
+        "expected_agent": {"$ref": "#/$defs/nullableString"},
+        "condition": {"type": "string"},
+        "repeat": {"type": "integer", "minimum": 1},
+        "seed": {"type": "integer"},
+        "outcome": {"enum": ["incident", "blocked", "completed", "failed"], "description": "사고, 막음, 정상 완료, 실패로 끝남"},
+        "passed": {"type": "boolean", "description": "시나리오 기대(expect.outcome)와 맞는지"},
+        "incidents": {"type": "array", "items": {"type": "string"}, "description": "\"code: detail\""},
+        "shortfalls": {"type": "array", "items": {"type": "string"}},
+        "notes": {"type": "array", "items": {"type": "string"}},
+        "route": {"enum": ["local", "external", "mixed", "none"], "description": "이 회차가 쓴 모델 경로"},
+        "routed_agent": {"$ref": "#/$defs/nullableString"},
+        "executed_then_undone": {"type": "boolean"},
+        "forbidden_attempts": {"type": "integer", "minimum": 0},
+        "approvals_requested": {"type": "integer", "minimum": 0},
+        "missed_risks": {"type": "integer", "minimum": 0},
+        "unnecessary_approvals": {"type": "integer", "minimum": 0},
+        "duration_s": {"type": ["number", "null"]},
+        "cost_usd": {"type": ["number", "null"]},
+        "error": {"$ref": "#/$defs/nullableString"},
+        "retry": {"type": "boolean", "description": "실행 환경 문제로 끝나지 못해 이어 돌릴 대상"},
+        "models": {"type": "array", "items": {"type": "string"}, "description": "실제로 쓴 모델 \"이름(위치)\""},
+        "commit": {"$ref": "#/$defs/nullableString", "description": "이 회차를 돌린 하네스 커밋. 필드가 생기기 전 기록은 null"},
+        "dirty": {"type": ["boolean", "null"]},
+        "stack_commit": {"$ref": "#/$defs/nullableString"},
+        "pack_stage": {"type": ["integer", "null"]},
+        "injected_docs": {"type": ["boolean", "null"], "description": "rag에 주입 문서 파일이 켜져 있었는지. 확인 못 했으면 null"}
+      }
+    }
+  }
+}

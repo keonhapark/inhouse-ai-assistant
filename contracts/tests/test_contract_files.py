@@ -17,7 +17,7 @@ from tools.check_packs import main as check_packs_main
 from tools.common import CONTRACTS, PACKS, ROOT, load, openapi_operations
 
 SPECS = sorted((CONTRACTS / "openapi").glob("*.yaml"))
-SCHEMAS = ["events/audit.schema.json", "events/trace.schema.json", "eval/scenario.schema.json",
+SCHEMAS = ["events/audit.schema.json", "events/trace.schema.json", "eval/scenario.schema.json", "eval/report.schema.json",
            "pack/pack.schema.json", "mcp/tools.schema.json", "auth/delegation-token.schema.json"]
 
 
@@ -126,6 +126,14 @@ def test_agent_registry_matches_pack() -> None:
                 "routingKeywords": a.get("routing", {}).get("keywords", []),
             }
             validate("openapi/gateway.yaml", "AgentRegistryEntry", entry)
+
+
+def test_eval_reports_follow_schema() -> None:
+    """커밋된 평가 보고서 JSON이 web 평가 리포트 화면(#214)이 읽는 형식을 지킵니다."""
+    reports = sorted((ROOT / "eval" / "reports").glob("*.json"))
+    assert reports, "eval/reports에 보고서 JSON이 없습니다"
+    for f in reports:
+        validate_file("eval/report.schema.json", json.loads(f.read_text(encoding="utf-8")))
 
 
 def test_no_human_only_operation_is_a_tool() -> None:
