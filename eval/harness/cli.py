@@ -131,6 +131,27 @@ def rag_file_sha256(cfg: dict[str, Any], env: str) -> str | None:
     return got[0] if got and re.fullmatch(r"[0-9a-f]{64}", got[0]) else None
 
 
+def verify_stack(cfg: dict[str, Any], required: bool) -> str | None:
+    """설정 stackCheck.containers가 있으면 띄운 스택이 stackCommit의 소스인지 봅니다(#449). 다르면 멈춥니다.
+    required(확인 셋)인데 설정이 없으면 멈춥니다."""
+    from harness.stackcheck import StackCheckError, check_stack
+
+    containers = cfg.get("stackCheck", {}).get("containers")
+    commit = cfg.get("stackCommit")
+    if not containers or not commit:
+        if required:
+            raise SystemExit("--bundle 실행은 띄운 스택을 확인합니다. 설정에 stackCommit과 stackCheck.containers를 둡니다")
+        return None
+    try:
+        c = check_stack(list(containers), commit)
+    except StackCheckError as e:
+        raise SystemExit(str(e)) from e
+    if not c.ok:
+        raise SystemExit(f"띄운 스택이 stackCommit과 다릅니다: {c.describe()}. 예: {', '.join(c.mismatched[:5])}")
+    print(c.describe(), flush=True)
+    return c.describe()
+
+
 def check_bundle_scenarios(bundle: Path, scenarios: Path) -> None:
     """--bundle일 때 실제로 읽는 시나리오 파일이 모두 대조한 묶음의 manifest에 있는지 봅니다(#432). 내용 해시는
     check_bundle이 이미 manifest와 대조했습니다."""
@@ -215,6 +236,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                          "부를 수 있게 합니다")
     if args.bundle and injected:
         check_bundle_injected_docs(Path(args.bundle), cfg)
+    stack_check = verify_stack(cfg, required=bool(args.bundle))
     system, erp = make_factories(cfg)
     out = Path(args.out)
     rows_file = out.with_suffix(".rows.jsonl")
@@ -238,6 +260,10 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"이어 돌리기: 끝난 회차 {len(done)}개를 건너뜁니다", flush=True)
         now = (_git("rev-parse", "HEAD"), cfg.get("stackCommit"), cfg.get("packStage"))
         other = {sig: n for sig, n in signature_counts(done).items() if sig != now}
+        moved = {sig: n for sig, n in other.items() if sig[1:] != now[1:]}
+        if bundle and moved:
+            raise SystemExit(f"확인 셋(--bundle)을 이어 돌릴 때는 스택 커밋과 팩 단계가 앞선 회차와 같아야 합니다"
+                             f"(--allow-mixed여도). 다른 회차: {moved}, 지금: {now}. 하네스 커밋 차이만 허용합니다")
         if other and not args.allow_mixed:
             raise SystemExit(f"앞선 회차가 지금과 다른 (하네스 커밋, 스택 커밋, 팩 단계)에서 돌았습니다: {other}. "
                              f"지금은 {now}입니다. 섞어서 보고하려면 --allow-mixed를 붙입니다(보고서에 커밋별 회차 수가 "
@@ -266,6 +292,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     meta.tuned_sets = list(cfg.get("tunedSets", []))
     meta.model_override = cfg["gateway"].get("modelOverride")
     meta.bundle = bundle
+    meta.stack_check = stack_check
     meta.model_settings = {str(k): str(v) for k, v in (cfg.get("modelSettings") or {}).items()}
     if injected and any(not has_document_injection(s) for s in scenarios):
         meta.notes.append("주입 문서 파일을 켠 스택에서 문서형 주입이 아닌 시나리오도 돌려, 주입 문서가 그 검색에 섞였을 수 "

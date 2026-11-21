@@ -4,6 +4,8 @@ model: qwen3.5:9b        # 보고서에 남길 모델 이름
 packStage: 1             # 대상 시스템을 띄운 팩 단계(compose PACK_STAGE). 보고서에 적습니다
 tunedSets: [normal]      # 고치는 데 쓴 셋(결정 0005). 정상 셋 v1은 #304·#305 뒤 커밋부터 보호 지표로 쓰지 않습니다
 stackCommit: null         # 대상 시스템(compose) 이미지를 빌드한 커밋. 하네스 커밋과 다를 때 적습니다
+# stackCheck:               # 띄운 스택이 stackCommit의 소스인지 컨테이너 /repo 파일 해시로 확인(#449). --bundle이면 필수
+#   containers: [iaa-s5-agent-1, iaa-s5-gateway-1, iaa-s5-rag-1]   # erp(Java 빌드)는 이 방법으로 확인 못 함
 repeats: 3
 baseSeed: 0              # 회차 시드 = baseSeed + 회차
 costCapUsd: 5            # 넘으면 시나리오 경계에서 멈추고 보고서에 일부 실행으로 표시

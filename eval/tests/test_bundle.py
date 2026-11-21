@@ -92,8 +92,22 @@ def test_run_stops_on_bundle_mismatch(tmp_path, capsys):
         main(["bundle-check", str(root)])
 
 
-def _run_cfg(tmp_path, rag=True):
+STACK = "c" * 40
+
+
+@pytest.fixture(autouse=True)
+def _stack_matches(monkeypatch):
+    """띄운 스택 확인(#449)은 따로 시험하고, 여기서는 맞는다고 둡니다."""
+    from harness.stackcheck import StackCheck
+
+    monkeypatch.setattr("harness.stackcheck.check_stack",
+                        lambda containers, commit: StackCheck(commit, list(containers), compared=3))
+
+
+def _run_cfg(tmp_path, rag=True, stack=True):
     cfg = {"erp": {"baseUrl": "http://e"}, "gateway": {"baseUrl": "http://g", "conditions": ["full"]}}
+    if stack:
+        cfg |= {"stackCommit": STACK, "stackCheck": {"containers": ["agent-c"]}}
     if rag:
         cfg["rag"] = {"container": "rag-c"}
     p = tmp_path / "c.yaml"
@@ -213,7 +227,7 @@ def test_resume_refuses_rows_from_another_bundle(tmp_path, monkeypatch):
     _reach_factories(monkeypatch)
     row = {"scenario_id": "a", "set": "confirm", "kind": "normal", "concern_type": None, "reactive": False,
            "author": "hand", "expected_agent": None, "condition": "full", "repeat": 1, "seed": 1,
-           "outcome": "completed", "passed": True}
+           "outcome": "completed", "passed": True, "stack_commit": STACK}
     out = tmp_path / "r"
     args = ["run", "--config", str(_run_cfg(tmp_path)), "--scenarios", str(root / "scenarios"),
             "--out", str(out), "--bundle", str(root), "--resume", "--allow-mixed"]
@@ -253,3 +267,51 @@ def test_toolcall_run_records_bundle_and_relative_items(tmp_path, monkeypatch):
     meta = json.loads((tmp_path / "tc" / "r.json").read_text(encoding="utf-8"))["meta"]
     assert meta["items"] == "scenarios/a.yaml" and meta["bundle"].startswith("toolcall-v1 `")
     assert str(tmp_path) not in (tmp_path / "tc" / "r.md").read_text(encoding="utf-8")
+
+
+def test_bundle_run_requires_stack_check_config(tmp_path, monkeypatch):
+    root, table = make_bundle(tmp_path, name="confirm-v1")
+    _confirm_table(monkeypatch, table)
+    monkeypatch.setattr("harness.cli.load_scenarios", lambda d: [])
+    _fake_docker(monkeypatch, "")
+    with pytest.raises(SystemExit, match="stackCheck.containers"):
+        main(["run", "--config", str(_run_cfg(tmp_path, stack=False)), "--scenarios", str(root / "scenarios"),
+              "--out", str(tmp_path / "r"), "--bundle", str(root)])
+
+
+def test_run_stops_when_running_stack_differs(tmp_path, monkeypatch):
+    from harness.stackcheck import StackCheck
+
+    root, table = make_bundle(tmp_path, name="confirm-v1")
+    _confirm_table(monkeypatch, table)
+    monkeypatch.setattr("harness.cli.load_scenarios", lambda d: [])
+    _fake_docker(monkeypatch, "")
+    monkeypatch.setattr("harness.stackcheck.check_stack", lambda containers, commit: StackCheck(
+        commit, list(containers), compared=3, mismatched=["agent-c:agent/app.py"]))
+    with pytest.raises(SystemExit, match="띄운 스택이 stackCommit과 다릅니다.*agent/app.py"):
+        main(["run", "--config", str(_run_cfg(tmp_path)), "--scenarios", str(root / "scenarios"),
+              "--out", str(tmp_path / "r"), "--bundle", str(root)])
+
+
+def test_bundle_resume_refuses_other_stack_even_with_allow_mixed(tmp_path, monkeypatch):
+    """확인 셋을 이어 돌릴 때는 하네스 커밋 차이만 받고, 스택 커밋·팩 단계가 다르면 멈춥니다(#449)."""
+    from harness.cli import check_bundle
+
+    root, table = make_bundle(tmp_path, name="confirm-v1")
+    _confirm_table(monkeypatch, table)
+    monkeypatch.setattr("harness.cli.load_scenarios", lambda d: [])
+    _fake_docker(monkeypatch, "")
+    _reach_factories(monkeypatch)
+    row = {"scenario_id": "a", "set": "confirm", "kind": "normal", "concern_type": None, "reactive": False,
+           "author": "hand", "expected_agent": None, "condition": "full", "repeat": 1, "seed": 1,
+           "outcome": "completed", "passed": True, "bundle": check_bundle(str(root))}
+    out = tmp_path / "r"
+    args = ["run", "--config", str(_run_cfg(tmp_path)), "--scenarios", str(root / "scenarios"),
+            "--out", str(out), "--bundle", str(root), "--resume", "--allow-mixed"]
+    out.with_suffix(".rows.jsonl").write_text(json.dumps({**row, "stack_commit": "d" * 40}) + "\n", encoding="utf-8")
+    with pytest.raises(SystemExit, match="스택 커밋과 팩 단계가 앞선 회차와 같아야"):
+        main(args)
+    out.with_suffix(".rows.jsonl").write_text(json.dumps({**row, "stack_commit": STACK, "commit": "old"}) + "\n",
+                                              encoding="utf-8")
+    with pytest.raises(_Reached):
+        main(args)
