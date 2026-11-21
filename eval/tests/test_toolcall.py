@@ -125,6 +125,7 @@ def test_run_items_perfect_agent_and_report():
     assert rows[0]["agentId"] in ("hr", "assistant", "finance", "procurement")
     s = summarize(rows, 2)
     assert s["accuracy"]["n"] == 12 and s["passK"]["n"] == 6 and s["errors"] == 0
+    assert [(x["key"], x["rate"]["N"]) for x in s["byLocation"]] == [("local", 12)]
     text = render(rows, {"model": "local", "repeats": 2})
     assert "| 전체(회차 단위) | 12/12" in text and "| pass^2(항목 단위) | 6/6" in text
 

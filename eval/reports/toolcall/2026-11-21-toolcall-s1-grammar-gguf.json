@@ -1,0 +1,3179 @@
+{
+ "meta": {
+  "title": "도구 호출 측정 2026-11-21-toolcall-s1-grammar-gguf",
+  "commit": "1c7c6f3cd6981d28fb1b25a08817fa362675d7cb",
+  "dirty": false,
+  "machine": "Linux-5.15.167.4-microsoft-standard-WSL2-x86_64-with-glibc2.39 x86_64",
+  "started_at": "2026-11-21T16:24:17+09:00",
+  "items": "/tmp/claude-1000/-home-keonha-orca-workspaces-inhouse-ai-assistant-eval/3f1a2a77-b0fc-4538-a785-330fb9a377b0/scratchpad/stack-dev/agent/eval_dev/tool_calls.jsonl",
+  "itemsSha256": "20b53cd56de748ed0258de04eda5e9d317ea522d92ba95286c7ce4cdbc15b499",
+  "itemCount": 60,
+  "maxStage": null,
+  "model": "local-gguf",
+  "variant": {
+   "grammar": true
+  },
+  "repeats": 1,
+  "notes": [
+   "기기: RTX 4070 SUPER 12GB, WSL2(Linux 5.15) Docker, Ollama 0.40.15(WSL 안, 모델 ext4, OLLAMA_CONTEXT_LENGTH 8192, MAX_LOADED_MODELS 3, KEEP_ALIVE 24h)",
+   "모델: local=qwen3.5:9b, local-gguf=qwen3.5:9b-q4_K_M, 이 PC에서는 둘 다 digest 56671c2ab938(같은 GGUF Q4_K_M, llama.cpp 실행기). 외부 기준 external=Claude Haiku 5.5",
+   "스택: develop 1c7c6f3, litellm·gateway(GATEWAY_EVAL_TOOLCALL=1)·agent(AGENT_EVAL_MODE=1)만, PACK_STAGE=2. 다른 세션은 Ollama를 쓰지 않음(리드가 차례를 줌). 동시 실행 1",
+   "변형: {\"grammar\": true}, 반복 1"
+  ],
+  "finished_at": "2026-11-21T16:54:41+09:00"
+ },
+ "summary": {
+  "runs": 60,
+  "scored": 42,
+  "errors": 18,
+  "accuracy": {
+   "n": 31,
+   "N": 42,
+   "rate": 0.7380952380952381,
+   "low": 0.5796033128823908,
+   "high": 0.8613898679115297
+  },
+  "passK": {
+   "k": 1,
+   "n": 31,
+   "N": 42,
+   "rate": 0.7380952380952381,
+   "low": 0.5796033128823908,
+   "high": 0.8613898679115297
+  },
+  "byCategory": [
+   {
+    "key": "clarify",
+    "rate": {
+     "n": 3,
+     "N": 10,
+     "rate": 0.3,
+     "low": 0.06673951117773483,
+     "high": 0.6524528500599971
+    }
+   },
+   {
+    "key": "confusable",
+    "rate": {
+     "n": 2,
+     "N": 2,
+     "rate": 1.0,
+     "low": 0.15811388300841855,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "direct",
+    "rate": {
+     "n": 22,
+     "N": 23,
+     "rate": 0.9565217391304348,
+     "low": 0.7805133925465237,
+     "high": 0.9988998313695585
+    }
+   },
+   {
+    "key": "resolve",
+    "rate": {
+     "n": 4,
+     "N": 7,
+     "rate": 0.5714285714285714,
+     "low": 0.18405156764008246,
+     "high": 0.9010117215574922
+    }
+   }
+  ],
+  "byTool": [
+   {
+    "key": "approval_get",
+    "rate": {
+     "n": 2,
+     "N": 2,
+     "rate": 1.0,
+     "low": 0.15811388300841855,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "approval_list_mine",
+    "rate": {
+     "n": 2,
+     "N": 3,
+     "rate": 0.6666666666666666,
+     "low": 0.09429932405024632,
+     "high": 0.9915962413403874
+    }
+   },
+   {
+    "key": "approval_withdraw",
+    "rate": {
+     "n": 2,
+     "N": 2,
+     "rate": 1.0,
+     "low": 0.15811388300841855,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "delegation_list",
+    "rate": {
+     "n": 1,
+     "N": 1,
+     "rate": 1.0,
+     "low": 0.024999999999999967,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "delegation_revoke",
+    "rate": {
+     "n": 2,
+     "N": 2,
+     "rate": 1.0,
+     "low": 0.15811388300841855,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "expense_request",
+    "rate": {
+     "n": 4,
+     "N": 6,
+     "rate": 0.6666666666666666,
+     "low": 0.22277809550351418,
+     "high": 0.9567281317072585
+    }
+   },
+   {
+    "key": "hr_get_my_profile",
+    "rate": {
+     "n": 1,
+     "N": 1,
+     "rate": 1.0,
+     "low": 0.024999999999999967,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "leave_get_balance",
+    "rate": {
+     "n": 2,
+     "N": 2,
+     "rate": 1.0,
+     "low": 0.15811388300841855,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "leave_request",
+    "rate": {
+     "n": 3,
+     "N": 7,
+     "rate": 0.42857142857142855,
+     "low": 0.09898827844250757,
+     "high": 0.8159484323599171
+    }
+   },
+   {
+    "key": "org_search_employees",
+    "rate": {
+     "n": 1,
+     "N": 1,
+     "rate": 1.0,
+     "low": 0.024999999999999967,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "policy_search",
+    "rate": {
+     "n": 4,
+     "N": 4,
+     "rate": 1.0,
+     "low": 0.39763536438352276,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "purchase_request",
+    "rate": {
+     "n": 3,
+     "N": 5,
+     "rate": 0.6,
+     "low": 0.14663279963467424,
+     "high": 0.9472550494736831
+    }
+   },
+   {
+    "key": "room_cancel_reservation",
+    "rate": {
+     "n": 1,
+     "N": 1,
+     "rate": 1.0,
+     "low": 0.024999999999999967,
+     "high": 1.0
+    }
+   },
+   {
+    "key": "room_list_availability",
+    "rate": {
+     "n": 2,
+     "N": 4,
+     "rate": 0.5,
+     "low": 0.06758598648854253,
+     "high": 0.9324140135114569
+    }
+   },
+   {
+    "key": "room_reserve",
+    "rate": {
+     "n": 1,
+     "N": 1,
+     "rate": 1.0,
+     "low": 0.024999999999999967,
+     "high": 1.0
+    }
+   }
+  ],
+  "byStage": [
+   {
+    "key": 1,
+    "rate": {
+     "n": 24,
+     "N": 31,
+     "rate": 0.7741935483870968,
+     "low": 0.5890361338613221,
+     "high": 0.9040578316542489
+    }
+   },
+   {
+    "key": 2,
+    "rate": {
+     "n": 7,
+     "N": 11,
+     "rate": 0.6363636363636364,
+     "low": 0.30790471501168026,
+     "high": 0.890736556180902
+    }
+   }
+  ],
+  "byLocation": [
+   {
+    "key": "local",
+    "rate": {
+     "n": 31,
+     "N": 42,
+     "rate": 0.7380952380952381,
+     "low": 0.5796033128823908,
+     "high": 0.8613898679115297
+    }
+   }
+  ],
+  "outcomes": {
+   "error": 18,
+   "correct": 30,
+   "no_call_asked": 3,
+   "wrong_args": 1,
+   "no_call_answered": 7,
+   "confirm_then_proceed": 1
+  },
+  "schemaValid": {
+   "n": 28,
+   "N": 28,
+   "rate": 1.0,
+   "low": 0.8765638814997225,
+   "high": 1.0
+  },
+  "asked": {
+   "n": 7,
+   "N": 42,
+   "rate": 0.16666666666666666,
+   "low": 0.06974066365567658,
+   "high": 0.31364086688067105
+  },
+  "fabricated": 0,
+  "latencyMs": {
+   "p50": 9917.5,
+   "p95": 49791.35000000002
+  },
+  "locations": {
+   "local": 42
+  }
+ },
+ "rows": [
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 64979,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-901",
+   "target_tool": "leave_request",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 15043,
+   "result": {
+    "tool": "leave_request",
+    "arguments": {
+     "leave_type": "half_am",
+     "start_date": "2027-03-12",
+     "end_date": "2027-03-12",
+     "reason": "병원 진료"
+    },
+    "rawArguments": "{\"leave_type\": \"half_am\", \"start_date\": \"2027-03-12\", \"end_date\": \"2027-03-12\", \"reason\": \"병원 진료\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 15038,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1821,
+     "completionTokens": 857
+    }
+   },
+   "id": "tc-902",
+   "target_tool": "leave_request",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "leave_request",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 15038,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 9781,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "연차 신청을 도와드리겠습니다. 다음 주 수요일(3/17)부터 금요일(3/19)까지 2 일간 연차로 신청하시겠어요?",
+    "asked": true,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 9778,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 1465,
+     "completionTokens": 586
+    }
+   },
+   "id": "tc-903",
+   "target_tool": "leave_request",
+   "category": "resolve",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "no_call_asked",
+   "passed": false,
+   "tool": null,
+   "asked": true,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 9778,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 10960,
+   "result": {
+    "tool": "leave_request",
+    "arguments": {
+     "leave_type": "sick",
+     "start_date": "2027-03-10",
+     "end_date": "2027-03-10",
+     "reason": "감기 몸살"
+    },
+    "rawArguments": "{\"leave_type\": \"sick\", \"start_date\": \"2027-03-10\", \"end_date\": \"2027-03-10\", \"reason\": \"감기 몸살\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 10956,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1819,
+     "completionTokens": 638
+    }
+   },
+   "id": "tc-904",
+   "target_tool": "leave_request",
+   "category": "resolve",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "leave_request",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 10956,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 13320,
+   "result": {
+    "tool": "leave_request",
+    "arguments": {
+     "leave_type": "half_am",
+     "start_date": "2027-03-11",
+     "end_date": "2027-03-11",
+     "reason": "은행 업무"
+    },
+    "rawArguments": "{\"leave_type\": \"half_am\", \"start_date\": \"2027-03-11\", \"end_date\": \"2027-03-11\", \"reason\": \"은행 업무\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 13316,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1815,
+     "completionTokens": 773
+    }
+   },
+   "id": "tc-905",
+   "target_tool": "leave_request",
+   "category": "resolve",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "wrong_args",
+   "passed": false,
+   "tool": "leave_request",
+   "asked": false,
+   "mismatched": [
+    "leave_type"
+   ],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 13316,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 65169,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-906",
+   "target_tool": "leave_request",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 64688,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-907",
+   "target_tool": "leave_request",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 4306,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "연차 사용을 원하시는군요. 정확한 기간과 사유를 알려주시면 결재를 도와드리겠습니다.\n\n1. 연차를 몇 일 사용하시나요? (시작일과 종료일)\n2. 휴가 사유는 무엇인가요?\n\n또한, 혹시 다른 동료분인지 확인하고 싶으시면 인사 정보를 먼저 보여드릴 수 있습니다.",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 4304,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 1458,
+     "completionTokens": 227
+    }
+   },
+   "id": "tc-908",
+   "target_tool": "leave_request",
+   "category": "clarify",
+   "stage": 1,
+   "expected_type": "clarify",
+   "outcome": "no_call_answered",
+   "passed": false,
+   "tool": null,
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 4304,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 4411,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "연차 결재를 위해 시작일, 종료일, 사유가 필요합니다. 예를 들어 \"2027-03-10부터 2027-03-15까지\"와 같은 형식으로 알려주세요.",
+    "asked": true,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 4408,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 1452,
+     "completionTokens": 264
+    }
+   },
+   "id": "tc-909",
+   "target_tool": "leave_request",
+   "category": "clarify",
+   "stage": 1,
+   "expected_type": "clarify",
+   "outcome": "correct",
+   "passed": true,
+   "tool": null,
+   "asked": true,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 4408,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 3874,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "반차 요청을 드리기 전에 다음 정보를 알려주세요:\n\n1. 반차 시작일 (YYYY-MM-DD 형식)\n2. 반차 종료일 (YYYY-MM-DD 형식)\n3. 반차 사유\n4. 오전 반차인지 오후 반차인지",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 3871,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 1454,
+     "completionTokens": 230
+    }
+   },
+   "id": "tc-910",
+   "target_tool": "leave_request",
+   "category": "clarify",
+   "stage": 1,
+   "expected_type": "clarify",
+   "outcome": "no_call_answered",
+   "passed": false,
+   "tool": null,
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 3871,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 7934,
+   "result": {
+    "tool": "leave_get_balance",
+    "arguments": {},
+    "rawArguments": "{\n  }",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 7930,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1800,
+     "completionTokens": 470
+    }
+   },
+   "id": "tc-911",
+   "target_tool": "leave_get_balance",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "leave_get_balance",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 7930,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 9687,
+   "result": {
+    "tool": "leave_get_balance",
+    "arguments": {},
+    "rawArguments": "{\n  }",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 9684,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1806,
+     "completionTokens": 549
+    }
+   },
+   "id": "tc-912",
+   "target_tool": "leave_get_balance",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "leave_get_balance",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 9684,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 10407,
+   "result": {
+    "tool": "hr_get_my_profile",
+    "arguments": {},
+    "rawArguments": "{\n  }",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 10403,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1803,
+     "completionTokens": 608
+    }
+   },
+   "id": "tc-913",
+   "target_tool": "hr_get_my_profile",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "hr_get_my_profile",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 10403,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 61877,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-914",
+   "target_tool": "approval_list_mine",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 18942,
+   "result": {
+    "tool": "approval_list_mine",
+    "arguments": {
+     "status": "rejected"
+    },
+    "rawArguments": "{\"status\": \"rejected\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 18938,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1801,
+     "completionTokens": 1139
+    }
+   },
+   "id": "tc-915",
+   "target_tool": "approval_list_mine",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "approval_list_mine",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 18938,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 5283,
+   "result": {
+    "tool": "approval_get",
+    "arguments": {
+     "documentId": "doc-1042"
+    },
+    "rawArguments": "{\"documentId\": \"doc-1042\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 5280,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1813,
+     "completionTokens": 281
+    }
+   },
+   "id": "tc-916",
+   "target_tool": "approval_get",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "approval_get",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 5280,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 3009,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "결재 문서 doc-1077 을 회수하시려면 회수 사유가 필요합니다. 어떤 사유로 회수하시겠습니까?",
+    "asked": true,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 3007,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 1460,
+     "completionTokens": 161
+    }
+   },
+   "id": "tc-917",
+   "target_tool": "approval_withdraw",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "confirm_then_proceed",
+   "passed": true,
+   "tool": null,
+   "asked": true,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 3007,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 14976,
+   "result": {
+    "tool": "approval_list_mine",
+    "arguments": {
+     "status": "in_progress"
+    },
+    "rawArguments": "{\"status\": \"in_progress\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 14972,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1809,
+     "completionTokens": 897
+    }
+   },
+   "id": "tc-918",
+   "target_tool": "approval_withdraw",
+   "category": "confusable",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "approval_list_mine",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 14972,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 30274,
+   "result": {
+    "tool": "delegation_list",
+    "arguments": {
+     "role": "delegator"
+    },
+    "rawArguments": "{\"role\": \"delegator\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 30267,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1808,
+     "completionTokens": 1834
+    }
+   },
+   "id": "tc-919",
+   "target_tool": "delegation_list",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "delegation_list",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 30267,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 62483,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-920",
+   "target_tool": "delegation_list",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 9019,
+   "result": {
+    "tool": "delegation_revoke",
+    "arguments": {
+     "delegationId": "dlg-0031"
+    },
+    "rawArguments": "{\"delegationId\": \"dlg-0031\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 9015,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1809,
+     "completionTokens": 494
+    }
+   },
+   "id": "tc-921",
+   "target_tool": "delegation_revoke",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "delegation_revoke",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 9015,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 50220,
+   "result": {
+    "tool": "delegation_list",
+    "arguments": {
+     "role": "delegator"
+    },
+    "rawArguments": "{\"role\": \"delegator\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 50216,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1802,
+     "completionTokens": 3084
+    }
+   },
+   "id": "tc-922",
+   "target_tool": "delegation_revoke",
+   "category": "confusable",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "delegation_list",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 50216,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 60008,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-923",
+   "target_tool": "delegation_register",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 64691,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-924",
+   "target_tool": "delegation_register",
+   "category": "resolve",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 70124,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-925",
+   "target_tool": "delegation_register",
+   "category": "clarify",
+   "stage": 1,
+   "expected_type": "clarify",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 51623,
+   "result": {
+    "tool": "org_search_employees",
+    "arguments": {
+     "q": "김도현",
+     "unitId": "구매팀"
+    },
+    "rawArguments": "{\n  \"q\": \"김도현\",\n  \"unitId\": \"구매팀\"\n}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 51619,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1813,
+     "completionTokens": 3100
+    }
+   },
+   "id": "tc-926",
+   "target_tool": "org_search_employees",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "org_search_employees",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 51619,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 5255,
+   "result": {
+    "tool": "policy_search",
+    "arguments": {
+     "question": "경조 휴가 사용 기간"
+    },
+    "rawArguments": "{\"question\": \"경조 휴가 사용 기간\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 5251,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1805,
+     "completionTokens": 257
+    }
+   },
+   "id": "tc-927",
+   "target_tool": "policy_search",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "policy_search",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 5251,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 58462,
+   "result": {
+    "tool": "room_list_availability",
+    "arguments": {
+     "startsAt": "2027-03-15T14:00:00+09:00",
+     "endsAt": "2027-03-15T15:00:00+09:00",
+     "minCapacity": 4
+    },
+    "rawArguments": "{\"startsAt\": \"2027-03-15T14:00:00+09:00\", \"endsAt\": \"2027-03-15T15:00:00+09:00\", \"minCapacity\": 4}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "org_search_employees",
+     "room_list_availability",
+     "room_list_my_reservations",
+     "room_reserve",
+     "room_cancel_reservation",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 58458,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1301,
+     "completionTokens": 3615
+    }
+   },
+   "id": "tc-928",
+   "target_tool": "room_list_availability",
+   "category": "resolve",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "room_list_availability",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 58458,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 65784,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-929",
+   "target_tool": "room_list_availability",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 65181,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-930",
+   "target_tool": "room_list_availability",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 5687,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "회의실을 예약해 드리기 위해선 다음 정보가 필요합니다:\n\n1. **예약 시작 시간** (예: 2027-03-10 14:00)\n2. **예약 종료 시간** (예: 2027-03-10 15:00)\n3. **참석자 수** (선택사항, 최소 인원 기준)\n\n어떤 시간대에 몇 명으로 회의실 예약을 원하시나요?",
+    "asked": true,
+    "candidates": [
+     "org_search_employees",
+     "room_list_availability",
+     "room_list_my_reservations",
+     "room_reserve",
+     "room_cancel_reservation",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 5685,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 957,
+     "completionTokens": 307
+    }
+   },
+   "id": "tc-931",
+   "target_tool": "room_list_availability",
+   "category": "clarify",
+   "stage": 1,
+   "expected_type": "clarify",
+   "outcome": "correct",
+   "passed": true,
+   "tool": null,
+   "asked": true,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 5685,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 5365,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "회의실 예약을 도와드리기 위해 몇 가지 정보를 알려주세요:\n\n1. **예약 날짜**: 다음 주 중 어떤 날이 좋으신가요? (예: 3월 17일 화요일 등)\n2. **시간대**: 몇 시부터 몇 시까지 사용하시나요?\n3. **인원**: 몇 명이 참석하시나요?\n4. **용도**: 회의 제목이나 용도는 무엇인가요?\n\n이 정보를 알려주시면 빈 회의실을 찾아 예약해 드리겠습니다.",
+    "asked": false,
+    "candidates": [
+     "org_search_employees",
+     "room_list_availability",
+     "room_list_my_reservations",
+     "room_reserve",
+     "room_cancel_reservation",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 5362,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 958,
+     "completionTokens": 314
+    }
+   },
+   "id": "tc-932",
+   "target_tool": "room_list_availability",
+   "category": "clarify",
+   "stage": 1,
+   "expected_type": "clarify",
+   "outcome": "no_call_answered",
+   "passed": false,
+   "tool": null,
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 5362,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 3233,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "회의실을 찾으시려면 어떤 시간대를 원하시는지 알려주세요. 예를 들어 \"오늘 오후 2시부터 5시까지\"처럼 시작 시간과 종료 시간을 말씀해 주시면 빈 회의실을 찾아드릴 수 있습니다.",
+    "asked": false,
+    "candidates": [
+     "org_search_employees",
+     "room_list_availability",
+     "room_list_my_reservations",
+     "room_reserve",
+     "room_cancel_reservation",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 3231,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 958,
+     "completionTokens": 190
+    }
+   },
+   "id": "tc-933",
+   "target_tool": "room_list_availability",
+   "category": "clarify",
+   "stage": 1,
+   "expected_type": "clarify",
+   "outcome": "no_call_answered",
+   "passed": false,
+   "tool": null,
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 3231,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 69590,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-934",
+   "target_tool": "room_reserve",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 71917,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-935",
+   "target_tool": "room_reserve",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 16536,
+   "result": {
+    "tool": "room_reserve",
+    "arguments": {
+     "roomId": "room-e",
+     "startsAt": "2027-03-25T10:00:00+09:00",
+     "endsAt": "2027-03-25T14:00:00+09:00",
+     "title": "설계 검토"
+    },
+    "rawArguments": "{\"roomId\": \"room-e\", \"startsAt\": \"2027-03-25T10:00:00+09:00\", \"endsAt\": \"2027-03-25T14:00:00+09:00\", \"title\": \"설계 검토\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "org_search_employees",
+     "room_list_availability",
+     "room_list_my_reservations",
+     "room_reserve",
+     "room_cancel_reservation",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 16532,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1295,
+     "completionTokens": 948
+    }
+   },
+   "id": "tc-936",
+   "target_tool": "room_reserve",
+   "category": "resolve",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "room_reserve",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 16532,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 60008,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-937",
+   "target_tool": "room_reserve",
+   "category": "confusable",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 64287,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-938",
+   "target_tool": "room_list_my_reservations",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 62806,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-939",
+   "target_tool": "room_list_my_reservations",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 10343,
+   "result": {
+    "tool": "room_cancel_reservation",
+    "arguments": {
+     "reservationId": "rsv-0042"
+    },
+    "rawArguments": "{\"reservationId\": \"rsv-0042\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "org_search_employees",
+     "room_list_availability",
+     "room_list_my_reservations",
+     "room_reserve",
+     "room_cancel_reservation",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 10339,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1284,
+     "completionTokens": 534
+    }
+   },
+   "id": "tc-940",
+   "target_tool": "room_cancel_reservation",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "room_cancel_reservation",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 10339,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "assistant",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 65775,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-941",
+   "target_tool": "room_cancel_reservation",
+   "category": "confusable",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 62508,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-942",
+   "target_tool": "org_search_employees",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 5311,
+   "result": {
+    "tool": "policy_search",
+    "arguments": {
+     "question": "출장비 일일 한도"
+    },
+    "rawArguments": "{\"question\": \"출장비 일일 한도\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 5306,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1801,
+     "completionTokens": 241
+    }
+   },
+   "id": "tc-943",
+   "target_tool": "policy_search",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "policy_search",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 5306,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "finance",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 19763,
+   "result": {
+    "tool": "expense_request",
+    "arguments": {
+     "amount": 15000,
+     "spent_on": "2027-03-09",
+     "merchant": "카카오택시",
+     "purpose": "고객사 미팅 이동",
+     "business_no": "202-00-00000"
+    },
+    "rawArguments": "{\"amount\": 15000, \"spent_on\": \"2027-03-09\", \"merchant\": \"카카오택시\", \"purpose\": \"고객사 미팅 이동\", \"business_no\": \"202-00-00000\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "expense_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 19755,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1276,
+     "completionTokens": 1139
+    }
+   },
+   "id": "tc-944",
+   "target_tool": "expense_request",
+   "category": "resolve",
+   "stage": 2,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "expense_request",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 19755,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "finance",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 41727,
+   "result": {
+    "tool": "expense_request",
+    "arguments": {
+     "amount": 48000,
+     "spent_on": "2027-03-08",
+     "merchant": "소담한식",
+     "purpose": "팀 회의 식사"
+    },
+    "rawArguments": "{\n  \"amount\": 48000,\n  \"spent_on\": \"2027-03-08\",\n  \"merchant\": \"소담한식\",\n  \"purpose\": \"팀 회의 식사\"\n}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "expense_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 41723,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1268,
+     "completionTokens": 2576
+    }
+   },
+   "id": "tc-945",
+   "target_tool": "expense_request",
+   "category": "direct",
+   "stage": 2,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "expense_request",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 41723,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "finance",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 13945,
+   "result": {
+    "tool": "expense_request",
+    "arguments": {
+     "amount": 132000,
+     "spent_on": "2027-03-04",
+     "merchant": "호텔 라온",
+     "purpose": "영업 출장",
+     "business_no": "202-00-00000"
+    },
+    "rawArguments": "{\"amount\": 132000, \"spent_on\": \"2027-03-04\", \"merchant\": \"호텔 라온\", \"purpose\": \"영업 출장\", \"business_no\": \"202-00-00000\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "expense_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 13940,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1270,
+     "completionTokens": 786
+    }
+   },
+   "id": "tc-946",
+   "target_tool": "expense_request",
+   "category": "direct",
+   "stage": 2,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "expense_request",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 13940,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "finance",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 2685,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "사무용품 구매 목적이 필요합니다. 어떤 용도로 사용하셨는지 알려주세요.",
+    "asked": true,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "expense_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 2682,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 934,
+     "completionTokens": 133
+    }
+   },
+   "id": "tc-947",
+   "target_tool": "expense_request",
+   "category": "resolve",
+   "stage": 2,
+   "expected_type": "call",
+   "outcome": "no_call_asked",
+   "passed": false,
+   "tool": null,
+   "asked": true,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 2682,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "finance",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 2952,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "경비 정산을 올리려면 다음 정보가 필요합니다:\n\n- 금액\n- 지출 내역 (어디서)\n- 상점명\n- 목적\n\n이 내용을 알려주세요.",
+    "asked": true,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "expense_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 2949,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 916,
+     "completionTokens": 164
+    }
+   },
+   "id": "tc-948",
+   "target_tool": "expense_request",
+   "category": "clarify",
+   "stage": 2,
+   "expected_type": "clarify",
+   "outcome": "correct",
+   "passed": true,
+   "tool": null,
+   "asked": true,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 2949,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "finance",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 3787,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "어제 쓴 3만 원 정산을 위해 다음 정보가 필요합니다:\n\n1. 무엇을 위해 썼는지 (용도)\n2. 어디에서 썼는지 (상점/상호명)\n3. 사업 번호 (있다면)\n\n이 정보들을 알려주시면 정산 결재를 올릴 수 있습니다.",
+    "asked": false,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "expense_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 3785,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 922,
+     "completionTokens": 230
+    }
+   },
+   "id": "tc-949",
+   "target_tool": "expense_request",
+   "category": "clarify",
+   "stage": 2,
+   "expected_type": "clarify",
+   "outcome": "no_call_answered",
+   "passed": false,
+   "tool": null,
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 3785,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 10061,
+   "result": {
+    "tool": "approval_list_mine",
+    "arguments": {
+     "status": "in_progress"
+    },
+    "rawArguments": "{\"status\": \"in_progress\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 10057,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1809,
+     "completionTokens": 584
+    }
+   },
+   "id": "tc-950",
+   "target_tool": "approval_list_mine",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "approval_list_mine",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 10057,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 39463,
+   "result": {
+    "tool": "policy_search",
+    "arguments": {
+     "question": "법인카드 없이 식대 정산 규정"
+    },
+    "rawArguments": "{\"question\": \"법인카드 없이 식대 정산 규정\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 39460,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1805,
+     "completionTokens": 2418
+    }
+   },
+   "id": "tc-951",
+   "target_tool": "policy_search",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "policy_search",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 39460,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "procurement",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 18309,
+   "result": {
+    "tool": "purchase_request",
+    "arguments": {
+     "item_code": "BLT-M6-20",
+     "quantity": 500,
+     "unit_price": 120,
+     "total_amount": 60000,
+     "reason": "조립 라인 보충"
+    },
+    "rawArguments": "{\"item_code\": \"BLT-M6-20\", \"quantity\": 500, \"unit_price\": 120, \"total_amount\": 60000, \"reason\": \"조립 라인 보충\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "purchase_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 18304,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1273,
+     "completionTokens": 1094
+    }
+   },
+   "id": "tc-952",
+   "target_tool": "purchase_request",
+   "category": "direct",
+   "stage": 2,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "purchase_request",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 18304,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "procurement",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 13521,
+   "result": {
+    "tool": "purchase_request",
+    "arguments": {
+     "item_code": "GLV-NT-L",
+     "quantity": 200,
+     "unit_price": 1500,
+     "total_amount": 300000,
+     "reason": "현장 소모품"
+    },
+    "rawArguments": "{\"item_code\": \"GLV-NT-L\", \"quantity\": 200, \"unit_price\": 1500, \"total_amount\": 300000, \"reason\": \"현장 소모품\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "purchase_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 13516,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1269,
+     "completionTokens": 768
+    }
+   },
+   "id": "tc-953",
+   "target_tool": "purchase_request",
+   "category": "direct",
+   "stage": 2,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "purchase_request",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 13516,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "procurement",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 13694,
+   "result": {
+    "tool": "purchase_request",
+    "arguments": {
+     "item_code": "SNS-PX-01",
+     "quantity": 10,
+     "unit_price": 85000,
+     "total_amount": 850000,
+     "reason": "검사 설비 교체"
+    },
+    "rawArguments": "{\"item_code\":\"SNS-PX-01\",\"quantity\":10,\"unit_price\":85000,\"total_amount\":850000,\"reason\":\"검사 설비 교체\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "purchase_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 13690,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1261,
+     "completionTokens": 786
+    }
+   },
+   "id": "tc-954",
+   "target_tool": "purchase_request",
+   "category": "direct",
+   "stage": 2,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "purchase_request",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 13690,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "procurement",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 502,
+   "wallMs": 65387,
+   "result": "{\"detail\":\"LLM 응답 504\"}",
+   "id": "tc-955",
+   "target_tool": "purchase_request",
+   "category": "resolve",
+   "stage": 2,
+   "expected_type": "call",
+   "outcome": "error",
+   "passed": false,
+   "tool": null,
+   "asked": null,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": null,
+   "location": null,
+   "error": "HTTP 502"
+  },
+  {
+   "repeat": 1,
+   "agentId": "procurement",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 3788,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "볼트를 구매하시려면 다음 정보를 알려주세요:\n\n- 볼트 품목 코드 (또는 품명)\n- 구매할 수량\n- 1개당 단가\n- 구매 사유",
+    "asked": false,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "purchase_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 3785,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 912,
+     "completionTokens": 202
+    }
+   },
+   "id": "tc-956",
+   "target_tool": "purchase_request",
+   "category": "clarify",
+   "stage": 2,
+   "expected_type": "clarify",
+   "outcome": "no_call_answered",
+   "passed": false,
+   "tool": null,
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 3785,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "procurement",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 9104,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "BRG-6204 베어링 구매 요청을 위해 단위 가격과 총액, 그리고 구매 사유가 필요합니다.\n\n단위 가격은 얼마이며, 총액은 어떻게 계산하셨나요? (수량 50개 × 단가)\n또한 구매 사유도 함께 알려주시면 구매 요청 결재를 올릴 수 있습니다.",
+    "asked": false,
+    "candidates": [
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "policy_search",
+     "purchase_request"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 9101,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 924,
+     "completionTokens": 557
+    }
+   },
+   "id": "tc-957",
+   "target_tool": "purchase_request",
+   "category": "clarify",
+   "stage": 2,
+   "expected_type": "clarify",
+   "outcome": "no_call_answered",
+   "passed": false,
+   "tool": null,
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 9101,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 8556,
+   "result": {
+    "tool": null,
+    "arguments": null,
+    "rawArguments": null,
+    "content": "죄송합니다만, 구매 요청 관련 도구는 없습니다. 인사 결재(휴가, 반차 등) 목록을 보시겠어요? 아니면 다른 시스템의 구매 요청을 말씀하시는 건가요?",
+    "asked": true,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 8553,
+    "llmCalls": 1,
+    "usage": {
+     "promptTokens": 1457,
+     "completionTokens": 507
+    }
+   },
+   "id": "tc-958",
+   "target_tool": "approval_list_mine",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "no_call_asked",
+   "passed": false,
+   "tool": null,
+   "asked": true,
+   "mismatched": [],
+   "schema_valid": null,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 8553,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 13229,
+   "result": {
+    "tool": "approval_get",
+    "arguments": {
+     "documentId": "doc-3005"
+    },
+    "rawArguments": "{\"documentId\": \"doc-3005\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 13224,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1809,
+     "completionTokens": 760
+    }
+   },
+   "id": "tc-959",
+   "target_tool": "approval_get",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "approval_get",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 13224,
+   "location": "local",
+   "error": null
+  },
+  {
+   "repeat": 1,
+   "agentId": "hr",
+   "variant": {
+    "grammar": true
+   },
+   "model": "local-gguf",
+   "status": 200,
+   "wallMs": 5555,
+   "result": {
+    "tool": "policy_search",
+    "arguments": {
+     "question": "구매 견적 수량 규정"
+    },
+    "rawArguments": "{\"question\": \"구매 견적 수량 규정\"}",
+    "content": "",
+    "asked": false,
+    "candidates": [
+     "hr_get_my_profile",
+     "org_search_employees",
+     "leave_get_balance",
+     "leave_request",
+     "approval_list_mine",
+     "approval_get",
+     "approval_withdraw",
+     "delegation_list",
+     "delegation_register",
+     "delegation_revoke",
+     "policy_search"
+    ],
+    "model": {
+     "requested": "local-gguf",
+     "egress": "local-gguf",
+     "location": "local"
+    },
+    "latencyMs": 5551,
+    "llmCalls": 2,
+    "usage": {
+     "promptTokens": 1811,
+     "completionTokens": 280
+    }
+   },
+   "id": "tc-960",
+   "target_tool": "policy_search",
+   "category": "direct",
+   "stage": 1,
+   "expected_type": "call",
+   "outcome": "correct",
+   "passed": true,
+   "tool": "policy_search",
+   "asked": false,
+   "mismatched": [],
+   "schema_valid": true,
+   "schema_errors": [],
+   "fabricated": 0,
+   "latency_ms": 5551,
+   "location": "local",
+   "error": null
+  }
+ ]
+}
