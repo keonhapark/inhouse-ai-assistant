@@ -1,6 +1,6 @@
 """팩 양식 도구(#397): 팩 forms.yaml 양식의 tool로 상신 도구를 만들어 공용 도구처럼 다룹니다.
 
-금융 팩 사본에서 여신 지원(credit) 에이전트에 loan_request를 붙여 봅니다(실제 팩 연결은 agent·gateway 구현 뒤).
+금융 팩 사본에서 여신 지원(credit) 에이전트에 loan_request를 붙여 봅니다. IT 서비스 팩은 실제 팩의 프로젝트 지원(project) 에이전트 effort_report를 봅니다.
 """
 
 from __future__ import annotations
@@ -132,3 +132,44 @@ def test_eval_path_tools_include_form_tools_after_public(pack: Path) -> None:
     reg = Registry.load(pack)
     tools = load_tools(CONTRACTS / "mcp" / "tools.json", reg.form_tools)
     assert list(tools)[-1] == "loan_request" and tools["loan_request"]["required_scope"] == "approval:request:loan"
+
+
+IT_SERVICES = PACK_DIR.parent / "it-services"
+EFFORT = {"project_code": "PRJ-2026-03", "week_start": "2026-11-16", "hours": 40, "summary": "요구사항 정의서 검토"}
+
+
+def test_it_services_project_agent_has_effort_report_with_preview() -> None:
+    reg = Registry.load(IT_SERVICES)
+    assert [t["name"] for t in reg.form_tools] == ["effort_report"]
+    project = reg.get("project")
+    assert "effort_report" in project.tools
+    # 상신은 미리보기 승인 뒤 실행합니다(도구 설명과 같게)
+    assert project.raw["risk_policy"]["reversible_write"] == "confirm"
+    catalog = Catalog.load(CONTRACTS / "mcp" / "tools.json", CONTRACTS / "openapi", reg)
+    tool = catalog.get("effort_report")
+    assert tool is not None and tool.fixed == {"formId": "effort"} and tool.required_scope == "approval:request:effort"
+
+
+@pytest.mark.anyio
+async def test_effort_report_goes_to_erp_with_team_leader(tmp_path: Path) -> None:
+    import time
+
+    import jwt
+
+    reg = Registry.load(IT_SERVICES)
+    catalog = Catalog.load(CONTRACTS / "mcp" / "tools.json", CONTRACTS / "openapi", reg)
+    erp = create_fake_erp(IT_SERVICES, delegation_public_key=PUBLIC_KEY)
+    backends = {"erp": httpx.AsyncClient(transport=httpx.ASGITransport(app=erp), base_url="http://erp.test")}
+    service = ToolService(catalog, reg, TokenVerifier.from_public_key(PUBLIC_KEY), backends, AuditLog(tmp_path / "a"))
+    t = int(time.time())
+    token = jwt.encode({"iss": "gateway", "aud": ["erp", "mcp"], "sub": "E0006", "agt": "project",  # 공공구축팀 컨설턴트
+                        "cid": f"cnv_{uuid.uuid4().hex[:8]}", "scopes": ["approval:request:effort", "approval:read"],
+                        "tools": list(reg.get("project").tools), "doc_scopes": ["public"], "iat": t, "exp": t + 600,
+                        "jti": uuid.uuid4().hex}, PRIVATE_KEY, algorithm="ES256")
+    out = await service.call("effort_report", EFFORT, token,
+                             CallMeta(trust_level="user_direct", idempotency_key=uuid.uuid4().hex))
+    assert out.ok, out.problem
+    got = await service.call("approval_get", {"documentId": out.data["resource"]["id"]}, token, CallMeta())
+    assert got.ok, got.problem
+    assert got.data["formId"] == "effort"
+    assert [s["approverId"] for s in got.data["steps"]] == ["E0005"]  # 공공구축팀 팀장(PM)
