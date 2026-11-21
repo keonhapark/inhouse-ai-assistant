@@ -237,6 +237,10 @@ def run_matrix(scenarios: list[dict[str, Any]], system_factory: SystemFactory, e
     meta.cost_spent_usd = prior_cost_usd
     rows: list[RunRow] = list(done_rows or [])
     done_keys = {(r.scenario_id, r.condition, r.repeat) for r in rows}
+    # 나눠 돌린 묶음(--injected-docs only·exclude)을 같은 결과 파일에 이으면 done_rows에 이번 계획 밖 회차가
+    # 있습니다. 계획 회차는 이번 계획과 앞선 회차의 합집합으로 셉니다.
+    plan_keys = {(s["id"], c, rep) for rep in range(1, repeats + 1) for s in scenarios for c in conditions}
+    meta.planned_runs = len(plan_keys | done_keys)
     for r in rows:
         if r.cost_usd is None:
             meta.cost_unknown_runs += 1
