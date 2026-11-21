@@ -36,7 +36,7 @@
 - `scenarios/finance/dev/`(21개), `scenarios/it-services/dev/`(20개)는 업종 팩을 같은 하네스로 돌려 보는 개발 시나리오입니다(설계 `docs/design/stage3-and-packs.md` 2절). 정상 업무와 반응형(고객 연락처·서버 주소·건강 정보가 든 요청)을 섞었습니다. 금융 팩은 팩 전체가 외부 LLM을 쓰지 않으므로 모두 `externalAllowed: false`입니다. IT 서비스 팩 규정 질의는 팩 문서가 생긴 뒤 더합니다.
 - 시나리오 검사는 공용 도구(`contracts/mcp/tools.json`)에 더해 시나리오 팩의 양식 도구(`packs/<팩>/forms.yaml`의 `tool.name`, 예: `loan_request`, `effort_report`)를 받습니다. 시험은 시나리오의 팩으로 가짜 erp를 띄웁니다.
 - 실행은 팩으로 띄운 스택(`PACK_DIR`)에서 GPU 사용권을 받아 따로 합니다.
-- 새 팩을 더할 때 코어(erp·gateway·agent·rag) 변경 줄 수: `uv run python tools/core_lines.py --pack finance --pack it-services [--extra <커밋>]`. 팩 폴더를 바꾼 커밋을 팩 PR 범위로 보고 코어 코드·코어 시험·팩 줄 수를 표로 냅니다. 코어 안 `tests/`는 따로, rag 문서 템플릿은 팩으로 셉니다. 팩 폴더를 건드리지 않은 관련 코어 커밋은 `--extra`로 더합니다.
+- 새 팩을 더할 때 코어(erp·gateway·agent·rag) 변경 줄 수: `uv run python tools/core_lines.py [--pack <팩>]`. 팩마다 팩 폴더를 바꾼 커밋과, `core_lines.yaml`에 이유와 함께 적은 팩 폴더 밖 관련 커밋(처음 그 기능이 필요했던 팩)을 셉니다. 코어 안 `tests/`는 코어 시험, `*.md`는 코어 문서로 따로, rag 문서 템플릿은 팩으로 셉니다. 관련 커밋 후보는 `--suggest <팩>`(gh 필요, 사람이 골라 설정에 적음). 결과는 `reports/packs/2026-11-22-core-lines.md`입니다.
 
 ## 실행
 
