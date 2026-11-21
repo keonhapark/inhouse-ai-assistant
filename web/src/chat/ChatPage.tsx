@@ -3,6 +3,7 @@ import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { decideApproval, postMessage, undoAction, type StreamResult } from './api'
+import { ACCEPT, formatBytes, MAX_IMAGES, pickImages, release, toDataUrl, type PickedImage } from './attachments'
 import { ActionCard, AssistantMessage, PreviewCard, ToolCall } from './parts'
 import { emptyThread, pendingApproval, threadReducer, type ChatEvent } from './thread'
 import './chat.css'
@@ -20,6 +21,24 @@ export function ChatPage() {
   const [selected, setSelected] = useState<Summary | null>(null)
   const [thread, dispatch] = useReducer(threadReducer, emptyThread)
   const [draft, setDraft] = useState('')
+  // 보내기 전 붙인 사진과 붙이지 못한 이유
+  const [images, setImagesState] = useState<PickedImage[]>([])
+  const [attachErrors, setAttachErrors] = useState<string[]>([])
+  // 사진을 읽는 동안에는 보내기와 첨부를 막습니다(읽기 전에 보내면 사진이 다음 메시지로 딸려 감).
+  const [reading, setReading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const attachRef = useRef<HTMLButtonElement>(null)
+  const attachListRef = useRef<HTMLUListElement>(null)
+  // 연달아 고를 때 남은 칸을 옛 값으로 세지 않도록 지금 붙인 사진을 ref로도 둡니다.
+  const imagesRef = useRef<PickedImage[]>([])
+  const setImages = (next: PickedImage[]) => {
+    imagesRef.current = next
+    setImagesState(next)
+  }
+  // 이 화면에서 보낸 사진의 object URL(말풍선 표시용). 대화를 바꾸면 풉니다.
+  const sentUrls = useRef<{ url: string }[]>([])
+  // 마지막으로 보낸 사진(다시 보내기용). 화면에서 보낸 메시지에만 있습니다.
+  const lastSent = useRef<PickedImage[]>([])
   const [notice, setNotice] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const abort = useRef<AbortController | null>(null)
@@ -75,6 +94,7 @@ export function ChatPage() {
   }
 
   async function open(c: Summary) {
+    clearAttachments()
     abort.current?.abort()
     epoch.current++
     stick.current = true
@@ -99,7 +119,18 @@ export function ChatPage() {
     }
   }
 
+  /** 대화를 바꿀 때 붙여 둔 사진·오류를 비우고 보낸 사진의 object URL을 풉니다(다른 대화로 사진이 딸려 가지 않게). */
+  function clearAttachments() {
+    release(imagesRef.current)
+    setImages([])
+    setAttachErrors([])
+    release(sentUrls.current)
+    sentUrls.current = []
+    lastSent.current = []
+  }
+
   function newConversation() {
+    clearAttachments()
     abort.current?.abort()
     epoch.current++
     stick.current = true
@@ -109,9 +140,19 @@ export function ChatPage() {
     dispatch({ type: 'reset' })
   }
 
-  async function send(text: string) {
-    const content = text.trim()
+  /** 사진만 보낼 때 메시지 본문(계약상 content는 필수입니다) */
+  const IMAGE_ONLY = '사진을 첨부했습니다.'
+
+  async function send(text: string, imgs: PickedImage[] = []) {
+    const content = text.trim() || (imgs.length ? IMAGE_ONLY : '')
     if (!content) return
+    let dataUrls: { dataUrl: string }[]
+    try {
+      dataUrls = await Promise.all(imgs.map(async (i) => ({ dataUrl: await toDataUrl(i) })))
+    } catch {
+      setAttachErrors(['사진을 읽지 못해 보내지 않았습니다. 사진을 빼고 다시 붙여 주세요.'])
+      return
+    }
     setNotice(null)
     let conv = selected
     if (!conv) {
@@ -135,9 +176,19 @@ export function ChatPage() {
     }
     stick.current = true
     setDraft('')
-    dispatch({ type: 'user', text: content })
+    setImages([])
+    setAttachErrors([])
+    sentUrls.current.push(...imgs)
+    lastSent.current = imgs
+    dispatch({ type: 'user', text: content, images: imgs.map(({ name, url }) => ({ name, url })) })
     const signal = startStream()
-    await finishStream(await postMessage(conv.conversationId, content, onEvent, signal))
+    const result = await postMessage(conv.conversationId, content, onEvent, signal, dataUrls)
+    // 사진이 거절됐으면(크기·형식·장수) 입력하던 글과 사진을 되돌려 고쳐 보내게 합니다.
+    if (!result.ok && [413, 415, 422].includes(result.status) && imgs.length && imagesRef.current.length === 0) {
+      setDraft((cur) => cur || (content === IMAGE_ONLY ? '' : content))
+      setImages(imgs)
+    }
+    await finishStream(result)
   }
 
   async function decide(approvalId: string, decision: 'approve' | 'reject') {
@@ -161,7 +212,9 @@ export function ChatPage() {
   const waiting = pendingApproval(thread)
   const lastUser = [...thread.items].reverse().find((i) => i.kind === 'user')
   const agentName = thread.route?.agentName ?? selected?.agentName
-  const canSend = !thread.streaming && !waiting && !creating
+  const canSend = !thread.streaming && !waiting && !creating && !reading
+  // 사진 목록을 바꿀 수 있는 때(보내는 중·대화를 만드는 중·승인 대기에는 막음)
+  const canAttach = !thread.streaming && !waiting && !creating && !reading
 
   // 실행 승인을 기다리느라 꺼졌던 입력창이 다시 켜지면 포커스를 돌려줍니다.
   const wasWaiting = useRef(false)
@@ -172,13 +225,45 @@ export function ChatPage() {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (canSend) void send(draft)
+    if (canSend) void send(draft, images)
+  }
+
+  async function onPick(files: FileList | null) {
+    if (!files?.length || reading) return
+    const list = Array.from(files)
+    // 같은 파일을 지웠다가 다시 고를 수 있게 비웁니다.
+    if (fileRef.current) fileRef.current.value = ''
+    const started = epoch.current
+    setReading(true)
+    try {
+      const { images: picked, errors } = await pickImages(list, imagesRef.current.length)
+      // 읽는 사이 대화를 바꿨으면 버립니다.
+      if (epoch.current !== started) return release(picked)
+      setImages([...imagesRef.current, ...picked].slice(0, MAX_IMAGES))
+      setAttachErrors(errors)
+    } finally {
+      setReading(false)
+    }
+  }
+
+  function removeImage(id: string, index: number) {
+    const gone = imagesRef.current.find((x) => x.id === id)
+    if (gone) release([gone])
+    const next = imagesRef.current.filter((x) => x.id !== id)
+    setImages(next)
+    setAttachErrors([])
+    // 누른 버튼이 사라지므로 다음(없으면 앞) 빼기 버튼, 사진이 없으면 첨부 버튼으로 포커스를 옮깁니다.
+    requestAnimationFrame(() => {
+      const buttons = attachListRef.current?.querySelectorAll<HTMLButtonElement>('button')
+      const target = buttons?.[Math.min(index, (buttons?.length ?? 1) - 1)]
+      ;(target ?? attachRef.current ?? inputRef.current)?.focus()
+    })
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
-      if (canSend) void send(draft)
+      if (canSend) void send(draft, images)
     }
   }
 
@@ -254,10 +339,21 @@ export function ChatPage() {
             switch (it.kind) {
               case 'user':
                 return (
-                  <p key={it.key} className="msg msg--user">
+                  <div key={it.key} className="msg msg--user">
                     <span className="visually-hidden">나: </span>
                     {it.text}
-                  </p>
+                    {it.images?.length ? (
+                      <ul className="msg__images" aria-label={`첨부한 사진 ${it.images.length}장`}>
+                        {it.images.map((img, i) => (
+                          <li key={i}>
+                            <img src={img.url} alt={img.name} />
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (it.attachmentCount ?? 0) > 0 ? (
+                      <span className="msg__attached">사진 {it.attachmentCount}장 첨부(기록에는 사진을 남기지 않습니다)</span>
+                    ) : null}
+                  </div>
                 )
               case 'assistant':
                 return <AssistantMessage key={it.key} item={it} />
@@ -269,6 +365,7 @@ export function ChatPage() {
                     key={it.key}
                     agentName={agentName}
                     approval={it.approval}
+                    fromImage={it.fromImage}
                     decision={it.decision}
                     closed={it.closed}
                     busy={thread.streaming}
@@ -289,9 +386,15 @@ export function ChatPage() {
                 return (
                   <div key={it.key} className="notice notice--error" role="alert">
                     <span>{it.message}</span>
-                    {it.retryable && lastUser?.kind === 'user' && canSend && (
-                      <Button onClick={() => void send(lastUser.text)}>다시 보내기</Button>
-                    )}
+                    {it.retryable &&
+                      lastUser?.kind === 'user' &&
+                      canSend &&
+                      // 복원한 기록의 사진은 본문이 없어 다시 보낼 수 없습니다.
+                      ((lastUser.attachmentCount ?? 0) > 0 && !lastUser.images?.length ? (
+                        <span className="muted">사진을 다시 붙여 보내 주세요.</span>
+                      ) : (
+                        <Button onClick={() => void send(lastUser.text, lastUser.images?.length ? lastSent.current : [])}>다시 보내기</Button>
+                      ))}
                   </div>
                 )
             }
@@ -305,6 +408,34 @@ export function ChatPage() {
             </p>
           )}
           {waiting && <p className="muted">미리보기 카드에서 실행하거나 취소하면 이어서 쓸 수 있습니다.</p>}
+          <div role="status" aria-live="polite" className="attach__errors">
+            {attachErrors.map((m) => (
+              <p key={m} className="alert">
+                {m}
+              </p>
+            ))}
+          </div>
+          {images.length > 0 && (
+            <ul className="attach" aria-label="보낼 사진" ref={attachListRef}>
+              {images.map((img, i) => (
+                <li key={img.id} className="attach__item">
+                  <img src={img.url} alt="" />
+                  <span className="attach__name">
+                    {img.name} <span className="muted">{formatBytes(img.bytes)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="attach__remove"
+                    aria-label={`${img.name} 빼기`}
+                    disabled={!canAttach}
+                    onClick={() => removeImage(img.id, i)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="chat__input">
             <label className="visually-hidden" htmlFor="chat-input">
               메시지
@@ -320,7 +451,19 @@ export function ChatPage() {
               onKeyDown={onKeyDown}
               disabled={!!waiting}
             />
-            <Button type="submit" variant="primary" disabled={!canSend || !draft.trim()}>
+            <input ref={fileRef} id="chat-file" type="file" accept={ACCEPT} multiple hidden onChange={(e) => void onPick(e.target.files)} />
+            <Button
+              ref={attachRef}
+              onClick={() => fileRef.current?.click()}
+              disabled={!canAttach || images.length >= MAX_IMAGES}
+              aria-describedby="chat-file-hint"
+            >
+              {reading ? '사진 읽는 중' : '사진 첨부'}
+            </Button>
+            <span id="chat-file-hint" className="visually-hidden">
+              JPEG·PNG, {MAX_IMAGES}장까지, 한 장 5MB까지
+            </span>
+            <Button type="submit" variant="primary" disabled={!canSend || (!draft.trim() && images.length === 0)}>
               보내기
             </Button>
           </div>

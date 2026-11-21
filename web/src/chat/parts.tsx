@@ -46,6 +46,8 @@ export function Citations({ citations }: { citations: Citation[] }) {
 type PreviewProps = {
   agentName?: string | null
   approval: Approval
+  /** 사진을 붙인 턴의 카드. 값 일부가 사진에서 읽은 것일 수 있습니다 */
+  fromImage?: boolean
   decision?: 'approve' | 'reject'
   closed?: 'expired' | 'failed'
   busy: boolean
@@ -67,7 +69,7 @@ function useNow(enabled: boolean): number {
   return now
 }
 
-export function PreviewCard({ agentName, approval, decision, closed, busy, now: fixedNow, onDecide, onExpire }: PreviewProps) {
+export function PreviewCard({ agentName, approval, fromImage, decision, closed, busy, now: fixedNow, onDecide, onExpire }: PreviewProps) {
   const ticking = useNow(fixedNow === undefined && !decision && !closed && approval.expiresAt !== undefined)
   const now = fixedNow ?? ticking
   const { preview } = approval
@@ -84,6 +86,7 @@ export function PreviewCard({ agentName, approval, decision, closed, busy, now: 
           {agentName && <strong>{agentName}</strong>}
           <span>{approval.toolLabel ?? <code>{approval.tool}</code>}</span>
           <RiskBadge risk={approval.risk} />
+          {fromImage && <Badge tone="warning">이미지에서 읽은 값(확인 필요)</Badge>}
         </>
       }
       footer={
@@ -111,6 +114,9 @@ export function PreviewCard({ agentName, approval, decision, closed, busy, now: 
       }
     >
       <p>{preview.summary}</p>
+      {fromImage && (
+        <p className="warning-line">첨부한 사진에서 읽은 값이 들어 있을 수 있습니다. 금액·날짜 같은 값이 사진과 맞는지 확인한 뒤 실행해 주세요.</p>
+      )}
       <PreviewChanges preview={preview} />
       {!preview.undoable && <p className="warning-line">실행하면 되돌릴 수 없습니다.</p>}
     </Card>

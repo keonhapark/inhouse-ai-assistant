@@ -186,6 +186,12 @@ GATEWAY_EXTERNAL_LOG=/audit/gateway/external.jsonl docker compose -f infra/compo
 |---|---|
 | ![실제 평가 리포트](docs/images/real-eval-report.png) | ![실제 시나리오별 결과](docs/images/real-eval-scenarios.png) |
 
+| 사진 첨부: 보낼 사진(미리보기·빼기) | 사진을 붙인 턴의 미리보기 카드 |
+|---|---|
+| ![사진 첨부](docs/images/chat-attach-pick-light.png) | ![이미지에서 읽은 값](docs/images/chat-attach-preview-light.png) |
+
+채팅에서 JPEG·PNG 사진을 한 번에 3장(한 장 5MB)까지 붙여 보냅니다(gateway 메시지 `attachments`, data URL). 형식은 파일 앞 바이트로 보고(MIME이 비거나 `image/jpg`여도 받음, HEIC는 JPEG로 저장해 달라고 안내), 화면 표시는 object URL로, data URL은 보낼 때만 만듭니다. 사진이 거절되면(413·415·422) 입력하던 글과 사진을 되돌립니다. 실행 미리보기 카드에는 gateway가 준 `fromAttachments`가 true면, 없으면 마지막 카드 뒤에 사진을 보낸 적이 있으면 "이미지에서 읽은 값(확인 필요)"을 붙입니다(사진에서 읽은 값은 신뢰 불가, 결정 0004). 지난 대화는 기록의 첨부 메타로 "사진 n장 첨부"만 보여 줍니다(사진 본문은 저장하지 않음). 화면의 영수증은 시험용으로 지어낸 것이고, 모의 서버는 사진을 읽지 않고 정해 둔 값을 돌려줍니다(실제 읽기는 agent의 로컬 비전 모델).
+
 | 로그인 오류 | 디자인 부품 |
 |---|---|
 | ![로그인 오류](docs/images/login-error-light.png) | ![부품](docs/images/design-light.png) |

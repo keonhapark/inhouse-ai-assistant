@@ -512,6 +512,8 @@ export interface components {
                 content: string;
                 /** Format: date-time */
                 at: string;
+                /** @description 이 메시지에 붙인 이미지의 메타 정보. 이미지 본문(data URL)은 저장하지 않으므로 돌려주지 않습니다(감사에 남기는 값과 같음) */
+                attachments?: components["schemas"]["AttachmentMeta"][];
             } | components["schemas"]["ChatEvent"])[];
         };
         /** @description SSE 이벤트 하나. type마다 쓰는 필드가 다릅니다 */
@@ -552,6 +554,8 @@ export interface components {
                 preview: components["schemas"]["WritePreview"];
                 /** Format: date-time */
                 expiresAt?: string;
+                /** @description 이 턴에 agent가 첨부 이미지를 읽었는지(agent ToolPreview.fromAttachments를 그대로 넘김). true면 미리보기 값 일부가 이미지에서 읽은 신뢰 불가 값이라 화면이 "확인 필요"를 표시합니다(결정 0004). 없으면 화면은 첨부를 보낸 턴의 카드로 추정합니다 */
+                fromAttachments?: boolean;
             };
             /** @description type=approval_decided */
             decision?: {
@@ -767,7 +771,7 @@ export interface components {
             /** Format: date-time */
             startedAt: string;
             finishedAt?: string | null;
-            /** @description 회차에 나온 셋(normal */
+            /** @description 회차에 나온 셋(normal, confirm, dev) */
             sets?: string[];
             conditions: string[];
             repeats?: number;
@@ -777,6 +781,16 @@ export interface components {
             complete: boolean;
             /** @description 본문에 summary가 있는지(#328 전 보고서는 false) */
             hasSummary: boolean;
+        };
+        /** @description 대화 기록에 남는 첨부 정보(본문 없음) */
+        AttachmentMeta: {
+            /** @enum {string} */
+            kind: "image";
+            /** @enum {string} */
+            mediaType: "image/jpeg" | "image/png";
+            /** @description 디코딩한 크기 */
+            bytes: number;
+            sha256: string;
         };
         EmployeeSummary: {
             id: string;
@@ -1843,6 +1857,8 @@ export interface operations {
             header?: {
                 /** @description 평가 전용. GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. gateway는 이 대화의 agent /run에 condition으로 넘기고(이어지는 /resume은 agent 실행 상태가 조건을 기억합니다), 같은 대화의 출구 호출과 위임 토큰 발급에도 조건을 적용합니다. 조건별 장치 구성은 contracts/eval/conditions.md입니다. */
                 "X-Eval-Condition"?: "no_guard" | "write_blocked" | "approve_all" | "baseline_tools" | "full";
+                /** @description 평가 전용(모델 교체 회귀, #107·#346). GATEWAY_EVAL_MODE=1일 때만 받고, 아니면 400(validation)입니다. 이 대화의 위임 토큰을 붙인 출구 호출에서 별칭을 바꿔 끼웁니다. `local=local-exaone`은 로컬 업무 별칭(`local`, `local-gguf`, 기밀 판정·비용 상한·외부 장애 폴백으로 로컬로 돌릴 때 포함)을 `local-exaone`으로, `external=external-sonnet`은 `external`을 `external-sonnet`으로 보냅니다. 위치(local·external)는 바뀌지 않으므로 모델 정책·가림·기밀 판정은 그대로입니다. 이미지(`local-vision`)·임베딩(`local-embed`)과 토큰 없는 호출(입구 라우터)은 바꾸지 않습니다. 응답 머리글 `X-Egress-Model`에 실제로 보낸 별칭이 나옵니다. 운영 경로에는 영향이 없습니다. */
+                "X-Eval-Model-Override"?: "local=local-exaone" | "external=external-sonnet" | "local=local-exaone,external=external-sonnet";
             };
             path?: never;
             cookie?: never;

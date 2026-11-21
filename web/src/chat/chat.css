@@ -282,7 +282,101 @@ select {
   resize: none;
 }
 
+/* 보낸 메시지의 사진과 보낼 사진 */
+.msg__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin: var(--sp-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.msg__images img {
+  display: block;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-control);
+  object-fit: cover;
+  background: var(--surface);
+}
+
+.msg__attached {
+  display: block;
+  margin-top: var(--sp-4);
+  font-size: var(--fs-12);
+  opacity: 0.85;
+}
+
+.attach__errors:empty {
+  display: none;
+}
+
+.attach__errors {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.attach {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attach__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  max-width: 100%;
+  padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.attach__item img {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-control);
+  object-fit: cover;
+}
+
+.attach__name {
+  max-width: 200px;
+  overflow: hidden;
+  font-size: var(--fs-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attach__remove {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-16);
+  cursor: pointer;
+}
+
+.attach__remove:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
 @media (max-width: 720px) {
+  .chat__input {
+    flex-wrap: wrap;
+  }
+
+  .chat__input textarea {
+    flex-basis: 100%;
+  }
+
   .chat {
     grid-template-columns: 1fr;
     height: auto;

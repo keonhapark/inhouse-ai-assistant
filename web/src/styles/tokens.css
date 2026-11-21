@@ -15,7 +15,8 @@
   --on-fill: #ffffff;
 
   --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* 고정폭 글꼴에 한글이 없는 환경(만료 시각 앞 '만료' 등)에서 한글은 Pretendard로 그립니다 */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Pretendard Variable', Pretendard, monospace;
 
   --fs-12: 12px;
   --fs-14: 14px;

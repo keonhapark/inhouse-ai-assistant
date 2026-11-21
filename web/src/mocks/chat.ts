@@ -150,6 +150,55 @@ function scenario(c: Conv, content: string): Draft[] {
   return [...route(c, 'assistant', 'fallback', '맞는 부서 없음'), ...words(text), { type: 'message', text }, { type: 'done' }]
 }
 
+/**
+ * 사진을 붙인 메시지: 재무 에이전트가 영수증에서 읽은 값으로 경비 정산 미리보기를 냅니다(결정 0004 덧붙임: 사진을 읽은 턴은 승인을 받음).
+ * 실제 읽기는 agent의 로컬 비전 모델이 하고, 모의 서버는 정해 둔 값을 돌려줍니다.
+ */
+function receipt(c: Conv): Draft[] {
+  const approvalId = `ap-${++idSeq}`
+  approvals.set(approvalId, {
+    conv: c.summary.conversationId,
+    tool: 'expense_request',
+    summary: '경비 정산 결재 EXP-0107(42,000원)을 올렸습니다.',
+    done: '올렸습니다. 필요 없으면 되돌리기를 누르면 됩니다.',
+    rejected: '올리지 않았습니다.',
+    undoable: true,
+  })
+  const text = '영수증에서 가맹점·날짜·금액을 읽었습니다. 아래 내용으로 경비 정산을 올릴까요?'
+  return [
+    ...route(c, 'finance', 'llm', '영수증 경비 정산'),
+    ...words(text),
+    { type: 'message', text, model: LOCAL },
+    {
+      type: 'approval_required',
+      approval: {
+        approvalId,
+        tool: 'expense_request',
+        toolLabel: '경비 정산',
+        risk: 'reversible_write',
+        fromAttachments: true,
+        expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+        preview: {
+          dryRun: true,
+          operation: 'createExpenseRequest',
+          summary: '경비 정산 결재를 올립니다(결재선: 팀장).',
+          undoable: true,
+          changes: [
+            {
+              op: 'create',
+              resource: 'approval_document',
+              resourceId: null,
+              before: null,
+              after: { merchant: '가온식당 성수점', spent_on: '2026-11-20', amount: 42000, category: '식대' },
+            },
+          ],
+        },
+      },
+    },
+    { type: 'done', model: LOCAL },
+  ]
+}
+
 function owned(request: Request, id: string): { me?: Employee; conv?: Conv } {
   const me = employeeForToken(request.headers.get('Authorization'))
   const conv = convs.get(id)
@@ -212,11 +261,39 @@ export const chatHandlers = [
     if (conv.summary.status === 'awaiting_approval') {
       return problem(409, 'invalid-state', '실행 승인을 기다리는 중입니다. 미리보기 카드에서 먼저 실행하거나 취소해 주세요.')
     }
-    const { content } = (await request.json()) as { content: string }
-    conv.events.push({ type: 'user_message', content, at: now() })
+    const { content, attachments = [] } = (await request.json()) as { content: string; attachments?: { kind: string; dataUrl: string }[] }
+    // gateway 계약: jpeg·png data URL, 3장까지, 한 장 5MB(디코딩 크기)
+    if (attachments.length > 3) return problem(422, 'validation', '이미지는 3장까지 붙일 수 있습니다.')
+    if (attachments.some((a) => !/^data:image\/(jpeg|png);base64,/.test(a.dataUrl))) {
+      return problem(415, 'unsupported-media-type', 'JPEG·PNG 이미지만 받습니다.')
+    }
+    // base64 디코딩 크기: 4글자당 3바이트에서 끝의 패딩(=) 수를 뺍니다.
+    const decoded = (u: string) => {
+      const b64 = u.slice(u.indexOf(',') + 1)
+      return (b64.length * 3) / 4 - (b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0)
+    }
+    if (attachments.some((a) => decoded(a.dataUrl) > 5 * 1024 * 1024)) {
+      return problem(413, 'payload-too-large', '이미지 한 장은 5MB까지입니다.')
+    }
+    // 기록에는 첨부 본문 없이 메타만 남깁니다(계약 AttachmentMeta). sha256은 모의 값입니다.
+    conv.events.push({
+      type: 'user_message',
+      content,
+      at: now(),
+      ...(attachments.length
+        ? {
+            attachments: attachments.map((a) => ({
+              kind: 'image' as const,
+              mediaType: a.dataUrl.startsWith('data:image/png') ? ('image/png' as const) : ('image/jpeg' as const),
+              bytes: Math.round(decoded(a.dataUrl)),
+              sha256: '0'.repeat(64),
+            })),
+          }
+        : {}),
+    })
     conv.summary.title ??= content.slice(0, 30)
     conv.summary.updatedAt = now()
-    const events = stamp(conv, scenario(conv, content))
+    const events = stamp(conv, attachments.length ? receipt(conv) : scenario(conv, content))
     if (events.some((e) => e.type === 'approval_required')) conv.summary.status = 'awaiting_approval'
     return sseResponse(events)
   }),
