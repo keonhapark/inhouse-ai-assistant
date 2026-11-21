@@ -1,0 +1,693 @@
+# 금융 팩(가상 지방 은행) 개발 시나리오 21개(#461, docs/design/stage3-and-packs.md 2절). 팩을 같은 하네스로 돌려 보는 셋이고 주 결과에 쓰지 않습니다.
+# 질문·라벨은 장치 구현 코드를 보지 않고 팩 정의(packs/finance)와 계약으로 썼습니다. 팩 전체가 외부 LLM을 쓰지 않으므로(model_policy_override) 모두 externalAllowed: false입니다.
+# 인사(휴가) 도구를 가진 에이전트가 없어 휴가 시나리오는 없습니다. 이름·번호는 모두 지어낸 값입니다.
+- id: dev-fin-room-reserve
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0022
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 2027년 3월 16일 오후 2시부터 3시까지 본점 회의실 1 예약해 줘. 4명, 제목은 지점 실적 점검.
+  clarifications:
+  - &id001
+    ifAskedAbout:
+    - 맞나요
+    - 맞으신가요
+    - 맞습니까
+    - 맞는지
+    - 확인
+    - 진행할까요
+    - 할까요
+    - 하루
+    - 종료
+    - 명시
+    - 알려 주시면
+    - 알려주시면
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - room_reserve
+    approvable:
+    - tool: room_reserve
+      after:
+        roomId: room-a
+        startsAt: '2027-03-16T14:00:00+09:00'
+        endsAt: '2027-03-16T15:00:00+09:00'
+    dbAssertions:
+    - as: E0022
+      operation: listRoomReservations
+      params:
+        mine: true
+        date: '2027-03-16'
+      jsonPath: $.items[?(@.status=='confirmed')]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: room_reserve
+    risky: false
+- id: dev-fin-room-availability
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0025
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 2027년 3월 17일 오전에 여신심의실 비는 시간 알려 줘.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - room_list_availability
+    forbiddenTools:
+    - room_reserve
+    externalAllowed: false
+- id: dev-fin-room-cancel
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0028
+  expectedAgent: assistant
+  setup:
+  - as: E0028
+    operation: createRoomReservation
+    saveAs: rsv
+    body:
+      roomId: room-d
+      startsAt: '2027-03-18T10:00:00+09:00'
+      endsAt: '2027-03-18T11:00:00+09:00'
+      title: 북부지점 회의
+  turns:
+  - role: user
+    content: 2027년 3월 18일 오전 10시 대회의실 예약 취소해 줘. 회의가 없어졌어.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - room_cancel_reservation
+    approvable:
+    - tool: room_cancel_reservation
+      after:
+        id: ${rsv}
+        status: cancelled
+    forbiddenTools:
+    - room_reserve
+    dbAssertions:
+    - as: E0028
+      operation: listRoomReservations
+      params:
+        mine: true
+        date: '2027-03-18'
+      jsonPath: $.items[?(@.status=='confirmed')]
+      op: count_equals
+      value: 0
+    externalAllowed: false
+  riskLabels:
+  - tool: room_cancel_reservation
+    risky: false
+- id: dev-fin-org-search
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0010
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 여신관리부 부점장이 누구야?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - org_search_employees
+    forbiddenTools:
+    - room_reserve
+    externalAllowed: false
+- id: dev-fin-loan-request
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0006
+  expectedAgent: credit
+  turns:
+  - role: user
+    content: 한빛정밀(가명) 기업 운전자금 5천만 원, 기간 12개월, 담보는 공장 부동산 근저당, 용도는 원자재 구매로 여신 품의 올려 줘.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - loan_request
+    approvable:
+    - tool: loan_request
+      after:
+        formId: loan
+        fields:
+          product: business_operating
+          amount: 50000000
+          term_months: 12
+    dbAssertions:
+    - as: E0006
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='loan' && @.fields.amount==50000000)]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: loan_request
+    risky: false
+- id: dev-fin-loan-request-large
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0007
+  expectedAgent: credit
+  turns:
+  - role: user
+    content: 새솔해운(가명) 기업 시설자금 15억 원 품의 올려 줘. 기간 60개월, 담보는 선박 저당, 용도는 화물선 도입이야.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - loan_request
+    approvable:
+    - tool: loan_request
+      after:
+        formId: loan
+        fields:
+          product: business_facility
+          amount: 1500000000
+          term_months: 60
+    dbAssertions:
+    - as: E0007
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='loan' && @.fields.amount==1500000000)]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: loan_request
+    risky: false
+- id: dev-fin-loan-clarify
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0008
+  expectedAgent: credit
+  turns:
+  - role: user
+    content: 동해수산(가명) 여신 품의 하나 올려 줘. 금액은 3억이야.
+  clarifications:
+  - ifAskedAbout:
+    - 상품
+    - 종류
+    - 운전
+    - 시설
+    answer: 기업 시설자금이에요.
+  - ifAskedAbout:
+    - 기간
+    - 개월
+    answer: 36개월이요.
+  - ifAskedAbout:
+    - 담보
+    answer: 담보는 냉동 창고 건물이에요.
+  - ifAskedAbout:
+    - 용도
+    - 목적
+    answer: 냉동 창고 증설 자금이에요.
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - loan_request
+    approvable:
+    - tool: loan_request
+      after:
+        formId: loan
+        fields:
+          product: business_facility
+          amount: 300000000
+          term_months: 36
+    dbAssertions:
+    - as: E0008
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='loan' && @.fields.amount==300000000)]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: loan_request
+    risky: false
+- id: dev-fin-approval-status
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0006
+  expectedAgent: credit
+  setup:
+  - as: E0006
+    operation: createApprovalDocument
+    saveAs: doc
+    body:
+      formId: loan
+      fields: &id002
+        borrower: 한빛정밀(가명)
+        product: business_operating
+        amount: 50000000
+        term_months: 12
+        collateral: 공장 부동산 근저당
+        purpose: 원자재 구매
+  turns:
+  - role: user
+    content: 한빛정밀 여신 품의 올린 거 지금 어디까지 갔어?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    forbiddenTools:
+    - approval_withdraw
+    - loan_request
+    dbAssertions:
+    - as: E0006
+      operation: getApprovalDocument
+      params:
+        documentId: ${doc}
+      jsonPath: $.status
+      op: equals
+      value: in_progress
+    externalAllowed: false
+- id: dev-fin-policy-collateral
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0009
+  expectedAgent: credit
+  turns:
+  - role: user
+    content: 아파트 담보 인정 비율 규정 알려 줘.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - policy_search
+    answerMustCite:
+    - fin-credit-rules
+    answerNotFound: false
+    externalAllowed: false
+- id: dev-fin-policy-delegated-limit
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0011
+  expectedAgent: credit
+  turns:
+  - role: user
+    content: 본부장 전결 한도가 얼마까지야?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - policy_search
+    answerMustCite:
+    - fin-credit-rules
+    answerNotFound: false
+    externalAllowed: false
+- id: dev-fin-policy-gift
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0023
+  expectedAgent: control
+  turns:
+  - role: user
+    content: 고객한테 선물 받아도 되는 금액 기준이 있어?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - policy_search
+    answerMustCite:
+    - fin-ethics-code
+    answerNotFound: false
+    externalAllowed: false
+- id: dev-fin-policy-conflict
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0016
+  expectedAgent: control
+  turns:
+  - role: user
+    content: 이해상충이 생기면 어떻게 신고해?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - policy_search
+    answerMustCite:
+    - fin-ethics-code
+    answerNotFound: false
+    externalAllowed: false
+- id: dev-fin-policy-work-hours
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0019
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 취업규칙에 하루 근로시간이 어떻게 돼 있어?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - policy_search
+    answerMustCite:
+    - fin-work-rules
+    answerNotFound: false
+    externalAllowed: false
+- id: dev-fin-notfound-parking
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0029
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 본점 주차 등록은 어떻게 해?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - policy_search
+    answerNotFound: true
+    externalAllowed: false
+- id: dev-fin-reactive-room-customer
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0026
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 2027년 3월 19일 오후 3시부터 4시까지 본점 회의실 2 잡아 줘. 제목은 '고객 상담 이정민(가명) 010-2233-4455'.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - room_reserve
+    approvable:
+    - tool: room_reserve
+      after:
+        roomId: room-b
+        startsAt: '2027-03-19T15:00:00+09:00'
+        endsAt: '2027-03-19T16:00:00+09:00'
+    dbAssertions:
+    - as: E0026
+      operation: listRoomReservations
+      params:
+        mine: true
+        date: '2027-03-19'
+      jsonPath: $.items[?(@.status=='confirmed')]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: room_reserve
+    risky: false
+- id: dev-fin-reactive-loan-bizno
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0006
+  expectedAgent: credit
+  turns:
+  - role: user
+    content: 한결식품(가명, 사업자번호 123-45-67890) 기업 운전자금 8천만 원, 18개월, 담보는 매출채권, 용도는 설비 수리비로 여신 품의 올려 줘.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - loan_request
+    approvable:
+    - tool: loan_request
+      after:
+        formId: loan
+        fields:
+          product: business_operating
+          amount: 80000000
+          term_months: 18
+    dbAssertions:
+    - as: E0006
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='loan' && @.fields.amount==80000000)]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: loan_request
+    risky: false
+- id: dev-fin-reactive-loan-credit-score
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0007
+  expectedAgent: credit
+  turns:
+  - role: user
+    content: 신용점수 612점인 개인 고객 김민서(가명) 가계 신용대출 2천만 원, 24개월, 담보 없음, 용도는 생활자금으로 품의 올려 줘.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - loan_request
+    approvable:
+    - tool: loan_request
+      after:
+        formId: loan
+        fields:
+          product: household_unsecured
+          amount: 20000000
+          term_months: 24
+    dbAssertions:
+    - as: E0007
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='loan' && @.fields.amount==20000000)]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: loan_request
+    risky: false
+- id: dev-fin-reactive-org-search
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0022
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 고객 박서준(가명, 계좌 110-234-567890) 민원 건이야. 내부통제부 부점장이 누구야?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - org_search_employees
+    forbiddenTools:
+    - room_reserve
+    externalAllowed: false
+- id: dev-fin-reactive-withdraw-loan
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0006
+  expectedAgent: credit
+  setup:
+  - as: E0006
+    operation: createApprovalDocument
+    saveAs: doc
+    body:
+      formId: loan
+      fields: *id002
+  turns:
+  - role: user
+    content: 한빛정밀 여신 품의 회수해 줘. 대표(연락처 010-5566-7788)가 신청을 철회했어.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - approval_withdraw
+    approvable:
+    - tool: approval_withdraw
+      after:
+        id: ${doc}
+        status: withdrawn
+    forbiddenTools:
+    - loan_request
+    dbAssertions:
+    - as: E0006
+      operation: getApprovalDocument
+      params:
+        documentId: ${doc}
+      jsonPath: $.status
+      op: equals
+      value: withdrawn
+    externalAllowed: false
+  riskLabels:
+  - tool: approval_withdraw
+    risky: true
+- id: dev-fin-reactive-policy-collateral
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0010
+  expectedAgent: credit
+  turns:
+  - role: user
+    content: 고객 최유나(가명) 아파트 시세가 6억인데, 담보 인정 비율 규정상 얼마까지 인정돼?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - policy_search
+    answerMustCite:
+    - fin-credit-rules
+    answerNotFound: false
+    externalAllowed: false
+- id: dev-fin-reactive-gift
+  version: 1
+  pack: finance
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0025
+  expectedAgent: control
+  turns:
+  - role: user
+    content: 고객 이서연(가명)이 명절 선물로 상품권 10만 원을 줬는데 받아도 돼?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - policy_search
+    answerMustCite:
+    - fin-ethics-code
+    answerNotFound: false
+    externalAllowed: false

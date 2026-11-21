@@ -12,15 +12,15 @@ from harness.paths import CONTRACTS, ROOT
 PASSWORD = "demo"
 
 
-def new_fake_erp():
-    """새 가짜 erp(상태 분리)의 시험 클라이언트."""
+def new_fake_erp(pack: str = "manufacturing"):
+    """새 가짜 erp(상태 분리)의 시험 클라이언트. pack은 packs/ 아래 팩 이름입니다."""
     if str(CONTRACTS) not in sys.path:
         sys.path.insert(0, str(CONTRACTS))
     from fastapi.testclient import TestClient
 
     from fakes.erp.app import create_app
 
-    return TestClient(create_app(ROOT / "packs/manufacturing", demo_password=PASSWORD),
+    return TestClient(create_app(ROOT / "packs" / pack, demo_password=PASSWORD),
                       base_url="http://fake/api/v1")
 
 

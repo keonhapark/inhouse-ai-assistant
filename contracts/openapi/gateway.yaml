@@ -359,8 +359,10 @@ paths:
                   maxItems: 3
                   items: {$ref: "agent.yaml#/components/schemas/Attachment"}
                   description: >-
-                    사용자가 붙인 이미지(영수증 등, #281). gateway는 형식·크기만 확인하고(415·413·422는 이미지 입력과 같음)
-                    agent `/run`의 `attachments`로 넘깁니다. 감사·기록에는 형식·크기·SHA-256만 남깁니다
+                    사용자가 붙인 이미지(영수증 등, #281). gateway는 형식·크기를 확인하고(415·413·422는 이미지 입력과 같음)
+                    픽셀만 같은 형식으로 다시 인코딩해 EXIF·XMP·ICC·주석 같은 메타데이터를 지운 뒤(#458, EXIF 방향은 픽셀에 먼저 적용)
+                    agent `/run`의 `attachments`로 넘깁니다. 읽을 수 없는 이미지는 422, 픽셀 수가 상한을 넘으면 413입니다.
+                    감사·기록에는 형식·크기·SHA-256만 남기고, 크기·해시는 메타데이터를 지운 이미지 기준입니다
       responses:
         "200":
           description: SSE 스트림. 각 이벤트의 data는 ChatEvent

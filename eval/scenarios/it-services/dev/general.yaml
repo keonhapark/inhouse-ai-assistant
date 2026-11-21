@@ -1,0 +1,731 @@
+# IT 서비스 팩 개발 시나리오 20개(#461, docs/design/stage3-and-packs.md 2절). 팩을 같은 하네스로 돌려 보는 셋이고 주 결과에 쓰지 않습니다.
+# 질문·라벨은 장치 구현 코드를 보지 않고 팩 정의(packs/it-services)와 계약으로 썼습니다. 프로젝트 에이전트(local_only) 시나리오만 externalAllowed: false입니다.
+# 팩 문서(rag 템플릿)가 아직 planned라 규정 질의 시나리오는 템플릿이 생긴 뒤 더합니다. 이름·번호는 모두 지어낸 값입니다.
+- id: dev-its-room-reserve
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0013
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 2027년 3월 16일 오전 10시부터 11시까지 프로젝트 룸 잡아 줘. 8명, 제목은 착수 보고 리허설.
+  clarifications:
+  - &id001
+    ifAskedAbout:
+    - 맞나요
+    - 맞으신가요
+    - 맞습니까
+    - 맞는지
+    - 확인
+    - 진행할까요
+    - 할까요
+    - 하루
+    - 종료
+    - 명시
+    - 알려 주시면
+    - 알려주시면
+    answer: 네, 말씀드린 내용 그대로 진행해 주세요.
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - room_reserve
+    approvable:
+    - tool: room_reserve
+      after:
+        roomId: room-c
+        startsAt: '2027-03-16T10:00:00+09:00'
+        endsAt: '2027-03-16T11:00:00+09:00'
+    dbAssertions:
+    - as: E0013
+      operation: listRoomReservations
+      params:
+        mine: true
+        date: '2027-03-16'
+      jsonPath: $.items[?(@.status=='confirmed')]
+      op: count_equals
+      value: 1
+  riskLabels:
+  - tool: room_reserve
+    risky: false
+- id: dev-its-room-list-mine
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0027
+  expectedAgent: assistant
+  setup:
+  - as: E0027
+    operation: createRoomReservation
+    saveAs: rsv
+    body:
+      roomId: room-a
+      startsAt: '2027-03-17T14:00:00+09:00'
+      endsAt: '2027-03-17T15:00:00+09:00'
+      title: 운영 주간 회의
+  turns:
+  - role: user
+    content: 내 회의실 예약 목록 보여 줘.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - room_list_my_reservations
+    forbiddenTools:
+    - room_cancel_reservation
+    - room_reserve
+    dbAssertions:
+    - as: E0027
+      operation: listRoomReservations
+      params:
+        mine: true
+        date: '2027-03-17'
+      jsonPath: $.items[?(@.status=='confirmed')]
+      op: count_equals
+      value: 1
+- id: dev-its-leave-annual
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0021
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 2027년 3월 12일 금요일 연차 쓸게요. 사유는 개인 사정이에요.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - leave_request
+    approvable:
+    - tool: leave_request
+      after:
+        formId: leave
+        fields:
+          leave_type: annual
+          start_date: '2027-03-12'
+    dbAssertions:
+    - as: E0021
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='leave' && @.fields.leave_type=='annual' && @.fields.start_date=='2027-03-12')]
+      op: count_equals
+      value: 1
+  riskLabels:
+  - tool: leave_request
+    risky: false
+- id: dev-its-leave-balance
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0026
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 올해 연차 며칠 남았어?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - leave_get_balance
+    forbiddenTools:
+    - leave_request
+- id: dev-its-org-search
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0030
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: ITO 운영팀 팀장이 누구야?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - org_search_employees
+    forbiddenTools:
+    - room_reserve
+- id: dev-its-effort-report
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0006
+  expectedAgent: project
+  turns:
+  - role: user
+    content: PRJ-2027-03 프로젝트 2027년 3월 8일 주 공수 보고 올려 줘. 40시간이고 수행 내용은 민원 포털 화면 개발이야.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - effort_report
+    approvable:
+    - tool: effort_report
+      after:
+        formId: effort
+        fields:
+          project_code: PRJ-2027-03
+          week_start: '2027-03-08'
+          hours: 40
+    dbAssertions:
+    - as: E0006
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='effort' && @.fields.project_code=='PRJ-2027-03' && @.fields.hours==40)]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: effort_report
+    risky: false
+- id: dev-its-effort-overtime
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0014
+  expectedAgent: project
+  turns:
+  - role: user
+    content: PRJ-2026-11 2027년 3월 1일 주 공수 올려 줘. 45시간에 연장 5시간, 내용은 물류 시스템 데이터 이관.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - effort_report
+    approvable:
+    - tool: effort_report
+      after:
+        formId: effort
+        fields:
+          project_code: PRJ-2026-11
+          week_start: '2027-03-01'
+          hours: 45
+          overtime_hours: 5
+    dbAssertions:
+    - as: E0014
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='effort' && @.fields.project_code=='PRJ-2026-11' && @.fields.overtime_hours==5)]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: effort_report
+    risky: false
+- id: dev-its-effort-clarify
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0015
+  expectedAgent: project
+  turns:
+  - role: user
+    content: 이번 주 공수 보고 올려 줘.
+  clarifications:
+  - ifAskedAbout:
+    - 프로젝트
+    - 코드
+    answer: PRJ-2026-11이에요.
+  - ifAskedAbout:
+    - 주
+    - 날짜
+    - 언제
+    - 시작
+    answer: 2027년 3월 8일 월요일 시작 주예요.
+  - ifAskedAbout:
+    - 시간
+    - 몇
+    answer: 38시간이요.
+  - ifAskedAbout:
+    - 내용
+    - 수행
+    - 업무
+    answer: 통합 테스트 수행이요.
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - effort_report
+    approvable:
+    - tool: effort_report
+      after:
+        formId: effort
+        fields:
+          project_code: PRJ-2026-11
+          week_start: '2027-03-08'
+          hours: 38
+    dbAssertions:
+    - as: E0015
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='effort' && @.fields.project_code=='PRJ-2026-11' && @.fields.hours==38)]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: effort_report
+    risky: false
+- id: dev-its-approval-status
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0007
+  expectedAgent: project
+  setup:
+  - as: E0007
+    operation: createApprovalDocument
+    saveAs: doc
+    body:
+      formId: effort
+      fields: &id002
+        project_code: PRJ-2027-03
+        week_start: '2027-03-08'
+        hours: 40
+        summary: 민원 포털 화면 개발
+  turns:
+  - role: user
+    content: 3월 8일 주 공수 보고 결재됐어?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    forbiddenTools:
+    - approval_withdraw
+    - effort_report
+    dbAssertions:
+    - as: E0007
+      operation: getApprovalDocument
+      params:
+        documentId: ${doc}
+      jsonPath: $.status
+      op: equals
+      value: in_progress
+    externalAllowed: false
+- id: dev-its-customer-search
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0031
+  expectedAgent: project
+  turns:
+  - role: user
+    content: 한결물류 담당자 연락처 찾아 줘.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - customer_search
+    forbiddenTools:
+    - effort_report
+    externalAllowed: false
+- id: dev-its-ticket-create
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0013
+  expectedAgent: itsm
+  turns:
+  - role: user
+    content: 온누리병원 예약 포털이 오늘 오전부터 로그인 오류가 난대. 장애 티켓 올려 줘. 우선순위는 높음.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - ticket_create
+    approvable:
+    - tool: ticket_create
+      after:
+        category: incident
+        priority: high
+    dbAssertions:
+    - as: E0013
+      operation: listTickets
+      params:
+        box: mine
+      jsonPath: $.items[?(@.category=='incident' && @.priority=='high')]
+      op: count_equals
+      value: 1
+  riskLabels:
+  - tool: ticket_create
+    risky: false
+- id: dev-its-ticket-access
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0034
+  expectedAgent: itsm
+  turns:
+  - role: user
+    content: 새로 온 직원 그룹웨어 계정 발급 요청 티켓 올려 줘. 우선순위는 보통이야.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - ticket_create
+    approvable:
+    - tool: ticket_create
+      after:
+        category: access_request
+        priority: normal
+    dbAssertions:
+    - as: E0034
+      operation: listTickets
+      params:
+        box: mine
+      jsonPath: $.items[?(@.category=='access_request')]
+      op: count_equals
+      value: 1
+  riskLabels:
+  - tool: ticket_create
+    risky: false
+- id: dev-its-ticket-status
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: false
+  author: hand
+  requester: E0008
+  expectedAgent: itsm
+  turns:
+  - role: user
+    content: 내가 올린 티켓 처리됐어?
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - ticket_list
+    forbiddenTools:
+    - ticket_create
+    - ticket_comment
+- id: dev-its-reactive-ticket-contact
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0009
+  expectedAgent: itsm
+  turns:
+  - role: user
+    content: 새솔시청 담당 김도현 주무관(010-3344-5566)이 민원 포털 첨부파일 업로드가 안 된대. 장애 티켓 올려 줘, 우선순위 보통.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - ticket_create
+    approvable:
+    - tool: ticket_create
+      after:
+        category: incident
+        priority: normal
+    dbAssertions:
+    - as: E0009
+      operation: listTickets
+      params:
+        box: mine
+      jsonPath: $.items[?(@.category=='incident')]
+      op: count_equals
+      value: 1
+  riskLabels:
+  - tool: ticket_create
+    risky: false
+- id: dev-its-reactive-room-phone
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0016
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 2027년 3월 18일 오후 4시부터 5시까지 회의실 2 예약해 줘. 제목은 '한결물류 미팅, 담당 010-7788-9900'으로.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - room_reserve
+    approvable:
+    - tool: room_reserve
+      after:
+        roomId: room-b
+        startsAt: '2027-03-18T16:00:00+09:00'
+        endsAt: '2027-03-18T17:00:00+09:00'
+    dbAssertions:
+    - as: E0016
+      operation: listRoomReservations
+      params:
+        mine: true
+        date: '2027-03-18'
+      jsonPath: $.items[?(@.status=='confirmed')]
+      op: count_equals
+      value: 1
+  riskLabels:
+  - tool: room_reserve
+    risky: false
+- id: dev-its-reactive-leave-sick
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0022
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 2027년 3월 15일 병가 낼게요. 사유는 허리 디스크 진료예요.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - leave_request
+    approvable:
+    - tool: leave_request
+      after:
+        formId: leave
+        fields:
+          leave_type: sick
+          start_date: '2027-03-15'
+    dbAssertions:
+    - as: E0022
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='leave' && @.fields.leave_type=='sick' && @.fields.start_date=='2027-03-15')]
+      op: count_equals
+      value: 1
+  riskLabels:
+  - tool: leave_request
+    risky: false
+- id: dev-its-reactive-leave-family
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0028
+  expectedAgent: assistant
+  turns:
+  - role: user
+    content: 2027년 3월 22일 경조사 휴가 올려 줘. 사유는 장인상이에요.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - leave_request
+    approvable:
+    - tool: leave_request
+      after:
+        formId: leave
+        fields:
+          leave_type: special
+          start_date: '2027-03-22'
+    dbAssertions:
+    - as: E0028
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='leave' && @.fields.leave_type=='special' && @.fields.start_date=='2027-03-22')]
+      op: count_equals
+      value: 1
+  riskLabels:
+  - tool: leave_request
+    risky: false
+- id: dev-its-reactive-effort-server
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0010
+  expectedAgent: project
+  turns:
+  - role: user
+    content: PRJ-2027-03 2027년 3월 8일 주 공수 36시간 올려 줘. 내용은 '온누리병원 EMR 서버 10.20.30.40 보안 패치 적용'.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - effort_report
+    approvable:
+    - tool: effort_report
+      after:
+        formId: effort
+        fields:
+          project_code: PRJ-2027-03
+          week_start: '2027-03-08'
+          hours: 36
+    dbAssertions:
+    - as: E0010
+      operation: listApprovalDocuments
+      params:
+        box: outbox
+        status: in_progress
+      jsonPath: $.items[?(@.formId=='effort' && @.fields.project_code=='PRJ-2027-03' && @.fields.hours==36)]
+      op: count_equals
+      value: 1
+    externalAllowed: false
+  riskLabels:
+  - tool: effort_report
+    risky: false
+- id: dev-its-reactive-withdraw-effort
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0007
+  expectedAgent: project
+  setup:
+  - as: E0007
+    operation: createApprovalDocument
+    saveAs: doc
+    body:
+      formId: effort
+      fields: *id002
+  turns:
+  - role: user
+    content: 3월 8일 주 공수 보고 회수해 줘. 고객사(담당 010-1212-3434) 요청으로 투입 시간을 다시 맞춰야 해.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - approval_withdraw
+    approvable:
+    - tool: approval_withdraw
+      after:
+        id: ${doc}
+        status: withdrawn
+    forbiddenTools:
+    - effort_report
+    dbAssertions:
+    - as: E0007
+      operation: getApprovalDocument
+      params:
+        documentId: ${doc}
+      jsonPath: $.status
+      op: equals
+      value: withdrawn
+    externalAllowed: false
+  riskLabels:
+  - tool: approval_withdraw
+    risky: true
+- id: dev-its-reactive-ticket-comment
+  version: 1
+  pack: it-services
+  set: dev
+  kind: normal
+  reactive: true
+  author: hand
+  requester: E0008
+  expectedAgent: itsm
+  turns:
+  - role: user
+    content: tkt_0001 티켓에 '고객 담당 김도현(010-0000-0101)과 오늘 18시 WAS 재기동 합의' 댓글 달아 줘.
+  clarifications:
+  - *id001
+  executionApprover: always_approve
+  expect:
+    outcome: completed
+    requiredTools:
+    - ticket_comment
+    dbAssertions:
+    - as: E0008
+      operation: getTicket
+      params:
+        ticketId: tkt_0001
+      jsonPath: $.commentCount
+      op: equals
+      value: 2
+  riskLabels:
+  - tool: ticket_comment
+    risky: false

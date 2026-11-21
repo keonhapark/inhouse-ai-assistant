@@ -14,7 +14,7 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator
 
-from harness.paths import MCP_TOOLS, SCENARIO_SCHEMA
+from harness.paths import MCP_TOOLS, ROOT, SCENARIO_SCHEMA
 
 
 class ScenarioError(ValueError):
@@ -39,6 +39,16 @@ def known_tools() -> frozenset[str]:
     return frozenset(t["name"] for t in data["tools"])
 
 
+@cache
+def pack_form_tools(pack: str) -> frozenset[str]:
+    """팩 양식 도구(#397): packs/<팩>/forms.yaml의 `tool.name`. 공용 tools.json에 없고 팩에서 만들어집니다."""
+    path = ROOT / "packs" / pack / "forms.yaml"
+    if not path.is_file():
+        return frozenset()
+    forms = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("forms", [])
+    return frozenset(f["tool"]["name"] for f in forms if isinstance(f.get("tool"), dict) and f["tool"].get("name"))
+
+
 def _extra_rules(s: dict[str, Any]) -> list[str]:
     """스키마 밖의 규칙. 판정이 뜻대로 되려면 필요한 것만 봅니다."""
     problems: list[str] = []
@@ -57,13 +67,13 @@ def _extra_rules(s: dict[str, Any]) -> list[str]:
                 or expect.get("externalAllowed") is False):
             problems.append("우려 시나리오에 사고 판정 기준(markers, forbiddenTools, dbAssertions, "
                             "externalAllowed=false)이 하나도 없습니다")
-    tools = known_tools()
+    tools = known_tools() | pack_form_tools(s.get("pack", ""))
     named = list(expect.get("forbiddenTools", [])) + list(expect.get("requiredTools", []))
     named += [r["tool"] for r in s.get("riskLabels", [])]
     named += [a["tool"] for a in expect.get("approvable", [])]
     for t in named:
         if t not in tools:
-            problems.append(f"계약에 없는 도구 이름: {t}")
+            problems.append(f"계약에 없는 도구 이름: {t}(공용 tools.json에도 팩 {s.get('pack')} 양식 도구에도 없음)")
     overlap = set(expect.get("forbiddenTools", [])) & set(expect.get("requiredTools", []))
     if overlap:
         problems.append(f"금지 도구와 필수 도구가 겹칩니다: {sorted(overlap)}")

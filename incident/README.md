@@ -68,7 +68,7 @@ uv run python -m incident.run --session 1 --up --faults all --repeat 3
 
 알아 둘 것:
 
-- 세션 스택은 외부 모델 키를 비워 띄우므로, 외부 별칭으로 가는 호출은 평소에도 LiteLLM에서 401(Missing Anthropic API Key)로 끝납니다. 장애와 관계없는 잡음입니다.
+- 세션 스택은 외부 모델 키를 비워 띄우므로, 외부 별칭으로 가는 호출은 평소에도 LiteLLM에서 401(Missing Anthropic API Key)로 끝납니다. 장애와 관계없는 잡음이라 분석에서 뺍니다(아래 "LiteLLM 401 잡음").
 - 장애를 주입·복구한 docker 조작(pause, stop, update 등)도 컨테이너 이벤트에 남습니다. 분석에서는 이것을 증상이 아닌 조작으로 보고 빼야 합니다.
 - 묶음은 커밋하므로 수집할 때 위임 토큰 ID(`delegationTokenId`, 비밀값 검사가 키로 봄)와 erp 시작 로그의 Spring 기본 비밀번호를 `<가림>`으로 바꿉니다(`collect.sanitize`).
 
@@ -78,6 +78,7 @@ uv run python -m incident.run --session 1 --up --faults all --repeat 3
 |---|---|
 | `incident/logs.py` | 묶음 로그를 줄 단위(시각, 서비스, 수준)로 읽음. 스택 추적 줄은 앞 줄에 붙이고, 헬스 검사 줄은 따로 표시하고, 컨테이너 이벤트 중 사람이 한 조작(pause, stop, update 등)은 뺌 |
 | `incident/baseline.py` | LLM 없는 기준선. Drain3(MIT)로 로그 템플릿을 묶어 분석 구간에 늘어난 템플릿, 로그가 끊긴 서비스(헬스 검사 줄까지 사라짐), 비슷한 과거 티켓의 원인으로 서비스 순위 |
+| `incident/rcaeval_stats.py` | 비교용 RCAEval 계열 통계 기준선(N-Sigma, BARO)의 로그 부분 |
 | `incident/llm.py` | 기준선이 모은 진단 텍스트(늘어난 템플릿, 끊긴 로그, 티켓, 비슷한 과거 티켓)를 gateway `local` 별칭에 주고 원인 후보 3개(서비스, 종류, 근거 줄)를 받음 |
 | `bench/rca.py` | 묶음으로 상위 1·3 정확도(원인 서비스)와 지연을 잼 |
 
@@ -102,6 +103,16 @@ cd incident && INCIDENT_SESSION=1 uv run uvicorn --factory incident.app:from_env
 - `ticketId`를 주면 erp에서 티켓을 읽어 본문을 증상으로 쓰고, 분석 기준 시각은 `at`이나 티켓 작성 시각입니다.
 - LLM이 실패하거나 후보를 못 내면 기준선 순위로 답합니다(`method: baseline`). 근거 줄·이유에서 토큰·이메일처럼 보이는 값은 가립니다.
 - `INCIDENT_HISTORY_DIR`에 원인이 밝혀진 묶음(truth.json) 폴더를 주면 비슷한 과거 티켓을 씁니다.
+- LiteLLM 401 잡음은 기본으로 뺍니다. 외부 모델 키를 넣은 스택에서는 `INCIDENT_KEYLESS_NOISE=0`으로 끕니다(키가 빠진 것이 실제 장애일 수 있음).
+
+### LiteLLM 401 잡음(#467)
+
+외부 키 없는 호출 한 건은 litellm에 오류 줄, "model group 'external' failed", 스택 추적, `AuthenticationError: Missing Anthropic API Key`, 401 접근 로그로 찍히고, gateway에도 401 접근 로그가 남습니다. 개발용 7건에서는 묶음마다 한 번 있었고, 분석 구간에 걸리면 "늘어난 오류"로 잡혀 litellm을 원인으로 골랐습니다.
+
+- `logs.mark_keyless_noise`가 litellm의 `Missing <공급자> API Key` 줄로 시작해 1초 안의 마지막 같은 줄까지를 예외 한 건으로 묶고, 그 안의 스택 추적·외부 별칭(`external...`) model group 줄, 끝 줄 바로 뒤의 model group 줄, 그리고 `POST /v1/chat/completions` 401 접근 로그를 litellm·gateway에서 한 줄씩 `noise` 수준으로 바꿉니다. 개발용 묶음에서는 예외 한 건이 litellm 6줄과 gateway 1줄이었고, 잘못된 키 장애 묶음에서는 0줄이었습니다.
+- 같은 1초 안이라도 로컬 별칭(`local...`) 실패, 5xx, 다른 경로의 401, 두 번째 401은 그대로 둡니다.
+- `noise` 줄은 템플릿 변화와 RCAEval 계열 시계열에서 빠지고, 로그 끊김을 볼 때는 셉니다(서비스가 살아 있다는 줄이므로).
+- 잘못된 키로 gateway를 배포한 장애(litellm `user_api_key_auth ... No connected db`)는 이 무늬가 아니라 그대로 남습니다.
 
 ### 개발용 측정(7건)
 
@@ -117,8 +128,30 @@ cd incident && INCIDENT_SESSION=1 uv run uvicorn --factory incident.app:from_env
 - 그 뒤 로그 수준 판정을 고쳤습니다(단어 중간의 ValueError·SQLException을 오류로, HTTP 상태는 접근 로그 모양일 때만). 기준선만 다시 잰 값(`bench/results/dev-7-baseline-1053.json`, 10:53): 로그 상위 1 0.429·상위 3 0.857, 로그 + 유사 티켓 상위 1 0.286·상위 3 0.857. 세션 스택을 메모리 때문에 내려 LLM은 다시 재지 못했습니다.
 - 이 7건으로 기준선을 손봤으므로(로그 끊김 신호, 기준 구간) 개발용 수치입니다. 결론은 기준선을 고정한 뒤 새로 모을 6종 × 3회로 냅니다.
 - 같은 Ollama를 평가 스택(iaa-s5)이 함께 쓰는 중이라 LLM 지연은 흔들립니다.
-- 틀리는 경우: 외부 모델 키를 비워 생기는 LiteLLM 401(Missing Anthropic API Key)이 늘어난 오류로 잡혀 litellm을 원인으로 고름. gateway 잘못된 키 배포는 오류가 LiteLLM 쪽에 찍혀 litellm을 고름.
+- 틀리는 경우: 외부 모델 키를 비워 생기는 LiteLLM 401(Missing Anthropic API Key)이 늘어난 오류로 잡혀 litellm을 원인으로 고름(#467에서 뺌, 아래). gateway 잘못된 키 배포는 오류가 LiteLLM 쪽에 찍혀 litellm을 고름.
 - 티켓 문장이 증상을 꽤 드러내(예: "AI 비서" → LLM 경로) 티켓만으로도 상위 3이 높습니다.
+
+### 401 잡음 빼기와 RCAEval 계열 기준선(#467)
+
+`bench/results/dev-7-noise-rcaeval-0624.json`(잡음 뺌)과 `dev-7-keepnoise-rcaeval-0624.json`(잡음 둠), 2026-11-22 06:24, 데스크탑 CPU(LLM 없음), 위와 같은 묶음 7개·신고 시각·구간, 각 1회.
+
+| 방법 | 잡음 둠 상위 1 / 3 | 잡음 뺌 상위 1 / 3 | 지연 중앙값(뺌) |
+|---|---|---|---|
+| 로그(템플릿 변화 + 로그 끊김) | 0.429 / 0.857 | 0.571 / 0.857 | 10ms |
+| 로그 + 유사 티켓 | 0.286 / 0.857 | 0.429 / 0.857 | 11ms |
+| N-Sigma(RCAEval 계열, 15초 칸) | 0.143 / 0.143 | 0.000 / 0.143 | 16ms |
+| BARO(RCAEval 계열, 15초 칸) | 0.143 / 0.143 | 0.000 / 0.143 | 16ms |
+
+```bash
+uv run python -m bench.rca --runs data/runs/20261121-0058 data/runs/20261121-0106 data/runs/20261121-0115 \
+  [--keep-keyless-noise] [--rcaeval-bin 15] --out bench/results/<이름>.json
+```
+
+- 잡음을 빼자 rag_corrupt에서 litellm 대신 rag를 1위로 골랐습니다(로그 상위 1 0.429 → 0.571). 7건이라 한 건이 0.143입니다.
+- RCAEval 계열은 RCAEval의 로그 시계열(`convert/derive.py` log_series)과 순위(`e2e/baro.py` mmnsigma·mmbaro의 logts 부분)를 표준 라이브러리로 옮긴 것입니다. 주입 전 칸으로 척도를 맞추고 주입 뒤 칸의 최댓값으로 `{서비스}_{템플릿}` 열을 줄 세웁니다. 우리 묶음에는 지표·트레이스가 없어 로그만 씁니다.
+- 낮은 이유: 늘어난 쪽만 점수로 세므로 멈추거나 죽어 로그가 끊긴 원인 서비스(postgres 정지, litellm 일시 정지)는 보이지 않고, 증상이 난 호출 쪽 서비스가 올라옵니다. 평소 구간이 20~45초라 15초 칸 2~3개로 척도를 맞춰, 평소 트래픽 템플릿의 작은 흔들림이 큰 점수가 됩니다.
+- 칸 크기를 바꿔도 비슷합니다(잡음 뺌, `--rcaeval-bin`): 10초 N-Sigma·BARO 0.143 / 0.143, 5초 N-Sigma 0.143 / 0.143·BARO 0.000 / 0.143, 1초 N-Sigma 0.000 / 0.000·BARO 0.000 / 0.143.
+- 결론은 6종 × 3회 본 측정(#284)에서 같은 방법들로 다시 냅니다.
 
 ## 외부 비교 데이터(RCAEval)
 
@@ -130,6 +163,7 @@ uv run python -m incident.rcaeval          # data/external/RE3-SS/에 풀기(101
 - 출처: Pham et al., RCAEval(https://github.com/phamquiluan/RCAEval), 데이터 Zenodo 레코드 14590730
 - 라이선스: Zenodo 데이터는 CC BY 4.0, 코드 저장소 README는 MIT로 적혀 있습니다
 - RE3-SS(Sock Shop, 30건, 로그 포함)만 받습니다. 경우 폴더 이름이 정답 원인이고 `inject_time.txt`가 주입 시각입니다
+- `incident/rcaeval_stats.py`는 RCAEval 코드(MIT, Copyright (c) 2024 Luan Pham)의 로그 시계열·N-Sigma·BARO 계산을 옮긴 것입니다. Drain3 가림 규칙은 RCAEval 기본값 그대로입니다
 
 ## 시험
 

@@ -24,6 +24,20 @@
 | `harness/bundle.py` | 확인 셋 묶음 해시를 계약 표(`contracts/eval/confirm-sets.md`)와 대조합니다 |
 | `harness/cli.py` | `validate`, `run`, `report` 명령 |
 
+## 야간 회귀(#464)
+
+- `uv run python tools/nightly.py --config <조건 설정>`: 고정한 개발 셋 부분집합(`nightly/subset.txt`, 우려 유형마다 3개, 문서형 주입 제외)을 설정의 조건으로 1회 돌리고, 바로 앞 실행과 (시나리오, 조건) 단위로 견줍니다(`harness/nightly.py`). 공식 평가 셋은 쓰지 않습니다.
+- GPU 사용권(`scripts/gpu-lease.sh`)이 비어 있을 때만 돕니다. 사용 중이면 아무것도 하지 않고 끝내고, 도는 동안 30분마다 늘리며 끝나면(실패해도) 반납합니다.
+- 결과는 저장소 밖 state 폴더(기본 `~/.local/share/inhouse-ai/nightly`)에 `<시각>.{json,md,rows.jsonl}`와 `<시각>-compare.md`로 남습니다. 1회 실행끼리라 회차 간 변동이 섞이므로, 바뀐 회차는 원인 후보를 찾는 출발점입니다.
+- 스택은 미리 띄워 둡니다. 타이머 예시는 `nightly/inhouse-eval-nightly.{service,timer}`(systemd 사용자 단위, cron 한 줄도 적음)입니다.
+
+## 업종 팩(#461)
+
+- `scenarios/finance/dev/`(21개), `scenarios/it-services/dev/`(20개)는 업종 팩을 같은 하네스로 돌려 보는 개발 시나리오입니다(설계 `docs/design/stage3-and-packs.md` 2절). 정상 업무와 반응형(고객 연락처·서버 주소·건강 정보가 든 요청)을 섞었습니다. 금융 팩은 팩 전체가 외부 LLM을 쓰지 않으므로 모두 `externalAllowed: false`입니다. IT 서비스 팩 규정 질의는 팩 문서가 생긴 뒤 더합니다.
+- 시나리오 검사는 공용 도구(`contracts/mcp/tools.json`)에 더해 시나리오 팩의 양식 도구(`packs/<팩>/forms.yaml`의 `tool.name`, 예: `loan_request`, `effort_report`)를 받습니다. 시험은 시나리오의 팩으로 가짜 erp를 띄웁니다.
+- 실행은 팩으로 띄운 스택(`PACK_DIR`)에서 GPU 사용권을 받아 따로 합니다.
+- 새 팩을 더할 때 코어(erp·gateway·agent·rag) 변경 줄 수: `uv run python tools/core_lines.py --pack finance --pack it-services [--extra <커밋>]`. 팩 폴더를 바꾼 커밋을 팩 PR 범위로 보고 코어 코드·코어 시험·팩 줄 수를 표로 냅니다. 코어 안 `tests/`는 따로, rag 문서 템플릿은 팩으로 셉니다. 팩 폴더를 건드리지 않은 관련 코어 커밋은 `--extra`로 더합니다.
+
 ## 실행
 
 ```
@@ -77,6 +91,20 @@ uv run python tools/fetch_visa.py --out <저장소 밖 폴더> --per-class 5   #
 - 표기 차이(지름 기호 Ø·DIA·지름, 띄어쓰기, 대소문자, 불량 유형의 한·영 표현)는 같다고 봅니다. 도면은 부품 번호·도면 이름과 치수·주기 여섯 항목을 모두 맞혀야 "모두 맞음"입니다.
 - 숨은 지시가 든 그림(`hiddenInstruction`)은 읽기 점수에서 빼고, 지시를 따랐는지는 개발 셋 시나리오(`dev-s3-inject-*`)로 봅니다.
 - VisA(CC BY 4.0) 원본은 저장소에 넣지 않습니다. 스크립트는 저장소 안 경로를 거부하고, 받은 목록(`manifest.jsonl`, SHA-256)과 라이선스 표기를 함께 남깁니다.
+
+### 가짜 영수증(#462, #100)
+
+```
+uv run --group tools python tools/make_receipts.py --out <저장소 밖 폴더> --font <NotoSansKR-Regular.ttf>   # 개발 묶음 40장
+uv run --group tools python tools/make_receipts.py --set confirm --seed <비공개 값> --out <저장소 밖> --font ...
+uv run python tools/make_receipts.py --truth-only --out receipts/dev-truth.jsonl                          # 개발 정답만
+```
+
+- 가맹점·품목·금액·날짜·사업자번호(검증 숫자가 맞는 가상 번호)를 생성기가 정합니다. 레이아웃(마트·음식점·카드 전표), 날짜·금액 표기, 기울기·흐림·구김·그림자를 시드로 섞습니다. 생성 모델은 쓰지 않습니다.
+- 정답은 시드만으로 정해지고 글꼴과 관계없습니다. 개발 묶음 정답(`receipts/dev-truth.jsonl`, 시드 `DEV_SEED`)만 커밋하고, 그림은 저장소 밖에 만듭니다. 확인 묶음은 다른 시드를 실행 때만 주며, 스크립트는 개발 시드와 저장소 안 경로를 거부합니다.
+- 한글을 그리려면 라이선스가 분명한 한글 글꼴(예: Noto Sans KR, SIL OFL)을 `--font`로 줍니다. 글꼴은 저장소에 넣지 않고, 쓴 글꼴 파일의 SHA-256을 묶음의 `manifest.json`에 남깁니다.
+- 채점(`harness/receipts.py`): 금액·날짜·가맹점·사업자번호 필드 완전 일치. 비교 전에 표기만 정규화합니다. 금액은 통화 기호·쉼표·공백·천 단위 마침표를 지우고 만·천 단위를 읽고, 날짜는 ISO로 바꿉니다. 사업자번호는 숫자 10자리, 가맹점은 NFKC·공백 제거·법인 표기 통일로 맞춥니다. 그 밖의 차이는 틀림이고, 읽지 못한 필드도 틀림입니다. 필드별·전체 완전 일치(Clopper-Pearson 95%)와 레이아웃·왜곡 정도별 전체 일치를 냅니다.
+- 전통 기준선(#463): `uv run python tools/ocr_baseline.py --images <묶음 폴더> --engine tesseract|rapidocr|oracle --out <결과 이름>`. OCR 엔진이 낸 줄에서 정규식(`harness/receipt_baseline.py`)으로 네 필드를 뽑아 같은 채점기로 셉니다. `oracle`은 OCR 없이 생성기의 줄 텍스트를 써서 정규식만의 상한을 봅니다(개발 묶음 40/40). OCR 엔진(tesseract `kor`, rapidocr 한국어 모델)은 따로 설치합니다.
 
 ## 시험
 
