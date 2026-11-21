@@ -719,7 +719,11 @@ components:
       bearerFormat: JWT
       description: >-
         erp가 발급한 직원 JWT. 이 방식을 쓰는 사람용 경로는 모두 위임 토큰(gateway 발급, `agt` 클레임)을 받지 않고
-        403 `delegation-token-not-allowed`를 돌려줍니다(erp.yaml `ProblemCode`). 아래 각 경로의 응답 목록에 403을 따로 적지 않은 곳도 같습니다.
+        403 `delegation-token-not-allowed`를 돌려줍니다(erp.yaml `ProblemCode`). 슬랙 로그인(`POST /auth/slack`)으로 받은
+        토큰은 허용 목록(내 정보, 알림, 대화 만들기·조회·메시지, 실행 승인, 되돌리기) 밖의 경로에서 403
+        `service-login-not-allowed`입니다. `Authorization: Bearer` 헤더가 없거나 비었으면 401 `unauthorized`이고,
+        JWT의 서명·만료는 erp가 확인해 erp의 401을 그대로 돌려줍니다. 아래 각 경로의 응답 목록에 401·403을 따로 적지
+        않은 곳도 같습니다.
 
   parameters:
     ConversationId:
