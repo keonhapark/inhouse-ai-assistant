@@ -7,6 +7,7 @@ import com.networknt.schema.SchemaValidatorsConfig;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import io.inhouse.erp.common.ApiException;
+import io.inhouse.erp.common.Ko;
 import io.inhouse.erp.pack.Pack;
 import java.math.BigInteger;
 import java.util.Comparator;
@@ -56,11 +57,18 @@ public class FormValidator {
         }
         BigInteger amount = fields.path(form.amountField()).bigIntegerValue();
         if (!amount.equals(want)) {
-            String detail = form.amountField() + "가 " + String.join(" × ", form.amountProductOf()) + "(" + want
-                    + ")와 다릅니다";
+            String detail = Ko.i(label(form, form.amountField())) + " "
+                    + String.join(" × ", form.amountProductOf().stream().map(n -> label(form, n)).toList())
+                    + "(" + String.format("%,d", want) + "원)과 다릅니다. " + Ko.eul(label(form, form.amountField()))
+                    + " 다시 확인하세요.";
             throw new ApiException(422, "form-validation-failed", detail,
                     List.of(new ApiException.FieldError(form.amountField(), "mismatch")));
         }
+    }
+
+    /** 팩 양식 스키마의 칸 표시 이름(title). 없으면 칸 이름 그대로입니다. */
+    private static String label(Pack.FormDef form, String name) {
+        return form.fields().path("properties").path(name).path("title").asText(name);
     }
 
     private static String field(ValidationMessage m) {

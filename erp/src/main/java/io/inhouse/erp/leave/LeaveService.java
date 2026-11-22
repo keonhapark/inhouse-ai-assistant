@@ -1,6 +1,7 @@
 package io.inhouse.erp.leave;
 
 import io.inhouse.erp.common.ApiException;
+import io.inhouse.erp.common.Ko;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.DayOfWeek;
@@ -49,11 +50,11 @@ public class LeaveService {
         LocalDate s = date("start_date", start);
         LocalDate e = date("end_date", end);
         if (e.isBefore(s)) {
-            throw formError("end_date", "before start_date", "end_date가 start_date보다 앞입니다");
+            throw formError("end_date", "before start_date", "종료일이 시작일보다 앞입니다. 날짜를 다시 고르세요.");
         }
         if ("half_am".equals(leaveType) || "half_pm".equals(leaveType)) {
             if (!s.equals(e)) {
-                throw formError("end_date", "must equal start_date", "반차는 하루만 씁니다");
+                throw formError("end_date", "must equal start_date", "반차는 하루만 신청할 수 있습니다. 시작일과 종료일을 같게 고르세요.");
             }
             return HALF;
         }
@@ -75,8 +76,8 @@ public class LeaveService {
         BigDecimal remaining = b == null ? BigDecimal.ZERO : b.remaining();
         if (days.compareTo(remaining) > 0) {
             throw new ApiException(422, "leave-balance-insufficient",
-                    "필요 " + days.stripTrailingZeros().toPlainString() + "일, 남은 "
-                            + remaining.stripTrailingZeros().toPlainString() + "일");
+                    "이 신청에는 " + days.stripTrailingZeros().toPlainString() + "일이 필요한데 남은 연차는 "
+                            + remaining.stripTrailingZeros().toPlainString() + "일입니다. 기간을 줄이세요.");
         }
         if (immediatelyApproved) {
             b.addUsed(days);
@@ -116,8 +117,17 @@ public class LeaveService {
         try {
             return LocalDate.parse(value);
         } catch (DateTimeParseException | NullPointerException e) {
-            throw formError(field, "YYYY-MM-DD", field + ": 날짜 형식이 아닙니다");
+            throw formError(field, "YYYY-MM-DD", Ko.eul(dateLabel(field)) + " 날짜로 입력하세요. 예: 2026-11-21");
         }
+    }
+
+    /** 팩 휴가 양식의 칸 이름 */
+    private static String dateLabel(String field) {
+        return switch (field) {
+            case "start_date" -> "시작일";
+            case "end_date" -> "종료일";
+            default -> field;
+        };
     }
 
     private static ApiException formError(String field, String message, String detail) {

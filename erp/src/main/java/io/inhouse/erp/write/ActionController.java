@@ -66,11 +66,11 @@ public class ActionController {
         return writes.run(req, () -> {
             Action a = actions.lockById(actionId).orElseThrow();
             if (a.isUndone()) {
-                throw new ApiException(409, "already-undone", "이미 되돌린 행동입니다");
+                throw new ApiException(409, "already-undone");
             }
             UndoHandler handler = undoHandlers.get(a.getOperation());
             if (!a.isUndoable() || handler == null) {
-                throw new ApiException(409, "not-undoable", a.getOperation() + "은 되돌릴 수 없습니다");
+                throw new ApiException(409, "not-undoable");
             }
             WriteOutcome out = handler.undo(a);
             return new WriteOutcome(out.summary(), out.changes(), false, out.resource(), a.getResourceId(),
@@ -81,6 +81,6 @@ public class ActionController {
     private Action own(ErpPrincipal p, String actionId) {
         return actions.findById(actionId)
                 .filter(a -> a.getActorId().equals(p.employeeId()))
-                .orElseThrow(() -> ApiException.notFound("행동이 없습니다"));
+                .orElseThrow(() -> ApiException.notFound("실행 기록이 없습니다."));
     }
 }

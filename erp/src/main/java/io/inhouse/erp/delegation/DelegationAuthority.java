@@ -48,10 +48,10 @@ public class DelegationAuthority implements DelegateAuthority {
             Set<String> middle = delegations.findByDelegatorIdOrderByCreatedAtDesc(approverId).stream()
                     .map(Delegation::getDelegateId).collect(Collectors.toSet());
             if (!middle.isEmpty() && !delegations.findByDelegatorIdInAndDelegateId(middle, actorId).isEmpty()) {
-                throw new ApiException(403, "redelegation-not-allowed", "재위임은 따라가지 않습니다");
+                throw new ApiException(403, "redelegation-not-allowed", "대결자가 다시 맡긴 결재는 할 수 없습니다.");
             }
             if (doc.getSteps().stream().anyMatch(s -> s.getApproverId().equals(actorId))) {
-                throw new ApiException(403, "not-current-approver", "현재 결재 차례가 아닙니다");
+                throw new ApiException(403, "not-current-approver", "결재 대기 목록을 새로 고치세요.");
             }
             throw ApiException.notFound("결재 문서가 없습니다");
         }
