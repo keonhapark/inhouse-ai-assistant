@@ -56,7 +56,7 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     스택(`GATEWAY_EVAL_TOOLCALL=1`)의 측정 호출(`purpose=eval-toolcall`)입니다. rag 질의 임베딩은 #191 뒤로 토큰을 붙입니다.
     2026-11-21 실제 스택 기록에서 토큰이 있는 호출 537건은 모두 채워져 있었고, null 272건은 모두 토큰 없는 호출이었습니다
     (그중 rag 질의 임베딩 101건은 #191 전 이미지의 기록).
-  - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 120초, LiteLLM `request_timeout`도 120초, #536) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
+  - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 120초, LiteLLM `request_timeout`도 120초, agent의 호출당 `AGENT_LLM_TIMEOUT_S`와 같음. 한 턴 전체는 `AGENT_TIMEOUT_SECONDS` 300초, #536) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
   - 비용 상한(`gateway/budgets.py`, 팩 선택 파일 `budgets.yaml`, #155): 외부 응답 비용(LiteLLM `x-litellm-response-cost`,
     스트림은 별칭 단가 `model_info.input_cost_per_token`·`output_cost_per_token`과 usage로 계산)을 기간(day|month)마다 에이전트와
@@ -210,7 +210,7 @@ DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
 환경 변수: `ERP_BASE_URL`, `PACK_DIR`(기본 `packs/manufacturing`), `CONTRACTS_DIR`(기본 `contracts`),
 `DELEGATION_TOKEN_PRIVATE_KEY`(없으면 임시 키를 만들고 경고를 남깁니다), `LITELLM_BASE_URL`(기본 `http://localhost:4000`),
 `LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
-`AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`,
+`AGENT_TIMEOUT_SECONDS`(기본 300, agent `/run` 한 턴 전체, #536), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`,
 `SLACK_BRIDGE_SECRET`, `SLACK_USERS_FILE`, `ERP_SERVICE_LOGIN_SECRET`, `SLACK_LOGIN_PER_USER_PER_MINUTE`, `SLACK_LOGIN_PER_MINUTE`, `GATEWAY_EVAL_REPORTS_DIR`,
 `GATEWAY_LOCAL_REASONING_EFFORT`(기본 빈 값=채우지 않음, #427·#536),
 `GATEWAY_SEMANTIC_CACHE`(`1`이면 켬, #465), `GATEWAY_CACHE_THRESHOLD`(기본 0.95), `GATEWAY_CACHE_TTL_SECONDS`(기본 600).

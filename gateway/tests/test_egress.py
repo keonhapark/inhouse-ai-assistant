@@ -550,8 +550,10 @@ def test_rerouted_calls_keep_thinking_and_timeout_is_120s_by_default(client, app
 
     for k in ("GATEWAY_LOCAL_REASONING_EFFORT", "LLM_TIMEOUT_SECONDS"):
         monkeypatch.delenv(k, raising=False)
+    monkeypatch.delenv("AGENT_TIMEOUT_SECONDS", raising=False)
     s = Settings.from_env()
     assert s.local_reasoning_effort is None and s.llm_timeout_seconds == 120.0
+    assert s.agent_timeout_seconds == 300.0          # 한 턴 전체는 LLM 호출 여럿을 담게(리드 결정, #536)
     monkeypatch.setenv("GATEWAY_LOCAL_REASONING_EFFORT", "none")
     assert Settings.from_env().local_reasoning_effort == "none"
     cfg = yaml.safe_load((ROOT / "gateway/litellm/config.yaml").read_text(encoding="utf-8"))

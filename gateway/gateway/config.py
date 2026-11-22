@@ -31,7 +31,7 @@ class Settings:
     alert_webhook_url: str | None = None
     audit_event_files: tuple[str, ...] = ()
     agent_base_url: str = "http://localhost:8020"
-    agent_timeout_seconds: float = 120.0
+    agent_timeout_seconds: float = 300.0  # AGENT_TIMEOUT_SECONDS: agent /run 한 턴 전체(LLM 호출이 여럿일 수 있음, #536)
     external_log: Path | None = None   # GATEWAY_EXTERNAL_LOG: 평가용 외부 요청 기록(JSON Lines)
     eval_mode: bool = False            # GATEWAY_EVAL_MODE=1: X-Eval-Condition을 받음
     eval_toolcall: bool = False        # GATEWAY_EVAL_TOOLCALL=1: 토큰 없는 외부 호출을 받음(#294, 도구 호출 측정 스택만)
@@ -64,7 +64,7 @@ class Settings:
             audit_dir=_path(os.environ.get("GATEWAY_AUDIT_DIR"), MODULE_ROOT / "var"),
             alert_webhook_url=os.environ.get("ALERT_WEBHOOK_URL") or None,
             agent_base_url=os.environ.get("AGENT_BASE_URL", "http://localhost:8020").rstrip("/"),
-            agent_timeout_seconds=float(os.environ.get("AGENT_TIMEOUT_SECONDS", "120")),
+            agent_timeout_seconds=float(os.environ.get("AGENT_TIMEOUT_SECONDS", "300")),
             external_log=_path(os.environ["GATEWAY_EXTERNAL_LOG"], REPO_ROOT)
             if os.environ.get("GATEWAY_EXTERNAL_LOG") else None,
             eval_mode=os.environ.get("GATEWAY_EVAL_MODE") == "1",
