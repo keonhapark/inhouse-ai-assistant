@@ -16,6 +16,7 @@ import argparse
 import json
 import statistics
 import time
+from dataclasses import asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,7 @@ import httpx
 
 from incident import rcaeval_stats
 from incident.baseline import PastTicket, rank
-from incident.llm import analyze, diagnostics
+from incident.llm import FALLBACK, CallSettings, analyze, diagnostics, resolve
 from incident.logs import read_bundle
 
 REPORT_DELAY = timedelta(seconds=45)
@@ -44,11 +45,11 @@ def ticket_text(t: dict[str, Any]) -> str:
     return f"{t['ticket']['title']} {t['ticket']['description']}"
 
 
-def llm_row(gateway: str, text: str) -> dict[str, Any]:
+def llm_row(gateway: str, text: str, settings: CallSettings = FALLBACK) -> dict[str, Any]:
     """실패(시간 초과 등)도 결과로 남깁니다. 후보가 없으면 맞힌 것으로 세지 않습니다."""
     t0 = time.monotonic()
     try:
-        r = analyze(gateway, text)
+        r = analyze(gateway, text, settings=settings)
     except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as e:  # 연결·상태·응답 모양
         return {"ranking": [], "ms": round((time.monotonic() - t0) * 1000), "error": type(e).__name__ + " " + str(e)[:120]}
     return {"ranking": [c.service for c in r.candidates], "kinds": [c.kind for c in r.candidates],
@@ -69,6 +70,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--keep-keyless-noise", action="store_true", help="LiteLLM 401 잡음을 빼지 않습니다(비교용)")
     args = ap.parse_args(argv)
 
+    # 장애 분석 호출의 생각 단계·시간 제한: gateway 모델 프로필(결정 0009) → 환경 변수 덮어쓰기. 결과 파일에 남깁니다.
+    settings = resolve(args.llm) if args.llm else None
+    if settings:
+        print(f"모델 프로필: {settings.model}, 생각 {settings.thinking}, {settings.timeout_s:.0f}초 ({settings.source})")
     bundles = load(args.runs)
     if not bundles:
         print("truth.json이 있는 묶음이 없습니다")
@@ -97,8 +102,8 @@ def main(argv: list[str] | None = None) -> int:
             row[m] = {"ranking": r.ranking[:3], "ms": round((time.monotonic() - t0) * 1000),
                       "topColumns": r.columns[:3]}
         if args.llm:
-            row["llm"] = llm_row(args.llm, diagnostics(both, text))
-            row["ticket-only-llm"] = llm_row(args.llm, f"[신고 티켓]\n{text}")
+            row["llm"] = llm_row(args.llm, diagnostics(both, text), settings)
+            row["ticket-only-llm"] = llm_row(args.llm, f"[신고 티켓]\n{text}", settings)
         rows.append(row)
         print(row["incidentId"], row["truth"], {k: v["ranking"] for k, v in row.items() if isinstance(v, dict)},
               flush=True)
@@ -120,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out.write_text(json.dumps({"runs": [str(r) for r in args.runs], "reportDelayS": 45, "windowS": 45,
                                         "keylessNoise": "kept" if args.keep_keyless_noise else "removed",
                                         "rcaevalBinS": args.rcaeval_bin,
+                                        "llmSettings": asdict(settings) if settings else None,
                                         "summary": summary, "rows": rows}, ensure_ascii=False, indent=2) + "\n",
                             encoding="utf-8")
     return 0
