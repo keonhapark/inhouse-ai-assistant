@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Schemas } from '../api/client'
 import { conversationMeta } from './conversation'
-import { formatDate, formatDateRange, formatWhen, formatWon } from './format'
+import { formatDate, formatDateRange, formatDateTime, formatWhen, formatWon } from './format'
 import { roleName, toolName } from './names'
 import { formRows, previewView } from './preview'
 
@@ -45,6 +45,8 @@ describe('형식', () => {
     expect(formatDate('2026-09-30')).toBe('2026. 9. 30.(수)')
     expect(formatDate('9월 30일')).toBe('9월 30일')
     expect(formatDateRange('2026-11-15', '2026-11-21')).toBe('2026. 11. 15.(일) ~ 2026. 11. 21.(토)')
+    expect(formatDate('2026-02-30')).toBe('2026-02-30')
+    expect(formatDateTime('2026-13-40T25:99Z')).toBe('2026-13-40T25:99Z')
   })
 
   it('목록의 언제: 오늘·어제·올해·다른 해', () => {
@@ -126,6 +128,32 @@ describe('실행 미리보기', () => {
     expect(v.title).toBe('결재 문서')
     expect(v.rows.find((r) => r.key === 'fields.amount')?.label).toBe('금액')
     expect(v.line[0].who).toBe('E0011')
+  })
+
+  it('양식을 모르면 양식 줄을 남기고, 대결로 처리한 단계는 실제 처리자를 보입니다', () => {
+    const v = previewView({
+      op: 'create', resource: 'approval_document',
+      after: { formId: 'expense', fields: { amount: 1 }, steps: [{ order: 1, approverId: 'E0011', status: 'approved', actedBy: 'E0036', onBehalfOf: 'E0011' }] },
+    }, { people })
+    expect(v.rows.find((r) => r.key === 'formId')?.after).toBe('expense')
+    expect(v.line[0].who).toBe('나우진 팀장(재무팀) (대결: 이영수 팀원(생산관리팀))')
+  })
+
+  it('견적: 고객사 이름이 있으면 ID는 빼고, 품목 줄은 "품목 수량개"로', () => {
+    const v = previewView({
+      op: 'create', resource: 'quote',
+      after: { customerId: 'cus_0001', customerName: '가온테크(가상)', lines: [{ itemName: '평기어', quantity: 500 }, { itemCode: 'NUT-M8', quantity: null }], totalAmount: 13750000, note: null },
+    })
+    expect(v.rows.map((r) => [r.label, r.after])).toEqual([
+      ['고객사', '가온테크(가상)'],
+      ['품목 줄', '평기어 500개, NUT-M8'],
+      ['합계', '13,750,000원'],
+    ])
+  })
+
+  it('보이는 줄이 원래 값과 같으면 "자세히"(raw)를 비우고, 이름을 바꾼 줄이 있으면 남깁니다', () => {
+    expect(previewView({ op: 'create', resource: 'delegation', after: { 양식: '모든 양식', 금액한도: '없음' } }).raw).toEqual([])
+    expect(previewView({ op: 'create', resource: 'ticket', after: { title: 'VPN', priority: 'high' } }).raw).toHaveLength(2)
   })
 
   it('바꿈: 바뀐 값만 상태 이름으로 "전 → 후"', () => {

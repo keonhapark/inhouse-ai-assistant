@@ -21,12 +21,16 @@ export function formatDate(v: string): string {
   const m = YMD.exec(v)
   if (!m) return v
   const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]))
-  if (Number.isNaN(d.getTime())) return v
+  // 없는 날(2026-02-30)은 Date가 다음 달로 넘기므로 되읽어 확인하고, 맞지 않으면 그대로 둡니다
+  if (d.getUTCFullYear() !== +m[1] || d.getUTCMonth() !== +m[2] - 1 || d.getUTCDate() !== +m[3]) return v
   return `${date.format(d)}(${weekday.format(d)})`
 }
 
 /** ISO 시각 → "2026. 11. 22. 11:20"(현지 시각) */
-export const formatDateTime = (iso: string) => dateTime.format(new Date(iso))
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? iso : dateTime.format(d)
+}
 
 /** "YYYY-MM-DD" 두 개 → "2026. 11. 15.(일) ~ 2026. 11. 21.(토)" */
 export const formatDateRange = (from: string, to: string) => `${formatDate(from)} ~ ${formatDate(to)}`

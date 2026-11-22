@@ -145,3 +145,6 @@ const ENUM_LABELS: Record<string, Record<string, string>> = {
   priority: { low: '낮음', normal: '보통', high: '높음' },
 }
 export const enumName = (key: string, value: string) => ENUM_LABELS[key]?.[value] ?? value
+
+/** 금액(원)인 필드·인자 이름: amount, total_amount, unit_price, totalAmount, unitPrice, maxAmount */
+export const isMoneyKey = (key: string) => /(^|_)(amount|price)$|(Amount|Price)$/.test(key)

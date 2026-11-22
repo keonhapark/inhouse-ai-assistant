@@ -1,5 +1,5 @@
 import type { Schemas } from '../api/client'
-import { fieldName, gradeName, roleName } from '../display/names'
+import { fieldName, gradeName, isMoneyKey, roleName } from '../display/names'
 
 type Entry = Schemas['AgentRegistryEntry']
 
@@ -27,7 +27,7 @@ export function josa(word: string, a: string, b: string): string {
 export function overrideWhen(o: Pick<Override, 'when' | 'arg' | 'gt'>): string {
   if (o.when === 'arg_gt' && o.arg && typeof o.gt === 'number') {
     const name = fieldName(o.arg)
-    const money = /amount|price/.test(o.arg)
+    const money = isMoneyKey(o.arg)
     return `${name}${josa(name, '이', '가')} ${o.gt.toLocaleString('ko-KR')}${money ? '원' : ''}보다 클 때`
   }
   return WHEN[o.when] ?? o.when

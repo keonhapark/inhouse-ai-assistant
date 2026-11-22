@@ -9,7 +9,7 @@ import type { Schemas } from '../api/client'
 import { changeRows, type ChangeRow } from '../chat/format'
 import { STEP_STATUS } from '../inbox/labels'
 import { formatDate, formatDateTime, formatWon, ISO_DATETIME } from './format'
-import { enumName, fieldName, gradeName, resourceName } from './names'
+import { enumName, fieldName, gradeName, isMoneyKey, resourceName } from './names'
 
 type Change = Schemas['Change']
 type Form = Schemas['ApprovalForm']
@@ -31,7 +31,6 @@ const META = new Set([
 const YMD = /^\d{4}-\d{2}-\d{2}$/
 /** 값이 직원 ID인 필드. 직원 사전이 있으면 이름·직급·부서로 바꿉니다 */
 const PERSON_KEYS = new Set(['approverId', 'actedBy', 'onBehalfOf', 'delegateId', 'delegatorId', 'confirmedBy', 'requesterId', 'createdBy', 'reservedBy'])
-const MONEY_KEY = /(^|_)(amount|price)$|(Amount|Price)$/
 
 export function personText(id: string, people?: Map<string, Person>): string {
   const p = people?.get(id)
@@ -45,10 +44,14 @@ function scopeText(v: unknown, forms?: Form[]): string | null {
   return `${types}, ${s.maxAmount == null ? '금액 한도 없음' : `${formatWon(s.maxAmount)} 이하`}`
 }
 
-function linesText(v: unknown): string | null {
-  if (!Array.isArray(v) || !v.every((x) => x && typeof x === 'object')) return null
+/** 배열: 빈 배열은 "없음", 글자·숫자 배열은 쉼표로, 견적 줄 같은 객체 배열은 "품목 수량개"로 잇습니다 */
+function listText(v: unknown): string | null {
+  if (!Array.isArray(v)) return null
+  if (v.length === 0) return '없음'
+  if (v.every((x) => typeof x === 'string' || typeof x === 'number')) return v.join(', ')
+  if (!v.every((x) => x && typeof x === 'object')) return null
   return v
-    .map((x: Record<string, unknown>) => [x.itemName ?? x.itemCode, x.quantity !== undefined ? `${x.quantity}개` : null].filter(Boolean).join(' '))
+    .map((x: Record<string, unknown>) => [x.itemName ?? x.itemCode, x.quantity != null ? `${x.quantity}개` : null].filter((t) => t != null && t !== '').join(' '))
     .join(', ')
 }
 
@@ -64,9 +67,9 @@ export function valueText(key: string, v: unknown, ctx: Lookups = {}, prop?: Pro
     if (key === 'formId') return ctx.forms?.find((f) => f.id === v)?.name ?? v
     return enumName(key, v)
   }
-  if (typeof v === 'number') return MONEY_KEY.test(key) ? formatWon(v) : v.toLocaleString('ko-KR')
+  if (typeof v === 'number') return isMoneyKey(key) ? formatWon(v) : v.toLocaleString('ko-KR')
   if (typeof v === 'boolean') return v ? '예' : '아니요'
-  return scopeText(v, ctx.forms) ?? linesText(v) ?? JSON.stringify(v)
+  return scopeText(v, ctx.forms) ?? listText(v) ?? JSON.stringify(v)
 }
 
 function props(form?: Form): Record<string, Prop> {
@@ -80,7 +83,7 @@ export function formRows(fields: Record<string, unknown>, form: Form | undefined
   return keys.map((key) => {
     const prop = p[key]
     const v = fields[key]
-    const money = typeof v === 'number' && (key === form?.amountField || MONEY_KEY.test(key))
+    const money = typeof v === 'number' && (key === form?.amountField || isMoneyKey(key))
     return { key, label: prop?.title ?? fieldName(key), value: money ? formatWon(v as number) : valueText(key, v, ctx, prop) }
   })
 }
@@ -89,7 +92,11 @@ function approvalLine(steps: unknown, people?: Map<string, Person>): LineStep[] 
   if (!Array.isArray(steps)) return []
   return (steps as Schemas['ApprovalStep'][])
     .filter((s) => s && typeof s.approverId === 'string')
-    .map((s) => ({ order: s.order, who: personText(s.approverId, people), status: STEP_STATUS[s.status]?.label ?? s.status }))
+    .map((s) => {
+      // 대결로 처리한 단계는 실제 처리자를 함께 보입니다
+      const proxy = s.actedBy && s.actedBy !== s.approverId ? ` (대결: ${personText(s.actedBy, people)})` : ''
+      return { order: s.order, who: personText(s.approverId, people) + proxy, status: STEP_STATUS[s.status]?.label ?? s.status }
+    })
 }
 
 export function previewView(c: Change, ctx: Lookups = {}): PreviewView {
@@ -122,7 +129,10 @@ export function previewView(c: Change, ctx: Lookups = {}): PreviewView {
     }
     // 양식 필드에 금액이 있으면 문서의 amount는 같은 값이라 뺍니다
     if (isDoc && k === 'amount' && main.fields && typeof main.fields === 'object') continue
-    if (isDoc && k === 'formId') continue
+    // 양식 이름은 제목으로 보이므로 뺍니다. 양식을 못 불러왔으면 어떤 양식인지 줄로 남깁니다
+    if (isDoc && k === 'formId' && form) continue
+    // 고객사 이름이 같이 오면 ID는 뺍니다
+    if (k === 'customerId' && main.customerName) continue
     view.rows.push({ key: k, label: fieldName(k), [side]: valueText(k, v, ctx) })
   }
   return withRaw(view)
@@ -130,6 +140,6 @@ export function previewView(c: Change, ctx: Lookups = {}): PreviewView {
 
 /** 보이는 줄이 원래 값과 모두 같으면(빼거나 바꾼 것이 없으면) raw를 비워 같은 내용을 두 번 보이지 않게 합니다 */
 function withRaw(v: PreviewView): PreviewView {
-  const same = v.raw.length === v.rows.length && v.raw.every((r) => v.rows.some((x) => x.label === r.field && x.before === r.before && x.after === r.after))
+  const same = v.raw.length === v.rows.length && v.raw.every((r) => v.rows.some((x) => x.key === r.field && x.label === r.field && x.before === r.before && x.after === r.after))
   return same ? { ...v, raw: [] } : v
 }
