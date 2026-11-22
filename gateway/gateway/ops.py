@@ -186,7 +186,8 @@ def compute_metrics(events: list[dict[str, Any]], egress_rows: list[dict[str, An
         if code:
             c["blocked"]["total"] += 1
             c["blocked"]["byCode"][code] += 1
-        if kind == "llm.request" and e.get("source") == "gateway" and e.get("result") != "denied":
+        if (kind == "llm.request" and e.get("source") == "gateway" and e.get("result") != "denied"
+                and not (e.get("model") or {}).get("cacheHit")):   # 의미 캐시 적중은 LLM을 부르지 않음(#485)
             loc = (e.get("model") or {}).get("location")
             if loc in ("local", "external"):
                 c["llmRequests"][loc] += 1

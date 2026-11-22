@@ -85,7 +85,8 @@ def test_egress_access(client, auditor, ext, login, staff_no):
 
 
 # ---------- /ops/metrics ----------
-def _ev(kind, agent, *, result="ok", source="agent", pt=None, method=None, loc=None, trust=None, at="2026-11-20T10:00:00+09:00"):
+def _ev(kind, agent, *, result="ok", source="agent", pt=None, method=None, loc=None, trust=None, at="2026-11-20T10:00:00+09:00",
+        cache_hit=False):
     import uuid
     e = {"eventId": uuid.uuid4().hex, "occurredAt": at, "source": source, "kind": kind,
          "actor": {"employeeId": "E1", "viaDelegationToken": True, "agentId": agent}, "result": result,
@@ -93,7 +94,9 @@ def _ev(kind, agent, *, result="ok", source="agent", pt=None, method=None, loc=N
     if method:
         e["routing"] = {"agentId": agent, "method": method, "reason": "r"}
     if loc:
-        e["model"] = {"name": "x", "location": loc, "externalSent": loc == "external", "redactions": 0}
+        e["model"] = {"name": "x", "location": loc, "externalSent": loc == "external" and not cache_hit, "redactions": 0}
+        if cache_hit:
+            e["model"]["cacheHit"] = True
     if trust:
         e["trustLevel"] = trust
     return e
@@ -117,6 +120,7 @@ def test_compute_metrics_counts(app):
         _ev("tool.blocked", a, result="error", source="mcp", pt="urn:problem:validation"),       # 정책 차단 아님
         _ev("rag.access_denied", b, result="denied", source="rag", pt="urn:problem:forbidden"),
         _ev("llm.request", a, source="gateway", loc="local"), _ev("llm.request", a, source="gateway", loc="external"),
+        _ev("llm.request", a, source="gateway", loc="external", cache_hit=True),                # 의미 캐시 적중(#485)
         _ev("llm.request", b, result="denied", source="gateway", pt="urn:problem:model-policy", loc="external"),
         _ev("route.decided", a, method="llm", at="2026-11-19T10:00:00+09:00"),                  # 기간 밖
     ]
