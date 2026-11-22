@@ -15,6 +15,7 @@
 | S6 | web | `web/` | React, TypeScript, Vite | 1 |
 | S7 | incident | `incident/` | Python(erp 세션이 맡음) | 2 |
 | S8 | slack | `channels/slack/` | TypeScript, Slack Bolt(Socket Mode)(web 세션이 맡음) | 2 |
+| S9 | ux | `ux/` | 사용성 연구·평가(페르소나·과업, 정보 구조, 디자인 시스템 명세, 휴리스틱·접근성 점검, Playwright 과업 걸어 보기). 화면 코드는 web이 구현 | 3 |
 
 - 모듈 세션은 자기 경로만 고칩니다. 예외로 `docs/contract-requests.md`에 한 줄 더하는 것은 누구나 합니다.
 - CI `paths` job이 브랜치 이름(`feat/<모듈>-…`)의 모듈과 바뀐 파일을 대조해 경로 밖 변경이 있으면 실패합니다.
