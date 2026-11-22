@@ -19,6 +19,7 @@ MODULE_PATHS = {
     "web": ["web/"],
     "incident": ["incident/"],
     "slack": ["channels/slack/"],
+    "ux": ["ux/"],
 }
 # 모듈 세션도 고칠 수 있는 공용 파일
 SHARED_OK = ["docs/contract-requests.md"]
