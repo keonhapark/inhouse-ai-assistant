@@ -42,47 +42,6 @@
 }
 
 /* 세그먼트 컨트롤 */
-.seg {
-  display: inline-flex;
-  flex-shrink: 1;
-  min-width: 0;
-  margin: 0 auto;
-  padding: 2px;
-  border-radius: var(--r-seg);
-  background: var(--seg-track);
-}
-
-.seg__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: var(--r-xs);
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: var(--fs-footnote);
-  font-weight: var(--fw-medium);
-  cursor: pointer;
-}
-
-.seg__item[aria-selected='true'] {
-  background: var(--seg-thumb);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 10%), 0 0 0 0.5px rgb(0 0 0 / 4%);
-  font-weight: var(--fw-semibold);
-}
-
-.seg__n {
-  color: var(--text-2);
-  font-variant-numeric: tabular-nums;
-}
-
-.seg__item[aria-selected='true'] .seg__n {
-  color: var(--text);
-}
-
 /* 두 줄 행 목록 */
 .doc-rows {
   margin: 0;
@@ -439,86 +398,6 @@
   .seg {
     overflow-x: auto;
   }
-}
-
-.tabs {
-  display: flex;
-  gap: var(--sp-4);
-  border-bottom: 1px solid var(--border);
-}
-
-.tabs__tab {
-  height: 36px;
-  padding: 0 var(--sp-12);
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  cursor: pointer;
-}
-
-.tabs__tab[aria-selected='true'] {
-  border-bottom-color: var(--accent);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-}
-
-.table th,
-.table td {
-  padding: var(--sp-8) var(--sp-12);
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  vertical-align: middle;
-}
-
-.table th {
-  color: var(--text-muted);
-  font-size: var(--fs-12);
-  font-weight: 600;
-}
-
-.table td .badge {
-  margin-left: var(--sp-8);
-}
-
-.table tr[aria-current='true'] td {
-  background: var(--bg);
-}
-
-.table .num {
-  text-align: right;
-}
-
-.link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.link:hover {
-  text-decoration: underline;
-}
-
-.notice-ok {
-  margin: 0;
-  padding: var(--sp-8) var(--sp-12);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--success);
-  border-radius: var(--radius-control);
-  background: var(--surface);
 }
 
 /* 대결 설정 화면: 툴바 + 읽기 폭(680px) 한 열 */

@@ -1,11 +1,11 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
+import { Navigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
+import { Toolbar } from '../shell/Toolbar'
 import { AuditPanel } from './AuditPanel'
 import { EgressPanel } from './EgressPanel'
 import { MetricsPanel } from './MetricsPanel'
 import { PRESETS, toRange, ymd, type Period } from './period'
-import '../inbox/inbox.css'
 import './admin.css'
 import { formatDateRange } from '../display/format'
 
@@ -20,12 +20,13 @@ export type Range = { since: string; until: string }
 
 const isTab = (v: string | undefined): v is Tab => TABS.some((t) => t.id === v)
 
-/** 운영 화면(/ops/metrics, /ops/egress, /ops/audit). 탭은 주소에서 읽어 감사 로그 등으로 바로 들어올 수 있습니다 */
+/**
+ * 운영 화면(/ops/metrics, /ops/egress, /ops/audit). 화면 사이는 왼쪽 탐색 막대의 운영 묶음으로 옮깁니다(ia.md 2절).
+ * 세 화면이 같은 경로(/ops/:tab)의 한 요소라 메뉴로 옮겨도 고른 기간이 그대로 남습니다.
+ */
 export function AdminPage() {
   const params = useParams()
-  const navigate = useNavigate()
   const tab: Tab = isTab(params.tab) ? params.tab : 'metrics'
-  const setTab = (t: Tab) => navigate(`/ops/${t}`, { replace: true })
   const [period, setPeriod] = useState<Period>({ kind: 'preset', preset: '24h' })
   // 기간은 적용할 때 한 번 시각으로 바꿔 둡니다. 다시 그릴 때마다 '지금'이 바뀌어 다시 불러오지 않게 합니다.
   const [range, setRange] = useState<Range>(() => toRange({ kind: 'preset', preset: '24h' })!)
@@ -34,7 +35,6 @@ export function AdminPage() {
   const [from, setFrom] = useState(() => ymd(new Date(Date.now() - 6 * 86_400_000)))
   const [to, setTo] = useState(today)
   const [rangeError, setRangeError] = useState<string | null>(null)
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
 
   function applyPreset(p: Period) {
     setPeriod(p)
@@ -52,77 +52,52 @@ export function AdminPage() {
     setRange(r)
   }
 
-  function onTabKey(e: KeyboardEvent, i: number) {
-    const last = TABS.length - 1
-    const next = e.key === 'ArrowRight' ? (i === last ? 0 : i + 1) : e.key === 'ArrowLeft' ? (i === 0 ? last : i - 1) : e.key === 'Home' ? 0 : e.key === 'End' ? last : -1
-    if (next < 0) return
-    e.preventDefault()
-    tabRefs.current[next]?.focus()
-    setTab(TABS[next].id)
-  }
-
   if (!isTab(params.tab)) return <Navigate to="/ops/metrics" replace />
+  const title = TABS.find((t) => t.id === tab)!.label
   return (
-    <main className="admin">
-      <h1>관리자 콘솔</h1>
-      <div className="admin__filters" role="group" aria-label="기간">
-        {PRESETS.map((p) => (
-          <Button
-            key={p.preset}
-            aria-pressed={period.kind === 'preset' && period.preset === p.preset}
-            variant={period.kind === 'preset' && period.preset === p.preset ? 'primary' : 'secondary'}
-            onClick={() => applyPreset({ kind: 'preset', preset: p.preset })}
-          >
-            최근 {p.label}
-          </Button>
-        ))}
-        <form className="admin__custom" onSubmit={applyCustom}>
-          <label>
-            <span className="muted">시작</span>
+    <main className="admin" aria-labelledby="ops-title">
+      <Toolbar title={title} titleId="ops-title">
+        <div className="seg" role="group" aria-label="기간">
+          {PRESETS.map((p) => (
+            <button
+              key={p.preset}
+              type="button"
+              className="seg__item"
+              aria-pressed={period.kind === 'preset' && period.preset === p.preset}
+              onClick={() => applyPreset({ kind: 'preset', preset: p.preset })}
+            >
+              최근 {p.label}
+            </button>
+          ))}
+        </div>
+      </Toolbar>
+      <div className="admin__body">
+        <form className="admin__custom" aria-label="날짜로 보기" onSubmit={applyCustom}>
+          <label className="admin__field">
+            <span>시작</span>
             <input type="date" value={from} max={today} aria-invalid={!!rangeError} aria-describedby={rangeError ? 'admin-range-error' : undefined} onChange={(e) => setFrom(e.target.value)} />
           </label>
-          <label>
-            <span className="muted">끝</span>
+          <label className="admin__field">
+            <span>끝</span>
             <input type="date" value={to} max={today} aria-invalid={!!rangeError} aria-describedby={rangeError ? 'admin-range-error' : undefined} onChange={(e) => setTo(e.target.value)} />
           </label>
           <Button type="submit" variant={period.kind === 'custom' ? 'primary' : 'secondary'}>
             날짜로 보기
           </Button>
+          <p className="admin__period" aria-live="polite">
+            {period.kind === 'custom' ? formatDateRange(period.from, period.to) : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}을 보고 있습니다.
+          </p>
         </form>
-      </div>
-      {rangeError && (
-        <p role="alert" id="admin-range-error">
-          {rangeError}
-        </p>
-      )}
-      <p className="muted admin__period" aria-live="polite">
-        {period.kind === 'custom' ? formatDateRange(period.from, period.to) : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}을 보고 있습니다.
-      </p>
-
-      <div role="tablist" aria-label="관리자 콘솔" className="tabs">
-        {TABS.map((t, i) => (
-          <button
-            key={t.id}
-            ref={(el) => {
-              tabRefs.current[i] = el
-            }}
-            role="tab"
-            id={`admin-tab-${t.id}`}
-            aria-selected={tab === t.id}
-            aria-controls="admin-panel"
-            tabIndex={tab === t.id ? 0 : -1}
-            className="tabs__tab"
-            onClick={() => setTab(t.id)}
-            onKeyDown={(e) => onTabKey(e, i)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div role="tabpanel" id="admin-panel" aria-labelledby={`admin-tab-${tab}`} className="admin__panel" tabIndex={0}>
-        {tab === 'metrics' && <MetricsPanel range={range} />}
-        {tab === 'egress' && <EgressPanel range={range} />}
-        {tab === 'audit' && <AuditPanel range={range} />}
+        {rangeError && (
+          <p role="alert" id="admin-range-error" className="admin__error">
+            {rangeError}
+          </p>
+        )}
+        <div className="admin__panel">
+          {tab === 'metrics' && <MetricsPanel range={range} />}
+          {tab === 'egress' && <EgressPanel range={range} />}
+          {tab === 'audit' && <AuditPanel range={range} />}
+        </div>
       </div>
     </main>
   )
