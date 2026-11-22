@@ -38,7 +38,7 @@ uv run python lora/compare_runs.py ~/lora/base-nothink.jsonl ~/lora/lora-nothink
 ```
 
 - 기본 모델: Hugging Face `Qwen/Qwen3.5-9B`(Apache-2.0, `Qwen3_5ForConditionalGeneration`). 리비전을 고정하지 않으면 받은 sha를 `run.json`에 남깁니다
-- 학습(`train_qlora.py`): 4비트 NF4·이중 양자화, bf16 계산(T4처럼 bf16이 없으면 fp16), 언어 모델 attention·MLP 선형층에만 LoRA(r 16, alpha 32, dropout 0.05), 정답(assistant) 토큰만 손실, 2 epoch, 학습률 2e-4(cosine), 배치 1 × 누적 8, gradient checkpointing, paged AdamW 8bit, 시드 7
+- 학습(`train_qlora.py`): 4비트 NF4·이중 양자화(양자화하지 않은 층을 fp32로 올리는 `prepare_model_for_kbit_training`은 쓰지 않음), bf16 계산(T4처럼 bf16이 없으면 fp16), 언어 모델 attention·MLP 선형층에만 LoRA(r 16, alpha 32, dropout 0.05), 정답(assistant) 토큰만 손실, 2 epoch, 학습률 2e-4(cosine), 배치 1 × 누적 8, gradient checkpointing, paged AdamW 8bit, 시드 7
 - chat template은 생각 끔 형식입니다. 데이터에 생각 내용이 없어 생각 켬 형식으로 만들면 빈 생각을 가르치게 되고 토큰 경계도 어긋납니다. 업무 경로는 생각 켬이 기본(결정 0008)이라 평가는 생각 끔·켬 둘 다 합니다
 - 토큰 길이(기본 데이터, Qwen3.5 토크나이저): p50 1,296, 최대 1,834. 정답 토큰 합 학습 62,780·검증 7,533. 확인은 `--dry-run`으로 했습니다(transformers 5.22.2, GPU 없음)
 - 내보내기(`export_ollama.py`): PEFT 어댑터를 llama.cpp `convert_lora_to_gguf.py`로 GGUF 어댑터로 바꾸고, Ollama API(`/api/blobs`, `/api/create`의 `adapters`)로 `qwen3.5:9b` 위에 얹은 모델을 만듭니다. 학습은 bf16 원본, 실행은 Q4_K_M 기본 모델이라 수치가 조금 다릅니다
@@ -49,7 +49,7 @@ uv run python lora/compare_runs.py ~/lora/base-nothink.jsonl ~/lora/lora-nothink
 
 Kaggle 노트북(T4 x2)에 Ollama와 터널을 띄운 셀이 돌고 있을 때, 셀 하나로 학습부터 Ollama 등록까지 끝까지 가게 합니다. 셀 코드는 저장소 밖에 두고(노트북에 붙여 넣음), 순서는 아래와 같습니다.
 
-1. 디스크·GPU·Ollama 확인. 기본 모델(약 19GB)은 `/kaggle/working`(20GB) 밖(`HF_HOME=/tmp/hf`)에 받고, 사용 중 메모리가 가장 적은 GPU를 `CUDA_VISIBLE_DEVICES`로 고릅니다(Ollama가 덜 쓰는 쪽)
+1. 디스크·GPU·Ollama 확인. 기본 모델(약 19GB)은 `/kaggle/working`(20GB) 밖(`HF_HOME=/tmp/hf`)에 받습니다. T4 한 장(15GB)에는 4비트 모델과 양자화하지 않은 임베딩·lm_head가 함께 들어가지 않아(#551 OOM) 두 GPU에 나눠 올립니다(`device_map=auto`). 학습하는 동안 Kaggle Ollama는 부르지 않습니다
 2. 공개 저장소를 받아 커밋을 고정
 3. `QLORA_SYSTEM=1 bash lora/install_qlora.sh`: 새 가상환경 없이 Kaggle 파이썬에 학습 패키지와 llama.cpp `gguf-py`를 넣습니다(Kaggle torch 그대로)
 4. `uv run python lora/make_toolcall_data.py --out …`(agent는 파이썬 3.12가 필요해 uv로). 기본 시드, 개발 묶음만 대조합니다. 확인 묶음 겹침 검사는 eval이 따로 합니다(#544)
