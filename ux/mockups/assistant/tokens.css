@@ -1,0 +1,85 @@
+/* assistant(대화 비서형): Fluent 2 + Ramp + Geist. 채팅이 주인공, 결재·미리보기는 오른쪽 패널. 여백 넓고 글이 큼, 자두색 강조.
+   기억에 남을 한 가지: 연한 회보라 바탕 위에 흰 탐색 막대와 오른쪽 결재 패널이 20px 반경·보랏빛 그림자로 "떠 있고", 가운데 대화는 면 없이 바탕에 바로 놓입니다.
+   셸: --bg가 대화 캔버스입니다. 탐색 막대·오른쪽 패널만 --surface + --r-lg + --shadow-md. 말풍선은 사용자 쪽만 --accent-soft 면.
+   규칙: 반경은 버튼·입력 sm, 미리보기 카드 md, 떠 있는 패널 lg. 그림자는 회색이 아니라 강조색 색조를 섞은 값입니다.
+   규칙: 강조색은 보내기·주 버튼·선택·진행 상태에만. "로컬에서 처리"는 강조색과 겹치지 않게 파랑을 씁니다. */
+:root {
+  color-scheme: light;
+
+  /* 면 */
+  --bg: #f3f2f7;
+  --surface: #ffffff;
+  --surface-2: #f8f7fb;
+  --sidebar-bg: #ffffff;
+  --sidebar-fg: #1d1b22;
+  --sidebar-fg-muted: #5d5967;
+  --sidebar-active-bg: #f0eafb;
+  --border: #e6e3ec;
+  --border-strong: #8a8694;
+
+  /* 글 */
+  --text: #1b1a1f;
+  --text-2: #48454f;
+  --text-3: #625e6b;
+
+  /* 강조: 자두색(plum violet) */
+  --accent: #6236c4;
+  --accent-fg: #ffffff;
+  --accent-soft: #f0eafb;
+  --focus: #6f45d6;
+
+  /* 상태(글/배경 쌍) */
+  --st-progress-fg: #5730b0;
+  --st-progress-bg: #f0eafb;
+  --st-approved-fg: #146b43;
+  --st-approved-bg: #e4f4eb;
+  --st-rejected-fg: #b02a1c;
+  --st-rejected-bg: #fdebe8;
+  --st-attention-fg: #8a4a00;
+  --st-attention-bg: #fff1d8;
+  --st-local-fg: #1d559a;
+  --st-local-bg: #e6f0fb;
+  --st-external-fg: #0d6470;
+  --st-external-bg: #e1f3f4;
+  --danger: #c0311f;
+  --danger-fg: #ffffff;
+
+  /* 글꼴 */
+  --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 21px;
+  --fs-2xl: 28px;
+  --lh: 1.6;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --num: "tnum";
+
+  /* 모양 */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --shadow-sm: 0 1px 2px rgb(20 22 28 / 6%), 0 0 1px rgb(20 22 28 / 12%);
+  --shadow-md: 0 1px 3px rgb(20 22 28 / 6%), 0 12px 32px -8px rgb(20 22 28 / 14%);
+
+  /* 간격(4px 기반, 위쪽이 넉넉함) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 36px;
+  --space-7: 56px;
+  --space-8: 80px;
+
+  /* 배치 */
+  --row-h: 52px;
+  --control-h: 34px;
+  --sidebar-w: 264px;
+  --topbar-h: 60px;
+  --dur: 200ms;
+}
