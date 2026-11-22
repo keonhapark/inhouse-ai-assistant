@@ -836,7 +836,7 @@ components:
             fromAttachments:
               type: boolean
               description: >-
-                이 턴에 agent가 첨부 이미지를 읽었는지(agent ToolPreview.fromAttachments를 그대로 넘김). true면 미리보기 값 일부가
+                이 대화에서 agent가 첨부 이미지를 읽은 적이 있는지(읽은 턴과 그 뒤 턴, #530. agent ToolPreview.fromAttachments를 그대로 넘김). true면 미리보기 값 일부가
                 이미지에서 읽은 신뢰 불가 값이라 화면이 "확인 필요"를 표시합니다(결정 0004). 없으면 화면은 첨부를 보낸 턴의 카드로 추정합니다
         decision:
           description: type=approval_decided
