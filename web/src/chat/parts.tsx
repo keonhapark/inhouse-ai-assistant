@@ -1,6 +1,7 @@
+import { Globe, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Schemas } from '../api/client'
-import { Badge, LocalBadge, RiskBadge } from '../components/Badge'
+import { Badge, RiskBadge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { newIdempotencyKey, type UndoResult } from './api'
@@ -12,15 +13,32 @@ import { Markdown } from './markdown'
 import type { Citation, ThreadItem } from './thread'
 
 type Approval = NonNullable<Schemas['ChatEvent']['approval']>
+type ToolCallInfo = NonNullable<Schemas['ChatEvent']['toolCall']>
 
-export function AssistantMessage({ item }: { item: Extract<ThreadItem, { kind: 'assistant' }> }) {
+/** 답 머리: "재무 담당 AI · 사내 처리"(ux/design-system.md 3.8). 한 턴의 첫 답에만 붙입니다 */
+export type AnswerHead = { agent: string; location?: 'local' | 'external' }
+
+export function AssistantMessage({ item, head }: { item: Extract<ThreadItem, { kind: 'assistant' }>; head?: AnswerHead }) {
   return (
     <div className="msg msg--assistant">
-      <span className="visually-hidden">답: </span>
+      {head ? (
+        <div className="msg__who">
+          <b>{head.agent}</b>
+          {head.location === 'local' && <span className="status status--blue">사내 처리</span>}
+          {head.location === 'external' && (
+            <span className="status">
+              <Globe aria-hidden />
+              외부 AI 사용
+            </span>
+          )}
+          <span className="visually-hidden">답: </span>
+        </div>
+      ) : (
+        <span className="visually-hidden">답: </span>
+      )}
       <div className="msg__text md">
         <Markdown text={item.text} tail={item.streaming && <span className="msg__cursor" aria-hidden="true" />} />
       </div>
-      {item.model?.location === 'local' && <LocalBadge />}
       {item.citations && item.citations.length > 0 && <Citations citations={item.citations} />}
     </div>
   )
@@ -29,14 +47,19 @@ export function AssistantMessage({ item }: { item: Extract<ThreadItem, { kind: '
 export function Citations({ citations }: { citations: Citation[] }) {
   return (
     <details className="citations">
-      <summary>근거 {citations.length}건</summary>
+      <summary>근거 규정 {citations.length}건</summary>
       <ul>
         {citations.map((c, i) => (
           <li key={`${c.docId}-${i}`}>
             <div className="citations__head">
               <strong>{c.title}</strong>
               {c.article && <span>{c.article}</span>}
-              {!c.verified && <Badge tone="warning">인용 확인 안 됨</Badge>}
+              {!c.verified && (
+                <span className="citations__unverified">
+                  <TriangleAlert aria-hidden />
+                  원문 대조 안 됨
+                </span>
+              )}
             </div>
             <blockquote>{c.quote}</blockquote>
           </li>
@@ -76,6 +99,7 @@ export function PreviewCard({ agentName, approval, fromImage, decision, closed, 
   const ticking = useNow(fixedNow === undefined && !decision && !closed && approval.expiresAt !== undefined)
   const now = fixedNow ?? ticking
   const { preview } = approval
+  const label = approval.toolLabel ?? toolName(approval.tool)
   const expired = closed === 'expired' || (!decision && approval.expiresAt !== undefined && Date.parse(approval.expiresAt) <= now)
   useEffect(() => {
     if (expired && !decision && !closed) onExpire?.()
@@ -83,24 +107,24 @@ export function PreviewCard({ agentName, approval, fromImage, decision, closed, 
   return (
     <Card
       className="preview"
-      aria-label={`실행 미리보기: ${approval.toolLabel ?? toolName(approval.tool)}`}
+      aria-label={`실행 전 확인: ${label}`}
       header={
         <>
           {agentName && <strong>{agentName}</strong>}
-          <span>{approval.toolLabel ?? toolName(approval.tool)}</span>
+          <span>{label}</span>
           <RiskBadge risk={approval.risk} />
-          {fromImage && <Badge tone="warning">이미지에서 읽은 값(확인 필요)</Badge>}
+          {fromImage && <Badge tone="warning">사진에서 읽은 값</Badge>}
         </>
       }
       footer={
         decision ? (
-          <Badge tone={decision === 'approve' ? 'success' : 'neutral'}>{decision === 'approve' ? '실행함' : '취소함'}</Badge>
+          <Badge tone={decision === 'approve' ? 'success' : 'neutral'}>{decision === 'approve' ? '완료' : '실행 안 함'}</Badge>
         ) : closed === 'failed' ? (
-          <Badge>더 결정할 수 없음</Badge>
+          <Badge>진행 불가</Badge>
         ) : (
           <>
             {approval.expiresAt && (
-              <span className="muted mono">{expired ? '만료됨' : `만료 ${formatTime(approval.expiresAt)}`}</span>
+              <span className="muted">{expired ? '확인 시간 지남' : `${formatTime(approval.expiresAt)}까지 확인`}</span>
             )}
             <Button disabled={busy || expired} onClick={() => onDecide('reject')}>
               취소
@@ -110,18 +134,16 @@ export function PreviewCard({ agentName, approval, fromImage, decision, closed, 
               disabled={busy || expired}
               onClick={() => onDecide('approve')}
             >
-              실행
+              {label}
             </Button>
           </>
         )
       }
     >
       <p>{preview.summary}</p>
-      {fromImage && (
-        <p className="warning-line">첨부한 사진에서 읽은 값이 들어 있을 수 있습니다. 금액·날짜 같은 값이 사진과 맞는지 확인한 뒤 실행해 주세요.</p>
-      )}
+      {fromImage && <p className="warning-line">영수증과 맞는지 확인해 주세요.</p>}
       <PreviewChanges preview={preview} />
-      {!preview.undoable && <p className="warning-line">실행하면 되돌릴 수 없습니다.</p>}
+      {!preview.undoable && <p className="warning-line">실행하면 취소할 수 없습니다.</p>}
     </Card>
   )
 }
@@ -204,7 +226,7 @@ type ActionProps = {
 }
 
 export function ActionCard({ item, onUndo }: ActionProps) {
-  // 같은 되돌리기를 다시 눌러도 같은 키로 보내 두 번 되돌리지 않게 합니다.
+  // 실행 취소를 다시 눌러도 같은 키로 보내 두 번 취소하지 않게 합니다.
   const [key] = useState(() => newIdempotencyKey('undo'))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -217,13 +239,13 @@ export function ActionCard({ item, onUndo }: ActionProps) {
     if (!r.ok) setError(r.message)
   }
   return (
-    <Card className={`action${undone ? ' action--undone' : ''}`} aria-label="실행한 일">
+    <Card className={`action${undone ? ' action--undone' : ''}`} aria-label="완료한 일">
       <div className="action__row">
-        <Badge tone={undone ? 'neutral' : 'success'}>{undone ? '되돌림' : '실행됨'}</Badge>
+        <Badge tone={undone ? 'neutral' : 'success'}>{undone ? '취소됨' : '완료'}</Badge>
         <span>{action.summary}</span>
         {action.undoable && !undone && (
           <Button className="action__undo" disabled={busy} onClick={undo}>
-            되돌리기
+            실행 취소
           </Button>
         )}
       </div>
@@ -236,17 +258,27 @@ export function ActionCard({ item, onUndo }: ActionProps) {
   )
 }
 
-export function ToolCall({ item }: { item: Extract<ThreadItem, { kind: 'tool' }> }) {
-  const { call } = item
+const STEP_STATUS: Record<NonNullable<ToolCallInfo['status']>, string | null> = { ok: null, error: '실패', blocked: '처리할 수 없음' }
+
+/**
+ * 에이전트가 쓴 기능(도구). 직원 화면에서는 접어 두고, 펼치면 표시 이름만 보입니다(ux/copy-guide.md 1.2).
+ * 이어서 온 도구 줄을 한 묶음으로 받습니다.
+ */
+export function ToolSteps({ calls }: { calls: ToolCallInfo[] }) {
   return (
-    <details className="tool">
-      <summary>
-        도구 실행{call.tool && <>: {toolName(call.tool)} <code className="muted">{call.tool}</code></>}
-      </summary>
-      <div className="row">
-        {call.risk && <RiskBadge risk={call.risk} />}
-        {call.status && <Badge tone={call.status === 'ok' ? 'success' : 'danger'}>{call.status === 'ok' ? '성공' : call.status === 'blocked' ? '차단' : '오류'}</Badge>}
-      </div>
+    <details className="steps">
+      <summary>처리 과정 {calls.length}단계</summary>
+      <ol>
+        {calls.map((c, i) => {
+          const status = c.status ? STEP_STATUS[c.status] : null
+          return (
+            <li key={i}>
+              {c.tool ? toolName(c.tool) : '알 수 없는 기능'}
+              {status && <span className="steps__status"> · {status}</span>}
+            </li>
+          )
+        })}
+      </ol>
     </details>
   )
 }

@@ -1,20 +1,51 @@
+import * as Menu from '@radix-ui/react-dropdown-menu'
+import { ArrowUp, Check, ChevronDown, Paperclip, Sparkles, SquarePen, TriangleAlert, X } from 'lucide-react'
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useReducer, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { api, problemTitle, type Schemas } from '../api/client'
-import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
-import { conversationMeta } from '../display/conversation'
+import { conversationRow } from '../display/conversation'
+import { agentLabel } from '../display/names'
 import { NEW_CHAT } from '../shell/events'
+import { Toolbar } from '../shell/Toolbar'
 import { decideApproval, postMessage, undoAction, type StreamResult } from './api'
 import { ACCEPT, formatBytes, MAX_IMAGES, pickImages, release, toDataUrl, type PickedImage } from './attachments'
-import { ActionCard, AssistantMessage, PreviewCard, ToolCall } from './parts'
-import { emptyThread, pendingApproval, threadReducer, type ChatEvent } from './thread'
+import { ActionCard, AssistantMessage, PreviewCard, ToolSteps, type AnswerHead } from './parts'
+import { emptyThread, pendingApproval, threadReducer, type ChatEvent, type ThreadItem } from './thread'
 import './chat.css'
 
 type Summary = Schemas['ConversationSummary']
 type AgentInfo = Schemas['AgentInfo']
 
 const NETWORK = '서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.'
-const ROUTE_METHOD = { llm: '자동 선택', keyword: '자동 선택(낱말)', fallback: '맞는 부서 없음', explicit: '직접 선택' } as const
+
+type ToolItem = Extract<ThreadItem, { kind: 'tool' }>
+/** 화면에 그릴 줄: 이어서 온 도구 줄은 "처리 과정" 하나로 묶고, 한 턴의 첫 답에는 답 머리를 붙입니다 */
+type Row = Exclude<ThreadItem, ToolItem> | { kind: 'tools'; key: string; calls: ToolItem['call'][] }
+
+function rowsOf(items: ThreadItem[]): { rows: Row[]; heads: Map<string, 'local' | 'external' | undefined> } {
+  const rows: Row[] = []
+  const heads = new Map<string, 'local' | 'external' | undefined>()
+  let turnHead: string | null = null
+  for (const it of items) {
+    if (it.kind === 'user') turnHead = null
+    if (it.kind === 'tool') {
+      const last = rows[rows.length - 1]
+      if (last?.kind === 'tools') last.calls.push(it.call)
+      else rows.push({ kind: 'tools', key: it.key, calls: [it.call] })
+      continue
+    }
+    if (it.kind === 'assistant') {
+      if (turnHead === null) {
+        turnHead = it.key
+        heads.set(it.key, undefined)
+      }
+      // 사내 처리 여부는 턴에 한 번만 보입니다. 모델 정보는 답이 끝나야 오므로 턴의 어느 답에서든 가져옵니다
+      if (it.model?.location && !heads.get(turnHead)) heads.set(turnHead, it.model.location)
+    }
+    rows.push(it)
+  }
+  return { rows, heads }
+}
 
 export function ChatPage() {
   const [convs, setConvs] = useState<Summary[]>([])
@@ -277,56 +308,65 @@ export function ChatPage() {
     }
   }
 
+  const current = selected ? (convs.find((c) => c.conversationId === selected.conversationId) ?? selected) : null
+  const title = current?.title ?? '새 대화'
+  const agent = agentName ? agentLabel(agentName) : undefined
+  const chosen = agents.find((a) => a.id === agentChoice)
+  const { rows, heads } = rowsOf(thread.items)
+  const route = thread.route
+  const routeNote =
+    route?.method === 'fallback'
+      ? `맞는 담당 AI가 없어 ${agent ?? '기본 담당 AI'}가 답합니다.`
+      : route?.method && route.method !== 'explicit'
+        ? route.reason
+        : null
+
   return (
     <div className="chat">
-      <nav className="chat__list" aria-label="대화 목록">
-        <Button variant="primary" onClick={newConversation}>
-          새 대화
-        </Button>
+      <nav className="convs" aria-label="대화 목록">
+        <div className="convs__head">
+          <h2>대화</h2>
+          <button type="button" className="icon-btn" aria-label="새 대화" onClick={newConversation}>
+            <SquarePen aria-hidden />
+          </button>
+        </div>
         {convs.length === 0 ? (
-          <p className="muted">아직 대화가 없습니다.</p>
+          <p className="convs__empty">아직 대화가 없습니다. 무엇을 할지 적어 보세요.</p>
         ) : (
           <ul>
-            {convs.map((c) => (
-              <li key={c.conversationId}>
-                <button
-                  type="button"
-                  className="chat__item"
-                  aria-current={selected?.conversationId === c.conversationId ? 'true' : undefined}
-                  onClick={() => void open(c)}
-                >
-                  <span className="chat__item-title">{c.title ?? '새 대화'}</span>
-                  <span className="muted">{conversationMeta(c)}</span>
-                </button>
-              </li>
-            ))}
+            {convs.map((c) => {
+              const r = conversationRow(c)
+              return (
+                <li key={c.conversationId}>
+                  <button
+                    type="button"
+                    className="conv"
+                    aria-current={selected?.conversationId === c.conversationId ? 'true' : undefined}
+                    onClick={() => void open(c)}
+                  >
+                    <span className="conv__title">{c.title ?? '새 대화'}</span>
+                    <span className="conv__when">{r.when}</span>
+                    <span className="conv__sub">
+                      {r.agent}
+                      {r.status && <span className={`status status--${r.status.tone}`}>{r.status.label}</span>}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
           </ul>
         )}
       </nav>
 
-      <section className="chat__main" aria-label="대화">
-        <div className="chat__head">
-          {selected ? (
-            <span className="row">
-              <strong>{agentName ?? '에이전트 고르는 중'}</strong>
-              {thread.route?.method && <Badge>{ROUTE_METHOD[thread.route.method]}</Badge>}
-              {thread.route?.reason && <span className="muted">{thread.route.reason}</span>}
-            </span>
-          ) : (
-            <label className="chat__agent">
-              부서 에이전트
-              <select value={agentChoice} onChange={(e) => setAgentChoice(e.target.value)}>
-                <option value="">자동 선택</option>
-                {agents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                    {a.modelPolicy === 'local_only' ? ' (로컬 모델만)' : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+      <main className="chat__main" aria-labelledby="chat-title">
+        <Toolbar title={title} titleId="chat-title" sub={selected ? (agent ?? '담당 AI 정하는 중') : undefined}>
+          {selected && routeNote && (
+            <details key={selected.conversationId} className="route">
+              <summary>자동 선택</summary>
+              <p>{routeNote}</p>
+            </details>
           )}
-        </div>
+        </Toolbar>
 
         <div
           className="chat__log"
@@ -339,82 +379,91 @@ export function ChatPage() {
             stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40
           }}
         >
-          {thread.items.length === 0 && (
-            <p className="muted chat__empty">무엇을 도와드릴까요? 회의실 예약, 연차 규정처럼 물어보면 맞는 부서 에이전트가 답합니다.</p>
-          )}
-          {thread.items.map((it) => {
-            switch (it.kind) {
-              case 'user':
-                return (
-                  <div key={it.key} className="msg msg--user">
-                    <span className="visually-hidden">나: </span>
-                    {it.text}
-                    {it.images?.length ? (
-                      <ul className="msg__images" aria-label={`첨부한 사진 ${it.images.length}장`}>
-                        {it.images.map((img, i) => (
-                          <li key={i}>
-                            <img src={img.url} alt={img.name} />
-                          </li>
+          <div className="col">
+            {thread.items.length === 0 && <p className="chat__empty">무엇을 할지 적어 보세요. 회의실 예약, 경비 정산, 규정 질문을 맞는 담당 AI가 맡습니다.</p>}
+            {rows.map((it) => {
+              switch (it.kind) {
+                case 'user':
+                  return (
+                    <div key={it.key} className="msg msg--user">
+                      <span className="visually-hidden">나: </span>
+                      {it.text}
+                      {it.images?.length ? (
+                        <ul className="msg__images" aria-label={`첨부한 사진 ${it.images.length}장`}>
+                          {it.images.map((img, i) => (
+                            <li key={i}>
+                              <img src={img.url} alt={img.name} />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (it.attachmentCount ?? 0) > 0 ? (
+                        <small className="msg__attached">
+                          <Paperclip aria-hidden />
+                          사진 {it.attachmentCount}장 첨부(기록에는 사진을 남기지 않습니다)
+                        </small>
+                      ) : null}
+                    </div>
+                  )
+                case 'assistant': {
+                  const head: AnswerHead | undefined = heads.has(it.key) ? { agent: agent ?? '담당 AI', location: heads.get(it.key) } : undefined
+                  return <AssistantMessage key={it.key} item={it} head={head} />
+                }
+                case 'tools':
+                  return <ToolSteps key={it.key} calls={it.calls} />
+                case 'approval':
+                  return (
+                    <PreviewCard
+                      key={it.key}
+                      agentName={agent}
+                      approval={it.approval}
+                      fromImage={it.fromImage}
+                      decision={it.decision}
+                      closed={it.closed}
+                      busy={thread.streaming}
+                      onDecide={(d) => void decide(it.approval.approvalId, d)}
+                      onExpire={() => onExpire(it.approval.approvalId)}
+                    />
+                  )
+                case 'action':
+                  return <ActionCard key={it.key} item={it} onUndo={undo} />
+                case 'blocked':
+                  return (
+                    <div key={it.key} className="notice notice--blocked" role="status">
+                      <TriangleAlert aria-hidden />
+                      <div>
+                        <b>처리할 수 없는 요청</b>
+                        <p>{it.reason}</p>
+                      </div>
+                    </div>
+                  )
+                case 'error':
+                  return (
+                    <div key={it.key} className="notice notice--error" role="alert">
+                      <TriangleAlert aria-hidden />
+                      <span>{it.message}</span>
+                      {it.retryable &&
+                        lastUser?.kind === 'user' &&
+                        canSend &&
+                        // 복원한 기록의 사진은 본문이 없어 다시 보낼 수 없습니다.
+                        ((lastUser.attachmentCount ?? 0) > 0 && !lastUser.images?.length ? (
+                          <span className="muted">사진을 다시 첨부해 보내 주세요.</span>
+                        ) : (
+                          <Button onClick={() => void send(lastUser.text, lastUser.images?.length ? lastSent.current : [])}>다시 보내기</Button>
                         ))}
-                      </ul>
-                    ) : (it.attachmentCount ?? 0) > 0 ? (
-                      <span className="msg__attached">사진 {it.attachmentCount}장 첨부(기록에는 사진을 남기지 않습니다)</span>
-                    ) : null}
-                  </div>
-                )
-              case 'assistant':
-                return <AssistantMessage key={it.key} item={it} />
-              case 'tool':
-                return <ToolCall key={it.key} item={it} />
-              case 'approval':
-                return (
-                  <PreviewCard
-                    key={it.key}
-                    agentName={agentName}
-                    approval={it.approval}
-                    fromImage={it.fromImage}
-                    decision={it.decision}
-                    closed={it.closed}
-                    busy={thread.streaming}
-                    onDecide={(d) => void decide(it.approval.approvalId, d)}
-                    onExpire={() => onExpire(it.approval.approvalId)}
-                  />
-                )
-              case 'action':
-                return <ActionCard key={it.key} item={it} onUndo={undo} />
-              case 'blocked':
-                return (
-                  <div key={it.key} className="notice notice--blocked" role="status">
-                    <Badge tone="danger">차단</Badge>
-                    <span>{it.reason}</span>
-                  </div>
-                )
-              case 'error':
-                return (
-                  <div key={it.key} className="notice notice--error" role="alert">
-                    <span>{it.message}</span>
-                    {it.retryable &&
-                      lastUser?.kind === 'user' &&
-                      canSend &&
-                      // 복원한 기록의 사진은 본문이 없어 다시 보낼 수 없습니다.
-                      ((lastUser.attachmentCount ?? 0) > 0 && !lastUser.images?.length ? (
-                        <span className="muted">사진을 다시 붙여 보내 주세요.</span>
-                      ) : (
-                        <Button onClick={() => void send(lastUser.text, lastUser.images?.length ? lastSent.current : [])}>다시 보내기</Button>
-                      ))}
-                  </div>
-                )
-            }
-          })}
+                    </div>
+                  )
+              }
+            })}
+          </div>
         </div>
 
-        <form className="chat__composer" onSubmit={onSubmit}>
+        <div className="col chat__bottom">
           {notice && (
             <p role="alert" className="alert">
               {notice}
             </p>
           )}
-          {waiting && <p className="muted">미리보기 카드에서 실행하거나 취소하면 이어서 쓸 수 있습니다.</p>}
+          {waiting && <p className="chat__hint">위 확인 카드에서 실행하거나 취소하면 이어서 쓸 수 있습니다.</p>}
           <div role="status" aria-live="polite" className="attach__errors">
             {attachErrors.map((m) => (
               <p key={m} className="alert">
@@ -422,28 +471,28 @@ export function ChatPage() {
               </p>
             ))}
           </div>
-          {images.length > 0 && (
-            <ul className="attach" aria-label="보낼 사진" ref={attachListRef}>
-              {images.map((img, i) => (
-                <li key={img.id} className="attach__item">
-                  <img src={img.url} alt="" />
-                  <span className="attach__name">
-                    {img.name} <span className="muted">{formatBytes(img.bytes)}</span>
-                  </span>
-                  <button
-                    type="button"
-                    className="attach__remove"
-                    aria-label={`${img.name} 빼기`}
-                    disabled={!canAttach}
-                    onClick={() => removeImage(img.id, i)}
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="chat__input">
+          <form className="composer" onSubmit={onSubmit}>
+            {images.length > 0 && (
+              <ul className="attach" aria-label="보낼 사진" ref={attachListRef}>
+                {images.map((img, i) => (
+                  <li key={img.id} className="attach__item">
+                    <img src={img.url} alt="" />
+                    <span className="attach__name">
+                      {img.name} <span className="muted">{formatBytes(img.bytes)}</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="attach__remove"
+                      aria-label={`${img.name} 빼기`}
+                      disabled={!canAttach}
+                      onClick={() => removeImage(img.id, i)}
+                    >
+                      <X aria-hidden />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <label className="visually-hidden" htmlFor="chat-input">
               메시지
             </label>
@@ -453,29 +502,66 @@ export function ChatPage() {
               rows={2}
               maxLength={4000}
               value={draft}
-              placeholder="메시지를 입력합니다. Enter로 보내고 Shift+Enter로 줄을 바꿉니다."
+              placeholder="예: 다음 주 화요일 오후에 6명 들어갈 회의실 잡아 줘"
+              aria-describedby="chat-input-hint"
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onKeyDown}
               disabled={!!waiting}
             />
-            <input ref={fileRef} id="chat-file" type="file" accept={ACCEPT} multiple hidden onChange={(e) => void onPick(e.target.files)} />
-            <Button
-              ref={attachRef}
-              onClick={() => fileRef.current?.click()}
-              disabled={!canAttach || images.length >= MAX_IMAGES}
-              aria-describedby="chat-file-hint"
-            >
-              {reading ? '사진 읽는 중' : '사진 첨부'}
-            </Button>
-            <span id="chat-file-hint" className="visually-hidden">
-              JPEG·PNG, {MAX_IMAGES}장까지, 한 장 5MB까지
+            <span id="chat-input-hint" className="visually-hidden">
+              Enter로 보내고 Shift+Enter로 줄을 바꿉니다.
             </span>
-            <Button type="submit" variant="primary" disabled={!canSend || (!draft.trim() && images.length === 0)}>
-              보내기
-            </Button>
-          </div>
-        </form>
-      </section>
+            <div className="composer__bar">
+              <input ref={fileRef} id="chat-file" type="file" accept={ACCEPT} multiple hidden onChange={(e) => void onPick(e.target.files)} />
+              <button
+                ref={attachRef}
+                type="button"
+                className="chip"
+                onClick={() => fileRef.current?.click()}
+                disabled={!canAttach || images.length >= MAX_IMAGES}
+                aria-describedby="chat-file-hint"
+              >
+                <Paperclip aria-hidden />
+                {reading ? '사진 읽는 중' : '사진 첨부'}
+              </button>
+              <span id="chat-file-hint" className="visually-hidden">
+                JPEG·PNG, {MAX_IMAGES}장까지, 한 장 5MB까지
+              </span>
+              {!selected && (
+                <Menu.Root>
+                  <Menu.Trigger className="chip" aria-label={`담당 AI: ${chosen ? agentLabel(chosen.name) : '자동 선택'}`}>
+                    <Sparkles aria-hidden />
+                    {chosen ? agentLabel(chosen.name) : '자동 선택'}
+                    <ChevronDown aria-hidden />
+                  </Menu.Trigger>
+                  <Menu.Portal>
+                    <Menu.Content className="menu" side="top" align="start" sideOffset={6}>
+                      <Menu.Label className="menu__label">담당 AI</Menu.Label>
+                      <Menu.RadioGroup value={agentChoice} onValueChange={setAgentChoice}>
+                        {[{ id: '', label: '자동 선택', local: false }, ...agents.map((a) => ({ id: a.id, label: agentLabel(a.name), local: a.modelPolicy === 'local_only' }))].map(
+                          (o) => (
+                            <Menu.RadioItem key={o.id || 'auto'} value={o.id} className="menu__item">
+                              <Menu.ItemIndicator className="menu__check">
+                                <Check aria-hidden />
+                              </Menu.ItemIndicator>
+                              {o.label}
+                              {o.local && <span className="menu__hint">사내 처리만</span>}
+                            </Menu.RadioItem>
+                          ),
+                        )}
+                      </Menu.RadioGroup>
+                    </Menu.Content>
+                  </Menu.Portal>
+                </Menu.Root>
+              )}
+              <span className="composer__spacer" />
+              <button type="submit" className="send" aria-label="보내기" disabled={!canSend || (!draft.trim() && images.length === 0)}>
+                <ArrowUp aria-hidden />
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
     </div>
   )
 }

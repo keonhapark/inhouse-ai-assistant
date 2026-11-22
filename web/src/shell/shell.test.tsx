@@ -97,7 +97,7 @@ describe('명령 팔레트', () => {
     expect(await screen.findByText(/입사 1년이 지나면 연차 15일/)).toBeInTheDocument()
     await user.keyboard('{Control>}k{/Control}')
     await user.click(within(await screen.findByRole('dialog')).getByRole('option', { name: '새 대화' }))
-    expect(await screen.findByText(/무엇을 도와드릴까요/)).toBeInTheDocument()
+    expect(await screen.findByText(/무엇을 할지 적어 보세요/)).toBeInTheDocument()
     expect(screen.queryByText(/입사 1년이 지나면 연차 15일/)).toBeNull()
   })
 

@@ -49,9 +49,9 @@ describe('채팅 사진 첨부', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
 
     await user.click(screen.getByRole('button', { name: '보내기' }))
-    const card = await screen.findByRole('region', { name: '실행 미리보기: 경비 정산' })
-    expect(within(card).getByText('이미지에서 읽은 값(확인 필요)')).toBeInTheDocument()
-    expect(within(card).getByText(/사진과 맞는지 확인한 뒤 실행해 주세요/)).toBeInTheDocument()
+    const card = await screen.findByRole('region', { name: '실행 전 확인: 경비 정산 상신' })
+    expect(within(card).getByText('사진에서 읽은 값')).toBeInTheDocument()
+    expect(within(card).getByText('영수증과 맞는지 확인해 주세요.')).toBeInTheDocument()
     // 양식 필드 이름·원 단위·결재선(이름·직급·부서)만 보이고, API 원래 값은 "자세히" 안에 있습니다(#556)
     expect(await within(card).findByText('가맹점')).toBeInTheDocument()
     expect(within(card).getByText('42,000원')).toBeInTheDocument()
@@ -69,15 +69,15 @@ describe('채팅 사진 첨부', () => {
     expect(body.attachments[0].kind).toBe('image')
     expect(body.attachments[0].dataUrl).toMatch(/^data:image\/png;base64,/)
 
-    await user.click(within(card).getByRole('button', { name: '실행' }))
-    expect(await screen.findByRole('region', { name: '실행한 일' })).toBeInTheDocument()
+    await user.click(within(card).getByRole('button', { name: '경비 정산 상신' }))
+    expect(await screen.findByRole('region', { name: '완료한 일' })).toBeInTheDocument()
   })
 
   it('사진 없이 보낸 턴의 카드에는 확인 필요 표시가 없습니다', async () => {
     const user = renderChat()
     await user.type(await screen.findByLabelText('메시지'), '결재 회수{Enter}')
-    const card = await screen.findByRole('region', { name: '실행 미리보기: 결재 회수' })
-    expect(within(card).queryByText('이미지에서 읽은 값(확인 필요)')).toBeNull()
+    const card = await screen.findByRole('region', { name: '실행 전 확인: 결재 회수' })
+    expect(within(card).queryByText('사진에서 읽은 값')).toBeNull()
   })
 
   it('형식이 다르거나 5MB를 넘거나 3장을 넘으면 붙이지 않고 이유를 알립니다', async () => {
@@ -112,7 +112,7 @@ describe('채팅 사진 첨부', () => {
 describe('채팅 사진 첨부(기록·추정·되돌리기)', () => {
   const approval = (fromAttachments?: boolean) => ({
     type: 'approval_required', conversationId: 'c1', seq: 2,
-    approval: { approvalId: 'ap-x', tool: 'expense_request', toolLabel: '경비 정산', risk: 'reversible_write',
+    approval: { approvalId: 'ap-x', tool: 'expense_request', toolLabel: '경비 정산 상신', risk: 'reversible_write',
       expiresAt: '2999-01-01T00:00:00Z', ...(fromAttachments === undefined ? {} : { fromAttachments }),
       preview: { dryRun: true, operation: 'x', summary: '경비 정산', changes: [], undoable: true } },
   })
@@ -132,8 +132,8 @@ describe('채팅 사진 첨부(기록·추정·되돌리기)', () => {
     const list = await screen.findByRole('navigation', { name: '대화 목록' })
     await user.click(await within(list).findByRole('button', { name: /영수증/ }))
     expect(await screen.findByText('사진 1장 첨부(기록에는 사진을 남기지 않습니다)')).toBeInTheDocument()
-    const card = screen.getByRole('region', { name: '실행 미리보기: 경비 정산' })
-    expect(within(card).getByText('이미지에서 읽은 값(확인 필요)')).toBeInTheDocument()
+    const card = screen.getByRole('region', { name: '실행 전 확인: 경비 정산 상신' })
+    expect(within(card).getByText('사진에서 읽은 값')).toBeInTheDocument()
   })
 
   it.each([undefined, false])('fromAttachments가 %s여도 마지막 카드 뒤에 사진을 보낸 적이 있으면 확인 필요를 붙입니다(되묻고 글로 답한 턴)', async (fromAttachments) => {
@@ -153,8 +153,8 @@ describe('채팅 사진 첨부(기록·추정·되돌리기)', () => {
     await user.click(screen.getByRole('button', { name: '보내기' }))
     await screen.findByText('분류가 식대 맞나요?')
     await user.type(screen.getByLabelText('메시지'), '네{Enter}')
-    const card = await screen.findByRole('region', { name: '실행 미리보기: 경비 정산' })
-    expect(within(card).getByText('이미지에서 읽은 값(확인 필요)')).toBeInTheDocument()
+    const card = await screen.findByRole('region', { name: '실행 전 확인: 경비 정산 상신' })
+    expect(within(card).getByText('사진에서 읽은 값')).toBeInTheDocument()
   })
 
   it('사진이 거절되면(413) 입력하던 글과 사진을 되돌리고, 사진 없이 보낼 때는 attachments를 싣지 않습니다', async () => {
@@ -210,7 +210,7 @@ describe('채팅 사진 첨부(기록·추정·되돌리기)', () => {
     await user.upload(fileInput(), png())
     await user.click(screen.getByRole('button', { name: '보내기' }))
     await user.click(await screen.findByRole('button', { name: '다시 보내기' }))
-    await screen.findByRole('region', { name: '실행 미리보기: 경비 정산' })
+    await screen.findByRole('region', { name: '실행 전 확인: 경비 정산 상신' })
     expect((bodies[1].attachments as unknown[]).length).toBe(1)
   })
 })

@@ -286,6 +286,16 @@ export const inboxHandlers = [
     return HttpResponse.json({ items })
   }),
 
+  // 알림(툴바 종 모양): 내 결재 차례인 문서마다 하나. 모의 서버는 읽음 상태를 두지 않습니다
+  http.get(api('/notifications'), ({ request }) => {
+    const me = employeeForToken(request.headers.get('Authorization'))
+    if (!me) return unauthorized()
+    const items: Schemas['Notification'][] = docs
+      .filter((d) => inBox(me, d, 'inbox'))
+      .map((d) => ({ id: `ntf-${d.id}`, kind: 'approval_turn', message: `${d.title} 결재 차례입니다.`, documentId: d.id, createdAt: d.createdAt, read: false }))
+    return HttpResponse.json({ items })
+  }),
+
   http.get(api('/inbox/:id'), ({ request, params }) => {
     const me = employeeForToken(request.headers.get('Authorization'))
     if (!me) return unauthorized()

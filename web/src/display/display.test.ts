@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Schemas } from '../api/client'
-import { conversationMeta } from './conversation'
+import { conversationRow } from './conversation'
 import { formatDate, formatDateRange, formatDateTime, formatWhen, formatWon } from './format'
-import { roleName, toolName } from './names'
+import { agentLabel, roleName, toolName } from './names'
 import { formRows, previewView } from './preview'
 
 const expense: Schemas['ApprovalForm'] = {
@@ -58,10 +58,15 @@ describe('형식', () => {
   })
 
   it('도구·역할 이름, 모르면 그대로', () => {
-    expect(toolName('expense_request')).toBe('경비 정산 올리기')
+    expect(toolName('expense_request')).toBe('경비 정산 상신')
     expect(toolName('new_tool')).toBe('new_tool')
     expect(roleName('sales_staff')).toBe('영업 담당')
     expect(roleName('x')).toBe('x')
+  })
+
+  it('대화 안의 에이전트 이름은 "○○ 담당 AI", 전사 비서는 그대로', () => {
+    expect(agentLabel('재무')).toBe('재무 담당 AI')
+    expect(agentLabel('전사 비서')).toBe('전사 비서')
   })
 })
 
@@ -69,8 +74,12 @@ describe('대화 목록', () => {
   it('에이전트·상태·시각으로 같은 제목의 대화를 구별합니다', () => {
     const now = new Date(2026, 10, 22, 20, 0)
     const base = { conversationId: 'c', agentId: 'finance', agentName: '재무', title: '이 영수증으로…', createdAt: new Date(2026, 10, 22, 11, 17).toISOString() }
-    expect(conversationMeta({ ...base, status: 'awaiting_approval', updatedAt: new Date(2026, 10, 22, 11, 20).toISOString() }, now)).toBe('재무 · 승인 대기 · 오늘 11:20')
-    expect(conversationMeta({ ...base, agentName: null, status: 'active' }, now)).toBe('에이전트 미정 · 오늘 11:17')
+    expect(conversationRow({ ...base, status: 'awaiting_approval', updatedAt: new Date(2026, 10, 22, 11, 20).toISOString() }, now)).toEqual({
+      agent: '재무 담당 AI',
+      status: { label: '확인 필요', tone: 'orange' },
+      when: '오늘 11:20',
+    })
+    expect(conversationRow({ ...base, agentName: null, status: 'active' }, now)).toEqual({ agent: '담당 AI 정하는 중', status: null, when: '오늘 11:17' })
   })
 })
 

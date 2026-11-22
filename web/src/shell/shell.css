@@ -412,3 +412,156 @@
   color: var(--text-2);
   text-align: center;
 }
+
+/* 화면 머리(ux/design-system.md 3.1): 높이 52px, 제목 + 보조 글 … 오른쪽 알림 */
+.toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--toolbar-h);
+  flex: none;
+  padding: 0 var(--space-6);
+  border-bottom: 0.5px solid var(--sep);
+  background: var(--surface);
+}
+
+.toolbar__title {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar__sub {
+  flex: none;
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+}
+
+.toolbar__spacer {
+  flex: 1;
+}
+
+.toolbar__bell {
+  position: relative;
+}
+
+.toolbar__dot {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-full);
+  background: var(--danger);
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
+
+.notifications {
+  width: 300px;
+}
+
+.notifications__item {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2);
+}
+
+.notifications__when,
+.notifications__empty {
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}
+
+.notifications__empty {
+  margin: 0;
+  padding: var(--space-2);
+}
+
+.menu__hint {
+  margin-left: auto;
+  padding-left: var(--space-3);
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}
+
+/* 상태 표시(3.3): 7px 점 + 글자. 면을 깔지 않습니다 */
+.status {
+  --dot: var(--neutral);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
+
+.status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: var(--r-full);
+  background: var(--dot);
+}
+
+.status--green {
+  --dot: var(--success);
+}
+
+.status--orange {
+  --dot: var(--warning);
+}
+
+.status--red {
+  --dot: var(--danger);
+}
+
+.status--blue {
+  --dot: var(--accent);
+}
+
+.status--gray {
+  --dot: var(--neutral);
+}
+
+/* 외부 AI 사용: 회색 점 + 지구 아이콘(2.2절), 종료 같은 회색 상태와 구별합니다 */
+.status svg {
+  width: 12px;
+  height: 12px;
+  margin-left: -2px;
+}
+
+/* 칩(입력창 왼쪽 아래 사진 첨부·자동 선택) */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--fill-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+}
+
+.chip svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.chip:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 999px var(--pressed);
+}
+
+.chip:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: default;
+}
