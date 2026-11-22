@@ -21,10 +21,13 @@ export class User {
     this.shots = []
   }
 
-  async #act(kind, label, loc, fn) {
+  // 이름이 같은 요소가 둘 이상이면 어느 것을 누를지 모르므로 막힘으로 봅니다(재설계 뒤 조용히 다른 것을 누르지 않게).
+  async #act(kind, label, loc, fn, timeoutMs = this.timeoutMs) {
     const t0 = Date.now()
     try {
-      await loc.first().waitFor({ state: 'visible', timeout: this.timeoutMs })
+      await loc.first().waitFor({ state: 'visible', timeout: timeoutMs })
+      const n = await loc.count()
+      if (n > 1 && kind !== 'see') throw new Error(`같은 이름의 요소가 ${n}개입니다`)
       await fn(loc.first())
     } catch (err) {
       this.steps.push({ kind, label, ok: false, ms: Date.now() - t0 })
@@ -40,9 +43,10 @@ export class User {
     })
   }
 
-  /** 체크박스·라디오도 사람에게는 클릭 한 번입니다. */
+  /** 체크박스·라디오도 사람에게는 클릭 한 번입니다. 이미 원하는 상태면 누르지 않고 세지 않습니다. */
   check(loc, label, on = true) {
     return this.#act('click', label, loc, async (l) => {
+      if ((await l.isChecked()) === on) return
       await l.setChecked(on)
       this.counts.clicks++
     })
@@ -73,9 +77,8 @@ export class User {
   /** 첨부 버튼을 눌러 파일 고르기 창에서 파일을 고릅니다(클릭 1 + 파일 1). */
   upload(loc, files, label) {
     return this.#act('upload', label, loc, async (l) => {
-      const chooser = this.page.waitForEvent('filechooser', { timeout: this.timeoutMs })
-      await l.click()
-      ;(await chooser).setFiles(files)
+      const [chooser] = await Promise.all([this.page.waitForEvent('filechooser', { timeout: this.timeoutMs }), l.click()])
+      await chooser.setFiles(files)
       this.counts.clicks++
       this.counts.files += files.length
     })
@@ -83,7 +86,12 @@ export class User {
 
   /** 눈으로 찾는 단계입니다. 조작 수는 늘지 않지만 단계로 셉니다. */
   see(loc, label, timeoutMs = this.timeoutMs) {
-    return this.#act('see', label, loc, (l) => l.waitFor({ state: 'visible', timeout: timeoutMs }))
+    return this.#act('see', label, loc, async () => {}, timeoutMs)
+  }
+
+  /** 조작 단계 수입니다. 눈으로 찾는 단계(see)는 스크립트마다 넣는 수가 달라 과업끼리 견줄 때 뺍니다. */
+  get actions() {
+    return this.steps.filter((s) => s.kind !== 'see').length
   }
 
   async shot(name) {

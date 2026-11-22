@@ -28,6 +28,18 @@ async function send(u, page, text) {
 
 const txt = async (loc) => ((await loc.count()) ? (await loc.first().innerText()).replace(/\s+/g, ' ') : '')
 
+/** 표에서 머리글 이름이 header인 열의 칸 글자들입니다. 열이 없으면 빈 배열입니다. */
+async function column(table, header) {
+  return table.evaluate((el, h) => {
+    const heads = [...el.querySelectorAll('thead th, thead td')].map((x) => x.textContent.trim())
+    const i = heads.indexOf(h)
+    if (i < 0) return []
+    return [...el.querySelectorAll('tbody tr')].map((r) => r.children[i]?.textContent.trim() ?? '').filter(Boolean)
+  }, header)
+}
+/** 금지어만 보는 판정은 글이 비었을 때 통과하지 않게 합니다. */
+const clean = (t, bad) => t.trim().length > 0 && !bad.test(t)
+
 export const tasks = [
   {
     id: 'E1',
@@ -51,8 +63,8 @@ export const tasks = [
       judge('금액이 원 단위 쉼표 형식(42,000원)으로 보인다', /42,000\s*원/.test(t), t)
       judge('값 이름이 한국어(가맹점·사용일·금액)로 보인다', /가맹점/.test(t) && /사용일|날짜/.test(t), t)
       judge('누가 결재하는지(결재선)가 보인다', /결재선|팀장|서도윤/.test(t), t)
-      judge('사진에서 읽은 값이라 확인이 필요하다는 표시가 보인다', /사진|이미지/.test(t), t)
-      await u.click(card.getByRole('button', { name: '실행' }), '실행')
+      judge('사진에서 읽은 값이라 확인이 필요하다는 표시가 보인다', /(사진|이미지)[^.]{0,30}(확인 필요|확인한 뒤|맞는지)/.test(t), t)
+      await u.click(card.getByRole('button', { name: '실행', exact: true }), '실행')
       await u.see(page.getByText(/올렸습니다/).last(), '결과 안내', 10000)
       await u.shot('done')
       judge('경비 정산을 실행했다', true)
@@ -74,7 +86,7 @@ export const tasks = [
       await u.see(done, '실행한 일 카드', 10000)
       const t = await txt(done)
       judge('예약한 회의실·시각이 결과에 보인다', /회의실/.test(t) && /\d{1,2}:\d{2}/.test(t), t)
-      await u.click(done.getByRole('button', { name: '되돌리기' }), '되돌리기')
+      await u.click(done.getByRole('button', { name: '되돌리기', exact: true }), '되돌리기')
       await u.see(done.getByText('되돌림'), '되돌림 표시')
       await u.shot('undone')
       judge('되돌린 뒤 되돌렸다는 표시가 보인다', true)
@@ -116,14 +128,14 @@ export const tasks = [
       ['확인', '휴가 기간·종류가 한국어 이름으로 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '승인함' }), '승인함으로 이동')
+      await u.click(page.getByRole('link', { name: '승인함', exact: true }), '승인함으로 이동')
       await u.click(page.getByRole('tab', { name: '올린 것' }), '올린 것 탭')
       await u.click(page.getByRole('button', { name: /연차 휴가 신청/ }), '문서 열기')
       const doc = page.getByRole('region', { name: /결재 문서/ })
       await u.see(doc, '결재 문서 상세')
       await u.shot('doc')
       const t = await txt(doc)
-      judge('지금 누구 차례인지 보인다', /서도윤/.test(t) && /대기|차례|진행/.test(t), t)
+      judge('지금 누구 차례인지 보인다', /서도윤.{0,15}(차례|대기)/.test(t), t)
       judge('휴가 기간·종류가 한국어 이름으로 보인다', /시작일/.test(t) && /종류/.test(t) && !/start_date|leave_type/.test(t), t)
       judge('올린 결재 문서를 열었다', true)
     },
@@ -145,8 +157,8 @@ export const tasks = [
       await u.shot('preview')
       const t = await txt(card)
       judge('되돌릴 수 없다는 경고가 실행 전에 보인다', /되돌릴 수 없/.test(t), t)
-      judge('무엇이 어떻게 바뀌는지 한국어로 보인다', !/\b(status|pending|withdrawn|approval)\b/.test(t), t)
-      await u.click(card.getByRole('button', { name: '실행' }), '실행')
+      judge('무엇이 어떻게 바뀌는지 한국어로 보인다', clean(t, /\b(status|pending|withdrawn|approval)\b/), t)
+      await u.click(card.getByRole('button', { name: '실행', exact: true }), '실행')
       await u.see(page.getByText(/회수했습니다/).last(), '결과 안내', 10000)
       await u.shot('done')
       judge('회수를 실행했다', true)
@@ -163,15 +175,15 @@ export const tasks = [
       ['확인', '승인한 문서가 처리함에 있다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '승인함' }), '승인함으로 이동')
+      await u.click(page.getByRole('link', { name: '승인함', exact: true }), '승인함으로 이동')
       await u.click(page.getByRole('button', { name: /연차 휴가 신청/ }), '문서 열기')
       const doc = page.getByRole('region', { name: /결재 문서/ })
       await u.see(doc, '결재 문서 상세')
       await u.shot('doc')
       const t = await txt(doc)
-      judge('승인 전에 기간·종류·사유가 보인다', /11-27|11\/27|11월 27일|11\. 27/.test(t) && /연차/.test(t) && /개인 사정/.test(t), t)
-      await u.click(doc.getByRole('button', { name: '승인' }), '승인')
-      await u.see(page.getByRole('status'), '처리 안내')
+      judge('승인 전에 기간·종류·사유가 보인다', /11-27|11\/27|11월 27일|11\. 27/.test(t) && /종류\s*연차/.test(t) && /개인 사정/.test(t), t)
+      await u.click(doc.getByRole('button', { name: '승인', exact: true }), '승인')
+      await u.see(page.getByRole('status').filter({ hasText: /승인했습니다/ }), '처리 안내')
       await u.click(page.getByRole('tab', { name: '처리함' }), '처리함 탭')
       const found = await page
         .getByRole('tabpanel', { name: '처리함' })
@@ -195,7 +207,7 @@ export const tasks = [
       ['확인', '이 결재 다음 단계(누가 이어 받는지)가 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '승인함' }), '승인함으로 이동')
+      await u.click(page.getByRole('link', { name: '승인함', exact: true }), '승인함으로 이동')
       await u.click(page.getByRole('tab', { name: '대결' }), '대결 탭')
       await u.click(page.getByRole('button', { name: /출장 경비/ }), '문서 열기')
       const doc = page.getByRole('region', { name: /결재 문서/ })
@@ -205,8 +217,8 @@ export const tasks = [
       judge('원 결재자(누구 대신인지)가 보인다', /윤서진/.test(t), t)
       judge('금액이 원 단위 쉼표 형식으로 보인다', /320,000/.test(t), t)
       judge('이 결재 다음 단계(누가 이어 받는지)가 보인다', /임채원/.test(t), t)
-      await u.click(doc.getByRole('button', { name: '승인' }), '승인')
-      await u.see(page.getByRole('status'), '처리 안내')
+      await u.click(doc.getByRole('button', { name: '승인', exact: true }), '승인')
+      await u.see(page.getByRole('status').filter({ hasText: /승인했습니다/ }), '처리 안내')
       await u.shot('done')
       judge('대결 문서를 승인했다', true)
     },
@@ -222,7 +234,7 @@ export const tasks = [
       ['확인', '등록한 위임이 목록에 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '승인함' }), '승인함으로 이동')
+      await u.click(page.getByRole('link', { name: '승인함', exact: true }), '승인함으로 이동')
       const panel = page.getByRole('complementary', { name: '대결 설정' })
       await u.fill(panel.getByRole('searchbox', { name: '이름으로 찾기' }), '한지우', '대리인 이름 찾기')
       await u.check(panel.getByRole('radio', { name: /한지우/ }), '대리인 고르기')
@@ -238,10 +250,10 @@ export const tasks = [
       const t = await txt(pv)
       judge(
         '등록 전 미리보기에 대리인·기간·범위가 한국어로 보인다',
-        /한지우/.test(t) && /휴가/.test(t) && !/\b(delegateId|formTypes|startsAt|emp-\d+)\b/.test(t),
+        /한지우/.test(t) && /휴가/.test(t) && clean(t, /\b(delegate\w*|formTypes|startsAt|leave|expense|purchase|delegation|emp-\d+)\b/),
         t,
       )
-      await u.click(pv.getByRole('button', { name: '등록' }), '등록')
+      await u.click(pv.getByRole('button', { name: '등록', exact: true }), '등록')
       await u.see(panel.getByText(/서도윤 → 한지우/), '위임 목록')
       await u.shot('done')
       judge('등록한 위임이 목록에 보인다', true)
@@ -259,14 +271,19 @@ export const tasks = [
       ['확인', '어느 직원·어느 대화의 요청인지 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '관리' }), '관리로 이동')
+      await u.click(page.getByRole('link', { name: '관리', exact: true }), '관리로 이동')
       await u.click(page.getByRole('tab', { name: '외부 전송 기록' }), '외부 전송 기록 탭')
-      const row = page.getByRole('tabpanel').getByText(/가림 \d+곳: .*전화번호/)
+      // 전화번호를 가린 기록 중 가장 최근(맨 위) 것을 엽니다.
+      const row = page.getByRole('tabpanel').getByText(/가림 \d+곳: .*전화번호/).first()
       await u.click(row, '전화번호 가림 기록 펼치기')
       await u.shot('egress')
       const t = await txt(page.getByRole('tabpanel'))
       judge('가린 자리가 본문에서 구별되어 보인다', /\[(전화번호|PHONE|가림)[^\]]*\]|<[A-Z_]+>/.test(t), t.slice(0, 400))
-      judge('어느 직원·어느 대화의 요청인지 보인다', /E\d{4}|emp-\d+|대화/.test(t), t.slice(0, 400))
+      // 펼친 기록 한 건 안에 직원(사번·이름)과 대화를 가리키는 것이 있어야 합니다.
+      const item = await txt(page.getByRole('tabpanel').getByRole('listitem').filter({ hasText: /전화번호/ }))
+      // 보낸 본문(system·user 이하)은 빼고 기록 머리만 봅니다. 본문 속 낱말로 통과하지 않게 합니다.
+      const head = item.split(/\b(system|user)\b/)[0]
+      judge('어느 직원·어느 대화의 요청인지 보인다', /(E\d{4}|emp-\d+|직원)/.test(head) && /(대화|conv)/i.test(head), head.slice(0, 400))
       judge('외부 전송 기록 한 건의 본문을 열었다', true)
     },
   },
@@ -281,14 +298,17 @@ export const tasks = [
       ['확인', '지금 보는 기간이 표 근처에 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '관리' }), '관리로 이동')
-      await u.click(page.getByRole('button', { name: '최근 7일' }), '최근 7일')
+      await u.click(page.getByRole('link', { name: '관리', exact: true }), '관리로 이동')
+      await u.click(page.getByRole('button', { name: '최근 7일', exact: true }), '최근 7일')
+      await u.see(page.getByText(/최근 7일을 보고/), '기간이 바뀜')
       const table = page.getByRole('region', { name: '에이전트별 표' })
       await u.see(table, '에이전트별 표')
       await u.shot('metrics')
-      const t = await txt(table)
-      judge('비용 단위가 분명하다(통화 표시)', /\$|원|USD/.test(t), t.slice(0, 300))
-      judge('지금 보는 기간이 표 근처에 보인다', /7일/.test(await txt(page.getByRole('main'))))
+      const cost = (await column(table, '외부 비용')).join(' ')
+      judge('비용 단위가 분명하다(통화 표시)', /(\$|₩|USD|KRW)\s?\d|\d\s?원/.test(cost), cost.slice(0, 300))
+      // 표를 감싼 절(제목 + 표) 안에 기간이 있어야 "표 근처"로 봅니다. 화면 맨 위 기간 문장은 세지 않습니다.
+      const section = await txt(page.getByRole('region', { name: '에이전트별', exact: true }))
+      judge('지금 보는 기간이 표 근처에 보인다', /7일|\d{1,2}\.\s?\d{1,2}\.?\s?[~–-]/.test(section), section.slice(0, 200))
       judge('지난 7일 에이전트별 표를 봤다', true)
     },
   },
@@ -303,17 +323,28 @@ export const tasks = [
       ['확인', '에이전트·작업이 사람이 읽는 이름으로 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '관리' }), '관리로 이동')
+      await u.click(page.getByRole('link', { name: '관리', exact: true }), '관리로 이동')
       await u.click(page.getByRole('tab', { name: '감사 로그' }), '감사 로그 탭')
       await u.select(page.getByRole('combobox', { name: '종류' }), '도구 차단', '종류: 도구 차단')
-      await u.click(page.getByRole('button', { name: '적용' }), '적용')
+      await u.click(page.getByRole('button', { name: '적용', exact: true }), '적용')
       const table = page.getByRole('region', { name: '감사 이벤트 표' })
-      await u.see(table.getByText('도구 차단').nth(1), '걸러진 행')
+      // 모든 행의 종류가 "도구 차단"이 될 때까지 기다립니다(필터 전 표를 세지 않게).
+      const filtered = await page
+        .waitForFunction(
+          (el) => {
+            const rows = [...el.querySelectorAll('tbody tr')]
+            return rows.length > 0 && rows.every((r) => r.textContent.includes('도구 차단'))
+          },
+          await table.elementHandle(),
+          { timeout: 5000 },
+        )
+        .then(() => true, () => false)
       await u.shot('audit')
-      const rows = await txt(table.locator('tbody'))
-      judge('직원이 이름으로 보인다', /[가-힣]{2,4}/.test(rows) && !/emp-\d+/.test(rows), rows.slice(0, 300))
-      judge('에이전트·작업이 사람이 읽는 이름으로 보인다', !/\b(assistant|hr|finance)\b/.test(rows), rows.slice(0, 300))
-      judge('도구 차단 이벤트를 걸러 봤다', true)
+      const people = (await column(table.getByRole('table'), '직원')).join(' | ')
+      const work = [...(await column(table.getByRole('table'), '에이전트')), ...(await column(table.getByRole('table'), '작업'))].join(' | ')
+      judge('직원이 이름으로 보인다', /[가-힣]{2,4}/.test(people) && clean(people, /emp-\d+|\bE\d{4}\b/), people.slice(0, 300))
+      judge('에이전트·작업이 사람이 읽는 이름으로 보인다', clean(work, /\b[a-z]+(_[a-z]+)+\b|\b[a-z]+[A-Z]\w*\b|\b(assistant|hr|finance|procurement)\b/), work.slice(0, 300))
+      judge('도구 차단 이벤트를 걸러 봤다', filtered)
     },
   },
   {
@@ -327,7 +358,7 @@ export const tasks = [
       ['확인', '왜 기대와 달랐는지 한 줄 이유가 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '평가' }), '평가로 이동')
+      await u.click(page.getByRole('link', { name: '평가', exact: true }), '평가로 이동')
       await u.select(page.getByRole('combobox', { name: '보기' }), '기대와 다른 회차가 있는 것만', '보기: 기대와 다름')
       const table = page.getByRole('region', { name: '시나리오별 결과 표' })
       // "이 프로젝트" 열(마지막 칸)이 기대와 다른 행을 눈으로 훑어 찾습니다.
@@ -339,10 +370,12 @@ export const tasks = [
       const first = row.getByRole('rowheader').getByRole('button')
       await u.see(first, '이 프로젝트 열이 기대와 다른 행 찾기')
       const name = await txt(first)
-      judge('시나리오가 사람이 읽는 제목으로 보인다', !/^[a-z0-9-]+$/.test(name.trim()), name)
+      judge('시나리오가 사람이 읽는 제목으로 보인다', clean(name, /^[\w.-]+$/), name)
+      // 상세는 버튼의 aria-controls로 찾습니다. 제목 글자가 바뀌어도 이어집니다.
+      const detailId = await first.getAttribute('aria-controls')
       await u.click(first, '시나리오 펼치기')
       await u.shot('scenario')
-      const t = await txt(page.locator(`[id="run-${name.trim()}"]`))
+      const t = detailId ? await txt(page.locator(`[id="${detailId}"]`)) : ''
       judge('왜 기대와 달랐는지 한 줄 이유가 보인다', /이유|원인|때문|부족 .+않음/.test(t), t.slice(0, 400))
       judge('기대와 다른 시나리오의 회차 상세를 열었다', true)
     },

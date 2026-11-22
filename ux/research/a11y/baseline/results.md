@@ -1,6 +1,6 @@
 # axe-core 점검 결과: baseline
 
-axe-core 4.14.1, 규칙 묶음 wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa, best-practice. web 모의 데이터 모드, 1280×800.
+axe-core 4.14.1, 규칙 묶음 wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa, best-practice. web 모의 데이터 모드(web 버전 `4988d0e`), 1280×800.
 
 | 화면 | 테마 | 위반 규칙 | 위반 요소 | critical | serious | moderate | minor | 규칙 |
 |---|---|---|---|---|---|---|---|---|

@@ -1,12 +1,14 @@
 // 과업 걸어 보기 실행기입니다.
-//   node walkthrough/run.mjs [--label baseline] [--only E1,A2]
+//   node walkthrough/run.mjs [--label baseline] [--only E1,A2] [--rebuild]
 // web을 모의 데이터 모드로 빌드해 띄우고, 브라우저 하나로 과업을 차례로 돌립니다.
 // 결과: research/walkthrough/<label>/results.json, results.md, shots/*.jpg
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+// --only를 주면 그 과업의 결과만 바꾸고 나머지는 그대로 둡니다.
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { chromium } from 'playwright'
 import { buildMockWeb, serve } from '../lib/serve.mjs'
+import { outcomeOf, summarize } from './outcome.mjs'
 import { personas, tasks } from './tasks.mjs'
 import { Blocked, User } from './user.mjs'
 
@@ -20,11 +22,23 @@ const { values: args } = parseArgs({
 const root = resolve(import.meta.dirname, '..')
 const outDir = resolve(root, 'research/walkthrough', args.label)
 const shotDir = resolve(outDir, 'shots')
-rmSync(outDir, { recursive: true, force: true })
+const only = args.only?.split(',')
+const jsonPath = resolve(outDir, 'results.json')
+
+// 전체 실행이면 폴더를 비우고, --only면 그 과업의 스크린샷만 지웁니다.
+let results = []
+if (only && existsSync(jsonPath)) {
+  results = JSON.parse(readFileSync(jsonPath, 'utf8')).results
+  for (const f of existsSync(shotDir) ? readdirSync(shotDir) : []) {
+    if (only.some((id) => f.startsWith(`${id}-`))) rmSync(resolve(shotDir, f))
+  }
+} else {
+  rmSync(outDir, { recursive: true, force: true })
+}
 mkdirSync(shotDir, { recursive: true })
 mkdirSync(resolve(root, '.cache'), { recursive: true })
 
-buildMockWeb({ force: args.rebuild })
+const webVersion = buildMockWeb({ force: args.rebuild })
 const { server, url } = await serve()
 const browser = await chromium.launch()
 
@@ -39,67 +53,65 @@ const receipt = resolve(root, '.cache/receipt.png')
   await p.close()
 }
 
-const only = args.only?.split(',')
-const results = []
+const meta = { label: args.label, at: new Date().toISOString(), mode: 'web 모의 데이터(msw)', web: webVersion, personas }
+const save = () => {
+  const order = new Map(tasks.map((t, i) => [t.id, i]))
+  results.sort((a, b) => order.get(a.id) - order.get(b.id))
+  writeFileSync(jsonPath, JSON.stringify({ meta, results }, null, 2) + '\n')
+  writeFileSync(resolve(outDir, 'results.md'), summarize(meta, results))
+}
+
 for (const task of tasks.filter((t) => !only || only.includes(t.id))) {
   const persona = personas[task.persona]
   const ctx = await browser.newContext({ viewport: persona.viewport, locale: 'ko-KR', timezoneId: 'Asia/Seoul' })
   const page = await ctx.newPage()
-  await page.goto(`${url}/login`)
-  await page.getByLabel('사번').fill(persona.account)
-  await page.getByLabel('비밀번호').fill('demo')
-  await page.getByRole('button', { name: '로그인' }).click()
-  await page.waitForURL(`${url}/`)
-
   const u = new User(page, { shotDir, taskId: task.id })
+  const names = new Set(task.criteria.map(([, name]) => name))
   const judged = new Map()
-  const judge = (name, pass, evidence) => judged.set(name, { pass: Boolean(pass), evidence: evidence?.slice?.(0, 500) })
+  const judge = (name, pass, evidence) => {
+    // 기준 이름이 어긋나면 그 기준이 조용히 "못 봄"으로 남으므로 바로 멈춥니다.
+    if (!names.has(name)) throw new Error(`${task.id}: criteria에 없는 기준입니다: ${name}`)
+    judged.set(name, { pass: Boolean(pass), evidence: evidence?.slice?.(0, 500) })
+  }
   const t0 = Date.now()
   let blocked = null
+  let error = null
   try {
+    await page.goto(`${url}/login`)
+    await page.getByLabel('사번').fill(persona.account)
+    await page.getByLabel('비밀번호').fill('demo')
+    await page.getByRole('button', { name: '로그인' }).click()
+    await page.waitForURL(`${url}/`)
     await task.run(u, page, { receipt, judge })
   } catch (err) {
-    if (!(err instanceof Blocked)) throw err
-    blocked = err.step
-    await u.shot('blocked')
+    if (err instanceof Blocked) {
+      blocked = err.step
+      await u.shot('blocked').catch(() => {})
+    } else {
+      // 스크립트 오류는 과업 실패와 다르게 남기고 다음 과업으로 갑니다.
+      error = String(err?.message ?? err).slice(0, 500)
+    }
   }
   const criteria = task.criteria.map(([kind, name]) => ({ kind, name, ...(judged.get(name) ?? { pass: null }) }))
-  const doneOk = criteria.filter((c) => c.kind === '완료').every((c) => c.pass)
-  const checkOk = criteria.filter((c) => c.kind === '확인').every((c) => c.pass)
-  const outcome = blocked || !doneOk ? '실패' : checkOk ? '성공' : '부분 성공'
+  const outcome = outcomeOf({ blocked, error, criteria })
+  results = results.filter((r) => r.id !== task.id)
   results.push({
     id: task.id,
     persona: persona.name,
     title: task.title,
     outcome,
     blocked,
+    error,
     counts: u.counts,
+    actions: u.actions,
     steps: u.steps,
     ms: Date.now() - t0,
     criteria,
     shots: u.shots,
   })
-  console.log(`${task.id} ${outcome}${blocked ? ` (${blocked})` : ''} 클릭 ${u.counts.clicks} 입력칸 ${u.counts.fields} 단계 ${u.steps.length}`)
+  save()
+  console.log(`${task.id} ${outcome}${blocked ? ` (${blocked})` : ''}${error ? ` 오류: ${error}` : ''} 클릭 ${u.counts.clicks} 입력칸 ${u.counts.fields} 조작 단계 ${u.actions}`)
   await ctx.close()
 }
 await browser.close()
 server.close()
-
-const meta = { label: args.label, at: new Date().toISOString(), mode: 'web 모의 데이터(msw)', personas }
-writeFileSync(resolve(outDir, 'results.json'), JSON.stringify({ meta, results }, null, 2) + '\n')
-
-const lines = [
-  `# 과업 걸어 보기 결과: ${args.label}`,
-  '',
-  '가상 사용자 결과입니다. 사람이 아니라 스크립트가 화면에 보이는 이름으로 요소를 찾아 조작했습니다. 데이터는 web 모의 데이터 모드(msw)입니다.',
-  '',
-  '| 과업 | 페르소나 | 결과 | 클릭 | 입력 칸(글자) | 키 | 단계 | 막힌 곳 | 못 채운 확인 기준 |',
-  '|---|---|---|---|---|---|---|---|---|',
-  ...results.map((r) => {
-    const miss = r.criteria.filter((c) => c.pass !== true).map((c) => c.name)
-    const c = r.counts
-    return `| ${r.id} ${r.title} | ${r.persona} | ${r.outcome} | ${c.clicks} | ${c.fields}(${c.chars}) | ${c.keys} | ${r.steps.length} | ${r.blocked ?? '-'} | ${miss.join('<br>') || '-'} |`
-  }),
-  '',
-]
-writeFileSync(resolve(outDir, 'results.md'), lines.join('\n'))

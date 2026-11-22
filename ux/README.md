@@ -20,10 +20,12 @@ cd ux
 npm ci
 npx playwright install --only-shell chromium   # 처음 한 번
 npm --prefix ../web ci                          # web 빌드에 필요
+npm test                                        # 판정·기준 이름 시험(브라우저 없음)
 npm run walk -- --label baseline                # → research/walkthrough/baseline/
 npm run a11y -- --label baseline                # → research/a11y/baseline/
 node research/wireframes/render.mjs             # 와이어프레임 PNG
 ```
 
-- web 빌드는 `.cache/web-mock/`에 한 번 만들고 다시 씁니다. web이 바뀌었으면 `npm run walk -- --rebuild`로 다시 빌드합니다.
+- web 빌드는 `.cache/web-mock/`에 두고, `web/`의 커밋이나 작업 트리가 바뀌면 다시 빌드합니다. 결과 파일에 잰 web 버전을 남깁니다. 강제로 다시 빌드하려면 `--rebuild`를 줍니다.
+- `--only E1,A2`는 그 과업의 결과만 바꾸고 나머지 결과는 그대로 둡니다.
 - 재설계 뒤 비교(#564)는 `--label after`처럼 다른 이름으로 돌려 같은 폴더 구조로 남깁니다.

@@ -3,7 +3,7 @@
 // 밝음·어두움(prefers-color-scheme) 두 번 돌리고, 화면별 위반 규칙·영향도·요소 수를 셉니다.
 // 화면마다 전체 스크린샷(shots/)을 남겨 휴리스틱 평가와 전후 비교에 씁니다.
 // 자동 점검은 WCAG 문제의 일부만 잡습니다. 키보드 순서·스크린리더 낭독은 따로 봐야 합니다.
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import AxeBuilder from '@axe-core/playwright'
@@ -14,6 +14,7 @@ const { values: args } = parseArgs({ options: { label: { type: 'string', default
 const root = resolve(import.meta.dirname, '..')
 const outDir = resolve(root, 'research/a11y', args.label)
 const shotDir = resolve(outDir, 'shots')
+rmSync(outDir, { recursive: true, force: true }) // 이름이 바뀐 화면의 옛 캡처가 남지 않게
 mkdirSync(shotDir, { recursive: true })
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice']
@@ -117,7 +118,7 @@ const SLUG = {
   '평가 리포트': 'eval',
 }
 
-buildMockWeb()
+const webVersion = buildMockWeb()
 const { server, url } = await serve()
 const browser = await chromium.launch()
 const out = []
@@ -125,9 +126,17 @@ for (const scheme of ['light', 'dark']) {
   for (const [name, account, prepare] of screens) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'ko-KR', colorScheme: scheme })
     const page = await ctx.newPage()
-    if (account) await login(page, url, account)
-    else await page.goto(`${url}/login`)
-    await prepare(page)
+    try {
+      if (account) await login(page, url, account)
+      else await page.goto(`${url}/login`)
+      await prepare(page)
+    } catch (err) {
+      // 화면을 만들지 못하면 그 화면만 오류로 남기고 다음으로 갑니다(빈 화면을 점검해 0건으로 세지 않게).
+      out.push({ scheme, screen: name, error: String(err?.message ?? err).slice(0, 300), violations: [], incomplete: [] })
+      console.log(`${scheme} ${name}: 화면을 만들지 못함`)
+      await ctx.close()
+      continue
+    }
     await page.screenshot({ path: `${shotDir}/${scheme}-${SLUG[name]}.jpg`, type: 'jpeg', quality: 70, fullPage: true })
     const r = await new AxeBuilder({ page }).withTags(TAGS).analyze()
     const violations = r.violations.map((v) => ({
@@ -147,20 +156,21 @@ await browser.close()
 server.close()
 
 const axeVersion = (await import('axe-core/package.json', { with: { type: 'json' } })).default.version
-writeFileSync(resolve(outDir, 'results.json'), JSON.stringify({ meta: { label: args.label, at: new Date().toISOString(), axeVersion, tags: TAGS }, screens: out }, null, 2) + '\n')
+writeFileSync(resolve(outDir, 'results.json'), JSON.stringify({ meta: { label: args.label, at: new Date().toISOString(), web: webVersion, axeVersion, tags: TAGS }, screens: out }, null, 2) + '\n')
 
 // 요약 표: 화면 × 테마, 영향도별 요소 수
 const IMPACTS = ['critical', 'serious', 'moderate', 'minor']
 const lines = [
   `# axe-core 점검 결과: ${args.label}`,
   '',
-  `axe-core ${axeVersion}, 규칙 묶음 ${TAGS.join(', ')}. web 모의 데이터 모드, 1280×800.`,
+  `axe-core ${axeVersion}, 규칙 묶음 ${TAGS.join(', ')}. web 모의 데이터 모드(web 버전 \`${webVersion}\`), 1280×800.`,
   '',
   '| 화면 | 테마 | 위반 규칙 | 위반 요소 | critical | serious | moderate | minor | 규칙 |',
   '|---|---|---|---|---|---|---|---|---|',
   ...out.map((s) => {
     const by = (i) => s.violations.filter((v) => v.impact === i).reduce((a, v) => a + v.nodes, 0)
     const total = s.violations.reduce((a, v) => a + v.nodes, 0)
+    if (s.error) return `| ${s.screen} | ${s.scheme === 'light' ? '밝음' : '어두움'} | 오류: ${s.error} | | | | | | |`
     return `| ${s.screen} | ${s.scheme === 'light' ? '밝음' : '어두움'} | ${s.violations.length} | ${total} | ${IMPACTS.map(by).join(' | ')} | ${s.violations.map((v) => `\`${v.id}\`(${v.nodes})`).join(' ') || '-'} |`
   }),
   '',
