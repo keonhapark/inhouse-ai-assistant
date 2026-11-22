@@ -90,6 +90,11 @@ describe('운영 화면', () => {
     await openMenu(user, '감사 로그')
     const table = await screen.findByRole('table')
     expect(within(table).getAllByRole('row')).toHaveLength(21)
+    // 직원·에이전트·작업은 이름 뒤에 ID를 작게 붙입니다
+    const second = within(table).getAllByRole('row')[2]
+    await vi.waitFor(() => expect(second).toHaveTextContent('서도윤 emp-2001'))
+    expect(second).toHaveTextContent('재무 finance')
+    expect(second).toHaveTextContent('결재 회수 approval_withdraw')
     await user.click(screen.getByRole('button', { name: '더 보기' }))
     await vi.waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row').length).toBeGreaterThan(21))
 

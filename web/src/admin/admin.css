@@ -256,6 +256,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.audit__id {
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}
+
 .audit__detail {
   font-size: var(--fs-caption);
 }

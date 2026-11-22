@@ -6,7 +6,7 @@ import { formatUsd, percent, percentText, useLoad } from './load'
 type Metrics = Schemas['OpsMetrics']
 
 const BLOCK_CODE: Record<string, string> = {
-  agent_not_callable: '부를 수 없는 에이전트',
+  agent_not_callable: '사용할 수 없는 에이전트',
   tool_not_allowed: '허용 안 된 도구',
   trust_violation: '신뢰 등급 위반',
   policy_denied: '위험 정책 거절',
