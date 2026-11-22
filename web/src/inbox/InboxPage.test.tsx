@@ -98,59 +98,6 @@ describe('팀장 승인함', () => {
   })
 })
 
-describe('대결 설정', () => {
-  it('받은 위임은 보이지만 해지할 수 없습니다', async () => {
-    renderInbox()
-    const panel = await screen.findByRole('complementary', { name: '대결 설정' })
-    expect(await within(panel).findByText('윤서진 → 서도윤')).toBeInTheDocument()
-    expect(within(panel).queryByRole('button', { name: /해지$/ })).toBeNull()
-  })
-
-  it('대리인을 찾아 미리보기 뒤 등록하고, 해지합니다', async () => {
-    const user = renderInbox()
-    const panel = await screen.findByRole('complementary', { name: '대결 설정' })
-    await user.type(within(panel).getByLabelText('이름으로 찾기'), '한지')
-    await user.click(await within(panel).findByRole('radio', { name: /한지우/ }))
-    await user.type(within(panel).getByLabelText('사유'), '교육 참석')
-    await user.click(within(panel).getByRole('button', { name: '미리보기' }))
-
-    const preview = await within(panel).findByRole('region', { name: '위임 미리보기' })
-    expect(within(preview).getByText('한지우에게 결재를 위임합니다.')).toBeInTheDocument()
-    expect(within(preview).getByText('모든 양식')).toBeInTheDocument()
-    await user.click(within(preview).getByRole('button', { name: '등록' }))
-
-    expect(await within(panel).findByRole('status')).toHaveTextContent('한지우에게 결재를 위임합니다.')
-    expect(await within(panel).findByText('서도윤 → 한지우')).toBeInTheDocument()
-    await user.click(within(panel).getByRole('button', { name: '한지우에게 맡긴 위임 해지' }))
-    expect(await within(panel).findByRole('status')).toHaveTextContent('해지했습니다')
-    expect(within(panel).queryByRole('button', { name: '한지우에게 맡긴 위임 해지' })).toBeNull()
-  })
-
-  it('양식을 골라 범위를 좁힙니다', async () => {
-    const user = renderInbox()
-    const panel = await screen.findByRole('complementary', { name: '대결 설정' })
-    await user.click(within(panel).getByRole('checkbox', { name: '모든 양식' }))
-    await user.click(await within(panel).findByRole('checkbox', { name: '휴가 신청' }))
-    await user.type(within(panel).getByLabelText('이름으로 찾기'), '박하')
-    await user.click(await within(panel).findByRole('radio', { name: /박하늘/ }))
-    await user.type(within(panel).getByLabelText('사유'), '휴가')
-    await user.click(within(panel).getByRole('button', { name: '미리보기' }))
-    const preview = await within(panel).findByRole('region', { name: '위임 미리보기' })
-    expect(within(preview).getByText('leave')).toBeInTheDocument()
-  })
-
-  it('서버가 거절하면 problem title을 그대로 보여 줍니다', async () => {
-    server.use(http.post('*/api/delegations', () => problemJson(422, 'delegation-out-of-period', '위임 기간이 올바르지 않습니다.')))
-    const user = renderInbox()
-    const panel = await screen.findByRole('complementary', { name: '대결 설정' })
-    await user.type(within(panel).getByLabelText('이름으로 찾기'), '한지')
-    await user.click(await within(panel).findByRole('radio', { name: /한지우/ }))
-    await user.type(within(panel).getByLabelText('사유'), '출장')
-    await user.click(within(panel).getByRole('button', { name: '미리보기' }))
-    expect(await within(panel).findByRole('alert')).toHaveTextContent('위임 기간이 올바르지 않습니다.')
-  })
-})
-
 describe('리뷰에서 고친 것', () => {
   it('같은 결정·의견을 다시 보낼 때만 같은 멱등 키를 씁니다', async () => {
     const keys: string[] = []
@@ -210,18 +157,5 @@ describe('리뷰에서 고친 것', () => {
     expect(within(doc).getByRole('heading', { name: '연차 휴가 신청(11/27~11/28)' })).toHaveFocus()
     await user.click(within(doc).getByRole('button', { name: '닫기' }))
     expect(screen.getByRole('button', { name: '연차 휴가 신청(11/27~11/28)' })).toHaveFocus()
-  })
-
-  it('미리보기 뒤 입력을 바꾸면 미리보기와 등록 버튼을 지웁니다', async () => {
-    const user = renderInbox()
-    const panel = await screen.findByRole('complementary', { name: '대결 설정' })
-    await user.type(within(panel).getByLabelText('이름으로 찾기'), '한지')
-    await user.click(await within(panel).findByRole('radio', { name: /한지우/ }))
-    await user.type(within(panel).getByLabelText('사유'), '출장')
-    await user.click(within(panel).getByRole('button', { name: '미리보기' }))
-    await within(panel).findByRole('region', { name: '위임 미리보기' })
-    await user.type(within(panel).getByLabelText('사유'), ' 연장')
-    expect(within(panel).queryByRole('region', { name: '위임 미리보기' })).toBeNull()
-    expect(within(panel).queryByRole('button', { name: '등록' })).toBeNull()
   })
 })

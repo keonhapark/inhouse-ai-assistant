@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import type { Employee, Schemas } from '../api/client'
 import { directory, employeeForToken } from './data'
+import { josa } from '../org/labels'
 import { problem } from './problem'
 
 type Doc = Schemas['ApprovalDocument']
@@ -41,7 +42,7 @@ function iso(offsetMs: number) {
   return new Date(Date.now() + offsetMs).toISOString()
 }
 
-/** 모의 결재 문서와 위임을 처음 상태로 되돌립니다. */
+/** 모의 결재 문서와 대결을 처음 상태로 되돌립니다. */
 export function resetMockInbox() {
   idSeq = 0
   const step = (order: number, approverId: string, status: Schemas['ApprovalStep']['status'], extra: object = {}) => ({
@@ -325,8 +326,8 @@ export const inboxHandlers = [
     const dryRun = new URL(request.url).searchParams.get('dryRun') === 'true'
     if (!dryRun && !hasKey(request)) return keyRequired()
     const body = (await request.json()) as Schemas['DelegationCreate']
-    if (body.delegateId === me.id) return problem(422, 'delegation-self', '자기 자신에게는 위임할 수 없습니다.')
-    if (!directory[body.delegateId]) return problem(422, 'validation', '대리인을 찾지 못했습니다.')
+    if (body.delegateId === me.id) return problem(422, 'delegation-self', '자기 자신을 대결자로 지정할 수 없습니다.')
+    if (!directory[body.delegateId]) return problem(422, 'validation', '대결자를 찾지 못했습니다.')
     if (Date.parse(body.endsAt) <= Date.parse(body.startsAt)) {
       return problem(422, 'validation', '끝 시각은 시작 시각보다 뒤여야 합니다.')
     }
@@ -360,7 +361,8 @@ export const inboxHandlers = [
         },
       },
     ]
-    const summary = `${nameOf(draft.delegateId)}에게 결재를 위임합니다.`
+    const who = nameOf(draft.delegateId)
+    const summary = `${who}${josa(who, '을', '를')} 대결자로 지정합니다.`
     if (dryRun) {
       const preview: Schemas['WritePreview'] = { dryRun: true, operation: 'createDelegation', summary, changes, undoable: true }
       return HttpResponse.json(preview)
@@ -382,16 +384,16 @@ export const inboxHandlers = [
     if (!me) return unauthorized()
     if (!hasKey(request)) return keyRequired()
     const d = delegations.find((x) => x.id === params.id)
-    if (!d) return problem(404, 'delegation-not-found', '위임을 찾지 못했습니다.')
-    if (d.delegatorId !== me.id) return problem(403, 'forbidden', '본인이 맡긴 위임만 해지할 수 있습니다.')
+    if (!d) return problem(404, 'delegation-not-found', '대결을 찾지 못했습니다.')
+    if (d.delegatorId !== me.id) return problem(403, 'forbidden', '본인이 지정한 대결만 해제할 수 있습니다.')
     const status = delegationStatus(d)
-    if (status === 'revoked' || status === 'expired') return problem(409, 'delegation-revoked', '이미 끝난 위임입니다.')
+    if (status === 'revoked' || status === 'expired') return problem(409, 'delegation-revoked', '이미 끝난 대결입니다.')
     d.revokedAt = new Date().toISOString()
     d.revokedBy = me.id
     const result: Schemas['ActionResult'] = {
       actionId: `act-revoke-${++idSeq}`,
       operation: 'revokeDelegation',
-      summary: `${nameOf(d.delegateId)}에게 맡긴 위임을 해지했습니다.`,
+      summary: `${nameOf(d.delegateId)} 대결을 해제했습니다.`,
       changes: [{ op: 'update', resource: 'delegation', resourceId: d.id, before: { status }, after: { status: 'revoked' } }],
       undoable: false,
       resource: delegationView(d),

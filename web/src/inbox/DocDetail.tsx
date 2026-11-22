@@ -153,7 +153,7 @@ export function DocDetail({ doc, form, canDecide, onDecided, onReload, onClose }
       {doc.viaDelegation && (
         <p className="warning-line">
           {doc.viaDelegation.originalApproverName}님 대신 결재합니다.
-          {doc.viaDelegation.endsAt && ` 위임은 ${formatDateTime(doc.viaDelegation.endsAt)}까지입니다.`}
+          {doc.viaDelegation.endsAt && ` 대결은 ${formatDateTime(doc.viaDelegation.endsAt)}까지입니다.`}
         </p>
       )}
 

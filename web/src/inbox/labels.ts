@@ -20,9 +20,9 @@ export const STEP_STATUS: Record<Schemas['ApprovalStep']['status'], Label> = {
 
 export const DELEGATION_STATUS: Record<Schemas['Delegation']['status'], Label> = {
   scheduled: { label: '예정', tone: 'neutral' },
-  active: { label: '유효', tone: 'success' },
-  expired: { label: '만료', tone: 'neutral' },
-  revoked: { label: '해지', tone: 'neutral' },
+  active: { label: '대결 중', tone: 'success' },
+  expired: { label: '종료', tone: 'neutral' },
+  revoked: { label: '해제', tone: 'neutral' },
 }
 
 export const BOXES = [
