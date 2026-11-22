@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     import torch
-    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+    from peft import LoraConfig, get_peft_model
     from transformers import (AutoModelForImageTextToText, BitsAndBytesConfig, Trainer, TrainingArguments,
                               set_seed)
 
@@ -118,7 +118,14 @@ def main(argv: list[str] | None = None) -> int:
         args.base_model, revision=revision, device_map="auto", dtype=compute,
         quantization_config=BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
                                                bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=compute))
-    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+    # prepare_model_for_kbit_training은 양자화하지 않은 큰 텐서(임베딩·lm_head·비전 쪽)를 fp32로 올려 T4 한 장(15GB)에서
+    # 메모리가 모자랐습니다(#551). 그 올림은 하지 않고 체크포인팅과 입력 기울기만 켭니다. LoRA 가중치는 PEFT가 fp32로 둡니다.
+    model.config.use_cache = False
+    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+    model.enable_input_require_grads()
+    devices = sorted({str(d) for d in getattr(model, "hf_device_map", {}).values()})
+    used = {i: round(torch.cuda.memory_allocated(i) / 2**30, 2) for i in range(torch.cuda.device_count())}
+    print(f"모델 올림: 장치 {devices}, GPU 메모리(GB) {used}", flush=True)
     model = get_peft_model(model, LoraConfig(r=args.lora_r, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,
                                              target_modules=args.target_modules, task_type="CAUSAL_LM"))
     trainable, total = model.get_nb_trainable_parameters()
@@ -138,7 +145,8 @@ def main(argv: list[str] | None = None) -> int:
                                num_train_epochs=args.epochs, learning_rate=args.lr, lr_scheduler_type="cosine",
                                warmup_ratio=0.03, bf16=bf16, fp16=not bf16, logging_steps=10, eval_strategy="epoch",
                                save_strategy="epoch", save_total_limit=2, seed=args.seed, optim="paged_adamw_8bit",
-                               gradient_checkpointing=True, remove_unused_columns=False, report_to=[]))
+                               gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False},
+                               remove_unused_columns=False, report_to=[]))
     from transformers import TrainerCallback
 
     class Progress(TrainerCallback):
@@ -174,7 +182,9 @@ def main(argv: list[str] | None = None) -> int:
            "versions": {"python": platform.python_version(), "torch": torch.__version__,
                         "transformers": transformers.__version__, "peft": peft.__version__},
            "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
-           "computeDtype": str(compute).removeprefix("torch."),
+           "computeDtype": str(compute).removeprefix("torch."), "devices": devices,
+           "peakMemoryGB": {i: round(torch.cuda.max_memory_allocated(i) / 2**30, 2)
+                            for i in range(torch.cuda.device_count())},
            "trainablePercent": round(100 * trainable / total, 3), "log": trainer.state.log_history}
     (out / "run.json").write_text(json.dumps(run, ensure_ascii=False, indent=1) + "\n", "utf-8")
     print(f"어댑터 {out / 'adapter'}, 기록 {out / 'run.json'}")
