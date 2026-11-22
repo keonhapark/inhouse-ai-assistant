@@ -38,6 +38,14 @@ from qlora_data import collate, encode_all, read_rows  # noqa: E402
 DEFAULT_TARGETS = r".*language_model.*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)$"
 
 
+def progress_line(step: int, max_steps: int, loss: float | None, elapsed: float) -> str:
+    """'진행 120/2488 손실 0.4123 경과 12분 남은 약 236분'. 남은 시간은 지금까지의 평균 단계 시간으로 어림합니다."""
+    rest = (max_steps - step) * elapsed / step / 60 if step else None
+    loss_text = f"{loss:.4f}" if loss is not None else "-"
+    rest_text = f"{rest:.0f}분" if rest is not None else "-"
+    return f"진행 {step}/{max_steps} 손실 {loss_text} 경과 {elapsed / 60:.0f}분 남은 약 {rest_text}"
+
+
 def outside_repo(path: Path) -> Path:
     p = path.expanduser().resolve()
     if p == REPO or REPO in p.parents:
@@ -69,6 +77,8 @@ def parse(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--max-len", type=int, default=2048, help="기본 데이터는 최대 1,834토큰(Qwen3.5 토크나이저)")
     ap.add_argument("--batch", type=int, default=1)
     ap.add_argument("--grad-accum", type=int, default=8)
+    ap.add_argument("--progress-minutes", type=float, default=3,
+                    help="이 간격(분)마다 단계·손실·남은 시간을 한 줄로 출력(노트북 셀 출력용)")
     ap.add_argument("--dry-run", action="store_true")
     return ap.parse_args(argv)
 
@@ -129,6 +139,26 @@ def main(argv: list[str] | None = None) -> int:
                                warmup_ratio=0.03, bf16=bf16, fp16=not bf16, logging_steps=10, eval_strategy="epoch",
                                save_strategy="epoch", save_total_limit=2, seed=args.seed, optim="paged_adamw_8bit",
                                gradient_checkpointing=True, remove_unused_columns=False, report_to=[]))
+    from transformers import TrainerCallback
+
+    class Progress(TrainerCallback):
+        """몇 분마다 한 줄씩 출력합니다(tqdm 막대가 노트북 셀 출력에 남지 않는 경우를 위해)."""
+
+        def __init__(self) -> None:
+            self.last = 0.0
+            self.loss: float | None = None
+
+        def on_log(self, args_, state, control, logs=None, **kw):  # noqa: ANN001
+            if logs and "loss" in logs:
+                self.loss = float(logs["loss"])
+
+        def on_step_end(self, args_, state, control, **kw):  # noqa: ANN001
+            now = time.time()
+            if now - self.last >= args.progress_minutes * 60 or state.global_step == state.max_steps:
+                self.last = now
+                print(progress_line(state.global_step, state.max_steps, self.loss, now - started), flush=True)
+
+    trainer.add_callback(Progress())
     started = time.time()
     trainer.train()
     model.save_pretrained(out / "adapter")

@@ -107,3 +107,17 @@ def test_compare_runs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> Non
 def test_install_dry_run() -> None:
     r = subprocess.run(["bash", str(LORA / "install_qlora.sh"), "--dry-run"], capture_output=True, text=True)
     assert r.returncode == 0 and "transformers==" in r.stdout
+
+
+def test_progress_line() -> None:
+    assert train_qlora.progress_line(120, 2488, 0.41234, 720) == "진행 120/2488 손실 0.4123 경과 12분 남은 약 237분"
+    assert train_qlora.progress_line(0, 10, None, 5) == "진행 0/10 손실 - 경과 0분 남은 약 -"
+    assert train_qlora.parse(["--data", "d", "--out", "o"]).progress_minutes == 3
+
+
+def test_install_system_mode_dry_run() -> None:
+    import os
+    r = subprocess.run(["bash", str(LORA / "install_qlora.sh"), "--dry-run"], capture_output=True, text=True,
+                       env={**os.environ, "QLORA_SYSTEM": "1"})
+    assert r.returncode == 0 and "torch 그대로" in r.stdout and "torch==" not in r.stdout
+
