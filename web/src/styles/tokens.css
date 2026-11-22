@@ -1,71 +1,217 @@
-/* web/DESIGN.md의 토큰입니다. 다크 모드는 같은 이름에 값만 바꿉니다. */
+/* 사내 AI 비서 디자인 토큰. 기준은 ux/design-system/tokens.css(#563)이고 그대로 옮겼습니다(명세 ux/design-system.md 7절).
+   맨 아래 "옛 이름" 묶음은 화면을 새 이름으로 옮기는 동안(#557)만 두는 별칭입니다. 쓰는 곳이 없어지면 지웁니다. */
+
 :root {
   color-scheme: light;
-  --bg: #f7f8fa;
+
+  /* 면 */
+  --bg: #f5f5f7;
   --surface: #ffffff;
-  --border: #e3e6eb;
-  --text: #1f2329;
-  --text-muted: #5f6672;
-  --accent: #2f5bdb;
-  --success: #1f8a5b;
-  --warning: #b26b00;
-  --danger: #c2372f;
-  --local: #5b4bb7;
-  /* 채움 버튼 위 글자색 */
-  --on-fill: #ffffff;
+  --surface-2: #fafafc;
+  --fill: rgb(118 118 128 / 12%);
+  --fill-2: rgb(118 118 128 / 8%);
+  --sidebar-bg: rgb(236 236 240 / 72%);
+  --sidebar-line: rgb(0 0 0 / 6%);
+  --popover-bg: rgb(255 255 255 / 86%);
+  --scrim: rgb(0 0 0 / 8%);
+  --sep: rgb(60 60 67 / 14%);
+  --sep-strong: rgb(60 60 67 / 26%);
+  --pressed: rgb(0 0 0 / 6%);
 
-  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  /* 고정폭 글꼴에 한글이 없는 환경(만료 시각 앞 '만료' 등)에서 한글은 Pretendard로 그립니다 */
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Pretendard Variable', Pretendard, monospace;
+  /* 글 */
+  --text: #1d1d1f;
+  --text-2: #66666b;
 
-  --fs-12: 12px;
-  --fs-14: 14px;
-  --fs-16: 16px;
-  --fs-20: 20px;
-  --fs-24: 24px;
-  --lh: 1.5;
+  /* 강조: 파우더 블루(사용자 선택). 면(--accent-fill, --sel)은 파스텔, 글자·아이콘(--accent)은 진한 단계 */
+  --accent: #1d5394;
+  --accent-fill: #cce1f9;
+  --on-accent: #1d5394;
+  --sel: #e1eefc;
+  --focus: #1d5394;
 
-  --sp-4: 4px;
-  --sp-8: 8px;
-  --sp-12: 12px;
-  --sp-16: 16px;
-  --sp-24: 24px;
-  --sp-32: 32px;
+  /* 상태(점·글자·아이콘에만. 면으로 깔지 않음). 진행은 강조색(파랑)과 겹치지 않게 라벤더 */
+  --progress: #4a3dae;
+  --success: #1e7b34;
+  --warning: #b25000;
+  --danger: #c4271c;
+  --neutral: #66666b;
+  --avatar-bg: #66666b;
 
-  --radius-control: 6px;
-  --radius-card: 10px;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 6%);
+  /* 세그먼트 컨트롤 */
+  --seg-track: rgb(118 118 128 / 12%);
+  --seg-thumb: #ffffff;
+
+  /* 그림자 */
+  --shadow-1: 0 0.5px 1px rgb(0 0 0 / 6%), 0 1px 3px rgb(0 0 0 / 4%);
+  --shadow-pop: 0 0 0 0.5px rgb(0 0 0 / 8%), 0 10px 32px rgb(0 0 0 / 14%), 0 2px 6px rgb(0 0 0 / 6%);
+
+  /* 글꼴과 글자 크기(7단계) */
+  --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --fs-caption: 12px;
+  --fs-footnote: 13px;
+  --fs-body: 14px;
+  --fs-headline: 15px;
+  --fs-title3: 17px;
+  --fs-title2: 22px;
+  --fs-title1: 28px;
+  --lh-body: 1.5;
+  --lh-title: 1.25;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --num: 'tnum';
+
+  /* 간격(4px 단위) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+
+  /* 반경 */
+  --r-tag: 6px;   /* 태그, 말풍선 꼬리 */
+  --r-xs: 7px;    /* 탐색 항목, 작은 버튼, 세그먼트 칸 */
+  --r-sm: 8px;    /* 버튼, 입력 */
+  --r-seg: 9px;   /* 세그먼트 트랙 */
+  --r-md: 10px;   /* 그룹 목록 */
+  --r-lg: 14px;   /* 시트, 팝오버, 입력창 */
+  --r-bubble: 18px;
+  --r-full: 999px;
+
+  /* 크기 */
   --control-h: 32px;
+  --control-h-sm: 26px;
+  --control-h-lg: 36px;
+  --row-h: 44px;    /* 한 줄 행 */
+  --row-h-2: 52px;  /* 두 줄 행(결재 목록) */
+  --label-w: 84px;  /* 값 행 라벨 */
+  --icon-sm: 14px;  /* 칩·태그·보조 줄 */
+  --icon: 16px;     /* 버튼·본문 */
+  --icon-lg: 18px;  /* 탐색 막대·툴바 */
+  --sidebar-w: 240px;
+  --toolbar-h: 52px;
+  --list-w: 272px;
+  --detail-w: 520px;
+  --reading-w: 680px;
+
+  /* 초점·상태 */
+  --focus-ring: 2px solid var(--focus);
+  --focus-offset: 2px;
+  --opacity-disabled: 0.45;
+
+  /* 쌓임 순서 */
+  --z-popover: 30;
+  --z-sheet: 40;
+  --z-palette: 50;
+  --z-toast: 60;
+
+  /* 움직임 */
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --dur-fast: 150ms;
+  --dur: 220ms;
+
+  /* 옛 이름(#557 옮기는 동안만). 새 토큰을 가리키고, 값이 따로 있는 것은 어두움 블록에도 둡니다 */
+  --border: #e3e3e8;
+  --text-muted: var(--text-2);
+  --on-fill: #ffffff;
+  --local: var(--accent);
+  --font-sans: var(--font);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Pretendard Variable', Pretendard, monospace;
+  --lh: var(--lh-body);
+  --fs-12: var(--fs-caption);
+  --fs-14: var(--fs-body);
+  --fs-16: var(--fs-headline);
+  --fs-20: var(--fs-title3);
+  --fs-24: var(--fs-title2);
+  --sp-4: var(--space-1);
+  --sp-8: var(--space-2);
+  --sp-12: var(--space-3);
+  --sp-16: var(--space-4);
+  --sp-24: var(--space-6);
+  --sp-32: var(--space-8);
+  --radius-control: var(--r-sm);
+  --radius-card: var(--r-md);
+  --shadow-card: var(--shadow-1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #16181d;
-    --surface: #1e2128;
-    --border: #2e323b;
-    --text: #e6e8ec;
-    --text-muted: #9aa1ad;
-    --accent: #7f9cf5;
-    --success: #4cc38a;
-    --warning: #f0b44c;
-    --danger: #f2756d;
-    --local: #a99bf0;
-    --on-fill: #16181d;
+    --bg: #1c1c1e;
+    --surface: #2c2c2e;
+    --surface-2: #323234;
+    --fill: rgb(118 118 128 / 24%);
+    --fill-2: rgb(118 118 128 / 16%);
+    --sidebar-bg: rgb(44 44 46 / 72%);
+    --sidebar-line: rgb(255 255 255 / 6%);
+    --popover-bg: rgb(44 44 46 / 86%);
+    --scrim: rgb(0 0 0 / 40%);
+    --sep: rgb(84 84 88 / 55%);
+    --sep-strong: rgb(84 84 88 / 80%);
+    --pressed: rgb(255 255 255 / 8%);
+    --text: #f5f5f7;
+    --text-2: #b0b0b5;
+    --accent: #a8ccf4;
+    --accent-fill: #a8ccf4;
+    --on-accent: #0d2a4d;
+    --sel: rgb(168 204 244 / 12%);
+    --focus: #a8ccf4;
+    --progress: #c7bdff;
+    --success: #5cbf6e;
+    --warning: #d9a45a;
+    --danger: #ff9189;
+    --neutral: #b0b0b5;
+    --avatar-bg: #636366;
+    --seg-track: rgb(118 118 128 / 24%);
+    --seg-thumb: #636366;
+    --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 6%);
+    --shadow-pop: 0 0 0 0.5px rgb(255 255 255 / 10%), 0 12px 36px rgb(0 0 0 / 50%);
+    /* 옛 이름 */
+    --border: #3a3a3c;
+    --on-fill: #1c1c1e;
   }
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #16181d;
-  --surface: #1e2128;
-  --border: #2e323b;
-  --text: #e6e8ec;
-  --text-muted: #9aa1ad;
-  --accent: #7f9cf5;
-  --success: #4cc38a;
-  --warning: #f0b44c;
-  --danger: #f2756d;
-  --local: #a99bf0;
-  --on-fill: #16181d;
+  --bg: #1c1c1e;
+  --surface: #2c2c2e;
+  --surface-2: #323234;
+  --fill: rgb(118 118 128 / 24%);
+  --fill-2: rgb(118 118 128 / 16%);
+  --sidebar-bg: rgb(44 44 46 / 72%);
+  --sidebar-line: rgb(255 255 255 / 6%);
+  --popover-bg: rgb(44 44 46 / 86%);
+  --scrim: rgb(0 0 0 / 40%);
+  --sep: rgb(84 84 88 / 55%);
+  --sep-strong: rgb(84 84 88 / 80%);
+  --pressed: rgb(255 255 255 / 8%);
+  --text: #f5f5f7;
+  --text-2: #b0b0b5;
+  --accent: #a8ccf4;
+  --accent-fill: #a8ccf4;
+  --on-accent: #0d2a4d;
+  --sel: rgb(168 204 244 / 12%);
+  --focus: #a8ccf4;
+  --progress: #c7bdff;
+  --success: #5cbf6e;
+  --warning: #d9a45a;
+  --danger: #ff9189;
+  --neutral: #b0b0b5;
+  --avatar-bg: #636366;
+  --seg-track: rgb(118 118 128 / 24%);
+  --seg-thumb: #636366;
+  --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 6%);
+  --shadow-pop: 0 0 0 0.5px rgb(255 255 255 / 10%), 0 12px 36px rgb(0 0 0 / 50%);
+  /* 옛 이름 */
+  --border: #3a3a3c;
+  --on-fill: #1c1c1e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur: 0ms; }
 }

@@ -1,5 +1,7 @@
 # web 디자인 기준
 
+> 재설계(#558) 중입니다. 색·글자·간격·부품 규칙은 [ux/design-system.md](../ux/design-system.md)가 기준이고, 이 문서의 원칙·부품 설명은 화면을 옮기며 그 명세로 바꿉니다.
+
 사내 업무 도구입니다. 화려함보다 오래 봐도 피곤하지 않고, 위험한 실행과 되돌리기가 눈에 잘 띄는 것을 우선합니다.
 
 ## 원칙
@@ -11,26 +13,7 @@
 
 ## 토큰
 
-CSS 변수로 두고 다크 모드는 같은 이름에 값만 바꿉니다.
-
-| 토큰 | 라이트 | 다크 | 쓰임 |
-|---|---|---|---|
-| `--bg` | `#F7F8FA` | `#16181D` | 화면 바탕 |
-| `--surface` | `#FFFFFF` | `#1E2128` | 카드·패널 |
-| `--border` | `#E3E6EB` | `#2E323B` | 구분선 |
-| `--text` | `#1F2329` | `#E6E8EC` | 본문 |
-| `--text-muted` | `#5F6672` | `#9AA1AD` | 보조 글 |
-| `--accent` | `#2F5BDB` | `#7F9CF5` | 주 버튼·링크·선택 |
-| `--success` | `#1F8A5B` | `#4CC38A` | 완료·승인 |
-| `--warning` | `#B26B00` | `#F0B44C` | 확인 필요(confirm 등급) |
-| `--danger` | `#C2372F` | `#F2756D` | 되돌릴 수 없음·반려·차단 |
-| `--local` | `#5B4BB7` | `#A99BF0` | "로컬에서 처리" 배지 |
-
-- 글꼴: Pretendard(SIL OFL 1.1) 본문, 숫자·ID는 `ui-monospace`
-- 글자 크기: 12 / 14(본문) / 16 / 20 / 24px, 줄 높이 1.5
-- 간격: 4px 단위(4, 8, 12, 16, 24, 32)
-- 모서리: 6px(입력·버튼), 10px(카드)
-- 그림자: 카드에 `0 1px 2px rgb(0 0 0 / 6%)` 하나만
+토큰의 기준은 [ux/design-system.md](../ux/design-system.md)(#563)와 [ux/design-system/tokens.css](../ux/design-system/tokens.css)입니다. `src/styles/tokens.css`는 그 파일을 그대로 옮기고, 화면을 새 이름으로 옮기는 동안(#557)만 옛 이름(`--sp-*`, `--fs-12`, `--text-muted`, `--border` 등)을 별칭으로 둡니다. 대비 시험은 `src/styles/contrast.test.ts`입니다.
 
 ## 기본 부품
 
