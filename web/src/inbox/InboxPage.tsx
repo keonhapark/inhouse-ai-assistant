@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { DelegationPanel } from './DelegationPanel'
@@ -11,8 +12,13 @@ import { notifyInboxChanged } from '../shell/pending'
 
 type ListState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ok'; items: InboxItem[] }
 
+/** 주소의 ?box=로 처음 열 칸을 고릅니다(채팅의 "결재 문서 보기"는 기안함으로 엽니다) */
+const boxFrom = (v: string | null): Box => BOXES.find((b) => b.box === v)?.box ?? 'inbox'
+
 export function InboxPage() {
-  const [box, setBox] = useState<Box>('inbox')
+  const [params] = useSearchParams()
+  const [initialBox] = useState(() => boxFrom(params.get('box')))
+  const [box, setBox] = useState<Box>(initialBox)
   const [list, setList] = useState<ListState>({ status: 'loading' })
   const [open, setOpen] = useState<InboxItem | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -23,7 +29,7 @@ export function InboxPage() {
   const panelRef = useRef<HTMLDivElement>(null)
   // 응답이 늦게 와도 지금 보고 있는 탭만 반영하도록 마지막 요청 번호와 현재 탭을 ref로 둡니다.
   const request = useRef(0)
-  const boxRef = useRef<Box>('inbox')
+  const boxRef = useRef<Box>(initialBox)
 
   const load = useCallback(async (b: Box) => {
     const id = ++request.current
@@ -39,7 +45,7 @@ export function InboxPage() {
   useEffect(() => {
     let alive = true
     const id = ++request.current
-    api.GET('/inbox', { params: { query: { box: 'inbox' } } }).then(
+    api.GET('/inbox', { params: { query: { box: initialBox } } }).then(
       ({ data, error }) =>
         alive &&
         id === request.current &&
@@ -57,7 +63,7 @@ export function InboxPage() {
     return () => {
       alive = false
     }
-  }, [])
+  }, [initialBox])
 
   function selectBox(b: Box) {
     if (b === box) return

@@ -74,11 +74,11 @@ describe('채팅 사진 첨부', () => {
 
     await user.click(within(card).getByRole('button', { name: '경비 정산 상신' }))
     const done = await screen.findByRole('region', { name: '완료한 일' })
-    // 결재 문서를 만든 일은 결재 문서 보기와 실행 취소를 붙이고, 확인 시트는 한 줄(완료)로 접습니다
-    expect(within(done).getByRole('link', { name: '결재 문서 보기' })).toHaveAttribute('href', '/approvals')
+    // 결재 문서를 만든 일은 결재 문서 보기(기안함)와 실행 취소를 붙입니다
+    expect(within(done).getByRole('link', { name: '결재 문서 보기' })).toHaveAttribute('href', '/approvals?box=outbox')
     expect(within(done).getByRole('button', { name: '실행 취소' })).toBeInTheDocument()
-    expect(within(card).getByText('완료')).toBeInTheDocument()
-    expect(within(card).queryByRole('button')).toBeNull()
+    // 승인한 시트는 완료한 일 행으로 바뀝니다(같은 상태를 두 번 보이지 않음)
+    expect(card).not.toBeInTheDocument()
   })
 
   it('사진 없이 보낸 턴의 카드에는 확인 필요 표시가 없습니다', async () => {

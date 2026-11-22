@@ -98,7 +98,7 @@ function useNow(enabled: boolean): number {
 
 /**
  * 실행 전 확인 시트(ux/design-system.md 3.6): 제목(일 이름) → 금액 → [사진 | 값 행] → 결재선 → "…까지 확인" [취소] [일 이름].
- * 결정이 나면(완료·실행 안 함·진행 불가) 한 줄로 접습니다. 실행한 결과는 뒤따르는 완료한 일 행이 보여 줍니다.
+ * 결정이 나면(완료·실행 안 함·진행 불가) 한 줄로 접습니다. 실행해 완료한 일 행이 뒤따르면 대화 화면이 이 시트를 그리지 않습니다(같은 자리에서 바뀜).
  */
 export function PreviewCard({ approval, fromImage, photo, decision, closed, busy, now: fixedNow, onDecide, onExpire }: PreviewProps) {
   const ticking = useNow(fixedNow === undefined && !decision && !closed && approval.expiresAt !== undefined)
@@ -130,7 +130,8 @@ export function PreviewCard({ approval, fromImage, photo, decision, closed, busy
     )
   }
 
-  const danger = approval.risk === 'irreversible'
+  // 실행 취소할 수 없는 일은 버튼을 위험 모양으로 두고 경고 줄을 붙입니다(색만으로 알리지 않음)
+  const danger = approval.risk === 'irreversible' || !preview.undoable
   return (
     <section className="sheet" aria-label={`실행 전 확인: ${label}`}>
       <header className="sheet__head">
@@ -142,11 +143,12 @@ export function PreviewCard({ approval, fromImage, photo, decision, closed, busy
           </span>
         )}
       </header>
-      <SheetBody preview={preview} photo={fromImage ? photo : undefined} />
+      <SheetBody preview={preview} photo={fromImage ? photo : undefined} danger={danger} />
       <footer className="sheet__foot">
         <span className="sheet__when">
-          {fromImage && '영수증과 맞는지 확인해 주세요. '}
-          {approval.expiresAt && `${formatTime(approval.expiresAt)}까지`}
+          {fromImage
+            ? `영수증과 맞는지 확인해 주세요.${approval.expiresAt ? ` ${formatTime(approval.expiresAt)}까지` : ''}`
+            : approval.expiresAt && `${formatTime(approval.expiresAt)}까지 확인`}
         </span>
         <Button disabled={busy} onClick={() => onDecide('reject')}>
           취소
@@ -159,15 +161,13 @@ export function PreviewCard({ approval, fromImage, photo, decision, closed, busy
   )
 }
 
-function SheetBody({ preview, photo }: { preview: Schemas['WritePreview']; photo?: { url: string; name: string } }) {
+function SheetBody({ preview, photo, danger }: { preview: Schemas['WritePreview']; photo?: { url: string; name: string }; danger: boolean }) {
   const lookups = useLookups()
   const views = preview.changes.map((c) => previewView(c, lookups))
   // 금액은 값 행에서 빼 맨 위에 크게 둡니다(첫 변경의 금액 하나)
   const first = views[0]
   const amountRow = first?.amountKey ? first.rows.find((r) => r.key === first.amountKey) : undefined
   const amount = amountRow?.after ?? amountRow?.before
-  const line = views.flatMap((v) => v.line)
-  const raw = views.flatMap((v) => v.raw)
   return (
     <>
       {amount && (
@@ -210,40 +210,50 @@ function SheetBody({ preview, photo }: { preview: Schemas['WritePreview']; photo
           })}
         </div>
       </div>
-      {!preview.undoable ? (
+      {views.map(
+        (v, i) =>
+          v.line.length > 0 && (
+            <p key={i} className="sheet__line">
+              <Users aria-hidden />
+              {views.length > 1 ? `${v.title} 결재선` : '결재선'}
+              {v.line.map((s) => (
+                <span key={s.order}>
+                  <b>{s.who}</b> {s.status}
+                </span>
+              ))}
+            </p>
+          ),
+      )}
+      {danger && (
         <p className="sheet__line sheet__line--danger">
           <TriangleAlert aria-hidden />
           실행하면 취소할 수 없습니다.
         </p>
-      ) : (
-        line.length > 0 && (
-          <p className="sheet__line">
-            <Users aria-hidden />
-            결재선
-            {line.map((s) => (
-              <span key={s.order}>
-                <b>{s.who}</b> {s.status}
-              </span>
-            ))}
-          </p>
-        )
       )}
       {preview.warnings?.map((w) => (
         <p key={w} className="sheet__warning">
           {w}
         </p>
       ))}
-      {raw.length > 0 && (
+      {views.some((v) => v.raw.length > 0) && (
         <details className="sheet__raw changes__raw">
           <summary>자세히</summary>
-          <dl>
-            {raw.map((r) => (
-              <div key={r.field} className="changes__row">
-                <dt className="mono">{r.field}</dt>
-                <ChangeValue before={r.before} after={r.after} />
-              </div>
-            ))}
-          </dl>
+          {views.map(
+            (v, i) =>
+              v.raw.length > 0 && (
+                <div key={i}>
+                  {views.length > 1 && <span className="sheet__change-title">{`${v.title} ${v.op}`}</span>}
+                  <dl>
+                    {v.raw.map((r) => (
+                      <div key={r.field} className="changes__row">
+                        <dt className="mono">{r.field}</dt>
+                        <ChangeValue before={r.before} after={r.after} />
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ),
+          )}
         </details>
       )}
     </>
@@ -353,7 +363,7 @@ export function ActionCard({ item, onUndo }: ActionProps) {
         </span>
         <span className="done__summary">{action.summary}</span>
         {APPROVAL_TOOLS.has(action.tool) && !undone && (
-          <Link className="btn btn--link" to="/approvals">
+          <Link className="btn btn--link" to="/approvals?box=outbox">
             결재 문서 보기
           </Link>
         )}

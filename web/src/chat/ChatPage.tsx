@@ -37,6 +37,14 @@ function rowsOf(items: ThreadItem[]): { rows: Row[]; heads: Map<string, 'local' 
       if (it.images?.length || it.attachmentCount) lastPhoto = it.images?.[0]
     }
     if (it.kind === 'approval' && lastPhoto) photos.set(it.key, lastPhoto)
+    // 승인한 확인 시트는 뒤따르는 완료한 일 행으로 바뀝니다(명세 3.6). 완료한 일이 오면 시트를 뺍니다
+    if (it.kind === 'action') {
+      const sheet = rows.findLastIndex((x) => x.kind === 'approval' || x.kind === 'user')
+      if (sheet >= 0) {
+        const x = rows[sheet]
+        if (x.kind === 'approval' && x.decision === 'approve') rows.splice(sheet, 1)
+      }
+    }
     if (it.kind === 'tool') {
       const last = rows[rows.length - 1]
       if (last?.kind === 'tools') last.calls.push(it.call)

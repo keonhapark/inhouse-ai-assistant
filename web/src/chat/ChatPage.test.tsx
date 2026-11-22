@@ -52,7 +52,7 @@ describe('직원 채팅', () => {
 
     await user.click(within(card).getByRole('button', { name: '결재 회수' }))
     const action = await screen.findByRole('region', { name: '완료한 일' })
-    expect(within(card).getByText('완료')).toBeInTheDocument()
+    expect(card).not.toBeInTheDocument()
     expect(within(action).queryByRole('button', { name: '실행 취소' })).toBeNull()
     expect(screen.getByLabelText('메시지')).toBeEnabled()
   })
