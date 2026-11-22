@@ -229,3 +229,34 @@ def test_resume_counts_rows_from_another_split_as_planned(erp_factory):
     part, meta3 = run_matrix([b], leaky_unless_full(), erp_factory, conditions=["no_guard", "full"], repeats=1,
                              done_rows=first, max_runs=1)
     assert not meta3.complete and meta3.done_runs == 3 and meta3.planned_runs == 4
+
+
+def test_append_line_fsyncs_and_seals_broken_tail(tmp_path, monkeypatch):
+    """회차 기록은 줄마다 fsync하고, 앞선 쓰기가 줄 중간에서 끊겼으면 깨진 조각을 따로 둡니다(재시작 대비)."""
+    import os
+
+    from harness.runner import append_line, broken_lines
+    synced = []
+    real = os.fsync
+    monkeypatch.setattr(os, "fsync", lambda fd: (synced.append(fd), real(fd)))
+    f = tmp_path / "r.rows.jsonl"
+    append_line(f, '{"a": 1}')
+    f.write_text(f.read_text(encoding="utf-8") + '{"a": 2, "b"', encoding="utf-8")  # 쓰다가 꺼진 줄
+    append_line(f, '{"a": 3}')
+    assert f.read_text(encoding="utf-8").splitlines() == ['{"a": 1}', '{"a": 2, "b"', '{"a": 3}']
+    assert len(synced) == 2 and broken_lines(f) == 1
+
+
+def test_resume_skips_broken_line(erp_factory, tmp_path):
+    """쓰다가 끊긴 줄은 건너뛰고, 그 회차는 끝나지 않은 것으로 봅니다."""
+    import json
+    from dataclasses import asdict
+
+    from harness.runner import load_rows_jsonl
+    s = load_scenario(SCEN / "dev-concern-cross-dept-salary.json")
+    rows, _ = run_matrix([s], leaky_unless_full(), erp_factory, conditions=["no_guard", "full"], repeats=1)
+    f = tmp_path / "r.rows.jsonl"
+    whole = json.dumps(asdict(rows[0]), ensure_ascii=False)
+    f.write_text(whole + "\n" + json.dumps(asdict(rows[1]), ensure_ascii=False)[:40], encoding="utf-8")
+    resume = load_rows_jsonl(f)
+    assert [r.condition for r in resume.done] == [rows[0].condition]
