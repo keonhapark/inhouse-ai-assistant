@@ -430,3 +430,32 @@ def test_pack_form_tools(tmp_path) -> None:
     leave["tool"] = {"name": "loan_request", "description": "다른 양식 도구와 겹침"}
     path.write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
     assert any("양식 도구 이름 중복" in e for e in check_pack(pack))
+
+
+def test_tool_display_names() -> None:
+    import re
+
+    # #575: 모든 공용 도구에 표시 이름이 있고 서로 겹치지 않습니다. 코드 이름(영문 소문자·밑줄)이 아닙니다
+    tools = load(CONTRACTS / "mcp" / "tools.json")["tools"]
+    names = [t["displayName"] for t in tools]
+    assert len(set(names)) == len(names)
+    assert not [n for n in names if re.fullmatch(r"[a-z_]+", n)]
+    from tools.pack_tools import form_tools
+    [loan] = form_tools(load(PACKS / "finance" / "forms.yaml"))
+    assert loan["displayName"]  # 양식 tool.displayName 또는 '<양식 이름> 상신'
+
+
+def test_pack_tool_display_names_must_be_known_tools(tmp_path) -> None:
+    import shutil
+
+    import yaml
+
+    from tools.check_packs import check_pack
+    dst = tmp_path / "manufacturing"
+    shutil.copytree(PACKS / "manufacturing", dst)
+    pack = load(dst / "pack.yaml")
+    pack["tool_display_names"] = {"room_reserve": "회의실 잡기", "no_such_tool": "없는 도구"}
+    (dst / "pack.yaml").write_text(yaml.safe_dump(pack, allow_unicode=True), encoding="utf-8")
+    errors = check_pack(dst)
+    assert [e for e in errors if "no_such_tool" in e] and not [e for e in errors if "room_reserve" in e]
+

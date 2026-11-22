@@ -2,6 +2,7 @@
 
 규칙(contracts/mcp/README.md '팩 양식 도구'와 같음). agent MCP 카탈로그와 gateway 위임 토큰 계산이 같은 규칙을 씁니다.
 - name·description: 양식 `tool`의 값
+- displayName: `tool.displayName`, 없으면 '<양식 name> 상신'(#575)
 - inputSchema: 양식 `fields`(JSON Schema)에서 `x-`로 시작하는 키를 뺀 것
 - risk: `tool.risk`(기본 reversible_write), trust_required: `tool.trust_required`(기본 user_direct)
 - required_scope: `approval:request:<양식 id>`
@@ -30,6 +31,7 @@ def form_tools(forms_doc: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         out.append({
             "name": t["name"],
+            "displayName": t.get("displayName") or f"{f['name']} 상신",
             "description": t["description"],
             "inputSchema": strip_x(f["fields"]),
             "risk": t.get("risk", "reversible_write"),

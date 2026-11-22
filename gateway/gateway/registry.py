@@ -38,6 +38,7 @@ def form_tools(forms_doc: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         out.append({
             "name": t["name"],
+            "displayName": t.get("displayName") or f"{f['name']} 상신",  # 도구 표시 이름(#575, 계약 참조 구현과 같게)
             "description": t["description"],
             "inputSchema": _strip_x(f["fields"]),
             "risk": t.get("risk", "reversible_write"),
