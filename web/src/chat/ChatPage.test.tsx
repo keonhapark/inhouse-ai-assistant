@@ -155,7 +155,7 @@ describe('직원 채팅', () => {
     await user.click(bell)
     const items = await screen.findAllByRole('menuitem', { name: /결재 차례입니다/ })
     await user.click(items[0])
-    expect(await screen.findByRole('heading', { level: 1, name: '승인함' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '결재' })).toBeInTheDocument()
   })
 
   it('서버 오류면 problem title과 다시 보내기를 보여 줍니다', async () => {

@@ -128,7 +128,7 @@ describe('실행 미리보기', () => {
       ['사업자번호', '581-31-95714'],
       ['목적', '팀 회의 다과비'],
     ])
-    expect(v.line).toEqual([{ order: 1, who: '나우진 팀장(재무팀)', status: '결재 차례' }])
+    expect(v.line).toEqual([{ order: 1, who: '나우진 팀장(재무팀)', status: '결재 대기' }])
     expect(v.raw.map((r) => r.field)).toContain('requesterId')
   })
 
