@@ -1,4 +1,4 @@
-import { TriangleAlert } from 'lucide-react'
+import { Globe, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Schemas } from '../api/client'
 import { Badge, RiskBadge } from '../components/Badge'
@@ -25,7 +25,12 @@ export function AssistantMessage({ item, head }: { item: Extract<ThreadItem, { k
         <div className="msg__who">
           <b>{head.agent}</b>
           {head.location === 'local' && <span className="status status--blue">사내 처리</span>}
-          {head.location === 'external' && <span className="status">외부 AI 사용</span>}
+          {head.location === 'external' && (
+            <span className="status">
+              <Globe aria-hidden />
+              외부 AI 사용
+            </span>
+          )}
           <span className="visually-hidden">답: </span>
         </div>
       ) : (

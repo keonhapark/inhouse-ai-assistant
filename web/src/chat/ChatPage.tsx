@@ -331,7 +331,7 @@ export function ChatPage() {
           </button>
         </div>
         {convs.length === 0 ? (
-          <p className="convs__empty">아직 대화가 없습니다.</p>
+          <p className="convs__empty">아직 대화가 없습니다. 무엇을 할지 적어 보세요.</p>
         ) : (
           <ul>
             {convs.map((c) => {
@@ -361,7 +361,7 @@ export function ChatPage() {
       <main className="chat__main" aria-labelledby="chat-title">
         <Toolbar title={title} titleId="chat-title" sub={selected ? (agent ?? '담당 AI 정하는 중') : undefined}>
           {selected && routeNote && (
-            <details className="route">
+            <details key={selected.conversationId} className="route">
               <summary>자동 선택</summary>
               <p>{routeNote}</p>
             </details>
