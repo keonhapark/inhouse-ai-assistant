@@ -2,6 +2,15 @@
 
 디자인 시스템 명세(#563) 전에 사용자가 실제 화면을 보고 방향을 고르도록 만든 정적 시안입니다. 비교 페이지는 [index.html](index.html)입니다.
 
+## 다듬은 판(#571)
+
+사용자가 섞음을 고른 뒤 "좀 더 애플스럽게"를 반영한 판이 `refined/`입니다. AI 비서·결재 두 화면을 밝음·어두움으로 찍었습니다(`*-light.png`, `*-dark.png`). 문구는 `../copy-guide.md`를 따릅니다. 비평과 반영 내역은 [refined/critique.md](refined/critique.md)입니다.
+
+- 애플 Human Interface Guidelines의 공개 원칙(여백, 글자 크기·굵기로 만든 위계, 반투명 사이드바, 그룹 묶음 목록, 세그먼트 컨트롤, 팝오버 확인)을 따르고, 애플 로고·SF Symbols·SF 서체·애플 화면은 쓰지 않습니다. 서체는 Pretendard, 아이콘은 Lucide입니다.
+- 색·크기는 `refined/refined.css` 한 파일에 있고, 어두운 테마는 같은 변수 이름에 값만 바꿉니다(`prefers-color-scheme`과 `data-theme`).
+
+## 처음 시안 세 방향(#568)
+
 | 방향 | 폴더 | 레퍼런스 묶음(`../research/references.md` 2절) |
 |---|---|---|
 | 섞음(추천) | `mixed/` | Linear식 셸 + Geist식 토큰 + Ramp식 경비·결재 |

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>시안 세 방향 비교</title>
+<title>시안 비교</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root { --bg: #f4f5f7; --surface: #fff; --text: #16181d; --text-2: #575d66; --border: #e2e4e8; }
@@ -28,15 +28,33 @@
   .notes { max-width: 1200px; margin-top: 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
   .notes h2 { font-size: 15px; margin: 0 0 8px; }
   .notes ul { margin: 0; padding-left: 18px; color: var(--text-2); }
+  .refined { max-width: 1400px; margin: 0 0 40px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .refined h2 { font-size: 18px; margin: 0 0 6px; display: flex; gap: 10px; align-items: center; }
+  .refined > p { margin: 0 0 16px; color: var(--text-2); max-width: 80ch; }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  h2.sub { font-size: 16px; margin: 0 0 12px; }
+  @media (max-width: 900px) { .pair { grid-template-columns: 1fr; } }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .row-label { padding-top: 16px; } }
 </style>
 </head>
 <body>
 <header>
-  <h1>시안 세 방향 비교</h1>
+  <h1>시안 비교</h1>
   <p>같은 데이터와 같은 구조(왼쪽 탐색 막대, 결재 목록과 상세 나란히)에 방향만 바꿨습니다. 직원 오지현이 팀 점심 영수증으로 경비 정산을 올리고(AI 비서), 팀장 서도윤이 그 문서를 승인하는(결재) 장면입니다. 회사·사람·가게는 지어낸 것입니다. 그림을 누르면 실제 HTML이 열립니다.</p>
 </header>
 
+<section class="refined" aria-labelledby="refined-h">
+  <h2 id="refined-h">다듬은 판: 섞음 + 애플식 정리 <span class="rec">사용자가 고른 방향</span></h2>
+  <p>섞음을 고른 뒤 "좀 더 애플스럽게"를 반영한 판입니다(#571). 여백을 늘리고 테두리·배지를 줄여 위계를 글자 크기와 굵기로 만들었고, 반투명 사이드바·그룹 묶음 목록·세그먼트 컨트롤·확인 팝오버를 썼습니다. 문구는 <code>ux/copy-guide.md</code>를 따릅니다(결재 대기, 기안함, 상신, 실행 취소 가능, 사내 처리).</p>
+  <div class="pair">
+    <figure><a href="refined/chat.html"><img src="refined/chat-light.png" alt="다듬은 판 AI 비서 화면, 밝음" width="1440" height="900"></a><figcaption>AI 비서, 밝음</figcaption></figure>
+    <figure><a href="refined/chat.html"><img src="refined/chat-dark.png" alt="다듬은 판 AI 비서 화면, 어두움" width="1440" height="900"></a><figcaption>AI 비서, 어두움</figcaption></figure>
+    <figure><a href="refined/approvals.html"><img src="refined/approvals-light.png" alt="다듬은 판 결재 화면, 밝음" width="1440" height="900"></a><figcaption>결재, 밝음(승인 확인 팝오버가 열린 상태)</figcaption></figure>
+    <figure><a href="refined/approvals.html"><img src="refined/approvals-dark.png" alt="다듬은 판 결재 화면, 어두움" width="1440" height="900"></a><figcaption>결재, 어두움</figcaption></figure>
+  </div>
+</section>
+
+<h2 class="sub">처음 시안 세 방향(#568)</h2>
 <div class="grid">
   <div></div>
   <div class="col-head"><h2><span class="swatch" style="background:#2b52d1"></span>섞음 <span class="rec">추천</span></h2><p>Linear식 셸, Geist식 회색 척도, Ramp식 경비·결재. 중간 밀도, 코발트 강조.</p></div>
