@@ -1,36 +1,63 @@
+/* 버튼(ux/design-system.md 3.2): 주 버튼은 --accent-fill, 보조·위험은 --fill 면. 위험은 글자만 --danger */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-4);
+  gap: 6px;
   height: var(--control-h);
-  padding: 0 var(--sp-12);
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-sm);
   font: inherit;
-  font-weight: 600;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.btn:active:not(:disabled) {
+  box-shadow: inset 0 0 0 999px var(--pressed);
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }
 
 .btn--primary {
-  background: var(--accent);
-  color: var(--on-fill);
+  background: var(--accent-fill);
+  color: var(--on-accent);
 }
 
 .btn--secondary {
-  background: transparent;
-  border-color: var(--border);
+  background: var(--fill);
   color: var(--text);
 }
 
 .btn--danger {
-  background: var(--danger);
-  color: var(--on-fill);
+  background: var(--fill);
+  color: var(--danger);
+}
+
+.btn--sm {
+  height: var(--control-h-sm);
+  padding: 0 10px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-caption);
+}
+
+.btn--link {
+  height: auto;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+
+.btn--link:hover {
+  text-decoration: underline;
 }
 
 /* 상태색은 테두리와 점에만 씁니다. --success·--warning은 흰 바탕 글자로 4.5:1에 못 미쳐 글자는 --text로 둡니다. */

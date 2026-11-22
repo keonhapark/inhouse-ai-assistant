@@ -119,7 +119,7 @@ describe('실행 미리보기', () => {
   it('결재 문서: 양식 이름·필드·결재선만 보이고 관리용 값은 raw에만 남깁니다', () => {
     const v = previewView(doc, { forms: [expense], people })
     expect(v.title).toBe('경비 정산')
-    expect(v.op).toBe('새로 만듦')
+    expect(v.op).toBe('추가')
     expect(v.rows.map((r) => [r.label, r.after])).toEqual([
       ['제목', '경비 정산 - 김건우'],
       ['금액', '5,800원'],
@@ -180,7 +180,7 @@ describe('실행 미리보기', () => {
       ['로트 번호', 'LOT-2611-07'],
     ])
     const r = previewView({ op: 'delete', resource: 'room_reservation', before: { id: 'r1', roomId: 'room-c', startsAt: '2026-11-25T06:00:00Z', status: 'confirmed' } })
-    expect(r.op).toBe('지움')
+    expect(r.op).toBe('삭제')
     expect(r.rows.find((x) => x.key === 'status')?.before).toBe('확정')
     expect(r.rows.find((x) => x.key === 'startsAt')?.before).toMatch(/^2026\. 11\. 25\. \d{2}:00$/)
     const g = previewView(

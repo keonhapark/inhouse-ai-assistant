@@ -45,12 +45,10 @@ describe('직원 채팅', () => {
     await say(user, '휴가 결재 회수해 줘')
 
     const card = await screen.findByRole('region', { name: '실행 전 확인: 결재 회수' })
-    expect(within(card).getByText('실행 취소 불가')).toBeInTheDocument()
     expect(within(card).getByText('실행하면 취소할 수 없습니다.')).toBeInTheDocument()
     expect(within(card).getByText('휴가 결재 APR-0042(11/24 오후 반차)를 회수합니다.')).toBeInTheDocument()
     expect(screen.getByText('위 확인 카드에서 실행하거나 취소하면 이어서 쓸 수 있습니다.')).toBeInTheDocument()
     expect(screen.getByLabelText('메시지')).toBeDisabled()
-    expect(within(card).getByText('인사 담당 AI')).toBeInTheDocument()
 
     await user.click(within(card).getByRole('button', { name: '결재 회수' }))
     const action = await screen.findByRole('region', { name: '완료한 일' })

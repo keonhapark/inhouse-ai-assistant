@@ -26,7 +26,7 @@ export const EXPENSE_SCHEMA = {
     spent_on: { type: 'string', format: 'date', title: '사용일' },
     merchant: { type: 'string', title: '가맹점' },
     business_no: { type: 'string', title: '사업자번호' },
-    purpose: { type: 'string', title: '목적' },
+    purpose: { type: 'string', title: '용도' },
   },
 }
 
