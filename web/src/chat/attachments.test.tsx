@@ -129,14 +129,14 @@ describe('채팅 사진 첨부(기록·추정·되돌리기)', () => {
     expect(within(card).getByText('이미지에서 읽은 값(확인 필요)')).toBeInTheDocument()
   })
 
-  it('fromAttachments가 없으면 마지막 카드 뒤에 사진을 보낸 적이 있는지로 추정합니다(되묻고 글로 답한 턴 포함)', async () => {
+  it.each([undefined, false])('fromAttachments가 %s여도 마지막 카드 뒤에 사진을 보낸 적이 있으면 확인 필요를 붙입니다(되묻고 글로 답한 턴)', async (fromAttachments) => {
     let n = 0
     server.use(
       http.post('*/api/conversations/:id/messages', () => {
         n++
         const events = n === 1
           ? [{ type: 'message', conversationId: 'c', seq: 0, text: '분류가 식대 맞나요?' }, { type: 'done', conversationId: 'c', seq: 1 }]
-          : [approval(), { type: 'done', conversationId: 'c', seq: 3 }]
+          : [approval(fromAttachments), { type: 'done', conversationId: 'c', seq: 3 }]
         return new HttpResponse(events.map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join(''), { headers: { 'Content-Type': 'text/event-stream' } })
       }),
     )

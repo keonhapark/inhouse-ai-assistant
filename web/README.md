@@ -190,7 +190,21 @@ GATEWAY_EXTERNAL_LOG=/audit/gateway/external.jsonl docker compose -f infra/compo
 |---|---|
 | ![사진 첨부](docs/images/chat-attach-pick-light.png) | ![이미지에서 읽은 값](docs/images/chat-attach-preview-light.png) |
 
-채팅에서 JPEG·PNG 사진을 한 번에 3장(한 장 5MB)까지 붙여 보냅니다(gateway 메시지 `attachments`, data URL). 형식은 파일 앞 바이트로 보고(MIME이 비거나 `image/jpg`여도 받음, HEIC는 JPEG로 저장해 달라고 안내), 화면 표시는 object URL로, data URL은 보낼 때만 만듭니다. 사진이 거절되면(413·415·422) 입력하던 글과 사진을 되돌립니다. 실행 미리보기 카드에는 gateway가 준 `fromAttachments`가 true면, 없으면 마지막 카드 뒤에 사진을 보낸 적이 있으면 "이미지에서 읽은 값(확인 필요)"을 붙입니다(사진에서 읽은 값은 신뢰 불가, 결정 0004). 지난 대화는 기록의 첨부 메타로 "사진 n장 첨부"만 보여 줍니다(사진 본문은 저장하지 않음). 화면의 영수증은 시험용으로 지어낸 것이고, 모의 서버는 사진을 읽지 않고 정해 둔 값을 돌려줍니다(실제 읽기는 agent의 로컬 비전 모델).
+채팅에서 JPEG·PNG 사진을 한 번에 3장(한 장 5MB)까지 붙여 보냅니다(gateway 메시지 `attachments`, data URL). 형식은 파일 앞 바이트로 보고(MIME이 비거나 `image/jpg`여도 받음, HEIC는 JPEG로 저장해 달라고 안내), 화면 표시는 object URL로, data URL은 보낼 때만 만듭니다. 사진이 거절되면(413·415·422) 입력하던 글과 사진을 되돌립니다. 실행 미리보기 카드에는 gateway가 준 `fromAttachments`가 true이거나 마지막 카드 뒤에 사진을 보낸 적이 있으면 "이미지에서 읽은 값(확인 필요)"을 붙입니다(사진에서 읽은 값은 신뢰 불가, 결정 0004). `fromAttachments`는 agent가 그 턴에 사진을 읽었는지만 알려 주므로, 사진을 보낸 뒤 되물은 질문에 글로 답한 턴의 카드는 false여도 표시합니다. 지난 대화는 기록의 첨부 메타로 "사진 n장 첨부"만 보여 줍니다(사진 본문은 저장하지 않음). 화면의 영수증은 시험용으로 지어낸 것이고, 모의 서버는 사진을 읽지 않고 정해 둔 값을 돌려줍니다(실제 읽기는 agent의 로컬 비전 모델).
+
+실제 스택(S6, `PACK_STAGE=3`)에서 로컬 모델을 코랩 T4(터널 경유)로 붙여 확인했습니다(2026-11-22). 영수증은 `eval/tools/make_receipts.py`가 Noto Sans KR(SIL OFL)로 그린 개발 묶음 그림이고, 불량 사진·도면은 `eval/images/`의 생성 그림입니다. 세 경우 모두 에이전트가 사진을 보낸 턴에 값을 읽었습니다. 영수증·불량 사진은 한 번 되물은 뒤 다음 턴에 미리보기 카드가 떴고, 그 카드에 "확인 필요"가 붙습니다. 도면은 실행할 도구가 없어 답 글로만 돌려줍니다.
+
+- 영수증 `rcp-dev-002`: 금액·날짜·가맹점·사업자번호 네 값이 정답과 같았습니다. 다른 영수증(`rcp-dev-003`)에서는 날짜를 2027-03-24 대신 2024-03-27로 읽었습니다.
+- 불량 사진 `defect-001`: 품목 코드 BRG-6204가 정답과 같았고, 유형은 `scratches`(정답 `scratch`)로 읽었습니다. 수량·로트 번호는 사진에 없어 되물었습니다.
+- 도면 `dwg-001`: 부품 번호, 치수 4개, 주기(재질·모따기)가 정답과 같았습니다.
+
+| 실제: 영수증 → 되물음 → 경비 정산 카드 | 실제: 불량 사진 → 되물음 → 불량 보고서 카드 |
+|---|---|
+| ![실제 영수증 첨부](docs/images/real-chat-attach-receipt.png) | ![실제 불량 사진 첨부](docs/images/real-chat-attach-defect.png) |
+
+| 실제: 도면 읽기(연구소 에이전트) | |
+|---|---|
+| ![실제 도면 첨부](docs/images/real-chat-attach-drawing.png) | |
 
 | 로그인 오류 | 디자인 부품 |
 |---|---|
