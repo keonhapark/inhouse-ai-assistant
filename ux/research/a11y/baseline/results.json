@@ -1,0 +1,359 @@
+{
+  "meta": {
+    "label": "baseline",
+    "at": "2026-11-22T12:19:38.187Z",
+    "axeVersion": "4.14.1",
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa",
+      "wcag22aa",
+      "best-practice"
+    ]
+  },
+  "screens": [
+    {
+      "scheme": "light",
+      "screen": "로그인",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "로그인 오류",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "채팅 빈 화면",
+      "violations": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Document should have one main landmark",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "bypass",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "screen": "채팅 답·근거·실행한 일",
+      "violations": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Document should have one main landmark",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "bypass",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "screen": "채팅 실행 미리보기",
+      "violations": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Document should have one main landmark",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "bypass",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "screen": "승인함 내 차례",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "승인함 문서 상세(대결)",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "승인함 위임 미리보기",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "조직도",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "에이전트",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "관리 운영 지표",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "관리 외부 전송 기록",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "관리 감사 로그",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "평가 리포트",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 75
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "로그인",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "로그인 오류",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "채팅 빈 화면",
+      "violations": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Document should have one main landmark",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "bypass",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "채팅 답·근거·실행한 일",
+      "violations": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Document should have one main landmark",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "bypass",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "채팅 실행 미리보기",
+      "violations": [
+        {
+          "id": "landmark-one-main",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Document should have one main landmark",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        },
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "targets": [
+            "html"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "bypass",
+          "nodes": 1
+        },
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "승인함 내 차례",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "승인함 문서 상세(대결)",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "승인함 위임 미리보기",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "조직도",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "에이전트",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "관리 운영 지표",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "관리 외부 전송 기록",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "관리 감사 로그",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "평가 리포트",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 75
+        }
+      ]
+    }
+  ]
+}
