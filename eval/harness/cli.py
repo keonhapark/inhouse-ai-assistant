@@ -31,7 +31,8 @@ from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
 
 
 # contracts/openapi/gateway.yaml createConversation의 X-Eval-Model-Override
-MODEL_OVERRIDES = ("local=local-exaone", "external=external-sonnet", "local=local-exaone,external=external-sonnet")
+MODEL_OVERRIDES = ("local=local-exaone", "external=external-sonnet", "local=local-exaone,external=external-sonnet",
+                   "external=external-exaone")
 
 
 def load_config(path: Path) -> dict[str, Any]:

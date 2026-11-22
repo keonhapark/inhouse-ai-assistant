@@ -105,6 +105,24 @@ async def test_finance_agent_cannot_call_purchase(h2: Harness) -> None:
     assert r.problem["type"] == "urn:problem:tool-not-allowed"
 
 
+@pytest.mark.anyio
+async def test_procurement_reads_item_price_and_stock(h2: Harness, reg2: Registry) -> None:
+    # 재고 조회(#466): 2단계 구매자재가 품목 단가·재고를 봅니다(계약 #519로 item_search가 2단계 도구)
+    assert "item_search" in reg2.get("procurement").tools
+    r = await h2.service.call("item_search", {"q": "BRG-6204"}, mint(agent="procurement", scopes=["item:read"]),
+                              CallMeta())
+    assert r.ok, r.problem
+    assert r.data["items"] == [{"code": "BRG-6204", "name": "깊은 홈 볼 베어링 6204", "unit": "EA",
+                                "unitPrice": 4200, "stock": 1250}]
+
+
+@pytest.mark.anyio
+async def test_finance_agent_cannot_call_item_search(h2: Harness) -> None:
+    r = await h2.service.call("item_search", {"q": "BRG"}, mint(agent="finance", tools=["item_search"],
+                                                               scopes=["item:read"]), CallMeta())
+    assert r.problem["type"] == "urn:problem:tool-not-allowed"
+
+
 # ---- 업무 실행 ----
 
 

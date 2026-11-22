@@ -405,8 +405,9 @@ class Egress:
         if probe is not None:
             hit = self.cache.lookup(probe)
             if hit is not None:
-                # LLM을 부르지 않으므로 외부 전송·비용·외부 기록이 없습니다. 사용 모델은 그 답을 만든 별칭(키에 들어 있음)입니다.
-                self.usage.record(caller.conversation_id, model["name"], model["location"])
+                # LLM을 부르지 않으므로 외부 전송·비용·외부 기록이 없습니다(#485). 감사에는 cacheHit로 남겨 운영 지표의 LLM 요청 수에서
+                # 빼고, 대화 사용 집계(ChatEvent model)에는 넣지 않습니다. 머리글의 별칭·위치는 그 답을 만든 별칭입니다(계약 #475).
+                model["cacheHit"] = True
                 note = (f"{note}; " if note else "") + f"의미 캐시 적중(유사도 {hit.similarity:.3f})"
                 self._audit(caller, model, "ok", None, note)
                 return Response(hit.entry.content, status_code=200, media_type=hit.entry.media_type,

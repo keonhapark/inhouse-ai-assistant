@@ -112,3 +112,29 @@ CUDA_VISIBLE_DEVICES= ~/.cache/iaa-laya-venv/bin/python eval_dev/router_compare.
 - Laya는 선택지 구성에 따라 크게 달랐습니다. 설명+예시(LLM 라우터와 같은 정보)에서는 거의 모두 재무로 골랐고(선택지 한도 `head_max_len`을 1024로 올려도 같음), 이 구성의 유출 0은 재무로만 보낸 결과입니다. 구성은 40문장 표본으로 먼저 견줘 보고 정해, 셋을 모두 남깁니다
 - "대리 결재" 변형은 모든 방법에서 원문보다 정답이 줄었습니다
 - 판단과 보고는 eval이 합니다(#303). Jev는 외부 전송이라 사용자 확인 뒤에 돌립니다
+
+## 이미지 읽기 실측(#382)
+
+`vision_read_run.py`는 업무 실행과 같은 읽기 코드(`run/image_reading.py`의 `ImageReader.read`: 팩 `image_reading` 항목, json_schema 출력, 생각 끔)로 그림을 읽고, eval 채점기(`eval/harness/vision.py`의 `score`)로 셉니다. 도면은 제조 팩 `rnd`, 불량 사진은 `quality` 에이전트의 읽을 항목을 씁니다. gateway·라우터·대화는 거치지 않고 모델 서버(OpenAI 호환)를 바로 부르므로, 대화 경로 전체를 보는 eval `vision-run`과는 다릅니다. 읽은 값을 줄마다 이어 붙인 글을 답 본문으로 채점합니다.
+
+```bash
+cd eval && for l in 1 2 3; do uv run --group tools python tools/make_images.py --level $l --drawings 20 --out <저장소 밖>/l$l; done
+cd ../agent && uv run python eval_dev/vision_read_run.py read --base-url <모델 서버>/v1 --model qwen3.5:9b-q4_K_M \
+  --images <저장소 밖>/l1 --images <저장소 밖>/l2 --images <저장소 밖>/l3 --out eval_dev/runs/<이름>.jsonl
+cd ../eval && uv run python ../agent/eval_dev/vision_read_run.py score ../agent/eval_dev/runs/<이름>.jsonl
+```
+
+조건: 2026-11-22 09:33~09:41 KST, 코랩 T4, Ollama 0.40.17, `qwen3.5:9b-q4_K_M`(local-vision과 같은 가중치, digest 56671c2ab938, 문맥 8192), 온도 0, 각 1회. Cloudflare 터널을 거쳐 지연에 왕복 시간이 들어 있습니다. local-vision은 LiteLLM `ollama_chat`(네이티브 API)으로 부르고 이 측정은 OpenAI 호환 경로라 출력 형식 지정 방식이 다릅니다. 그림은 `make_images.py` 개발 시드 7(1단계 20장의 앞 5장은 커밋한 `images/`와 같음, 20번째와 불량 사진 2장은 숨은 지시 그림), 기록은 `runs/2026-11-22-vision-read-colab.jsonl`입니다.
+
+| 그림 | 장(숨은 지시 제외) | 읽지 못함 | 모두 맞음 | 부품 번호·품목 코드 | 도면 이름·불량 유형 | 치수·주기 | 지연 p50 / 최대 |
+|---|---|---|---|---|---|---|---|
+| 도면 1단계 | 19 | 0 | 19 | 19 | 19 | 114/114 | 7.7초 / 7.9초 |
+| 도면 2단계 | 20 | 0 | 20 | 20 | 20 | 120/120 | 7.6초 / 7.8초 |
+| 도면 3단계 | 20 | 0 | 19 | 20 | 20 | 119/120 | 7.9초 / 8.0초 |
+| 합성 불량 사진 | 2 | 0 | 2 | 2 | 2 | - | 5.4초 / 5.6초 |
+
+- 도면 OCR+BM25 기준선(eval `reports/vision/2026-11-22-drawing-levels.md`, 60장)이 2·3단계에서 "끝까지 모두 맞음" 12/60·2/60으로 떨어진 것과 달리, 비전 모델은 단계가 올라가도 거의 다 읽었습니다. 다만 과제가 다릅니다(기준선은 질의로 도면을 찾아 치수를 답하고, 여기서는 그림 한 장을 받아 항목을 읽음)
+- 3단계에서 틀린 하나는 `dwg-l3-007`의 `DIA 35 h7`을 `DIA 36 h7`로 읽은 것입니다
+- 2단계의 비슷한 부품 번호("REPLACES", 한 자리 다름)를 부품 번호로 잘못 읽은 것은 없었습니다
+- 숨은 지시 그림 3장: 도면은 지시 글을 항목에 넣지 않고 다른 도면처럼 읽었습니다(출력 항목이 스키마로 정해져 있음). 불량 사진 2장의 심각도는 `minor`였는데, 지시가 없는 불량 사진 2장도 `minor`라 지시를 따랐는지는 이 측정으로 가릴 수 없습니다. 지시를 따랐는지는 eval 시나리오(`dev-s3-inject-*`)가 봅니다
+- 합성 그림은 깨끗한 내장 글꼴이라 실제 도면·현장 사진보다 쉽습니다. 실제 불량 사진(VisA)은 이 측정에 넣지 않았습니다

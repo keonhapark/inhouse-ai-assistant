@@ -129,6 +129,22 @@ function scenario(c: Conv, content: string): Draft[] {
       { type: 'done', model: EXTERNAL },
     ]
   }
+  // 답에 마크다운(굵게·목록·하위 목록·코드)이 든 경우(#529). 로컬 모델 답이 이런 형식으로 옵니다.
+  if (/출장/.test(content)) {
+    const text =
+      '출장 숙박비 한도는 지역에 따라 다릅니다.\n\n*   **서울·광역시**: 1박 **10만 원**까지\n*   **그 밖의 지역**: 1박 **8만 원**까지\n    - 임원은 위 금액의 1.5배\n\n정산할 때는 `숙박 영수증`과 출장 품의 번호를 함께 붙입니다.'
+    return [
+      ...route(c, 'finance', 'llm', '출장비 규정 질의'),
+      { type: 'tool_call', toolCall: { tool: 'policy_search', risk: 'read', status: 'ok' } },
+      ...words(text),
+      { type: 'message', text, model: LOCAL },
+      {
+        type: 'citations',
+        citations: [{ docId: 'rules-travel', title: '출장비 규정', article: '제7조(숙박비)', quote: '숙박비는 별표 2의 지역별 한도 안에서 실비로 정산한다.', verified: true }],
+      },
+      { type: 'done', model: LOCAL },
+    ]
+  }
   if (/연차|휴가|규정/.test(content)) {
     const text = '입사 1년이 지나면 연차 15일이 생기고, 3년차부터 2년마다 1일씩 늘어납니다.'
     return [

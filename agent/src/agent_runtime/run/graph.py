@@ -45,7 +45,7 @@ class RunGraphState(TypedDict, total=False):
     pending: dict[str, Any] | None
     tainted: bool
     conversation_tainted: bool
-    attachments_read: bool  # 이 턴에 첨부 이미지에서 값을 읽음(미리보기 fromAttachments, #394). 턴마다 비움
+    attachments_read: bool  # 이 대화에서 첨부 이미지를 읽음(미리보기 fromAttachments, #394·#530). TURN_RESET에 넣지 않아 대화 끝까지 남습니다
     taint_exempt: list[str]  # 이 턴의 신뢰 불가 표시(tainted)에서 뺄 도구. 영수증 턴의 expense_request(결정 0004 덧붙임)
     force_local: bool  # 라우터 fallback 대화(#308)·이미지를 읽은 대화(#413). TURN_RESET에 넣지 않아 대화 끝까지 남습니다
     actions: list[dict[str, Any]]
@@ -57,9 +57,9 @@ class RunGraphState(TypedDict, total=False):
     steps: int
 
 
-# conversation_tainted는 턴마다 풀지 않습니다(대화가 끝날 때까지 남음).
+# conversation_tainted·attachments_read는 턴마다 풀지 않습니다(대화가 끝날 때까지 남음).
 TURN_RESET: RunGraphState = {
-    "queue": [], "current": None, "pending": None, "tainted": False, "taint_exempt": [], "attachments_read": False,
+    "queue": [], "current": None, "pending": None, "tainted": False, "taint_exempt": [],
     "actions": [], "undo_notes": [],
     "citations": [], "blocked": [], "final": "", "status": "", "steps": 0,
 }

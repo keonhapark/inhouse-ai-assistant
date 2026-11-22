@@ -5,6 +5,7 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { newIdempotencyKey, type UndoResult } from './api'
 import { changeRows, formatTime, opLabel } from './format'
+import { Markdown } from './markdown'
 import type { Citation, ThreadItem } from './thread'
 
 type Approval = NonNullable<Schemas['ChatEvent']['approval']>
@@ -12,11 +13,10 @@ type Approval = NonNullable<Schemas['ChatEvent']['approval']>
 export function AssistantMessage({ item }: { item: Extract<ThreadItem, { kind: 'assistant' }> }) {
   return (
     <div className="msg msg--assistant">
-      <p className="msg__text">
-        <span className="visually-hidden">답: </span>
-        {item.text}
-        {item.streaming && <span className="msg__cursor" aria-hidden="true" />}
-      </p>
+      <span className="visually-hidden">답: </span>
+      <div className="msg__text md">
+        <Markdown text={item.text} tail={item.streaming && <span className="msg__cursor" aria-hidden="true" />} />
+      </div>
       {item.model?.location === 'local' && <LocalBadge />}
       {item.citations && item.citations.length > 0 && <Citations citations={item.citations} />}
     </div>

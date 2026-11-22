@@ -49,8 +49,9 @@ let localKey = 0
 const nextKey = (p: string) => `${p}-${++localKey}`
 
 /**
- * gateway가 fromAttachments를 주지 않을 때의 추정: 마지막 카드(미리보기·실행한 일) 뒤에 사진을 붙인 사용자 메시지가 있었는지.
+ * 마지막 카드(미리보기·실행한 일) 뒤에 사진을 붙인 사용자 메시지가 있었는지.
  * 사진을 보낸 뒤 되묻는 질문에 글로 답한 턴의 카드도 사진에서 읽은 값을 쓸 수 있어 보수적으로 봅니다.
+ * agent의 fromAttachments는 그 턴에 사진을 읽었는지만 알려 주므로(되물은 다음 턴은 false), false여도 이 추정을 함께 봅니다.
  */
 function imagesSinceLastCard(items: ThreadItem[]): boolean {
   for (let i = items.length - 1; i >= 0; i--) {
@@ -129,7 +130,7 @@ function applyEvent(s: ThreadState, e: ChatEvent): ThreadState {
             ...st,
             items: [
               ...items,
-              { kind: 'approval', key: e.approval.approvalId, approval: e.approval, fromImage: e.approval.fromAttachments ?? imagesSinceLastCard(items) },
+              { kind: 'approval', key: e.approval.approvalId, approval: e.approval, fromImage: e.approval.fromAttachments === true || imagesSinceLastCard(items) },
             ],
           }
         : st

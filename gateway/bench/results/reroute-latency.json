@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "at": "2026-11-22T09:22:36+09:00",
+    "device": "코랩 T4, 터널 경유",
+    "commit": "6a4aee2",
+    "python": "3.12.3",
+    "model": "ollama_chat/qwen3.5:9b (Q4_K_M)",
+    "litellm": "1.108.1",
+    "reps": 3,
+    "questions": 5,
+    "timeoutSeconds": 180
+  },
+  "summary": {
+    "none": {
+      "n": 15,
+      "errors": 0,
+      "over60s": 0,
+      "median": 2.96,
+      "max": 10.54,
+      "mean": 3.87,
+      "medianCompletionTokens": 68
+    },
+    "default": {
+      "n": 15,
+      "errors": 0,
+      "over60s": 1,
+      "median": 8.19,
+      "max": 79.91,
+      "mean": 13.07,
+      "medianCompletionTokens": 193
+    }
+  },
+  "rows": [
+    {
+      "rep": 0,
+      "question": 0,
+      "effort": "none",
+      "seconds": 1.86,
+      "completionTokens": 32,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 0,
+      "question": 0,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 3.75,
+      "completionTokens": 98,
+      "toolCall": true,
+      "reasoningChars": 135
+    },
+    {
+      "rep": 0,
+      "question": 1,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 7.55,
+      "completionTokens": 184,
+      "toolCall": true,
+      "reasoningChars": 218
+    },
+    {
+      "rep": 0,
+      "question": 1,
+      "effort": "none",
+      "seconds": 2.87,
+      "completionTokens": 68,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 0,
+      "question": 2,
+      "effort": "none",
+      "seconds": 2.36,
+      "completionTokens": 44,
+      "toolCall": false,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 0,
+      "question": 2,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 10.59,
+      "completionTokens": 267,
+      "toolCall": false,
+      "reasoningChars": 248
+    },
+    {
+      "rep": 0,
+      "question": 3,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 5.35,
+      "completionTokens": 115,
+      "toolCall": true,
+      "reasoningChars": 193
+    },
+    {
+      "rep": 0,
+      "question": 3,
+      "effort": "none",
+      "seconds": 2.96,
+      "completionTokens": 65,
+      "toolCall": false,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 0,
+      "question": 4,
+      "effort": "none",
+      "seconds": 5.83,
+      "completionTokens": 123,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 0,
+      "question": 4,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 79.91,
+      "completionTokens": 1965,
+      "toolCall": true,
+      "reasoningChars": 3877
+    },
+    {
+      "rep": 1,
+      "question": 0,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 5.71,
+      "completionTokens": 110,
+      "toolCall": true,
+      "reasoningChars": 161
+    },
+    {
+      "rep": 1,
+      "question": 0,
+      "effort": "none",
+      "seconds": 1.56,
+      "completionTokens": 32,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 1,
+      "question": 1,
+      "effort": "none",
+      "seconds": 3.43,
+      "completionTokens": 68,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 1,
+      "question": 1,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 8.19,
+      "completionTokens": 193,
+      "toolCall": true,
+      "reasoningChars": 225
+    },
+    {
+      "rep": 1,
+      "question": 2,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 12.05,
+      "completionTokens": 281,
+      "toolCall": false,
+      "reasoningChars": 362
+    },
+    {
+      "rep": 1,
+      "question": 2,
+      "effort": "none",
+      "seconds": 1.68,
+      "completionTokens": 35,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 1,
+      "question": 3,
+      "effort": "none",
+      "seconds": 1.94,
+      "completionTokens": 31,
+      "toolCall": false,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 1,
+      "question": 3,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 4.74,
+      "completionTokens": 113,
+      "toolCall": true,
+      "reasoningChars": 191
+    },
+    {
+      "rep": 1,
+      "question": 4,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 12.96,
+      "completionTokens": 298,
+      "toolCall": true,
+      "reasoningChars": 366
+    },
+    {
+      "rep": 1,
+      "question": 4,
+      "effort": "none",
+      "seconds": 4.55,
+      "completionTokens": 105,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 2,
+      "question": 0,
+      "effort": "none",
+      "seconds": 2.7,
+      "completionTokens": 49,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 2,
+      "question": 0,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 5.61,
+      "completionTokens": 134,
+      "toolCall": true,
+      "reasoningChars": 230
+    },
+    {
+      "rep": 2,
+      "question": 1,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 9.66,
+      "completionTokens": 223,
+      "toolCall": true,
+      "reasoningChars": 308
+    },
+    {
+      "rep": 2,
+      "question": 1,
+      "effort": "none",
+      "seconds": 4.23,
+      "completionTokens": 95,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 2,
+      "question": 2,
+      "effort": "none",
+      "seconds": 10.54,
+      "completionTokens": 242,
+      "toolCall": false,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 2,
+      "question": 2,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 10.95,
+      "completionTokens": 267,
+      "toolCall": false,
+      "reasoningChars": 350
+    },
+    {
+      "rep": 2,
+      "question": 3,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 5.38,
+      "completionTokens": 117,
+      "toolCall": true,
+      "reasoningChars": 204
+    },
+    {
+      "rep": 2,
+      "question": 3,
+      "effort": "none",
+      "seconds": 3.41,
+      "completionTokens": 76,
+      "toolCall": false,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 2,
+      "question": 4,
+      "effort": "none",
+      "seconds": 8.11,
+      "completionTokens": 179,
+      "toolCall": true,
+      "reasoningChars": 0
+    },
+    {
+      "rep": 2,
+      "question": 4,
+      "effort": "(없음, 모델 기본=생각)",
+      "seconds": 13.65,
+      "completionTokens": 333,
+      "toolCall": true,
+      "reasoningChars": 453
+    }
+  ]
+}
