@@ -38,7 +38,7 @@ uv run python lora/compare_runs.py ~/lora/base-nothink.jsonl ~/lora/lora-nothink
 ```
 
 - 기본 모델: Hugging Face `Qwen/Qwen3.5-9B`(Apache-2.0, `Qwen3_5ForConditionalGeneration`). 리비전을 고정하지 않으면 받은 sha를 `run.json`에 남깁니다
-- 학습(`train_qlora.py`): 4비트 NF4·이중 양자화, bf16 계산, 언어 모델 attention·MLP 선형층에만 LoRA(r 16, alpha 32, dropout 0.05), 정답(assistant) 토큰만 손실, 2 epoch, 학습률 2e-4(cosine), 배치 1 × 누적 8, gradient checkpointing, paged AdamW 8bit, 시드 7
+- 학습(`train_qlora.py`): 4비트 NF4·이중 양자화, bf16 계산(T4처럼 bf16이 없으면 fp16), 언어 모델 attention·MLP 선형층에만 LoRA(r 16, alpha 32, dropout 0.05), 정답(assistant) 토큰만 손실, 2 epoch, 학습률 2e-4(cosine), 배치 1 × 누적 8, gradient checkpointing, paged AdamW 8bit, 시드 7
 - chat template은 생각 끔 형식입니다. 데이터에 생각 내용이 없어 생각 켬 형식으로 만들면 빈 생각을 가르치게 되고 토큰 경계도 어긋납니다. 업무 경로는 생각 켬이 기본(결정 0008)이라 평가는 생각 끔·켬 둘 다 합니다
 - 토큰 길이(기본 데이터, Qwen3.5 토크나이저): p50 1,296, 최대 1,834. 정답 토큰 합 학습 62,780·검증 7,533. 확인은 `--dry-run`으로 했습니다(transformers 5.22.2, GPU 없음)
 - 내보내기(`export_ollama.py`): PEFT 어댑터를 llama.cpp `convert_lora_to_gguf.py`로 GGUF 어댑터로 바꾸고, Ollama API(`/api/blobs`, `/api/create`의 `adapters`)로 `qwen3.5:9b` 위에 얹은 모델을 만듭니다. 학습은 bf16 원본, 실행은 Q4_K_M 기본 모델이라 수치가 조금 다릅니다

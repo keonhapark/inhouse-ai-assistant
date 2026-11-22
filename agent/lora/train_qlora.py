@@ -101,10 +101,13 @@ def main(argv: list[str] | None = None) -> int:
                               set_seed)
 
     set_seed(args.seed)
+    # RTX 40은 bf16, 코랩 T4는 bf16을 지원하지 않아 fp16으로 계산합니다
+    bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    compute = torch.bfloat16 if bf16 else torch.float16
     model = AutoModelForImageTextToText.from_pretrained(
-        args.base_model, revision=revision, device_map="auto", dtype=torch.bfloat16,
+        args.base_model, revision=revision, device_map="auto", dtype=compute,
         quantization_config=BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
-                                               bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=torch.bfloat16))
+                                               bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=compute))
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
     model = get_peft_model(model, LoraConfig(r=args.lora_r, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,
                                              target_modules=args.target_modules, task_type="CAUSAL_LM"))
@@ -123,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
         args=TrainingArguments(output_dir=str(out / "checkpoints"), per_device_train_batch_size=args.batch,
                                per_device_eval_batch_size=args.batch, gradient_accumulation_steps=args.grad_accum,
                                num_train_epochs=args.epochs, learning_rate=args.lr, lr_scheduler_type="cosine",
-                               warmup_ratio=0.03, bf16=True, logging_steps=10, eval_strategy="epoch",
+                               warmup_ratio=0.03, bf16=bf16, fp16=not bf16, logging_steps=10, eval_strategy="epoch",
                                save_strategy="epoch", save_total_limit=2, seed=args.seed, optim="paged_adamw_8bit",
                                gradient_checkpointing=True, remove_unused_columns=False, report_to=[]))
     started = time.time()
@@ -141,6 +144,7 @@ def main(argv: list[str] | None = None) -> int:
            "versions": {"python": platform.python_version(), "torch": torch.__version__,
                         "transformers": transformers.__version__, "peft": peft.__version__},
            "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+           "computeDtype": str(compute).removeprefix("torch."),
            "trainablePercent": round(100 * trainable / total, 3), "log": trainer.state.log_history}
     (out / "run.json").write_text(json.dumps(run, ensure_ascii=False, indent=1) + "\n", "utf-8")
     print(f"어댑터 {out / 'adapter'}, 기록 {out / 'run.json'}")
