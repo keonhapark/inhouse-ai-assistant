@@ -542,6 +542,29 @@ def test_sampling_params_dropped_for_external_only(client, app, token_for, litel
     assert litellm.last_body()["temperature"] == 0
 
 
+# ---------- 로컬로 돌린 호출의 생각 단계·시간 제한(#536, 결정 0008) ----------
+def test_rerouted_calls_keep_thinking_and_timeout_is_120s_by_default(client, app, token_for, litellm, monkeypatch):
+    import yaml
+
+    from gateway.config import Settings
+
+    for k in ("GATEWAY_LOCAL_REASONING_EFFORT", "LLM_TIMEOUT_SECONDS"):
+        monkeypatch.delenv(k, raising=False)
+    s = Settings.from_env()
+    assert s.local_reasoning_effort is None and s.llm_timeout_seconds == 120.0
+    monkeypatch.setenv("GATEWAY_LOCAL_REASONING_EFFORT", "none")
+    assert Settings.from_env().local_reasoning_effort == "none"
+    cfg = yaml.safe_load((ROOT / "gateway/litellm/config.yaml").read_text(encoding="utf-8"))
+    assert cfg["litellm_settings"]["request_timeout"] >= s.llm_timeout_seconds
+    _, external_ok = _agent_ids(app)
+    litellm.external_mode = "500"                               # 외부 장애 → 로컬 폴백
+    r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
+                    json={"model": "external", "messages": MSG})
+    assert r.status_code == 200
+    assert [json.loads(q.content).get("reasoning_effort") for q in litellm.requests] == [None, None]
+    assert "생각 단계" not in (_llm_events(app)[-1]["detail"] or "")
+
+
 # ---------- 외부 장애 때 로컬 폴백(#143) ----------
 @pytest.mark.parametrize("mode,code,sent_out", [
     ("timeout", "llm-timeout", True), ("500", "llm-upstream-error", True), ("down", "llm-unavailable", False),
@@ -560,7 +583,7 @@ def test_external_failure_falls_back_to_local(client, app, token_for, litellm, a
     ev = _llm_events(app)
     assert ev[-2]["result"] == "error" and ev[-2]["problemType"] == f"urn:problem:{code}"
     assert ev[-1]["result"] == "ok" and ev[-1]["model"]["name"] == "local"
-    assert ev[-1]["detail"] == f"외부 장애({code})로 로컬 폴백; 생각 단계 끔(reasoning_effort=none)"  # #427
+    assert ev[-1]["detail"] == f"외부 장애({code})로 로컬 폴백"   # 생각 단계는 기본으로 건드리지 않음(#536)
     # 화면 표시: 요청이 실제로 외부로 나갔으면 external로 남습니다
     used = app.state.egress.usage.take("conv-9")
     assert used["location"] == ("external" if sent_out else "local")

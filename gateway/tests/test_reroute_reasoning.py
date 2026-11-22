@@ -1,7 +1,7 @@
-"""외부 별칭 요청을 로컬로 돌릴 때 생각 단계를 끕니다(#427).
+"""외부 별칭 요청을 로컬로 돌릴 때 GATEWAY_LOCAL_REASONING_EFFORT로 생각 단계를 끌 수 있습니다(#427).
 
-로컬 qwen3.5:9b는 생각 모드가 기본이라, 외부 모델을 기대한 호출을 로컬로 돌리면 길게 생각하다 시간 제한을 넘깁니다.
-gateway가 로컬로 돌린 호출에 reasoning_effort·think가 없으면 reasoning_effort(기본 none)를 채우고 감사 detail에 적습니다.
+기본은 채우지 않습니다(결정 0008, #536). 여기 시험은 설정으로 none을 준 경우의 동작입니다. 로컬로 돌린 호출에
+reasoning_effort·think가 없으면 그 값을 채우고 감사 detail에 적습니다.
 """
 
 import json
@@ -15,6 +15,11 @@ from .test_vision import _msg, _png, _url
 NOTE = "생각 단계 끔(reasoning_effort=none)"
 HR = [{"role": "user", "content": "2027년 3월 11일 병가 하루 신청해 줘."}]   # 업무 주제 hr-attendance → 로컬
 MSG = [{"role": "user", "content": "안녕"}]
+
+
+@pytest.fixture(autouse=True)
+def opted_in(app):
+    app.state.egress.local_reasoning_effort = "none"   # GATEWAY_LOCAL_REASONING_EFFORT=none
 
 
 def _bodies(litellm) -> list[dict]:
@@ -55,7 +60,7 @@ def test_caller_choice_is_kept(client, app, token_for, litellm, field, value):
     assert NOTE not in (_last_event(app).get("detail") or "")
 
 
-def test_setting_can_turn_it_off(client, app, token_for, litellm):
+def test_empty_setting_leaves_it_alone(client, app, token_for, litellm):
     app.state.egress.local_reasoning_effort = None
     assert _post(client, app, token_for, {"model": "external", "messages": HR}).status_code == 200
     assert "reasoning_effort" not in _bodies(litellm)[0]
@@ -102,6 +107,7 @@ def test_image_sent_to_local_alias_is_left_alone(client, app, token_for, litellm
 
 
 def test_pack_local_only_reroute_turns_thinking_off(lp):
+    lp.app_ref.state.egress.local_reasoning_effort = "none"
     tok = _token(lp, _external_ok_in_pack())
     r = lp.post("/v1/chat/completions", headers={"X-Delegation-Token": tok}, json={"model": "external", "messages": MSG})
     assert r.status_code == 200

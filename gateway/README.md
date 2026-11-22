@@ -56,7 +56,7 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     스택(`GATEWAY_EVAL_TOOLCALL=1`)의 측정 호출(`purpose=eval-toolcall`)입니다. rag 질의 임베딩은 #191 뒤로 토큰을 붙입니다.
     2026-11-21 실제 스택 기록에서 토큰이 있는 호출 537건은 모두 채워져 있었고, null 272건은 모두 토큰 없는 호출이었습니다
     (그중 rag 질의 임베딩 101건은 #191 전 이미지의 기록).
-  - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 60초) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
+  - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 120초, LiteLLM `request_timeout`도 120초, #536) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
   - 비용 상한(`gateway/budgets.py`, 팩 선택 파일 `budgets.yaml`, #155): 외부 응답 비용(LiteLLM `x-litellm-response-cost`,
     스트림은 별칭 단가 `model_info.input_cost_per_token`·`output_cost_per_token`과 usage로 계산)을 기간(day|month)마다 에이전트와
@@ -112,11 +112,12 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - `POST /v1/embeddings`: 로컬 별칭(`local-embed` → Ollama `bge-m3`, 1024차원)만 받습니다. 외부 별칭은 403입니다.
   - `reasoning_effort`는 그대로 넘깁니다. LiteLLM 1.108.1은 Ollama에 `none`이면 `think: false`, `low`·`high`면 `think: true`로
     바꿔 보냅니다(단계는 구분되지 않음). Ollama 전용 `think`는 외부로 보낼 때 뺍니다(Anthropic이 400으로 거절함).
-  - 외부 별칭 요청을 gateway가 로컬로 돌린 호출(이미지, 팩 외부 LLM 금지, 기밀 판정·업무 주제, 비용 상한, 외부 장애 폴백)에
-    `reasoning_effort`도 `think`도 없으면 `reasoning_effort: none`을 채워 생각 단계를 끕니다(#427). 로컬 qwen3.5:9b는 생각 모드가
-    기본이라 외부 모델을 기대한 호출이 길게 생각하다 시간 제한(`LLM_TIMEOUT_SECONDS`)을 넘기기 때문입니다. 감사 detail에
-    `생각 단계 끔(reasoning_effort=none)`을 적습니다. 처음부터 로컬 별칭으로 온 요청, 호출한 쪽이 정한 값, 별칭 `drop_params`가
-    `reasoning_effort`를 빼는 경우는 건드리지 않습니다. 값은 `GATEWAY_LOCAL_REASONING_EFFORT`(기본 `none`, 빈 값이면 채우지 않음)로 바꿉니다.
+  - 외부 별칭 요청을 gateway가 로컬로 돌린 호출(이미지, 팩 외부 LLM 금지, 기밀 판정·업무 주제, 비용 상한, 외부 장애 폴백)의
+    생각 단계는 기본으로 건드리지 않습니다(결정 0008, #536). `GATEWAY_LOCAL_REASONING_EFFORT`를 주면(예: `none`) `reasoning_effort`도
+    `think`도 없는 호출에 그 값을 채우고 감사 detail에 `생각 단계 끔(reasoning_effort=none)`처럼 적습니다(#427). 처음부터 로컬 별칭으로
+    온 요청, 호출한 쪽이 정한 값, 별칭 `drop_params`가 `reasoning_effort`를 빼는 경우는 건드리지 않습니다. 생각을 끄면 빠르지만
+    (코랩 T4 측정 중앙값 2.96초 대 8.19초, 최대 10.5초 대 79.9초, [bench/README.md](bench/README.md)) 답의 질을 위해 끄지 않고 시간
+    제한을 120초로 늘렸습니다.
 - 외부로 나가는 요청의 기밀 판정과 가림(로컬 모델로 가는 요청은 가리지 않습니다)
   - 사내 용어 사전(`gateway/confidential.py`): 팩의 `glossary.yaml`(#62)에서 용어를 읽어, 용어의 `action`이
     `block`이면 403 `confidential`, `local_only`면 로컬 별칭으로 돌립니다. 파일이 없으면 판정하지 않습니다.
@@ -211,7 +212,7 @@ DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
 `LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
 `AGENT_TIMEOUT_SECONDS`(기본 120), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`,
 `SLACK_BRIDGE_SECRET`, `SLACK_USERS_FILE`, `ERP_SERVICE_LOGIN_SECRET`, `SLACK_LOGIN_PER_USER_PER_MINUTE`, `SLACK_LOGIN_PER_MINUTE`, `GATEWAY_EVAL_REPORTS_DIR`,
-`GATEWAY_LOCAL_REASONING_EFFORT`(기본 `none`, #427),
+`GATEWAY_LOCAL_REASONING_EFFORT`(기본 빈 값=채우지 않음, #427·#536),
 `GATEWAY_SEMANTIC_CACHE`(`1`이면 켬, #465), `GATEWAY_CACHE_THRESHOLD`(기본 0.95), `GATEWAY_CACHE_TTL_SECONDS`(기본 600).
 상대 경로는 저장소 루트 기준입니다. LiteLLM은 1.108.1로 고정합니다(배포 뒤 2주가 지난 판).
 
