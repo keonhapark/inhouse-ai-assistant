@@ -324,7 +324,7 @@ components:
           description: erp WritePreview(summary, changes, undoable, warnings)
         fromAttachments:
           type: boolean
-          description: 이 턴에 첨부 이미지를 읽었으면 true. 인자 일부가 이미지에서 읽은 신뢰 불가 값일 수 있습니다(결정 0004). gateway가 ChatEvent approval로 넘깁니다
+          description: 이 대화에서 첨부 이미지를 읽은 적이 있으면 true입니다(읽은 턴과 그 뒤 턴, #530). 되물은 뒤 다음 턴에 나온 미리보기에도 이미지에서 읽은 값이 인자로 쓰일 수 있어 대화가 끝날 때까지 남깁니다. 인자 일부가 이미지에서 읽은 신뢰 불가 값일 수 있습니다(결정 0004). gateway가 ChatEvent approval로 넘깁니다
     ExecutedAction:
       type: object
       required: [tool, actionId, summary, undoable]
