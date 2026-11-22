@@ -32,7 +32,7 @@ describe('관리자 콘솔', () => {
     expect(within(screen.getByRole('region', { name: '입구 라우팅' })).getByText('모델이 고름')).toBeInTheDocument()
     const budgets = screen.getByRole('region', { name: '외부 비용 상한' })
     expect(within(budgets).getByRole('row', { name: /구매자재/ })).toHaveTextContent('상한 넘음 · 로컬로 내림')
-    expect(screen.getByRole('link', { name: '관리' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '운영 지표' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('기간을 바꾸면 그 기간으로 다시 부릅니다', async () => {
@@ -64,7 +64,7 @@ describe('관리자 콘솔', () => {
   it('외부 전송 기록: 가린 자리를 표시하고 에이전트로 거릅니다', async () => {
     const user = renderAdmin()
     await user.click(await screen.findByRole('tab', { name: '외부 전송 기록' }))
-    const first = (await screen.findAllByRole('listitem'))[0]
+    const first = (await within(screen.getByRole('tabpanel')).findAllByRole('listitem'))[0]
     expect(first).toHaveTextContent('가림 1곳: 전화번호')
     await user.click(within(first).getByText('전사 비서'))
     const mark = within(first).getByTitle('가림: 전화번호')
@@ -172,6 +172,6 @@ describe('관리자 콘솔', () => {
   it('auditor가 아니면 메뉴가 없고, 열어도 problem title을 보여 줍니다', async () => {
     renderAdmin('mock.emp-1001')
     expect(await screen.findByRole('alert')).toHaveTextContent('감사 조회 역할이 필요합니다.')
-    expect(screen.queryByRole('link', { name: '관리' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '운영 지표' })).toBeNull()
   })
 })

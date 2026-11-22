@@ -1,7 +1,7 @@
 .inbox {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
-  min-height: calc(100vh - 49px);
+  min-height: 100dvh;
 }
 
 .inbox__main {

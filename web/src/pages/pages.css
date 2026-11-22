@@ -23,27 +23,6 @@
   margin: 0;
 }
 
-.shell {
-  min-height: 100vh;
-}
-
-.topbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-16);
-  padding: var(--sp-8) var(--sp-24);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-
-.topbar__me {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-8);
-  margin-left: auto;
-}
-
 .page {
   display: grid;
   gap: var(--sp-24);
@@ -88,20 +67,4 @@
 
 .card p {
   margin: 0 0 var(--sp-4);
-}
-
-.topbar__nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-12);
-}
-
-.topbar__nav a {
-  color: var(--text-muted);
-  text-decoration: none;
-}
-
-.topbar__nav a[aria-current='page'] {
-  color: var(--text);
-  font-weight: 600;
 }

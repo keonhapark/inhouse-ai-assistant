@@ -76,7 +76,7 @@ describe('평가 리포트', () => {
     expect(within(normal).getByText('정상 업무를 거의 막지 않았다')).toBeInTheDocument()
     expect(within(normal).getByText(/\+22\.5%p \(\+12\.2~\+31\.9%p, 짝 80\)/)).toBeInTheDocument()
     expect(within(normal).getByRole('region', { name: '라우터 표' })).toHaveTextContent('71/80 (88.8%, 79.7%~94.7%)')
-    expect(screen.getByRole('link', { name: '평가' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '평가 리포트' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('시나리오별 결과: 기대와 다른 것만 거르고, 줄을 열어 사고·부족을 봅니다', async () => {
@@ -188,7 +188,7 @@ describe('평가 리포트', () => {
   it('auditor가 아니면 메뉴가 없고, 열어도 problem title을 보여 줍니다', async () => {
     renderAt('/eval', 'mock.emp-1001')
     expect(await screen.findByRole('alert')).toHaveTextContent('감사 조회 역할이 필요합니다.')
-    expect(screen.queryByRole('link', { name: '평가' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '평가 리포트' })).toBeNull()
   })
 })
 
