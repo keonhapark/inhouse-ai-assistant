@@ -46,6 +46,48 @@ def progress_line(step: int, max_steps: int, loss: float | None, elapsed: float)
     return f"진행 {step}/{max_steps} 손실 {loss_text} 경과 {elapsed / 60:.0f}분 남은 약 {rest_text}"
 
 
+def training_kwargs(args: argparse.Namespace, out: Path, bf16: bool) -> dict[str, Any]:
+    """TrainingArguments 인자. transformers 5에는 warmup_ratio가 없고, warmup_steps에 [0, 1) 실수를 주면 비율입니다."""
+    return {"output_dir": str(out / "checkpoints"), "per_device_train_batch_size": args.batch,
+            "per_device_eval_batch_size": args.batch, "gradient_accumulation_steps": args.grad_accum,
+            "num_train_epochs": args.epochs, "learning_rate": args.lr, "lr_scheduler_type": "cosine",
+            "warmup_steps": 0.03, "bf16": bf16, "fp16": not bf16, "logging_steps": 10, "eval_strategy": "epoch",
+            "save_strategy": "epoch", "save_total_limit": 2, "seed": args.seed, "optim": "paged_adamw_8bit",
+            "gradient_checkpointing": True, "gradient_checkpointing_kwargs": {"use_reentrant": False},
+            "remove_unused_columns": False, "report_to": []}
+
+
+def check_training_setup(kw: dict[str, Any], train: list[Any], valid: list[Any]) -> list[str]:
+    """dry-run에서 모델 없이 학습 설정을 미리 봅니다(#551 v2는 TrainingArguments 인자 이름에서 멈춤).
+
+    1. 인자 이름이 이 transformers 판 TrainingArguments 필드에 있는지(torch 없이)
+    2. torch가 있으면 TrainingArguments를 실제로 만들고, Trainer 생성 인자 이름도 확인
+    문제를 글로 돌려줍니다(없으면 빈 목록).
+    """
+    import dataclasses
+    import inspect
+
+    from transformers import TrainingArguments
+
+    names = {f.name for f in dataclasses.fields(TrainingArguments)}
+    problems = [f"TrainingArguments에 없는 인자: {k}" for k in kw if k not in names]
+    if problems:
+        return problems
+    try:
+        import torch  # noqa: F401
+    except ImportError:
+        return []
+    try:
+        TrainingArguments(**kw)
+        from transformers import Trainer
+        params = inspect.signature(Trainer.__init__).parameters
+        problems += [f"Trainer에 없는 인자: {k}" for k in ("model", "args", "train_dataset", "eval_dataset",
+                                                         "data_collator") if k not in params]
+    except Exception as e:  # noqa: BLE001 - 어떤 값이 틀렸는지 그대로 보여 줍니다
+        problems.append(f"TrainingArguments 생성 실패: {type(e).__name__}: {e}")
+    return problems
+
+
 def outside_repo(path: Path) -> Path:
     p = path.expanduser().resolve()
     if p == REPO or REPO in p.parents:
@@ -102,6 +144,15 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(summary, ensure_ascii=False))
     if not train:
         raise SystemExit("쓸 수 있는 학습 예시가 없습니다(too_long·prefix_mismatch 확인)")
+    try:
+        import torch as _torch
+        bf16_ok = _torch.cuda.is_available() and _torch.cuda.is_bf16_supported()
+    except ImportError:
+        bf16_ok = False
+    problems = check_training_setup(training_kwargs(args, out, bf16_ok), train, valid)
+    print("학습 설정 확인:", "문제 없음" if not problems else "; ".join(problems), flush=True)
+    if problems:
+        raise SystemExit("학습 설정에 문제가 있습니다")
     if args.dry_run:
         return 0
 
@@ -140,13 +191,7 @@ def main(argv: list[str] | None = None) -> int:
 
     trainer = Trainer(
         model=model, train_dataset=train, eval_dataset=valid, data_collator=to_tensors,
-        args=TrainingArguments(output_dir=str(out / "checkpoints"), per_device_train_batch_size=args.batch,
-                               per_device_eval_batch_size=args.batch, gradient_accumulation_steps=args.grad_accum,
-                               num_train_epochs=args.epochs, learning_rate=args.lr, lr_scheduler_type="cosine",
-                               warmup_ratio=0.03, bf16=bf16, fp16=not bf16, logging_steps=10, eval_strategy="epoch",
-                               save_strategy="epoch", save_total_limit=2, seed=args.seed, optim="paged_adamw_8bit",
-                               gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False},
-                               remove_unused_columns=False, report_to=[]))
+        args=TrainingArguments(**training_kwargs(args, out, bf16)))
     from transformers import TrainerCallback
 
     class Progress(TrainerCallback):
