@@ -19,6 +19,13 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return children
 }
 
+/** 운영 화면(감사 조회 역할만). 메뉴에 없을 뿐 아니라 주소로 들어와도 AI 비서로 보냅니다 */
+function RequireAuditor({ children }: { children: ReactNode }) {
+  const { state } = useAuth()
+  if (state.status === 'signed-in' && !state.employee.roles.includes('auditor')) return <Navigate to="/" replace />
+  return children
+}
+
 export function App() {
   return (
     <Routes>
@@ -32,11 +39,15 @@ export function App() {
         }
       >
         <Route path="/" element={<ChatPage />} />
-        <Route path="/inbox" element={<InboxPage />} />
+        <Route path="/approvals" element={<InboxPage />} />
         <Route path="/org" element={<OrgPage />} />
         <Route path="/agents" element={<AgentRegistryPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/eval" element={<EvalReportPage />} />
+        <Route path="/ops/eval" element={<RequireAuditor><EvalReportPage /></RequireAuditor>} />
+        <Route path="/ops/:tab" element={<RequireAuditor><AdminPage /></RequireAuditor>} />
+        {/* 예전 주소(ux/research/ia.md 2절에서 바뀜) */}
+        <Route path="/inbox" element={<Navigate to="/approvals" replace />} />
+        <Route path="/admin" element={<Navigate to="/ops/metrics" replace />} />
+        <Route path="/eval" element={<Navigate to="/ops/eval" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

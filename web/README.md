@@ -1,6 +1,6 @@
 # web
 
-직원 채팅과 팀장 승인함 화면입니다. React, TypeScript, Vite로 만들고, gateway(`contracts/openapi/gateway.yaml`)만 부릅니다. 디자인 기준은 `DESIGN.md`입니다.
+직원 채팅과 팀장 승인함 화면입니다. React, TypeScript, Vite로 만들고, gateway(`contracts/openapi/gateway.yaml`)만 부릅니다. 디자인 기준은 `ux/design-system.md`(재설계 #558)이고, `DESIGN.md`는 옮기는 동안의 안내입니다. 예전 주소(`/inbox`, `/admin`, `/eval`)는 새 주소로 옮겨 갑니다.
 
 ## 실행
 
@@ -32,11 +32,12 @@ npm run gen:api  # 계약이 바뀌면 src/api/schema.d.ts를 다시 만듭니�
 | `src/auth/` | 로그인 상태(토큰은 sessionStorage) |
 | `src/styles/tokens.css` | DESIGN.md 토큰(라이트·다크) |
 | `src/components/` | 기본 부품(버튼, 배지, 카드) |
-| `src/pages/` | 로그인, 상단바, 디자인 부품(`/design`) |
-| `src/inbox/` | 팀장 승인함(탭 4개, 결재선, 승인·반려)과 대결 설정(대리인 찾기, 양식 범위, 미리보기 → 등록, 해지) |
+| `src/pages/` | 로그인, 앱 셸, 디자인 부품(`/design`) |
+| `src/shell/` | 왼쪽 탐색 막대(업무·회사·운영 묶음, 결재 건수, 접기, 사용자 메뉴의 테마), 명령 팔레트(Ctrl K), 로그인 뒤 역할별 첫 화면 |
+| `src/inbox/` | 결재(`/approvals`, 탭 4개, 결재선, 승인·반려)와 대결 설정(대리인 찾기, 양식 범위, 미리보기 → 등록, 해지) |
 | `src/org/` | 조직도(부서 나무, 상위 경로, 구성원과 부서장, 담당 에이전트)와 에이전트 등록부(담당 부서, 위험 등급별 실행, 도구, 모델 정책). `/org`, `/agents` |
-| `src/admin/` | 관리자 콘솔(auditor만). 기간 필터, 운영 지표(합계, 에이전트별, 차단 이유, 입구 라우팅, 비용 상한), 외부 전송 기록(가린 자리 표시), 감사 로그(필터, 더 보기). `/admin` |
-| `src/eval/` | 평가 리포트(auditor만). eval 하네스의 보고서 JSON(`contracts/eval/report.schema.json`)을 gateway `/eval/reports`로 받아 실행 조건, 셋별 지표(비율과 95% 구간 막대, 짝 차이와 판정), 승인 요청·경로·비용, 시나리오별 회차 결과를 보여 줍니다. 통계는 보고서 summary 값을 그대로 씁니다. `/eval` |
+| `src/admin/` | 관리자 콘솔(auditor만). 기간 필터, 운영 지표(합계, 에이전트별, 차단 이유, 입구 라우팅, 비용 상한), 외부 전송 기록(가린 자리 표시), 감사 로그(필터, 더 보기). `/ops/metrics`, `/ops/egress`, `/ops/audit` |
+| `src/eval/` | 평가 리포트(auditor만). eval 하네스의 보고서 JSON(`contracts/eval/report.schema.json`)을 gateway `/eval/reports`로 받아 실행 조건, 셋별 지표(비율과 95% 구간 막대, 짝 차이와 판정), 승인 요청·경로·비용, 시나리오별 회차 결과를 보여 줍니다. 통계는 보고서 summary 값을 그대로 씁니다. `/ops/eval` |
 | `src/chat/` | 직원 채팅. SSE 읽기(`sse.ts`), ChatEvent를 화면 상태로 바꾸는 리듀서(`thread.ts`), 미리보기·행동·근거 부품 |
 | `src/mocks/` | gateway 계약 모의 서버(MSW)와 지어낸 직원 데이터 |
 | `Dockerfile`, `nginx/` | 정적 파일과 `/api` 프록시, `GET /health` |
@@ -221,4 +222,5 @@ GATEWAY_EXTERNAL_LOG=/audit/gateway/external.jsonl docker compose -f infra/compo
 ## 라이선스 표기
 
 - Pretendard: SIL Open Font License 1.1
-- MSW, openapi-typescript, openapi-fetch, React, React Router, Vite: MIT
+- MSW, openapi-typescript, openapi-fetch, React, React Router, Vite, Radix Primitives(`@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`), cmdk: MIT
+- Lucide 아이콘(`lucide-react`): ISC

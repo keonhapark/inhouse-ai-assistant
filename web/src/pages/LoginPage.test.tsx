@@ -42,10 +42,11 @@ describe('로그인', () => {
   it('맞으면 토큰을 저장하고 홈으로 갑니다. 로그아웃하면 토큰을 지웁니다', async () => {
     renderApp('/')
     const user = await fillAndSubmit('E1001', 'demo')
-    expect(await screen.findByRole('banner')).toHaveTextContent('한지우')
+    expect(await screen.findByRole('navigation', { name: '주 메뉴' })).toHaveTextContent('한지우')
     expect(tokenStore.get()).toBe('mock.emp-1001')
 
-    await user.click(screen.getByRole('button', { name: '로그아웃' }))
+    await user.click(screen.getByRole('button', { name: '한지우 사용자 메뉴' }))
+    await user.click(await screen.findByRole('menuitem', { name: '로그아웃' }))
     expect(await screen.findByLabelText('사번')).toBeInTheDocument()
     expect(tokenStore.get()).toBeNull()
   })
@@ -62,7 +63,7 @@ describe('저장된 토큰', () => {
   it('유효하면 /me로 세션을 되살립니다', async () => {
     tokenStore.set('mock.emp-2001')
     renderApp('/')
-    expect(await screen.findByRole('banner')).toHaveTextContent('서도윤')
+    expect(await screen.findByRole('navigation', { name: '주 메뉴' })).toHaveTextContent('서도윤')
   })
 
   it('401이면 토큰을 지우고 로그인 화면으로 보냅니다', async () => {

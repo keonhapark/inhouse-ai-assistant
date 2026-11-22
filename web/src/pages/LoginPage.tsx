@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { landingPath } from '../shell/pending'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { useAuth } from '../auth/useAuth'
@@ -14,8 +15,9 @@ export function LoginPage() {
   const [pending, setPending] = useState(false)
 
   if (state.status === 'signed-in') {
-    const from = (location.state as { from?: string } | null)?.from ?? '/'
-    return <Navigate to={from} replace />
+    // 가려던 화면이 AI 비서 첫 주소('/')뿐이면 역할별 첫 화면으로 보냅니다
+    const from = (location.state as { from?: string } | null)?.from
+    return from && from !== '/' ? <Navigate to={from} replace /> : <FirstScreen roles={state.employee.roles} />
   }
 
   async function onSubmit(e: FormEvent) {
@@ -67,4 +69,17 @@ export function LoginPage() {
       </Card>
     </main>
   )
+}
+
+/** 가려던 화면이 없으면 역할별 첫 화면으로 보냅니다(감사 조회 → 운영 지표, 결재할 문서 있음 → 결재, 그 밖 → AI 비서) */
+function FirstScreen({ roles }: { roles: string[] }) {
+  const [to, setTo] = useState<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    void landingPath(roles).then((p) => alive && setTo(p))
+    return () => {
+      alive = false
+    }
+  }, [roles])
+  return to ? <Navigate to={to} replace /> : <p className="page muted">불러오는 중입니다.</p>
 }

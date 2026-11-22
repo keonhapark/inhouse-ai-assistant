@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useReducer, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { conversationMeta } from '../display/conversation'
+import { NEW_CHAT } from '../shell/events'
 import { decideApproval, postMessage, undoAction, type StreamResult } from './api'
 import { ACCEPT, formatBytes, MAX_IMAGES, pickImages, release, toDataUrl, type PickedImage } from './attachments'
 import { ActionCard, AssistantMessage, PreviewCard, ToolCall } from './parts'
@@ -140,6 +141,14 @@ export function ChatPage() {
     setNotice(null)
     dispatch({ type: 'reset' })
   }
+
+  // 명령 팔레트의 "새 대화"(이 화면에 있을 때)
+  const onNewChat = useEffectEvent(newConversation)
+  useEffect(() => {
+    const on = () => onNewChat()
+    window.addEventListener(NEW_CHAT, on)
+    return () => window.removeEventListener(NEW_CHAT, on)
+  }, [])
 
   /** 사진만 보낼 때 메시지 본문(계약상 content는 필수입니다) */
   const IMAGE_ONLY = '사진을 첨부했습니다.'

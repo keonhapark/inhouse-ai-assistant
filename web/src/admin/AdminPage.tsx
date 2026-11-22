@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { AuditPanel } from './AuditPanel'
 import { EgressPanel } from './EgressPanel'
@@ -17,8 +18,14 @@ type Tab = (typeof TABS)[number]['id']
 
 export type Range = { since: string; until: string }
 
+const isTab = (v: string | undefined): v is Tab => TABS.some((t) => t.id === v)
+
+/** 운영 화면(/ops/metrics, /ops/egress, /ops/audit). 탭은 주소에서 읽어 감사 로그 등으로 바로 들어올 수 있습니다 */
 export function AdminPage() {
-  const [tab, setTab] = useState<Tab>('metrics')
+  const params = useParams()
+  const navigate = useNavigate()
+  const tab: Tab = isTab(params.tab) ? params.tab : 'metrics'
+  const setTab = (t: Tab) => navigate(`/ops/${t}`, { replace: true })
   const [period, setPeriod] = useState<Period>({ kind: 'preset', preset: '24h' })
   // 기간은 적용할 때 한 번 시각으로 바꿔 둡니다. 다시 그릴 때마다 '지금'이 바뀌어 다시 불러오지 않게 합니다.
   const [range, setRange] = useState<Range>(() => toRange({ kind: 'preset', preset: '24h' })!)
@@ -54,6 +61,7 @@ export function AdminPage() {
     setTab(TABS[next].id)
   }
 
+  if (!isTab(params.tab)) return <Navigate to="/ops/metrics" replace />
   return (
     <main className="admin">
       <h1>관리자 콘솔</h1>
