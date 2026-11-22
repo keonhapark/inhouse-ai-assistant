@@ -115,7 +115,7 @@ CUDA_VISIBLE_DEVICES= ~/.cache/iaa-laya-venv/bin/python eval_dev/router_compare.
 
 ## 이미지 읽기 실측(#382)
 
-`vision_read_run.py`는 업무 실행과 같은 읽기 코드(`run/image_reading.py`의 `ImageReader.read`: 팩 `image_reading` 항목, json_schema 출력, 생각 끔)로 그림을 읽고, eval 채점기(`eval/harness/vision.py`의 `score`)로 셉니다. 도면은 연구소(`rnd`), 불량 사진은 품질(`quality`) 에이전트의 읽을 항목을 씁니다. gateway·라우터·대화는 거치지 않고 모델 서버(OpenAI 호환)를 바로 부르므로, 대화 경로 전체를 보는 eval `vision-run`과는 다릅니다. 읽은 값을 줄마다 이어 붙인 글을 답 본문으로 채점합니다.
+`vision_read_run.py`는 업무 실행과 같은 읽기 코드(`run/image_reading.py`의 `ImageReader.read`: 팩 `image_reading` 항목, json_schema 출력, 생각 끔)로 그림을 읽고, eval 채점기(`eval/harness/vision.py`의 `score`)로 셉니다. 도면은 제조 팩 `rnd`, 불량 사진은 `quality` 에이전트의 읽을 항목을 씁니다. gateway·라우터·대화는 거치지 않고 모델 서버(OpenAI 호환)를 바로 부르므로, 대화 경로 전체를 보는 eval `vision-run`과는 다릅니다. 읽은 값을 줄마다 이어 붙인 글을 답 본문으로 채점합니다.
 
 ```bash
 cd eval && for l in 1 2 3; do uv run --group tools python tools/make_images.py --level $l --drawings 20 --out <저장소 밖>/l$l; done
