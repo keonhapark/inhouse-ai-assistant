@@ -1,0 +1,41 @@
+/* 운영 도구형: 흑연색 탐색 막대, 회색 바탕 위 흰 표 면, 각진 모서리, 그림자 없음.
+   기억에 남을 한 가지: 한 화면에 많이 들어가는 표. 선택한 행만 청록 왼쪽 막대로 표시합니다. */
+.dir-ops .cmdk { background: rgb(255 255 255 / 6%); border-color: #3a3f47; color: var(--sidebar-fg-muted); }
+.dir-ops kbd { background: transparent; border-color: #4a5059; color: var(--sidebar-fg-muted); }
+.dir-ops .nav__item.is-active .i { color: var(--sidebar-fg); }
+.dir-ops .nav__item.is-active { box-shadow: inset 2px 0 0 #3fb8b0; }
+.dir-ops .sidebar { border-right: 0; }
+.dir-ops .brand__mark { border-radius: 4px; }
+.dir-ops .avatar { background: #2f343c; color: var(--sidebar-fg); }
+.dir-ops .main .avatar { background: var(--accent-soft); color: var(--accent); }
+.dir-ops .topbar { padding: 0 var(--space-5); }
+.dir-ops .topbar h1 { font-size: var(--fs-lg); }
+.dir-ops .badge { border-radius: 2px; height: 20px; padding: 0 6px; }
+.dir-ops .chat { background: var(--bg); }
+.dir-ops .chat__scroll { padding: var(--space-5) var(--space-6) var(--space-3); }
+.dir-ops .chat__col { max-width: 860px; gap: var(--space-4); }
+.dir-ops .convs { width: 300px; }
+.dir-ops .convs ul { padding: 0; gap: 0; }
+.dir-ops .conv a { border-radius: 0; border-bottom: 1px solid var(--border); padding: var(--space-3) var(--space-5); }
+.dir-ops .conv.is-active a { background: #eef0f3; box-shadow: inset 3px 0 0 var(--accent); }
+.dir-ops .bubble { background: var(--surface); }
+.dir-ops .preview { box-shadow: none; }
+.dir-ops .preview__head { background: var(--surface-2); padding: var(--space-3) var(--space-4); }
+.dir-ops .preview__compare { gap: var(--space-5); }
+.dir-ops .preview__receipt, .dir-ops .doc__receipt { background: var(--bg); }
+.dir-ops .kv--table { grid-template-columns: 96px 1fr; row-gap: 0; border: 1px solid var(--border); }
+.dir-ops .kv--table dt, .dir-ops .kv--table dd { padding: 6px var(--space-4); border-bottom: 1px solid var(--border); }
+.dir-ops .kv--table dt { background: var(--surface-2); }
+.dir-ops .kv--table .kv__row:last-child > * { border-bottom: 0; }
+.dir-ops .kv__row--amount dd { font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+.dir-ops .preview__line { padding: var(--space-2) 0 0; border-top: 0; }
+.dir-ops .composer { border-radius: 3px; box-shadow: none; }
+.dir-ops .approvals { grid-template-columns: minmax(0, 1fr) 480px; }
+.dir-ops .approvals__list { padding: var(--space-4) var(--space-5); gap: var(--space-4); }
+.dir-ops .table { border-radius: 2px; }
+.dir-ops .table th { height: 30px; }
+.dir-ops .table tr.is-selected td { background: #eef0f3; }
+.dir-ops .table tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.dir-ops .doc__head { padding: var(--space-5) var(--space-5) var(--space-3); }
+.dir-ops .doc__head h2 { font-size: var(--fs-xl); }
+.dir-ops .doc__who, .dir-ops .doc__body, .dir-ops .doc__section { padding-left: var(--space-5); padding-right: var(--space-5); }

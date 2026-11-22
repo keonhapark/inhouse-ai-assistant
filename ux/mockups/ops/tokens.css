@@ -1,0 +1,86 @@
+/* ops(운영 도구형): Linear + Geist + Carbon. 표가 주인공, 밀도 높음, 회색조 + 석유청록 강조 하나. 모서리는 거의 각지게.
+   기억에 남을 한 가지: 흑연색 탐색 막대 옆에 32px 행·2px 모서리의 승인함 표가 한 화면에 20줄 넘게 들어가고, 선택 행만 청록 왼쪽 막대로 표시됩니다.
+   셸: 어두운 --sidebar-bg + 회색 --bg 위 흰 표 면. 카드 그림자는 없고(--shadow-sm: none) 테두리로만 나눕니다. --shadow-md는 메뉴·팔레트 전용.
+   규칙: 한글 본문 최소 12px(--fs-sm). --fs-xs(11px)는 숫자·단축키·ID에만. 숫자 열은 --num으로 오른쪽 정렬.
+   규칙: 강조색은 주 버튼·선택 행·초점에만, 상태는 배지(글/배경 쌍)로만. 입력 테두리는 --border-strong. */
+:root {
+  color-scheme: light;
+
+  /* 면 */
+  --bg: #eceef1;
+  --surface: #ffffff;
+  --surface-2: #f4f5f7;
+  --sidebar-bg: #1b1e23;
+  --sidebar-fg: #e8eaed;
+  --sidebar-fg-muted: #a3a9b3;
+  --sidebar-active-bg: #2f343c;
+  --border: #d9dce1;
+  --border-strong: #80868f;
+
+  /* 글 */
+  --text: #121417;
+  --text-2: #42474f;
+  --text-3: #5c626b;
+
+  /* 강조: 석유청록(petrol teal) */
+  --accent: #0a6b67;
+  --accent-fg: #ffffff;
+  --accent-soft: #dff1ef;
+  /* 밝은 면과 어두운 탐색 막대 양쪽에서 3:1 이상 */
+  --focus: #1f8d87;
+
+  /* 상태(글/배경 쌍) */
+  --st-progress-fg: #1d4bb5;
+  --st-progress-bg: #e7edfb;
+  --st-approved-fg: #136a3f;
+  --st-approved-bg: #e3f3e9;
+  --st-rejected-fg: #ad2a1b;
+  --st-rejected-bg: #fbe9e7;
+  --st-attention-fg: #874700;
+  --st-attention-bg: #fdf0d6;
+  --st-local-fg: #5739a8;
+  --st-local-bg: #eeeafb;
+  --st-external-fg: #3a4860;
+  --st-external-bg: #e6eaf0;
+  --danger: #b8301f;
+  --danger-fg: #ffffff;
+
+  /* 글꼴 */
+  --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --lh: 1.4;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --num: "tnum";
+
+  /* 모양 */
+  --r-sm: 2px;
+  --r-md: 3px;
+  --r-lg: 4px;
+  --shadow-sm: none;
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 18%);
+
+  /* 간격(2px 시작, 촘촘함) */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+
+  /* 배치 */
+  --row-h: 32px;
+  --control-h: 28px;
+  --sidebar-w: 208px;
+  --topbar-h: 40px;
+  --dur: 90ms;
+}
