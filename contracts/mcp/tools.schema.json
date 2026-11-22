@@ -12,10 +12,11 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "description", "inputSchema", "risk", "trust_required", "required_scope", "backend", "stage"],
+        "required": ["name", "displayName", "description", "inputSchema", "risk", "trust_required", "required_scope", "backend", "stage"],
         "additionalProperties": false,
         "properties": {
           "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
+          "displayName": {"type": "string", "minLength": 1, "maxLength": 30, "description": "직원 화면에 보이는 도구 이름(동사 명사형, ux/copy-guide.md 용어집). 미리보기·완료한 일 카드의 toolLabel. 팩이 pack.yaml tool_display_names로 덮어쓸 수 있습니다"},
           "description": {"type": "string", "description": "모델에게 보이는 설명(한국어)"},
           "inputSchema": {"type": "object"},
           "risk": {

@@ -133,6 +133,11 @@ def check_pack(pack_dir: Path) -> list[str]:
                 re.compile(pat)
             except re.error as e:
                 errors.append(f"{p}glossary.yaml topics {t['id']}: 정규식 '{pat}'이 올바르지 않습니다({e})")
+    # 도구 표시 이름 덮어쓰기(#575): 키는 공용 도구나 이 팩 양식 도구여야 합니다
+    known = set(tools) | {t["name"] for t in form_tool_list}
+    for name in (data["pack.yaml"].get("tool_display_names") or {}):
+        if name not in known:
+            errors.append(f"{p}pack.yaml tool_display_names: 도구 '{name}'가 tools.json·팩 양식 도구에 없습니다")
     for a in agents["agents"]:
         w = f"{p}agents.yaml {a['id']}"
         if a["owner_unit"] not in unit_ids:
