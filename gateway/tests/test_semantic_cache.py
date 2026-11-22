@@ -264,3 +264,30 @@ def test_real_embed_call_uses_local_embedding_alias(cc):
     assert asyncio.run(eg.embed_text("출장비")) == [0.1, 0.2]
     assert seen == [{"model": "local-embed", "input": "출장비"}]
     assert timeouts == [2.0]                                  # LLM 시간 제한보다 짧게 끊음
+
+
+def test_hit_is_not_counted_as_external_or_llm_request(cc):
+    """외부 별칭 적중은 외부 전송·LLM 요청·대화 사용 모델로 세지 않습니다(#485, 계약 #475·#522)."""
+    from datetime import datetime, timedelta, timezone
+
+    from gateway.ops import compute_metrics
+
+    from .test_egress import AUDIT_SCHEMA
+    from jsonschema import Draft202012Validator
+
+    _, ext = _agent_ids(cc.app_ref)
+    eg = cc.app_ref.state.egress
+    _ask(cc, _tok(cc, ext), "출장비 규정 알려 줘", model="external")          # 놓침: 외부로 나감
+    eg.usage.begin("conv-c")
+    r = _ask(cc, _tok(cc, ext), "출장비 규정이 어떻게 돼?", model="external")  # 적중
+    assert r.headers["x-cache"] == "hit" and r.headers["x-egress-location"] == "external"
+    assert eg.usage.take("conv-c") is None                    # 대화 사용 집계에 넣지 않음(ChatEvent model 없음)
+    events = [e for e in _audit(cc.app_ref) if e["kind"] == "llm.request"]
+    hit = events[-1]
+    assert hit["model"]["cacheHit"] is True and hit["model"]["externalSent"] is False
+    assert "cacheHit" not in events[0]["model"]
+    Draft202012Validator(AUDIT_SCHEMA).validate(hit)
+    now = datetime.now(timezone.utc)
+    m = compute_metrics(cc.app_ref.state.audit.events.read_all(), cc.app_ref.state.audit.egress.read_all(),
+                        cc.app_ref.state.registry, None, now - timedelta(hours=1), now + timedelta(hours=1))
+    assert {x["agentId"]: x for x in m["agents"]}[ext]["llmRequests"] == {"local": 0, "external": 1}
