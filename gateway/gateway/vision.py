@@ -99,14 +99,14 @@ def strip_metadata(data: bytes, mime: str, i: int = 1) -> bytes:
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             with Image.open(io.BytesIO(data), formats=[_FORMAT[mime]]) as im:
                 if im.width * im.height > MAX_PIXELS:
-                    raise ProblemError(413, "payload-too-large", f"이미지는 {MAX_PIXELS:,}화소까지 받습니다",
-                                       f"{i}번째 이미지: {im.width}x{im.height}")
+                    raise ProblemError(413, "payload-too-large", f"사진은 {MAX_PIXELS:,}화소까지 올릴 수 있습니다.",
+                                       f"{i}번째 사진({im.width}×{im.height}). 크기를 줄여 다시 올리세요.")
                 im.load()
                 upright = ImageOps.exif_transpose(im)
     except ProblemError:
         raise
     except (OSError, ValueError, SyntaxError, Image.DecompressionBombError, Image.DecompressionBombWarning):
-        raise ProblemError(422, "validation", "이미지를 읽을 수 없습니다", f"{i}번째 이미지")
+        raise ProblemError(422, "validation", "사진을 열 수 없습니다.", f"{i}번째 사진. 다른 사진을 올리세요.")
     upright.info = {k: v for k, v in upright.info.items() if k == "transparency"}
     out = io.BytesIO()
     if mime == "image/jpeg":
@@ -119,24 +119,24 @@ def strip_metadata(data: bytes, mime: str, i: int = 1) -> bytes:
 def _decode(url: str, i: int) -> tuple[str, bytes]:
     m = _DATA_URL.fullmatch(url)
     if m is None:
-        raise ProblemError(422, "validation", "이미지는 base64 data URL만 받습니다", f"{i}번째 이미지")
+        raise ProblemError(422, "validation", "사진을 읽지 못했습니다.", f"{i}번째 사진. 다시 올리세요.")
     mime = m["mime"].lower()
     if mime not in _MAGIC:
-        raise ProblemError(415, "unsupported-media-type", "이미지는 jpeg·png만 받습니다", f"{i}번째 이미지: {mime}")
+        raise ProblemError(415, "unsupported-media-type", "JPG나 PNG 사진만 올릴 수 있습니다.", f"{i}번째 사진")
     # 디코딩 전에 크기를 어림해 큰 본문을 메모리에 풀지 않습니다(base64 4글자 = 3바이트)
     if len(m["data"]) * 3 // 4 > MAX_IMAGE_BYTES + 3:
-        raise ProblemError(413, "payload-too-large", f"이미지 한 장은 {MAX_IMAGE_BYTES // (1024 * 1024)}MB까지 받습니다",
-                           f"{i}번째 이미지")
+        raise ProblemError(413, "payload-too-large", f"사진 한 장은 {MAX_IMAGE_BYTES // (1024 * 1024)}MB까지 올릴 수 있습니다.",
+                           f"{i}번째 사진. 크기를 줄여 다시 올리세요.")
     try:
         data = base64.b64decode(m["data"], validate=True)
     except (binascii.Error, ValueError):
-        raise ProblemError(422, "validation", "이미지 base64가 올바르지 않습니다", f"{i}번째 이미지")
+        raise ProblemError(422, "validation", "사진을 읽지 못했습니다.", f"{i}번째 사진. 다시 올리세요.")
     if len(data) > MAX_IMAGE_BYTES:
-        raise ProblemError(413, "payload-too-large", f"이미지 한 장은 {MAX_IMAGE_BYTES // (1024 * 1024)}MB까지 받습니다",
-                           f"{i}번째 이미지: {len(data)}B")
+        raise ProblemError(413, "payload-too-large", f"사진 한 장은 {MAX_IMAGE_BYTES // (1024 * 1024)}MB까지 올릴 수 있습니다.",
+                           f"{i}번째 사진({len(data) / (1024 * 1024):.1f}MB). 크기를 줄여 다시 올리세요.")
     if not data.startswith(_MAGIC[mime]):
-        raise ProblemError(415, "unsupported-media-type", "이미지 내용이 선언한 형식과 맞지 않습니다",
-                           f"{i}번째 이미지: {mime}")
+        raise ProblemError(415, "unsupported-media-type", "사진 파일이 손상됐거나 형식이 맞지 않습니다.",
+                           f"{i}번째 사진. JPG나 PNG로 다시 저장해 올리세요.")
     return mime, data
 
 

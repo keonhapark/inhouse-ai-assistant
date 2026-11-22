@@ -25,9 +25,9 @@ class ErpClient:
         try:
             return await self._http.request(method, path, json=json, params=params, headers=h)
         except httpx.TimeoutException:
-            raise ProblemError(504, "upstream-timeout", "erp가 제때 답하지 않았습니다")
+            raise ProblemError(504, "upstream-timeout", "업무 시스템이 답하지 않습니다.", "잠시 뒤 다시 시도하세요.")
         except httpx.HTTPError:
-            raise ProblemError(502, "upstream-unavailable", "erp에 연결하지 못했습니다")
+            raise ProblemError(502, "upstream-unavailable", "업무 시스템에 연결하지 못했습니다.", "잠시 뒤 다시 시도하세요.")
 
     async def get_json(self, path: str, bearer: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """성공하면 JSON을, 실패하면 erp 상태 코드로 ProblemError를 냅니다."""
@@ -43,4 +43,4 @@ def as_problem(r: httpx.Response) -> ProblemError:
     except ValueError:
         body = {}
     code = str(body.get("type", "urn:problem:upstream-error")).removeprefix("urn:problem:")
-    return ProblemError(r.status_code, code, body.get("title", "erp 오류"), body.get("detail", ""))
+    return ProblemError(r.status_code, code, body.get("title", "업무 시스템 오류"), body.get("detail", ""))

@@ -213,4 +213,4 @@ def test_too_many_pixels_is_413_before_decoding(chat, h, agent):
     assert len(out.getvalue()) < 1024 * 1024 and 8000 * 7000 > vision.MAX_PIXELS
     r = _post(chat, h, _new(chat, h), attachments=[_att(_url(out.getvalue()))])
     assert r.status_code == 413 and r.json()["type"] == "urn:problem:payload-too-large"
-    assert "8000x7000" in r.json()["detail"]
+    assert "8000×7000" in r.json()["detail"]
