@@ -35,6 +35,7 @@ from agent_runtime.evaluation.tool_call import (EvalBadRequest, EvalToolCaller, 
 from agent_runtime.llm import ChatClient, LLMSettings
 from agent_runtime.registry import Registry, Requester
 from agent_runtime.mcp_server.tokens import TokenVerifier
+from agent_runtime.pack_tools import tool_labels
 from agent_runtime.router import Router
 from agent_runtime.run.graph import Deps, build_graph
 from agent_runtime.run.policy import WideScope
@@ -153,7 +154,9 @@ def services_from_env() -> Services:
     mcp_url = os.environ.get("AGENT_MCP_URL", f"http://localhost:{os.environ.get('MCP_PORT', '8001')}/mcp")
     deps = Deps(llm=chat, caller=McpToolCaller(mcp_url), audit=log, wide=WideScope.from_pack(Path(pack_dir)),
                 trusted_docs=trusted_docs(Path(pack_dir)),
-                plan_reasoning_effort=os.environ.get("AGENT_PLAN_REASONING_EFFORT", "") or None)
+                plan_reasoning_effort=os.environ.get("AGENT_PLAN_REASONING_EFFORT", "") or None,
+                tool_labels=tool_labels(Path(os.environ.get("CONTRACTS_DIR", "../contracts")) / "mcp" / "tools.json",
+                                        Path(pack_dir), registry.form_tools))
     # 토큰 확인 키가 없으면 시작하지 않습니다. 끄는 것은 개발용 플래그로만 합니다.
     verifier: TokenVerifier | None = None
     if os.environ.get("AGENT_ALLOW_UNVERIFIED_TOKENS") != "1":

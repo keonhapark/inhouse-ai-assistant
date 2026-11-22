@@ -7,7 +7,7 @@ thread_id는 conversationId입니다. 위임 토큰은 그래프 상태(체크�
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 import hashlib
 import json
 import uuid
@@ -89,6 +89,8 @@ class Deps:
     # 보내지 않습니다. 생각을 끄면 지연은 줄지만 도구를 부르지 않고 말로만 답하는 경우가 많아(#423 측정, 기대 도구 28/46 vs 44/46)
     # 기본은 켭니다(결정 0008, #535).
     plan_reasoning_effort: str | None = None
+    # 도구 이름 → 직원 화면 표시 이름(#575, pack_tools.tool_labels). 미리보기·완료한 일의 toolLabel. 없으면 넣지 않습니다
+    tool_labels: Mapping[str, str] = field(default_factory=dict)
 
 
 def system_prompt(agent: Agent, condition: str, today: datetime, has_tools: bool,
@@ -244,6 +246,8 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         spec = ctx.spec(name)
         pending = {"approvalId": f"apr_{uuid.uuid4().hex[:16]}", "tool": name, "risk": spec.meta.risk,
                    "arguments": cur["args"], "preview": out.payload}
+        if name in deps.tool_labels:
+            pending["toolLabel"] = deps.tool_labels[name]
         return Command(update={"pending": pending}, goto="approval")
 
     async def approval(state: RunGraphState) -> Command:
@@ -280,6 +284,8 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
             if "actionId" in out.payload:
                 action = {"tool": name, "actionId": out.payload["actionId"],
                           "summary": out.payload.get("summary", ""), "undoable": bool(out.payload.get("undoable"))}
+                if name in deps.tool_labels:
+                    action["toolLabel"] = deps.tool_labels[name]
                 update["actions"] = [*state.get("actions", []), action]
                 if cur.get("undo_note") and action["undoable"]:
                     update["undo_notes"] = [*state.get("undo_notes", []),
