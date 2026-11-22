@@ -1,0 +1,5 @@
+/* 강조색 후보: 파우더 블루. 채움·선택 배경·주 버튼 면은 파스텔, 글자·아이콘·주 버튼 글자는 같은 색상의 진한 단계입니다.
+   대비(계산): 밝음 진한 글자/흰 면 4.5:1 이상, 진한 글자/파스텔 버튼 면 4.5:1 이상, 어두움 파스텔 글자/#2c2c2e 4.5:1 이상. */
+:root { --accent: #1D5394; --accent-btn: #CCE1F9; --accent-fg: #1D5394; --accent-soft: #E1EEFC; --sel: #E1EEFC; --focus: #1D5394; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --accent: #A8CCF4; --accent-btn: #A8CCF4; --accent-fg: #0D2A4D; --accent-soft: rgb(168 204 244 / 18%); --sel: rgb(168 204 244 / 16%); --focus: #A8CCF4; } }
+:root[data-theme='dark'] { --accent: #A8CCF4; --accent-btn: #A8CCF4; --accent-fg: #0D2A4D; --accent-soft: rgb(168 204 244 / 18%); --sel: rgb(168 204 244 / 16%); --focus: #A8CCF4; }

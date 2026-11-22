@@ -6,7 +6,7 @@
   "scripts": {
     "walk": "node walkthrough/run.mjs",
     "a11y": "node a11y/run.mjs",
-    "test": "node --test walkthrough/*.test.mjs",
+    "test": "node --test walkthrough/*.test.mjs design-system/*.test.mjs",
     "mockups": "node mockups/build.mjs && node mockups/render.mjs"
   },
   "devDependencies": {
