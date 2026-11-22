@@ -1,0 +1,40 @@
+{"id": "rcp-dev-001", "file": "rcp-dev-001.png", "read": {"amount": 12300, "spent_on": "2027-02-24", "merchant": "하늘빛안경", "business_no": "255-99-79421"}, "latencyMs": 8505, "error": null}
+{"id": "rcp-dev-002", "file": "rcp-dev-002.png", "read": {"amount": 5800, "spent_on": "2026-09-30", "merchant": "바른마트 역삼점", "business_no": "581-31-95714"}, "latencyMs": 3264, "error": null}
+{"id": "rcp-dev-003", "file": "rcp-dev-003.png", "read": {"amount": 91956, "spent_on": "2024-03-27", "merchant": "바른마트 역삼점", "business_no": "486-13-06912"}, "latencyMs": 3668, "error": null}
+{"id": "rcp-dev-004", "file": "rcp-dev-004.png", "read": {"amount": 73489, "spent_on": "2026-11-25", "merchant": "청솔한식뷔페", "business_no": "642-29-66239"}, "latencyMs": 3598, "error": null}
+{"id": "rcp-dev-005", "file": "rcp-dev-005.png", "read": {"amount": 48400, "spent_on": "2026-05-08", "merchant": "한빛문구", "business_no": "484-82-16818"}, "latencyMs": 3703, "error": null}
+{"id": "rcp-dev-006", "file": "rcp-dev-006.png", "read": {"amount": 75000, "spent_on": "2026-01-04", "merchant": "새솔약국", "business_no": "729-70-84555"}, "latencyMs": 3837, "error": null}
+{"id": "rcp-dev-007", "file": "rcp-dev-007.png", "read": {"amount": 43378, "spent_on": "2026-10-07", "merchant": "온누리편의점 서초점", "business_no": "724-61-15726"}, "latencyMs": 3613, "error": null}
+{"id": "rcp-dev-008", "file": "rcp-dev-008.png", "read": {"amount": 126500, "spent_on": "2026-01-15", "merchant": "한빛문구", "business_no": "448-30-37967"}, "latencyMs": 3969, "error": null}
+{"id": "rcp-dev-009", "file": "rcp-dev-009.png", "read": {"amount": 13689, "spent_on": "2026-07-16", "merchant": "은하분식", "business_no": "890-07-50917"}, "latencyMs": 3562, "error": null}
+{"id": "rcp-dev-010", "file": "rcp-dev-010.png", "read": {"amount": 32809, "spent_on": "2026-06-23", "merchant": "온누리편의점 서초점", "business_no": "159-75-37296"}, "latencyMs": 3442, "error": null}
+{"id": "rcp-dev-011", "file": "rcp-dev-011.png", "read": {"amount": 201818, "spent_on": "2026-03-09", "merchant": "늘봄베이커리", "business_no": "523-92-80690"}, "latencyMs": 3600, "error": null}
+{"id": "rcp-dev-012", "file": "rcp-dev-012.png", "read": {"amount": 31636, "spent_on": "2026-03-17", "merchant": "다래서점", "business_no": "251-90-72592"}, "latencyMs": 3465, "error": null}
+{"id": "rcp-dev-013", "file": "rcp-dev-013.png", "read": {"amount": 34300, "spent_on": "2026-10-04", "merchant": "(주)나래상사", "business_no": null}, "latencyMs": 3550, "error": null}
+{"id": "rcp-dev-014", "file": "rcp-dev-014.png", "read": {"amount": 7063, "spent_on": "2026-01-27", "merchant": "(주)솔빛유통", "business_no": "713-23-70504"}, "latencyMs": 3519, "error": null}
+{"id": "rcp-dev-015", "file": "rcp-dev-015.png", "read": {"amount": 59300, "spent_on": "2026-12-09", "merchant": "다래서점", "business_no": "874-69-91097"}, "latencyMs": 3518, "error": null}
+{"id": "rcp-dev-016", "file": "rcp-dev-016.png", "read": {"amount": 75500, "spent_on": "2026-05-04", "merchant": "푸른주유소", "business_no": "709-73-08189"}, "latencyMs": 4125, "error": null}
+{"id": "rcp-dev-017", "file": "rcp-dev-017.png", "read": {"amount": 19000, "spent_on": "2027-01-07", "merchant": "하늘빛안경", "business_no": "349-20-79147"}, "latencyMs": 3652, "error": null}
+{"id": "rcp-dev-018", "file": "rcp-dev-018.png", "read": {"amount": 117400, "spent_on": "2024-02-26", "merchant": "새솔약국", "business_no": "480-12-74827"}, "latencyMs": 3815, "error": null}
+{"id": "rcp-dev-019", "file": "rcp-dev-019.png", "read": {"amount": 77600, "spent_on": "2026-02-07", "merchant": "새벽택배 영업소", "business_no": "596-50-41472"}, "latencyMs": 3489, "error": null}
+{"id": "rcp-dev-020", "file": "rcp-dev-020.png", "read": {"amount": 18000, "spent_on": "2026-10-20", "merchant": "(주)나래상사", "business_no": "537-64-28803"}, "latencyMs": 3787, "error": null}
+{"id": "rcp-dev-021", "file": "rcp-dev-021.png", "read": {"amount": 68900, "spent_on": "2026-10-24", "merchant": "온누리편의점 서초점", "business_no": "414-24-22010"}, "latencyMs": 4011, "error": null}
+{"id": "rcp-dev-022", "file": "rcp-dev-022.png", "read": {"amount": 30000, "spent_on": "2026-10-27", "merchant": "모아철물", "business_no": "874-48-38632"}, "latencyMs": 3690, "error": null}
+{"id": "rcp-dev-023", "file": "rcp-dev-023.png", "read": {"amount": 75000, "spent_on": "2026-01-26", "merchant": "은하분식", "business_no": "539-05-60253"}, "latencyMs": 3756, "error": null}
+{"id": "rcp-dev-024", "file": "rcp-dev-024.png", "read": {"amount": 25000, "spent_on": "2026-02-23", "merchant": "바른마트 역삼점", "business_no": "603-78-38395"}, "latencyMs": 3984, "error": null}
+{"id": "rcp-dev-025", "file": "rcp-dev-025.png", "read": {"amount": 41800, "spent_on": "2026-01-19", "merchant": "새벽택배 영업소", "business_no": "863-31-97424"}, "latencyMs": 3900, "error": null}
+{"id": "rcp-dev-026", "file": "rcp-dev-026.png", "read": {"amount": 65489, "spent_on": "2026-09-09", "merchant": "한결세탁", "business_no": "313-62-16158"}, "latencyMs": 3802, "error": null}
+{"id": "rcp-dev-027", "file": "rcp-dev-027.png", "read": {"amount": 5378, "spent_on": "2026-06-01", "merchant": "늘봄베이커리", "business_no": "881-75-08919"}, "latencyMs": 4006, "error": null}
+{"id": "rcp-dev-028", "file": "rcp-dev-028.png", "read": {"amount": 30000, "spent_on": "2026-06-13", "merchant": "청솔한식뷔페", "business_no": "358-38-20077"}, "latencyMs": 3883, "error": null}
+{"id": "rcp-dev-029", "file": "rcp-dev-029.png", "read": {"amount": 3927, "spent_on": "2026-07-27", "merchant": "한빛문구", "business_no": "176-71-12671"}, "latencyMs": 3656, "error": null}
+{"id": "rcp-dev-030", "file": "rcp-dev-030.png", "read": {"amount": 34976, "spent_on": "2016-12-26", "merchant": "온누리편의점 서초점", "business_no": "190-62-93208"}, "latencyMs": 4302, "error": null}
+{"id": "rcp-dev-031", "file": "rcp-dev-031.png", "read": {"amount": 19200, "spent_on": "2026-04-25", "merchant": "들꽃꽃집", "business_no": "274-93-61459"}, "latencyMs": 3896, "error": null}
+{"id": "rcp-dev-032", "file": "rcp-dev-032.png", "read": {"amount": 123955, "spent_on": "2017-08-26", "merchant": "다운카페 본점", "business_no": null}, "latencyMs": 3405, "error": null}
+{"id": "rcp-dev-033", "file": "rcp-dev-033.png", "read": {"amount": 29455, "spent_on": "2027-03-31", "merchant": "다운카페 본점", "business_no": "884-31-76576"}, "latencyMs": 3806, "error": null}
+{"id": "rcp-dev-034", "file": "rcp-dev-034.png", "read": {"amount": 43773, "spent_on": "2026-10-18", "merchant": "하늘빛안경", "business_no": "477-72-51138"}, "latencyMs": 3744, "error": null}
+{"id": "rcp-dev-035", "file": "rcp-dev-035.png", "read": {"amount": 27956, "spent_on": "2027-02-19", "merchant": "가람식당", "business_no": "117-57-66755"}, "latencyMs": 4130, "error": null}
+{"id": "rcp-dev-036", "file": "rcp-dev-036.png", "read": {"amount": 27300, "spent_on": "2026-11-05", "merchant": "온누리편의점 서초점", "business_no": "796-43-29333"}, "latencyMs": 3962, "error": null}
+{"id": "rcp-dev-037", "file": "rcp-dev-037.png", "read": {"amount": 44000, "spent_on": "2026-05-11", "merchant": "온누리편의점 서초점", "business_no": "173-49-96803"}, "latencyMs": 4527, "error": null}
+{"id": "rcp-dev-038", "file": "rcp-dev-038.png", "read": {"amount": 28641, "spent_on": "2026-05-27", "merchant": null, "business_no": "566-70-61698"}, "latencyMs": 3702, "error": null}
+{"id": "rcp-dev-039", "file": "rcp-dev-039.png", "read": {"amount": 4364, "spent_on": "2026-04-09", "merchant": "은하분식", "business_no": "521-42-19684"}, "latencyMs": 3931, "error": null}
+{"id": "rcp-dev-040", "file": "rcp-dev-040.png", "read": {"amount": 60873, "spent_on": "2027-03-02", "merchant": "모아철물", "business_no": "271-56-89017"}, "latencyMs": 3761, "error": null}
