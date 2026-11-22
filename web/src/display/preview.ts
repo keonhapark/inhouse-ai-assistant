@@ -19,9 +19,10 @@ type Prop = { title?: string; type?: string | string[]; format?: string; 'x-labe
 export type Lookups = { forms?: Form[]; people?: Map<string, Person> }
 export type PreviewRow = { key: string; label: string; before?: string; after?: string }
 export type LineStep = { order: number; who: string; status: string }
-export type PreviewView = { title: string; op: string; rows: PreviewRow[]; line: LineStep[]; raw: ChangeRow[] }
+/** amountKey: 금액 줄의 key. 실행 전 확인 시트가 이 줄을 맨 위로 뺍니다(ux/design-system.md 3.6) */
+export type PreviewView = { title: string; op: string; rows: PreviewRow[]; line: LineStep[]; raw: ChangeRow[]; amountKey?: string }
 
-const OP = { create: '새로 만듦', update: '바꿈', delete: '지움' } as const
+const OP = { create: '추가', update: '변경', delete: '삭제' } as const
 
 /** 줄에서 빼는 관리용 값. 원래 값은 raw에 남습니다 */
 const META = new Set([
@@ -124,7 +125,10 @@ export function previewView(c: Change, ctx: Lookups = {}): PreviewView {
   for (const [k, v] of Object.entries(main)) {
     if (META.has(k) || k === 'steps' || (c.op === 'create' && (k === 'status' || v === null || v === undefined))) continue
     if (isDoc && k === 'fields' && v && typeof v === 'object') {
-      for (const r of formRows(v as Record<string, unknown>, form, ctx)) view.rows.push({ key: `fields.${r.key}`, label: r.label, [side]: r.value })
+      for (const r of formRows(v as Record<string, unknown>, form, ctx)) {
+        view.rows.push({ key: `fields.${r.key}`, label: r.label, [side]: r.value })
+        if (!view.amountKey && typeof (v as Record<string, unknown>)[r.key] === 'number' && (r.key === form?.amountField || isMoneyKey(r.key))) view.amountKey = `fields.${r.key}`
+      }
       continue
     }
     // 양식 필드에 금액이 있으면 문서의 amount는 같은 값이라 뺍니다
@@ -134,6 +138,7 @@ export function previewView(c: Change, ctx: Lookups = {}): PreviewView {
     // 고객사 이름이 같이 오면 ID는 뺍니다
     if (k === 'customerId' && main.customerName) continue
     view.rows.push({ key: k, label: fieldName(k), [side]: valueText(k, v, ctx) })
+    if (!view.amountKey && typeof v === 'number' && isMoneyKey(k)) view.amountKey = k
   }
   return withRaw(view)
 }

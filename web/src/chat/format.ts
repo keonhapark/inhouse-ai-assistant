@@ -34,7 +34,7 @@ export function changeRows(c: Change): ChangeRow[] {
     }))
 }
 
-const OP = { create: '새로 만듦', update: '바꿈', delete: '지움' } as const
+const OP = { create: '추가', update: '변경', delete: '삭제' } as const
 export const opLabel = (op: Change['op']) => OP[op]
 
 const hm = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })

@@ -51,13 +51,16 @@ describe('채팅 사진 첨부', () => {
     await user.click(screen.getByRole('button', { name: '보내기' }))
     const card = await screen.findByRole('region', { name: '실행 전 확인: 경비 정산 상신' })
     expect(within(card).getByText('사진에서 읽은 값')).toBeInTheDocument()
-    expect(within(card).getByText('영수증과 맞는지 확인해 주세요.')).toBeInTheDocument()
+    expect(within(card).getByText(/영수증과 맞는지 확인해 주세요/)).toBeInTheDocument()
     // 양식 필드 이름·원 단위·결재선(이름·직급·부서)만 보이고, API 원래 값은 "자세히" 안에 있습니다(#556)
     expect(await within(card).findByText('가맹점')).toBeInTheDocument()
-    expect(within(card).getByText('42,000원')).toBeInTheDocument()
+    // 금액은 값 행에서 빼 맨 위에 크게 둡니다(명세 3.6). 사진은 값 옆에 둡니다
+    expect(within(card).getByText('42,000원').closest('.sheet__amount')).not.toBeNull()
+    expect(within(card).queryByText('금액')).toBeNull()
+    expect(within(card).getByRole('img', { name: '첨부한 사진: receipt.png' })).toBeInTheDocument()
     expect(within(card).getByText('2026. 11. 20.(금)')).toBeInTheDocument()
-    expect(await within(card).findByText('서도윤 팀장(인사팀) · 결재 차례')).toBeInTheDocument()
-    expect(within(card).queryByText('requesterId', { selector: '.changes > dl dt' })).toBeNull()
+    expect((await within(card).findByText('서도윤 팀장(인사팀)')).parentElement).toHaveTextContent('서도윤 팀장(인사팀) 결재 차례')
+    expect(within(card).queryByText('requesterId', { selector: '.rows dt' })).toBeNull()
     expect(within(card).getByText('자세히').closest('details')).toHaveTextContent('requesterId')
     expect(screen.getByRole('list', { name: '첨부한 사진 1장' })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'receipt.png' })).toBeInTheDocument()
@@ -70,7 +73,12 @@ describe('채팅 사진 첨부', () => {
     expect(body.attachments[0].dataUrl).toMatch(/^data:image\/png;base64,/)
 
     await user.click(within(card).getByRole('button', { name: '경비 정산 상신' }))
-    expect(await screen.findByRole('region', { name: '완료한 일' })).toBeInTheDocument()
+    const done = await screen.findByRole('region', { name: '완료한 일' })
+    // 결재 문서를 만든 일은 결재 문서 보기(기안함)와 실행 취소를 붙입니다
+    expect(within(done).getByRole('link', { name: '결재 문서 보기' })).toHaveAttribute('href', '/approvals?box=outbox')
+    expect(within(done).getByRole('button', { name: '실행 취소' })).toBeInTheDocument()
+    // 승인한 시트는 완료한 일 행으로 바뀝니다(같은 상태를 두 번 보이지 않음)
+    expect(card).not.toBeInTheDocument()
   })
 
   it('사진 없이 보낸 턴의 카드에는 확인 필요 표시가 없습니다', async () => {

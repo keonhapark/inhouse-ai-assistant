@@ -1,10 +1,10 @@
-import { Globe, TriangleAlert } from 'lucide-react'
+import { CircleCheck, Globe, Image as ImageIcon, TriangleAlert, Undo2, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Schemas } from '../api/client'
-import { Badge, RiskBadge } from '../components/Badge'
 import { Button } from '../components/Button'
-import { Card } from '../components/Card'
 import { newIdempotencyKey, type UndoResult } from './api'
+import type { StatusTone } from '../display/conversation'
 import { previewView } from '../display/preview'
 import { toolName } from '../display/names'
 import { useLookups } from '../display/useLookups'
@@ -70,10 +70,11 @@ export function Citations({ citations }: { citations: Citation[] }) {
 }
 
 type PreviewProps = {
-  agentName?: string | null
   approval: Approval
   /** 사진을 붙인 턴의 카드. 값 일부가 사진에서 읽은 것일 수 있습니다 */
   fromImage?: boolean
+  /** 이 화면에서 보낸 사진(값 옆에 둡니다). 복원한 기록에는 없습니다 */
+  photo?: { url: string; name: string }
   decision?: 'approve' | 'reject'
   closed?: 'expired' | 'failed'
   busy: boolean
@@ -95,7 +96,11 @@ function useNow(enabled: boolean): number {
   return now
 }
 
-export function PreviewCard({ agentName, approval, fromImage, decision, closed, busy, now: fixedNow, onDecide, onExpire }: PreviewProps) {
+/**
+ * 실행 전 확인 시트(ux/design-system.md 3.6): 제목(일 이름) → 금액 → [사진 | 값 행] → 결재선 → "…까지 확인" [취소] [일 이름].
+ * 결정이 나면(완료·실행 안 함·진행 불가) 한 줄로 접습니다. 실행해 완료한 일 행이 뒤따르면 대화 화면이 이 시트를 그리지 않습니다(같은 자리에서 바뀜).
+ */
+export function PreviewCard({ approval, fromImage, photo, decision, closed, busy, now: fixedNow, onDecide, onExpire }: PreviewProps) {
   const ticking = useNow(fixedNow === undefined && !decision && !closed && approval.expiresAt !== undefined)
   const now = fixedNow ?? ticking
   const { preview } = approval
@@ -104,47 +109,154 @@ export function PreviewCard({ agentName, approval, fromImage, decision, closed, 
   useEffect(() => {
     if (expired && !decision && !closed) onExpire?.()
   }, [expired, decision, closed, onExpire])
+
+  const result: { label: string; tone: StatusTone } | null = decision
+    ? decision === 'approve'
+      ? { label: '완료', tone: 'green' }
+      : { label: '실행 안 함', tone: 'gray' }
+    : closed === 'failed'
+      ? { label: '진행 불가', tone: 'gray' }
+      : expired
+        ? { label: '진행 불가 · 확인 시간 지남', tone: 'gray' }
+        : null
+
+  if (result) {
+    return (
+      <section className="sheet sheet--closed" aria-label={`실행 전 확인: ${label}`}>
+        <h3 className="sheet__title">{label}</h3>
+        <span className={`status status--${result.tone}`}>{result.label}</span>
+        <span className="sheet__closed-summary">{preview.summary}</span>
+      </section>
+    )
+  }
+
+  // 실행 취소할 수 없는 일은 버튼을 위험 모양으로 두고 경고 줄을 붙입니다(색만으로 알리지 않음)
+  const danger = approval.risk === 'irreversible' || !preview.undoable
   return (
-    <Card
-      className="preview"
-      aria-label={`실행 전 확인: ${label}`}
-      header={
-        <>
-          {agentName && <strong>{agentName}</strong>}
-          <span>{label}</span>
-          <RiskBadge risk={approval.risk} />
-          {fromImage && <Badge tone="warning">사진에서 읽은 값</Badge>}
-        </>
-      }
-      footer={
-        decision ? (
-          <Badge tone={decision === 'approve' ? 'success' : 'neutral'}>{decision === 'approve' ? '완료' : '실행 안 함'}</Badge>
-        ) : closed === 'failed' ? (
-          <Badge>진행 불가</Badge>
-        ) : (
-          <>
-            {approval.expiresAt && (
-              <span className="muted">{expired ? '확인 시간 지남' : `${formatTime(approval.expiresAt)}까지 확인`}</span>
-            )}
-            <Button disabled={busy || expired} onClick={() => onDecide('reject')}>
-              취소
-            </Button>
-            <Button
-              variant={approval.risk === 'irreversible' ? 'danger' : 'primary'}
-              disabled={busy || expired}
-              onClick={() => onDecide('approve')}
-            >
-              {label}
-            </Button>
-          </>
-        )
-      }
-    >
-      <p>{preview.summary}</p>
-      {fromImage && <p className="warning-line">영수증과 맞는지 확인해 주세요.</p>}
-      <PreviewChanges preview={preview} />
-      {!preview.undoable && <p className="warning-line">실행하면 취소할 수 없습니다.</p>}
-    </Card>
+    <section className="sheet" aria-label={`실행 전 확인: ${label}`}>
+      <header className="sheet__head">
+        <h3 className="sheet__title">{label}</h3>
+        {fromImage && (
+          <span className="tag">
+            <ImageIcon aria-hidden />
+            사진에서 읽은 값
+          </span>
+        )}
+      </header>
+      <SheetBody preview={preview} photo={fromImage ? photo : undefined} danger={danger} />
+      <footer className="sheet__foot">
+        <span className="sheet__when">
+          {fromImage
+            ? `영수증과 맞는지 확인해 주세요.${approval.expiresAt ? ` ${formatTime(approval.expiresAt)}까지` : ''}`
+            : approval.expiresAt && `${formatTime(approval.expiresAt)}까지 확인`}
+        </span>
+        <Button disabled={busy} onClick={() => onDecide('reject')}>
+          취소
+        </Button>
+        <Button variant={danger ? 'danger' : 'primary'} disabled={busy} onClick={() => onDecide('approve')}>
+          {label}
+        </Button>
+      </footer>
+    </section>
+  )
+}
+
+function SheetBody({ preview, photo, danger }: { preview: Schemas['WritePreview']; photo?: { url: string; name: string }; danger: boolean }) {
+  const lookups = useLookups()
+  const views = preview.changes.map((c) => previewView(c, lookups))
+  // 금액은 값 행에서 빼 맨 위에 크게 둡니다(첫 변경의 금액 하나)
+  const first = views[0]
+  const amountRow = first?.amountKey ? first.rows.find((r) => r.key === first.amountKey) : undefined
+  const amount = amountRow?.after ?? amountRow?.before
+  return (
+    <>
+      {amount && (
+        <div className="sheet__amount">
+          <b>{amount}</b>
+        </div>
+      )}
+      <p className="sheet__summary">{preview.summary}</p>
+      <div className={`sheet__body${photo ? ' sheet__body--photo' : ''}`}>
+        {photo && (
+          <figure className="sheet__photo">
+            <img src={photo.url} alt={`첨부한 사진: ${photo.name}`} />
+            <a className="btn btn--link" href={photo.url} target="_blank" rel="noreferrer">
+              크게 보기
+            </a>
+          </figure>
+        )}
+        <div className="sheet__values">
+          {views.map((v, i) => {
+            const rows = v.rows.filter((r) => r !== amountRow)
+            return (
+              <div key={i} className="sheet__change">
+                {views.length > 1 && (
+                  <span className="sheet__change-title">
+                    {v.title} {v.op}
+                  </span>
+                )}
+                {rows.length > 0 && (
+                  <dl className="group rows">
+                    {rows.map((r) => (
+                      <div key={r.key} className="row">
+                        <dt className="row__label">{r.label}</dt>
+                        <ChangeValue before={r.before} after={r.after} />
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      {views.map(
+        (v, i) =>
+          v.line.length > 0 && (
+            <p key={i} className="sheet__line">
+              <Users aria-hidden />
+              {views.length > 1 ? `${v.title} 결재선` : '결재선'}
+              {v.line.map((s) => (
+                <span key={s.order}>
+                  <b>{s.who}</b> {s.status}
+                </span>
+              ))}
+            </p>
+          ),
+      )}
+      {danger && (
+        <p className="sheet__line sheet__line--danger">
+          <TriangleAlert aria-hidden />
+          실행하면 취소할 수 없습니다.
+        </p>
+      )}
+      {preview.warnings?.map((w) => (
+        <p key={w} className="sheet__warning">
+          {w}
+        </p>
+      ))}
+      {views.some((v) => v.raw.length > 0) && (
+        <details className="sheet__raw changes__raw">
+          <summary>자세히</summary>
+          {views.map(
+            (v, i) =>
+              v.raw.length > 0 && (
+                <div key={i}>
+                  {views.length > 1 && <span className="sheet__change-title">{`${v.title} ${v.op}`}</span>}
+                  <dl>
+                    {v.raw.map((r) => (
+                      <div key={r.field} className="changes__row">
+                        <dt className="mono">{r.field}</dt>
+                        <ChangeValue before={r.before} after={r.after} />
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ),
+          )}
+        </details>
+      )}
+    </>
   )
 }
 
@@ -225,6 +337,10 @@ type ActionProps = {
   onUndo(actionId: string, idempotencyKey: string): Promise<UndoResult>
 }
 
+/** 결재 문서를 만드는 일. 완료한 일 행에 "결재 문서 보기"를 붙입니다 */
+const APPROVAL_TOOLS = new Set(['expense_request', 'purchase_request', 'leave_request', 'loan_request'])
+
+/** 완료한 일 행(ux/design-system.md 3.6): ✓ 완료 + 요약 + 결재 문서 보기 + 실행 취소 */
 export function ActionCard({ item, onUndo }: ActionProps) {
   // 실행 취소를 다시 눌러도 같은 키로 보내 두 번 취소하지 않게 합니다.
   const [key] = useState(() => newIdempotencyKey('undo'))
@@ -239,12 +355,20 @@ export function ActionCard({ item, onUndo }: ActionProps) {
     if (!r.ok) setError(r.message)
   }
   return (
-    <Card className={`action${undone ? ' action--undone' : ''}`} aria-label="완료한 일">
-      <div className="action__row">
-        <Badge tone={undone ? 'neutral' : 'success'}>{undone ? '취소됨' : '완료'}</Badge>
-        <span>{action.summary}</span>
+    <section className={`done${undone ? ' done--undone' : ''}`} aria-label="완료한 일">
+      <div className="done__row">
+        <span className="done__state">
+          {undone ? <Undo2 aria-hidden /> : <CircleCheck aria-hidden />}
+          {undone ? '취소됨' : '완료'}
+        </span>
+        <span className="done__summary">{action.summary}</span>
+        {APPROVAL_TOOLS.has(action.tool) && !undone && (
+          <Link className="btn btn--link" to="/approvals?box=outbox">
+            결재 문서 보기
+          </Link>
+        )}
         {action.undoable && !undone && (
-          <Button className="action__undo" disabled={busy} onClick={undo}>
+          <Button className="btn--sm" disabled={busy} onClick={undo}>
             실행 취소
           </Button>
         )}
@@ -254,7 +378,7 @@ export function ActionCard({ item, onUndo }: ActionProps) {
           {error}
         </p>
       )}
-    </Card>
+    </section>
   )
 }
 

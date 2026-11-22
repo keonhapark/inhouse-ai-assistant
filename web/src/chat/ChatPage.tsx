@@ -22,12 +22,29 @@ type ToolItem = Extract<ThreadItem, { kind: 'tool' }>
 /** 화면에 그릴 줄: 이어서 온 도구 줄은 "처리 과정" 하나로 묶고, 한 턴의 첫 답에는 답 머리를 붙입니다 */
 type Row = Exclude<ThreadItem, ToolItem> | { kind: 'tools'; key: string; calls: ToolItem['call'][] }
 
-function rowsOf(items: ThreadItem[]): { rows: Row[]; heads: Map<string, 'local' | 'external' | undefined> } {
+type Photo = { url: string; name: string }
+
+function rowsOf(items: ThreadItem[]): { rows: Row[]; heads: Map<string, 'local' | 'external' | undefined>; photos: Map<string, Photo> } {
   const rows: Row[] = []
   const heads = new Map<string, 'local' | 'external' | undefined>()
+  // 확인 시트 옆에 둘 사진: 그 카드 앞에서 마지막으로 보낸 사진(이 화면에서 보낸 것만 있음)
+  const photos = new Map<string, Photo>()
+  let lastPhoto: Photo | undefined
   let turnHead: string | null = null
   for (const it of items) {
-    if (it.kind === 'user') turnHead = null
+    if (it.kind === 'user') {
+      turnHead = null
+      if (it.images?.length || it.attachmentCount) lastPhoto = it.images?.[0]
+    }
+    if (it.kind === 'approval' && lastPhoto) photos.set(it.key, lastPhoto)
+    // 승인한 확인 시트는 뒤따르는 완료한 일 행으로 바뀝니다(명세 3.6). 완료한 일이 오면 시트를 뺍니다
+    if (it.kind === 'action') {
+      const sheet = rows.findLastIndex((x) => x.kind === 'approval' || x.kind === 'user')
+      if (sheet >= 0) {
+        const x = rows[sheet]
+        if (x.kind === 'approval' && x.decision === 'approve') rows.splice(sheet, 1)
+      }
+    }
     if (it.kind === 'tool') {
       const last = rows[rows.length - 1]
       if (last?.kind === 'tools') last.calls.push(it.call)
@@ -44,7 +61,7 @@ function rowsOf(items: ThreadItem[]): { rows: Row[]; heads: Map<string, 'local' 
     }
     rows.push(it)
   }
-  return { rows, heads }
+  return { rows, heads, photos }
 }
 
 export function ChatPage() {
@@ -312,7 +329,7 @@ export function ChatPage() {
   const title = current?.title ?? '새 대화'
   const agent = agentName ? agentLabel(agentName) : undefined
   const chosen = agents.find((a) => a.id === agentChoice)
-  const { rows, heads } = rowsOf(thread.items)
+  const { rows, heads, photos } = rowsOf(thread.items)
   const route = thread.route
   const routeNote =
     route?.method === 'fallback'
@@ -414,9 +431,9 @@ export function ChatPage() {
                   return (
                     <PreviewCard
                       key={it.key}
-                      agentName={agent}
                       approval={it.approval}
                       fromImage={it.fromImage}
+                      photo={photos.get(it.key)}
                       decision={it.decision}
                       closed={it.closed}
                       busy={thread.streaming}

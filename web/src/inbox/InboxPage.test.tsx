@@ -9,10 +9,10 @@ import { AuthProvider } from '../auth/AuthContext'
 import { server } from '../mocks/node'
 
 // 서도윤(emp-2001, 인사팀장)으로 로그인합니다. 모의 데이터는 src/mocks/inbox.ts입니다.
-function renderInbox() {
+function renderInbox(path = '/inbox') {
   tokenStore.set('mock.emp-2001')
   render(
-    <MemoryRouter initialEntries={['/inbox']}>
+    <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
         <App />
       </AuthProvider>
@@ -30,6 +30,11 @@ async function openDoc(user: ReturnType<typeof userEvent.setup>, title: string) 
 }
 
 describe('팀장 승인함', () => {
+  it('주소의 ?box=로 처음 열 칸을 고릅니다(채팅의 결재 문서 보기)', async () => {
+    renderInbox('/approvals?box=outbox')
+    expect(await screen.findByRole('tab', { name: '올린 것' })).toHaveAttribute('aria-selected', 'true')
+  })
+
   it('내 차례 문서를 열어 결재선을 보고 승인하면 처리함으로 옮겨 갑니다', async () => {
     const user = renderInbox()
     const doc = await openDoc(user, '연차 휴가 신청(11/27~11/28)')
