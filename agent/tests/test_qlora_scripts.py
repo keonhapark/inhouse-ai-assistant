@@ -121,3 +121,16 @@ def test_install_system_mode_dry_run() -> None:
                        env={**os.environ, "QLORA_SYSTEM": "1"})
     assert r.returncode == 0 and "torch 그대로" in r.stdout and "torch==" not in r.stdout
 
+
+
+def test_training_kwargs_use_transformers5_names(tmp_path: Path) -> None:
+    # transformers 5에는 warmup_ratio가 없습니다(#551 v2 실패). 비율은 warmup_steps에 [0, 1) 실수로 줍니다
+    kw = train_qlora.training_kwargs(train_qlora.parse(["--data", "d", "--out", "o"]), tmp_path, bf16=False)
+    assert "warmup_ratio" not in kw and kw["warmup_steps"] == 0.03
+    assert (kw["bf16"], kw["fp16"]) == (False, True)
+    assert kw["output_dir"] == str(tmp_path / "checkpoints")
+
+
+def test_check_training_setup_catches_unknown_argument() -> None:
+    pytest.importorskip("transformers")  # agent 환경에는 없음. 학습 환경에서만 돕니다
+    assert train_qlora.check_training_setup({"warmup_ratio": 0.03}, [], []) == ["TrainingArguments에 없는 인자: warmup_ratio"]
