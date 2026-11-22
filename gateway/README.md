@@ -28,7 +28,7 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     프로필 값이 틀리면 gateway가 뜨지 않습니다. 모듈(agent·rag·incident)은 `GET /v1/model-profiles`(토큰 없음)로, 관리 화면은
     `GET /api/ops/models`(auditor)로 같은 본문을 봅니다. 각 모듈의 환경 변수는 값이 있을 때만 프로필을 덮어씁니다.
   - `local-gemma4`(평가 전용, Ollama `gemma4:12b`, 생각 모두 off, #595): 같은 개발 묶음에서 생각을 끄는 쪽이 도구 호출이 나았습니다
-    (끔 43/46, 켬 38/46, #586). 평가 대화는 `X-Eval-Model-Override: local=local-gemma4`로 로컬 업무 별칭을 바꿔 끼웁니다. 모델 파일은
+    (끔 43/46, 켬 38/46, #586). 지금은 별칭 이름으로 직접 부릅니다(평가 바꿔 끼우기 값은 eval과 맞춰 따로 더함). 모델 파일은
     디스크 여유가 있을 때 받습니다.
   - 평가 전용 별칭(모델 교체 회귀 #107·#346, 기본 경로에서는 쓰지 않음): `external-sonnet`(Claude Sonnet 5.5,
     `claude-sonnet-5-5`, $2 / $10 per MTok, 기본값이 아닌 `temperature`·`top_p`는 뺌)과 `local-exaone`(EXAONE 4.0 1.2B 공식

@@ -46,7 +46,6 @@ EVAL_MODEL_OVERRIDES = {
     "external=external-sonnet": {"external": "external-sonnet"},
     "local=local-exaone,external=external-sonnet": {"local": "local-exaone", "external": "external-sonnet"},
     "external=external-exaone": {"external": "external-exaone"},   # K-EXAONE 2.5 API(#436)
-    "local=local-gemma4": {"local": "local-gemma4"},               # Gemma 4 12B(#595, 결정 0009)
 }
 MAX_CONTENT = 4000
 AWAITING_CONFIRM = "실행 전 확인이 남아 있습니다. 확인 카드에서 먼저 결정하세요."
