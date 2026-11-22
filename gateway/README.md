@@ -20,6 +20,16 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     `local-gguf`(같은 Qwen3.5-9B의 GGUF Q4_K_M 판, llama.cpp 실행기, digest `56671c2ab938`)는 구조화 출력(`response_format`)이 됩니다.
     `local`(safetensors nvfp4, MLX 실행기, digest `d63f830f28d5`)은 되지 않아 400입니다(#205). 폴백·로컬 내림은 `local`을 씁니다.
     별칭마다 `model_info.location`이 있고, gateway는 이것으로 로컬·외부를 가릅니다.
+  - 모델 프로필(`gateway/profiles.py`, #595, 결정 0009, 계약 #600): 모델마다 다른 실행 설정은 별칭의 `model_info.profile`에 둡니다.
+    `thinking`(호출 목적별 `plan`·`reroute`·`imageRead`·`ragAnswer`·`incident`, `on`=`reasoning_effort: low`, `off`=`none`,
+    `default`=보내지 않음), `timeoutSeconds`(별칭 호출 한 번의 시간 제한, 기본 120), `structuredOutput`(response_format 지원, 기본 true),
+    `vision`(이미지 입력, 로컬만)입니다. `model_info.evalOnly: true`는 평가 전용 별칭입니다. Qwen3.5-9B 별칭(`local`·`local-gguf`·
+    `local-vision`)은 결정 0008 그대로 `plan`·`reroute` default(생각 켬), `imageRead`·`ragAnswer`·`incident` off, 120초입니다.
+    프로필 값이 틀리면 gateway가 뜨지 않습니다. 모듈(agent·rag·incident)은 `GET /v1/model-profiles`(토큰 없음)로, 관리 화면은
+    `GET /api/ops/models`(auditor)로 같은 본문을 봅니다. 각 모듈의 환경 변수는 값이 있을 때만 프로필을 덮어씁니다.
+  - `local-gemma4`(평가 전용, Ollama `gemma4:12b`, 생각 모두 off, #595): 같은 개발 묶음에서 생각을 끄는 쪽이 도구 호출이 나았습니다
+    (끔 43/46, 켬 38/46, #586). 평가 대화는 `X-Eval-Model-Override: local=local-gemma4`로 로컬 업무 별칭을 바꿔 끼웁니다. 모델 파일은
+    디스크 여유가 있을 때 받습니다.
   - 평가 전용 별칭(모델 교체 회귀 #107·#346, 기본 경로에서는 쓰지 않음): `external-sonnet`(Claude Sonnet 5.5,
     `claude-sonnet-5-5`, $2 / $10 per MTok, 기본값이 아닌 `temperature`·`top_p`는 뺌)과 `local-exaone`(EXAONE 4.0 1.2B 공식
     GGUF Q4_K_M, Ollama가 `hf.co/LGAI-EXAONE/EXAONE-4.0-1.2B-GGUF:Q4_K_M`으로 받음, 812MB). EXAONE 라이선스는
@@ -56,7 +66,7 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     스택(`GATEWAY_EVAL_TOOLCALL=1`)의 측정 호출(`purpose=eval-toolcall`)입니다. rag 질의 임베딩은 #191 뒤로 토큰을 붙입니다.
     2026-11-21 실제 스택 기록에서 토큰이 있는 호출 537건은 모두 채워져 있었고, null 272건은 모두 토큰 없는 호출이었습니다
     (그중 rag 질의 임베딩 101건은 #191 전 이미지의 기록).
-  - 시간 제한(`LLM_TIMEOUT_SECONDS`, 기본 120초, LiteLLM `request_timeout`도 120초, agent의 호출당 `AGENT_LLM_TIMEOUT_S`와 같음. 한 턴 전체는 `AGENT_TIMEOUT_SECONDS` 300초, #536) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
+  - 시간 제한(별칭 프로필 `timeoutSeconds`, 기본 120초, `LLM_TIMEOUT_SECONDS`가 있으면 모든 별칭을 덮어씀, LiteLLM `request_timeout`도 120초, agent의 호출당 `AGENT_LLM_TIMEOUT_S`와 같음. 한 턴 전체는 `AGENT_TIMEOUT_SECONDS` 300초, #536) 초과는 504 `llm-timeout`, 연결 실패는 502 `llm-unavailable`,
     LiteLLM 5xx는 502 `llm-upstream-error`이고, 모두 실패 알림(오류 로그, `ALERT_WEBHOOK_URL`이 있으면 웹훅)을 보냅니다.
   - 비용 상한(`gateway/budgets.py`, 팩 선택 파일 `budgets.yaml`, #155): 외부 응답 비용(LiteLLM `x-litellm-response-cost`,
     스트림은 별칭 단가 `model_info.input_cost_per_token`·`output_cost_per_token`과 usage로 계산)을 기간(day|month)마다 에이전트와
@@ -85,7 +95,7 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     `reasoning_effort`는 LiteLLM이 `thinking: adaptive`와 `output_config.effort`로 바꿔 넘깁니다(실측).
   - 출구가 요청을 거절하면(형식 422, 인증 401, 정책·등록부 403, 미지원 400) 감사 이벤트 `llm.request`에 대화 ID, 에이전트,
     요청한 별칭, 상태와 이유를 남깁니다(본문은 넣지 않음).
-  - `response_format`: `model_info.supports_response_format: false`인 별칭(`local`, Ollama MLX 실행기의 qwen3.5:9b)은 보내기 전에
+  - `response_format`: 프로필 `structuredOutput: false`인 별칭(`local`, Ollama MLX 실행기의 qwen3.5:9b)은 보내기 전에
     400 `unsupported-parameter`입니다. LiteLLM 501(기능 미지원)도 장애 알림 없이 400으로 돌려줍니다.
 - 평가 경로(#63)
   - `GATEWAY_EXTERNAL_LOG`(파일 경로)가 있을 때만 외부 모델로 실제 보낸 본문(가림 뒤)을
@@ -113,8 +123,9 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
   - `reasoning_effort`는 그대로 넘깁니다. LiteLLM 1.108.1은 Ollama에 `none`이면 `think: false`, `low`·`high`면 `think: true`로
     바꿔 보냅니다(단계는 구분되지 않음). Ollama 전용 `think`는 외부로 보낼 때 뺍니다(Anthropic이 400으로 거절함).
   - 외부 별칭 요청을 gateway가 로컬로 돌린 호출(이미지, 팩 외부 LLM 금지, 기밀 판정·업무 주제, 비용 상한, 외부 장애 폴백)의
-    생각 단계는 기본으로 건드리지 않습니다(결정 0008, #536). `GATEWAY_LOCAL_REASONING_EFFORT`를 주면(예: `none`) `reasoning_effort`도
-    `think`도 없는 호출에 그 값을 채우고 감사 detail에 `생각 단계 끔(reasoning_effort=none)`처럼 적습니다(#427). 처음부터 로컬 별칭으로
+    생각 단계는 돌린 별칭 프로필의 `thinking.reroute`를 따릅니다(#595). Qwen3.5-9B는 default라 건드리지 않습니다(결정 0008, #536).
+    `off`·`on`이거나 `GATEWAY_LOCAL_REASONING_EFFORT`를 주면(예: `none`, 프로필보다 앞섬) `reasoning_effort`도 `think`도 없는 호출에
+    그 값을 채우고 감사 detail에 `생각 단계 끔(reasoning_effort=none)`처럼 적습니다(#427). 처음부터 로컬 별칭으로
     온 요청, 호출한 쪽이 정한 값, 별칭 `drop_params`가 `reasoning_effort`를 빼는 경우는 건드리지 않습니다. 생각을 끄면 빠르지만
     (코랩 T4 측정 중앙값 2.96초 대 8.19초, 최대 10.5초 대 79.9초, [bench/README.md](bench/README.md)) 답의 질을 위해 끄지 않고 시간
     제한을 120초로 늘렸습니다.
@@ -209,10 +220,10 @@ DELEGATION_TOKEN_PRIVATE_KEY=infra/dev-keys/delegation-es256.pem \
 
 환경 변수: `ERP_BASE_URL`, `PACK_DIR`(기본 `packs/manufacturing`), `CONTRACTS_DIR`(기본 `contracts`),
 `DELEGATION_TOKEN_PRIVATE_KEY`(없으면 임시 키를 만들고 경고를 남깁니다), `LITELLM_BASE_URL`(기본 `http://localhost:4000`),
-`LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`, `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
+`LITELLM_MASTER_KEY`, `LITELLM_CONFIG`, `LLM_TIMEOUT_SECONDS`(기본 빈 값=프로필 `timeoutSeconds`, #595), `GATEWAY_AUDIT_DIR`, `ALERT_WEBHOOK_URL`, `AUDIT_EVENT_FILES`, `AGENT_BASE_URL`(기본 `http://localhost:8020`),
 `AGENT_TIMEOUT_SECONDS`(기본 300, agent `/run` 한 턴 전체, #536), `GATEWAY_EXTERNAL_LOG`, `GATEWAY_EVAL_MODE`, `GATEWAY_EVAL_TOOLCALL`, `GATEWAY_PACK_STAGE`,
 `SLACK_BRIDGE_SECRET`, `SLACK_USERS_FILE`, `ERP_SERVICE_LOGIN_SECRET`, `SLACK_LOGIN_PER_USER_PER_MINUTE`, `SLACK_LOGIN_PER_MINUTE`, `GATEWAY_EVAL_REPORTS_DIR`,
-`GATEWAY_LOCAL_REASONING_EFFORT`(기본 빈 값=채우지 않음, #427·#536),
+`GATEWAY_LOCAL_REASONING_EFFORT`(기본 빈 값=프로필 `thinking.reroute`, #427·#536·#595),
 `GATEWAY_SEMANTIC_CACHE`(`1`이면 켬, #465), `GATEWAY_CACHE_THRESHOLD`(기본 0.95), `GATEWAY_CACHE_TTL_SECONDS`(기본 600).
 상대 경로는 저장소 루트 기준입니다. LiteLLM은 1.108.1로 고정합니다(배포 뒤 2주가 지난 판).
 

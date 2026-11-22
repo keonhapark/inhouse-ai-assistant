@@ -36,7 +36,7 @@ def _audit(app) -> list[dict]:
 def test_litellm_config_aliases_have_location():
     locs = load_model_locations(ROOT / "gateway/litellm/config.yaml")
     assert locs == {"local": "local", "local-gguf": "local", "local-vision": "local", "local-exaone": "local",
-                    "local-embed": "local", "external": "external", "external-sonnet": "external",
+                    "local-gemma4": "local", "local-embed": "local", "external": "external", "external-sonnet": "external",
                     "external-exaone": "external"}
 
 
@@ -552,12 +552,17 @@ def test_rerouted_calls_keep_thinking_and_timeout_is_120s_by_default(client, app
         monkeypatch.delenv(k, raising=False)
     monkeypatch.delenv("AGENT_TIMEOUT_SECONDS", raising=False)
     s = Settings.from_env()
-    assert s.local_reasoning_effort is None and s.llm_timeout_seconds == 120.0
+    # 환경 변수가 없으면 덮어쓰지 않고 별칭 프로필을 따릅니다(#595): Qwen3.5-9B는 reroute default·120초
+    assert s.local_reasoning_effort is None and s.llm_timeout_seconds is None
+    assert app.state.egress.profiles["local"]["profile"]["timeoutSeconds"] == 120
     assert s.agent_timeout_seconds == 300.0          # 한 턴 전체는 LLM 호출 여럿을 담게(리드 결정, #536)
     monkeypatch.setenv("GATEWAY_LOCAL_REASONING_EFFORT", "none")
     assert Settings.from_env().local_reasoning_effort == "none"
     cfg = yaml.safe_load((ROOT / "gateway/litellm/config.yaml").read_text(encoding="utf-8"))
-    assert cfg["litellm_settings"]["request_timeout"] >= s.llm_timeout_seconds
+    from gateway.profiles import load_model_profiles
+
+    longest = max(p["profile"]["timeoutSeconds"] for p in load_model_profiles(ROOT / "gateway/litellm/config.yaml"))
+    assert cfg["litellm_settings"]["request_timeout"] >= longest
     _, external_ok = _agent_ids(app)
     litellm.external_mode = "500"                               # 외부 장애 → 로컬 폴백
     r = client.post("/v1/chat/completions", headers={"X-Delegation-Token": token_for(external_ok)},
@@ -758,10 +763,11 @@ def test_operational_egress_log_keeps_alias_and_provider_model(client, app, toke
 
 # ---------- 구조화 출력이 되는 로컬 별칭(#205) ----------
 def test_local_gguf_accepts_response_format(client, app, litellm):
-    from gateway.egress import load_model_info, load_provider_models
+    from gateway.egress import load_provider_models
+    from gateway.profiles import load_model_profiles
 
     cfg = ROOT / "gateway/litellm/config.yaml"
-    assert load_model_info(cfg)["local-gguf"]["supports_response_format"] is True
+    assert {p["alias"]: p for p in load_model_profiles(cfg)}["local-gguf"]["profile"]["structuredOutput"] is True
     assert load_provider_models(cfg)["local-gguf"] == "ollama_chat/qwen3.5:9b-q4_K_M"
     assert app.state.egress.local_alias == "local"             # 폴백·로컬 내림은 그대로 local
     rf = {"type": "json_schema", "json_schema": {"name": "r", "schema": {"type": "object"}}}
