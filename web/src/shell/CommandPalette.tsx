@@ -1,9 +1,10 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { Command } from 'cmdk'
-import { FileCheck2, Monitor, Moon, SquarePen, Sun } from 'lucide-react'
+import { FileCheck2, Monitor, Moon, SquarePen, Sun, UserSearch } from 'lucide-react'
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { Schemas } from '../api/client'
+import type { OrgNavState } from '../org/OrgPage'
 import { isPaletteKey, NEW_CHAT } from './events'
 import { navFor } from './nav'
 import { THEMES, useTheme, type Theme } from './theme'
@@ -13,7 +14,7 @@ const THEME_ICON: Record<Theme, typeof Sun> = { light: Sun, dark: Moon, system: 
 type Props = { me: Schemas['Employee']; open: boolean; onOpenChange(open: boolean): void }
 
 /**
- * 명령 팔레트(Ctrl K, ux/design-system.md 3.1). 화면 이동, 새 대화, 결재 대기 열기, 테마 바꾸기.
+ * 명령 팔레트(Ctrl K, ux/design-system.md 3.1). 화면 이동, 새 대화, 결재 대기 열기, 사람 찾기, 테마 바꾸기.
  * 동작은 cmdk(키보드 위아래·Enter·찾기), 대화상자(초점 가둠·Esc)는 Radix Dialog입니다.
  */
 export function CommandPalette({ me, open, onOpenChange }: Props) {
@@ -55,6 +56,10 @@ export function CommandPalette({ me, open, onOpenChange }: Props) {
                 <Command.Item onSelect={run(() => navigate('/approvals'))}>
                   <FileCheck2 aria-hidden />
                   결재 대기 열기
+                </Command.Item>
+                <Command.Item onSelect={run(() => navigate('/org', { state: { find: true } satisfies OrgNavState }))}>
+                  <UserSearch aria-hidden />
+                  사람 찾기
                 </Command.Item>
               </Command.Group>
               <Command.Group heading="화면 이동">

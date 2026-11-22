@@ -418,19 +418,7 @@
   letter-spacing: -0.015em;
 }
 
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px var(--space-2);
-  border-radius: var(--r-tag);
-  background: var(--fill-2);
-  color: var(--text-2);
-  font-size: var(--fs-caption);
-  font-weight: var(--fw-medium);
-  white-space: nowrap;
-}
-
+/* .tag 바탕은 components.css(3.3). 시트의 사진 태그 아이콘만 주황입니다 */
 .tag svg {
   width: 13px;
   height: 13px;

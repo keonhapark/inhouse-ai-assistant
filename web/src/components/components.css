@@ -182,3 +182,138 @@
   text-align: right;
   overflow-wrap: anywhere;
 }
+
+/* 묶음 목록(ux/design-system.md 3.4): --surface 묶음 안에 0.5px 구분선(왼쪽 16px 들여씀). 머리는 footnote 600 --text-2, 오른쪽 건수 */
+.group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0 var(--space-1);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+}
+
+.group__h {
+  margin: 0;
+  font: inherit;
+}
+
+.group__n {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-regular);
+}
+
+.group__list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  list-style: none;
+}
+
+.group__list > li {
+  position: relative;
+}
+
+.group__list > li + li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: var(--space-4);
+  height: 0.5px;
+  background: var(--sep);
+}
+
+.group__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--row-h);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-body);
+  text-align: left;
+  text-decoration: none;
+}
+
+button.group__row,
+a.group__row {
+  cursor: pointer;
+}
+
+button.group__row:hover,
+a.group__row:hover,
+.group__row[aria-current='true'] {
+  background: var(--sel);
+}
+
+.group__row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: calc(-1 * var(--focus-offset));
+}
+
+.group__main {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.group__title {
+  font-weight: var(--fw-semibold);
+}
+
+.group__sub {
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}
+
+.group__end {
+  flex: none;
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+}
+
+.group__row > svg {
+  flex: none;
+  width: var(--icon);
+  height: var(--icon);
+  color: var(--text-2);
+}
+
+.group__empty {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+}
+
+/* 태그(3.3): 한 가지 주의만. --fill-2 면, --text-2 글자 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px var(--space-2);
+  border-radius: var(--r-tag);
+  background: var(--fill-2);
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
