@@ -418,9 +418,23 @@ async def test_preview_marks_attachment_turn(r2: RunHarness) -> None:
     jsonschema.validate(preview, preview_schema)
     done = await r2.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
     assert done["status"] == "completed"
-    # 다음 턴(첨부 없음): 대화 표시로 승인은 받지만 이미지에서 읽은 값이 든 턴은 아님
+    # 다음 턴(첨부 없음): 앞 턴에 읽은 값이 인자로 쓰일 수 있어 대화 끝까지 표시가 남습니다(#530)
     s2 = await _run(r2, "finance", "같은 걸로 하나 더 올려 줘", None, conv, token)
-    assert s2["pendingApproval"]["toolPreview"]["fromAttachments"] is False
+    assert s2["pendingApproval"]["toolPreview"]["fromAttachments"] is True
+
+
+@pytest.mark.anyio
+async def test_preview_after_clarifying_turn_keeps_attachment_mark(r2: RunHarness) -> None:
+    """#528에서 본 흐름: 영수증을 읽고 목적을 되물은 뒤, 다음 턴(첨부 없음)에 나온 카드에도 표시가 남습니다(#530)."""
+    r2.runner.images = StubReader(dict(READ))
+    conv = f"cnv_{uuid.uuid4().hex[:8]}"
+    token = mint(agent="finance", cid=conv)
+    r2.llm.script = [say("어떤 목적의 지출인가요?"), call("expense_request", EXPENSE), say("올렸습니다.")]
+    first = await _run(r2, "finance", "이 영수증 정산해 줘", [IMAGE], conv, token)
+    assert first["status"] == "awaiting_user" and first["pendingApproval"] is None
+    s = await _run(r2, "finance", "거래처 점심이야", None, conv, token)
+    preview = s["pendingApproval"]["toolPreview"]
+    assert preview["tool"] == "expense_request" and preview["fromAttachments"] is True
 
 
 @pytest.mark.anyio
