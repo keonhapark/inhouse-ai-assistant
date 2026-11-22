@@ -1,0 +1,5 @@
+/* 강조색 후보: 민트. 채움·선택 배경·주 버튼 면은 파스텔, 글자·아이콘·주 버튼 글자는 같은 색상의 진한 단계입니다.
+   대비(계산): 밝음 진한 글자/흰 면 4.5:1 이상, 진한 글자/파스텔 버튼 면 4.5:1 이상, 어두움 파스텔 글자/#2c2c2e 4.5:1 이상. */
+:root { --accent: #0E6158; --accent-btn: #C2EAE2; --accent-fg: #0E6158; --accent-soft: #DAF3EE; --sel: #DAF3EE; --focus: #0E6158; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --accent: #99DECF; --accent-btn: #99DECF; --accent-fg: #093A33; --accent-soft: rgb(153 222 207 / 18%); --sel: rgb(153 222 207 / 16%); --focus: #99DECF; } }
+:root[data-theme='dark'] { --accent: #99DECF; --accent-btn: #99DECF; --accent-fg: #093A33; --accent-soft: rgb(153 222 207 / 18%); --sel: rgb(153 222 207 / 16%); --focus: #99DECF; }

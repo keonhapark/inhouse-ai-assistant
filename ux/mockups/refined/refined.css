@@ -1,7 +1,8 @@
 /* 다듬은 판(#571): 섞음 방향을 애플식 원칙으로 정리했습니다.
+   이 파일은 시안용입니다. 구현은 ux/design-system/tokens.css의 이름을 씁니다(값은 같음, 이름 대응은 명세 7절).
    - 위계는 테두리·배지가 아니라 글자 크기와 굵기로 만듭니다.
    - 반투명 사이드바, 둥근 선택 강조, 그룹 묶음(inset grouped) 목록, 얇은 구분선, 아주 옅은 그림자
-   - 강조색은 블루 하나. 상태는 채도를 낮춘 점과 글자로만 표시합니다.
+   - 강조색은 파우더 블루 하나(면은 파스텔, 글자는 진한 단계). 상태는 채도를 낮춘 점과 글자로만 표시합니다.
    - 서체는 Pretendard(OFL). 애플 로고·아이콘·화면은 쓰지 않고 아이콘은 Lucide(ISC)입니다.
    대비: 본문·보조 글은 쓰는 면(surface, surface-2, fill, 사이드바) 위에서 4.5:1 이상이 되도록 계산해 맞췄습니다. */
 
@@ -14,27 +15,29 @@
   --fill-2: rgb(118 118 128 / 8%);
   --sidebar-bg: rgb(236 236 240 / 72%);
   --sidebar-line: rgb(0 0 0 / 6%);
-  --sel: rgb(0 0 0 / 6%);
-  --sel-strong: #0066cc;
+  --sel: #e1eefc;
   --sep: rgb(60 60 67 / 14%);
   --sep-strong: rgb(60 60 67 / 26%);
   --text: #1d1d1f;
   --text-2: #66666b;
-  --accent: #0066cc;
-  --accent-btn: #0071e3;
-  --accent-fg: #ffffff;
-  --accent-soft: rgb(0 113 227 / 9%);
+  /* 강조: 파우더 블루(사용자 선택). 면은 파스텔, 글자·아이콘은 같은 색상의 진한 단계 */
+  --accent: #1d5394;
+  --accent-btn: #cce1f9;
+  --accent-fg: #1d5394;
+  --accent-soft: #e1eefc;
+  /* 진행 중·결재 대기 상태: 강조색(파랑)과 겹치지 않게 라벤더 진한 단계 */
+  --progress: #4a3dae;
   --green: #1e7b34;
   --orange: #b25000;
   --red: #c4271c;
-  --purple: #6b4fbb;
   --gray: #66666b;
+  --avatar-bg: #66666b;
   --shadow-1: 0 0.5px 1px rgb(0 0 0 / 6%), 0 1px 3px rgb(0 0 0 / 4%);
   --shadow-pop: 0 0 0 0.5px rgb(0 0 0 / 8%), 0 10px 32px rgb(0 0 0 / 14%), 0 2px 6px rgb(0 0 0 / 6%);
   --seg-track: rgb(118 118 128 / 12%);
   --seg-thumb: #ffffff;
   --paper: #fbfaf7;
-  --focus: #0066cc;
+  --focus: #1d5394;
 
   --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --r-sm: 8px;
@@ -50,12 +53,12 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --bg: #1c1c1e; --surface: #2c2c2e; --surface-2: #323234; --fill: rgb(118 118 128 / 24%); --fill-2: rgb(118 118 128 / 16%);
-    --sidebar-bg: rgb(44 44 46 / 72%); --sidebar-line: rgb(255 255 255 / 6%); --sel: rgb(255 255 255 / 9%); --sel-strong: #0a72e0;
-    --sep: rgb(84 84 88 / 55%); --sep-strong: rgb(84 84 88 / 80%); --text: #f5f5f7; --text-2: #a8a8ad;
-    --accent: #3b9bff; --accent-btn: #0a72e0; --accent-soft: rgb(10 132 255 / 16%);
-    --green: #5cbf6e; --orange: #d9a45a; --red: #ff6961; --purple: #bf9cff; --gray: #a8a8ad;
+    --sidebar-bg: rgb(44 44 46 / 72%); --sidebar-line: rgb(255 255 255 / 6%); --sel: rgb(168 204 244 / 12%);
+    --sep: rgb(84 84 88 / 55%); --sep-strong: rgb(84 84 88 / 80%); --text: #f5f5f7; --text-2: #b0b0b5;
+    --accent: #a8ccf4; --accent-btn: #a8ccf4; --accent-fg: #0d2a4d; --accent-soft: rgb(168 204 244 / 18%); --progress: #c7bdff;
+    --avatar-bg: #636366; --green: #5cbf6e; --orange: #d9a45a; --red: #ff9189; --gray: #b0b0b5;
     --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 6%); --shadow-pop: 0 0 0 0.5px rgb(255 255 255 / 10%), 0 12px 36px rgb(0 0 0 / 50%);
-    --seg-track: rgb(118 118 128 / 24%); --seg-thumb: #636366; --focus: #3b9bff;
+    --seg-track: rgb(118 118 128 / 24%); --seg-thumb: #636366; --focus: #a8ccf4;
   }
   :root:not([data-theme='light']) .receipt { filter: brightness(.86) drop-shadow(0 1px 2px rgb(0 0 0 / 30%)); }
 }
@@ -63,12 +66,12 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
   --bg: #1c1c1e; --surface: #2c2c2e; --surface-2: #323234; --fill: rgb(118 118 128 / 24%); --fill-2: rgb(118 118 128 / 16%);
-  --sidebar-bg: rgb(44 44 46 / 72%); --sidebar-line: rgb(255 255 255 / 6%); --sel: rgb(255 255 255 / 9%); --sel-strong: #0a72e0;
-  --sep: rgb(84 84 88 / 55%); --sep-strong: rgb(84 84 88 / 80%); --text: #f5f5f7; --text-2: #a8a8ad;
-  --accent: #3b9bff; --accent-btn: #0a72e0; --accent-soft: rgb(10 132 255 / 16%);
-  --green: #5cbf6e; --orange: #d9a45a; --red: #ff6961; --purple: #bf9cff; --gray: #a8a8ad;
+  --sidebar-bg: rgb(44 44 46 / 72%); --sidebar-line: rgb(255 255 255 / 6%); --sel: rgb(168 204 244 / 12%);
+  --sep: rgb(84 84 88 / 55%); --sep-strong: rgb(84 84 88 / 80%); --text: #f5f5f7; --text-2: #b0b0b5;
+  --accent: #a8ccf4; --accent-btn: #a8ccf4; --accent-fg: #0d2a4d; --accent-soft: rgb(168 204 244 / 18%); --progress: #c7bdff;
+  --avatar-bg: #636366; --green: #5cbf6e; --orange: #d9a45a; --red: #ff9189; --gray: #b0b0b5;
   --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 6%); --shadow-pop: 0 0 0 0.5px rgb(255 255 255 / 10%), 0 12px 36px rgb(0 0 0 / 50%);
-  --seg-track: rgb(118 118 128 / 24%); --seg-thumb: #636366; --focus: #3b9bff;
+  --seg-track: rgb(118 118 128 / 24%); --seg-thumb: #636366; --focus: #a8ccf4;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -83,7 +86,7 @@ ul, ol { padding: 0; list-style: none; }
 a { color: inherit; text-decoration: none; }
 button, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 45%, transparent); outline-offset: 1px; border-radius: var(--r-sm); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .i { width: 16px; height: 16px; flex: none; stroke-width: 1.6; }
 .tnum { font-feature-settings: 'tnum'; }
@@ -98,7 +101,7 @@ button { cursor: pointer; }
   padding: 18px 12px 12px; display: flex; flex-direction: column; gap: 14px;
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
-.brand__mark { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: var(--accent-btn); color: #fff; }
+.brand__mark { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: var(--accent-btn); color: var(--accent-fg); }
 .brand__mark .i { width: 14px; height: 14px; stroke-width: 2; }
 .brand b { font-size: 14px; font-weight: 650; letter-spacing: -0.01em; }
 .search { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: var(--r-sm); background: var(--fill-2); color: var(--text-2); font-size: 13px; border: 0; text-align: left; }
@@ -115,7 +118,7 @@ button { cursor: pointer; }
 .me__text { flex: 1; display: flex; flex-direction: column; line-height: 1.3; font-size: 13px; }
 .me__text b { font-weight: 600; }
 .me__text span { font-size: 12px; color: var(--text-2); }
-.avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #6e6e73; color: #fff; font-size: 12px; font-weight: 600; flex: none; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--avatar-bg); color: #fff; font-size: 12px; font-weight: 600; flex: none; }
 
 .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .toolbar { height: 52px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 24px; border-bottom: 0.5px solid var(--sep); background: var(--surface); }
@@ -140,7 +143,7 @@ button { cursor: pointer; }
 .status--orange { --c: var(--orange); }
 .status--red { --c: var(--red); }
 .status--blue { --c: var(--accent); }
-.status--purple { --c: var(--purple); }
+.status--progress { --c: var(--progress); }
 .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--text-2); background: var(--fill-2); padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
 .tag .i { width: 13px; height: 13px; color: var(--orange); }
 
@@ -170,8 +173,8 @@ button { cursor: pointer; }
 .chat__scroll { flex: 1; overflow: hidden; padding: 28px 32px 12px; }
 .col { max-width: 680px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 18px; }
 .chat > .col { padding: 0 32px 20px; box-sizing: content-box; }
-.me-msg { align-self: flex-end; max-width: 75%; background: var(--accent-btn); color: #fff; padding: 9px 14px; border-radius: 18px 18px 6px 18px; font-size: 14px; }
-.me-msg small { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; opacity: .85; }
+.me-msg { align-self: flex-end; max-width: 75%; background: var(--accent-btn); color: var(--accent-fg); padding: 9px 14px; border-radius: 18px 18px 6px 18px; font-size: 14px; }
+.me-msg small { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; }
 .me-msg small .i { width: 13px; height: 13px; }
 .agent-msg { display: flex; flex-direction: column; gap: 6px; }
 .agent-msg__who { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
@@ -212,7 +215,7 @@ button { cursor: pointer; }
 .seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--seg-track); }
 .seg button { border: 0; background: transparent; height: 28px; padding: 0 14px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
 .seg button .n { color: var(--text-2); font-feature-settings: 'tnum'; }
-.seg button.is-on .n { color: inherit; opacity: .7; }
+.seg button.is-on .n { color: var(--text); }
 .seg button.is-on { background: var(--seg-thumb); box-shadow: 0 1px 2px rgb(0 0 0 / 10%), 0 0 0 0.5px rgb(0 0 0 / 4%); font-weight: 600; }
 .pane-note { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
 .pane-note .i { width: 14px; height: 14px; color: var(--text-2); }
@@ -246,7 +249,7 @@ button { cursor: pointer; }
 .timeline .dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--fill); color: var(--text-2); }
 .timeline .dot .i { width: 12px; height: 12px; stroke-width: 2.4; }
 .timeline .done .dot { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
-.timeline .now .dot { background: var(--accent-soft); color: var(--accent); }
+.timeline .now .dot { background: color-mix(in srgb, var(--progress) 14%, transparent); color: var(--progress); }
 .timeline b { font-size: 13px; font-weight: 600; }
 .timeline small { font-size: 12px; color: var(--text-2); }
 .detail__foot { padding: 12px 28px 14px; border-top: 0.5px solid var(--sep); display: flex; align-items: flex-start; gap: 8px; background: var(--surface); }
@@ -266,4 +269,5 @@ button { cursor: pointer; }
 .popover p { font-size: 13px; color: var(--text-2); margin-top: 4px; }
 .popover__actions { display: flex; justify-content: flex-end; gap: 8px; }
 .popover::after { content: ''; position: absolute; right: 26px; bottom: -6px; width: 12px; height: 12px; background: inherit; transform: rotate(45deg); box-shadow: 0.5px 0.5px 0 rgb(0 0 0 / 8%); }
-.btn.is-pressed { opacity: .5; }
+.btn.is-pressed { box-shadow: inset 0 0 0 999px rgb(0 0 0 / 8%); }
+.detail__foot .btn--danger { margin-right: 4px; } /* 위험 버튼과 주 버튼 사이 12px(명세 3.2) */

@@ -102,7 +102,7 @@ export function refinedChat() {
         <div class="chat__scroll"><div class="col">
           <div class="me-msg">어제 팀 점심 영수증이야. 식대로 경비 정산 올려 줘<small>${icon('paperclip')}영수증 사진 1장</small></div>
           <div class="agent-msg">
-            <div class="agent-msg__who"><b>재무 담당 AI</b>${status('purple', '사내 처리')}</div>
+            <div class="agent-msg__who"><b>재무 담당 AI</b>${status('blue', '사내 처리')}</div>
             <p>영수증에서 가맹점, 사용일, 금액을 읽었습니다.</p>
           </div>
           ${expenseSheet()}
@@ -163,7 +163,7 @@ export function refinedApprovals() {
       <article class="detail" aria-label="결재 문서: 팀 점심 식대">
         <div class="detail__scroll">
           <header>
-            <p class="detail__kicker"><span>경비 정산</span><span class="tnum">EXP-0107</span>${status('blue', '결재 대기')}</p>
+            <p class="detail__kicker"><span>경비 정산</span><span class="tnum">EXP-0107</span>${status('progress', '결재 대기')}</p>
             <h2>팀 점심 식대</h2>
             <div class="detail__who"><span class="avatar">지현</span><b>오지현</b><span>생산관리팀, 2026년 11월 20일 12:44 상신</span></div>
             <ol class="timeline" aria-label="결재선">

@@ -1,0 +1,5 @@
+/* 강조색 후보: 라벤더. 채움·선택 배경·주 버튼 면은 파스텔, 글자·아이콘·주 버튼 글자는 같은 색상의 진한 단계입니다.
+   대비(계산): 밝음 진한 글자/흰 면 4.5:1 이상, 진한 글자/파스텔 버튼 면 4.5:1 이상, 어두움 파스텔 글자/#2c2c2e 4.5:1 이상. */
+:root { --accent: #4A3DAE; --accent-btn: #D9D1FF; --accent-fg: #4A3DAE; --accent-soft: #ECE8FF; --sel: #ECE8FF; --focus: #4A3DAE; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --accent: #C7BDFF; --accent-btn: #C7BDFF; --accent-fg: #231B5C; --accent-soft: rgb(199 189 255 / 18%); --sel: rgb(199 189 255 / 16%); --focus: #C7BDFF; } }
+:root[data-theme='dark'] { --accent: #C7BDFF; --accent-btn: #C7BDFF; --accent-fg: #231B5C; --accent-soft: rgb(199 189 255 / 18%); --sel: rgb(199 189 255 / 16%); --focus: #C7BDFF; }
