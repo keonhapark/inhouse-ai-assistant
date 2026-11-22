@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import os
 import platform
 import subprocess
 from collections.abc import Callable
@@ -305,12 +306,45 @@ def save_run(rows: list[RunRow], meta: RunMeta, path: Path, summary: dict[str, A
     path.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
+def append_line(path: Path, line: str) -> None:
+    """회차 기록 한 줄을 붙이고 디스크까지 내립니다(fsync). 컴퓨터가 갑자기 꺼져도 끝난 회차가 남게 합니다.
+    앞선 쓰기가 줄 중간에서 끊겨 파일이 줄바꿈으로 끝나지 않으면, 먼저 줄바꿈을 넣어 깨진 조각을 따로 둡니다."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+b") as f:
+        if f.tell() > 0:
+            f.seek(-1, os.SEEK_END)
+            if f.read(1) != b"\n":
+                f.write(b"\n")
+        f.write(line.encode("utf-8") + b"\n")
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def broken_lines(path: Path) -> int:
+    """회차 기록 파일에서 JSON으로 읽지 못하는 줄 수(쓰다가 끊긴 줄)."""
+    if not path.exists():
+        return 0
+    n = 0
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.strip():
+            try:
+                json.loads(line)
+            except json.JSONDecodeError:
+                n += 1
+    return n
+
+
 def _attempts(path: Path) -> dict[tuple[str, str, int], list[RunRow]]:
+    """쓰다가 끊긴 줄(JSON이 아닌 줄)은 건너뜁니다. 그 회차는 끝나지 않은 것으로 보고 다시 돕니다."""
     got: dict[tuple[str, str, int], list[RunRow]] = {}
     if path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             if line.strip():
-                r = RunRow(**json.loads(line))
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                r = RunRow(**data)
                 got.setdefault((r.scenario_id, r.condition, r.repeat), []).append(r)
     return got
 

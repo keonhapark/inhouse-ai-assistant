@@ -24,7 +24,8 @@ import yaml
 from harness.erp import ErpClient
 from harness.paths import EVAL_DIR, ROOT
 from harness.report import render, summarize
-from harness.runner import (MAX_RETRIES, RUN_CONDITIONS, HealthCheck, RunRow, _git, count_retries, load_rows_jsonl,
+from harness.runner import (MAX_RETRIES, RUN_CONDITIONS, HealthCheck, RunRow, _git, append_line, broken_lines,
+                            count_retries, load_rows_jsonl,
                             load_run, run_matrix, save_run, signature_counts, system_condition)
 from harness.scenario import ScenarioError, has_document_injection, load_scenarios
 from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
@@ -270,6 +271,8 @@ def cmd_run(args: argparse.Namespace) -> int:
             raise SystemExit(f"앞선 회차 중 지금 묶음({bundle})과 다른 묶음에서 돈 회차가 있습니다: "
                              f"{sorted(map(str, other_bundles))}. 다른 출력 이름으로 돌립니다")
         print(f"이어 돌리기: 끝난 회차 {len(done)}개를 건너뜁니다", flush=True)
+        if broken := broken_lines(rows_file):
+            print(f"회차 기록에서 쓰다가 끊긴 줄 {broken}개를 건너뜁니다(그 회차는 다시 돕니다)", flush=True)
         now = (_git("rev-parse", "HEAD"), cfg.get("stackCommit"), cfg.get("packStage"))
         other = {sig: n for sig, n in signature_counts(done).items() if sig != now}
         moved = {sig: n for sig, n in other.items() if sig[1:] != now[1:]}
@@ -285,8 +288,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     rows_file.parent.mkdir(parents=True, exist_ok=True)
 
     def progress(r: RunRow) -> None:
-        with rows_file.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(asdict(r), ensure_ascii=False) + "\n")
+        append_line(rows_file, json.dumps(asdict(r), ensure_ascii=False))
         print(f"{r.repeat} {r.condition:<15} {r.scenario_id:<40} {r.outcome}", flush=True)
 
     rows, meta = run_matrix(scenarios, system, erp, conditions=list(cfg["gateway"]["conditions"]),
@@ -411,8 +413,7 @@ def cmd_toolcall_run(args: argparse.Namespace) -> int:
         return r.status_code, (r.json() if r.status_code == 200 else r.text[:300])
 
     def progress(row: dict[str, Any]) -> None:
-        with rows_file.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        append_line(rows_file, json.dumps(row, ensure_ascii=False))
         print(f"{row['repeat']} {row['id']} {row['outcome']}", flush=True)
 
     rows = run_items(items, post, variant=variant, model=args.model, repeats=args.repeats, setup=setup,
