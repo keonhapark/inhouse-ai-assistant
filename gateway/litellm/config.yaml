@@ -91,6 +91,6 @@ model_list:
       # 단가는 공식 문서에 없어 적지 않습니다. 비용 머리글이 없으면 비용 상한에 더해지지 않습니다.
 
 litellm_settings:
-  request_timeout: 60
+  request_timeout: 120     # gateway LLM_TIMEOUT_SECONDS(기본 120)와 맞춥니다(#536, 결정 0008)
   num_retries: 0          # 재시도는 gateway가 정하지 않고 호출하는 쪽이 정합니다
   drop_params: true
