@@ -13,3 +13,4 @@
 | 2026-11-22 | gateway | #458 | gateway.yaml postMessage `attachments` 설명: 메타데이터를 지운 뒤 넘김, 읽을 수 없는 이미지 422·픽셀 상한 413, 메타 크기·해시는 지운 이미지 기준 | 첨부 이미지 EXIF 제거(기획서 2단계 영수증) | contract/gateway-attachment-exif PR, 구현 gateway #458 |
 | 2026-11-22 | gateway | #465 | gateway.yaml LLM 출구 머리말에 의미 캐시 응답 머리글 `X-Cache: hit|miss`(켠 경우만)와 적중 조건 | 권한 범위를 키에 넣은 의미 캐시(기획서 2단계) | contract/gateway-semantic-cache PR, 구현 gateway #465 |
 | 2026-11-22 | gateway | #484 | gateway.yaml 의미 캐시 적중 조건에 요청자(토큰 `sub`) 추가와 그 이유 | 권한이 같은 직원 사이에 이름·사유가 든 답이 섞이지 않게(리드 결정) | contract/gateway-cache-sub PR, 구현 gateway #484 |
+| 2026-11-22 | agent | #519 | tools.json `item_search` stage 3 → 2 | 2단계 구매자재 에이전트의 재고 조회(#466). erp listItems는 기능 묶음 제한이 없어 2단계에서도 동작 | contract/agent-item-search-stage PR, 팩 #466 |

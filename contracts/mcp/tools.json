@@ -505,7 +505,7 @@
       "trust_required": "any",
       "required_scope": "item:read",
       "backend": {"service": "erp", "operationId": "listItems"},
-      "stage": 3
+      "stage": 2
     },
     {
       "name": "customer_search",
