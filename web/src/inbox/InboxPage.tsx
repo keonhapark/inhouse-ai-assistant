@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { CalendarDays, FileText, Package, Receipt, type LucideIcon } from 'lucide-react'
 import { api, problemTitle, type Schemas } from '../api/client'
-import { Badge } from '../components/Badge'
+import { formatWhen, formatWon } from '../display/format'
+import { notifyInboxChanged } from '../shell/pending'
+import { Toolbar } from '../shell/Toolbar'
 import { DocDetail } from './DocDetail'
-import { BOXES, DOC_STATUS, formatAmount, formatDateTime, type Box } from './labels'
+import { BOXES, DOC_STATUS, type Box } from './labels'
 import { toInboxItem, type InboxItem } from './types'
 import './inbox.css'
-import { notifyInboxChanged } from '../shell/pending'
+
+const FORM_ICON: Record<string, LucideIcon> = { leave: CalendarDays, expense: Receipt, purchase: Package }
+const TONE_DOT = { accent: 'blue', success: 'green', danger: 'red', neutral: 'gray', warning: 'orange', local: 'blue' } as const
+const EMPTY: Record<Box, string> = {
+  inbox: '결재할 문서가 없습니다.',
+  delegated: '대신 결재할 문서가 없습니다.',
+  done: '결재한 문서가 없습니다.',
+  outbox: '상신한 문서가 없습니다.',
+}
 
 
 type ListState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ok'; items: InboxItem[] }
@@ -21,6 +32,7 @@ export function InboxPage() {
   const [list, setList] = useState<ListState>({ status: 'loading' })
   const [open, setOpen] = useState<InboxItem | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [counts, setCounts] = useState<Partial<Record<Box, number>>>({})
   // 양식은 문서 필드 이름·순서를 보이는 데 씁니다.
   const [forms, setForms] = useState<Schemas['ApprovalForm'][]>([])
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -29,20 +41,45 @@ export function InboxPage() {
   const request = useRef(0)
   const boxRef = useRef<Box>(initialBox)
 
-  const load = useCallback(async (b: Box) => {
+  /** 칸의 목록을 다시 불러옵니다. 그사이 칸을 바꿨으면 반영하지 않고 null */
+  const load = useCallback(async (b: Box): Promise<InboxItem[] | null> => {
     const id = ++request.current
     try {
       const { data, error } = await api.GET('/inbox', { params: { query: { box: b } } })
-      if (id !== request.current) return
-      setList(data ? { status: 'ok', items: data.items.map(toInboxItem) } : { status: 'error', message: problemTitle(error, '결재함을 불러오지 못했습니다.') })
+      if (id !== request.current) return null
+      const items = data ? data.items.map(toInboxItem) : null
+      setList(items ? { status: 'ok', items } : { status: 'error', message: problemTitle(error, '결재함을 불러오지 못했습니다.') })
+      if (items && (b === 'inbox' || b === 'delegated')) setCounts((c) => ({ ...c, [b]: items.length }))
+      return items
     } catch {
       if (id === request.current) setList({ status: 'error', message: '서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.' })
+      return null
+    }
+  }, [])
+
+  /** 세그먼트의 건수(결재 대기·대결 대기). 못 세면 숫자를 보이지 않습니다 */
+  const countBoxes = useCallback(async () => {
+    for (const b of ['inbox', 'delegated'] as const) {
+      try {
+        const { data } = await api.GET('/inbox', { params: { query: { box: b } } })
+        if (data) setCounts((c) => ({ ...c, [b]: data.items.length }))
+      } catch {
+        /* 건수만 빠집니다 */
+      }
     }
   }, [])
 
   useEffect(() => {
     let alive = true
     const id = ++request.current
+    for (const b of ['inbox', 'delegated'] as const) {
+      api.GET('/inbox', { params: { query: { box: b } } }).then(
+        ({ data }) => alive && data && setCounts((c) => ({ ...c, [b]: data.items.length })),
+        () => {
+          /* 건수만 빠집니다 */
+        },
+      )
+    }
     api.GET('/inbox', { params: { query: { box: initialBox } } }).then(
       ({ data, error }) =>
         alive &&
@@ -100,13 +137,15 @@ export function InboxPage() {
     }
   }
 
+  /** 결재한 뒤에는 목록에서 다음 문서를 엽니다(명세 3.7). 남은 문서가 없으면 결재함 영역으로 초점을 옮깁니다 */
   async function onDecided(message: string) {
     notifyInboxChanged()
     setOpen(null)
     setNotice(message)
-    // 처리한 행은 목록에서 빠지므로 초점을 결재함 영역으로 옮깁니다.
-    panelRef.current?.focus()
-    await load(boxRef.current)
+    const items = await load(boxRef.current)
+    void countBoxes()
+    if (items?.length) setOpen(items[0])
+    else panelRef.current?.focus()
   }
 
   function closeDoc(id: string) {
@@ -117,10 +156,9 @@ export function InboxPage() {
   const canDecide = box === 'inbox' || box === 'delegated'
 
   return (
-    <div className="inbox">
-      <main className="inbox__main">
-        <h1>승인함</h1>
-        <div role="tablist" aria-label="결재함" className="tabs">
+    <main className="inbox" aria-labelledby="inbox-title">
+      <Toolbar title="결재" titleId="inbox-title">
+        <div role="tablist" aria-label="결재함" className="seg">
           {BOXES.map((b, i) => (
             <button
               key={b.box}
@@ -132,79 +170,99 @@ export function InboxPage() {
               aria-selected={box === b.box}
               aria-controls="inbox-panel"
               tabIndex={box === b.box ? 0 : -1}
-              className="tabs__tab"
+              className="seg__item"
               onClick={() => selectBox(b.box)}
               onKeyDown={(e) => onTabKey(e, i)}
             >
               {b.label}
+              {counts[b.box] ? (
+                <>
+                  <span className="seg__n" aria-hidden>
+                    {counts[b.box]}
+                  </span>
+                  <span className="visually-hidden">, {counts[b.box]}건</span>
+                </>
+              ) : null}
             </button>
           ))}
         </div>
+      </Toolbar>
 
-        <div role="tabpanel" id="inbox-panel" aria-labelledby={`tab-${box}`} className="inbox__panel" tabIndex={0} ref={panelRef}>
+      <div className="inbox__body" data-open={open ? '' : undefined}>
+        <div role="tabpanel" id="inbox-panel" aria-labelledby={`tab-${box}`} className="inbox__list" tabIndex={-1} ref={panelRef}>
           {notice && (
-            <p role="status" className="notice-ok">
+            <p role="status" className="inbox__notice">
               {notice}
             </p>
           )}
-          {list.status === 'loading' && <p className="muted">불러오는 중입니다.</p>}
+          {list.status === 'loading' && <p className="inbox__empty">불러오는 중입니다.</p>}
           {list.status === 'error' && (
             <p role="alert" className="alert">
               {list.message}
             </p>
           )}
-          {list.status === 'ok' && list.items.length === 0 && <p className="muted">이 함에는 결재 문서가 없습니다.</p>}
+          {list.status === 'ok' && list.items.length === 0 && <p className="inbox__empty">{EMPTY[box]}</p>}
           {list.status === 'ok' && list.items.length > 0 && (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">양식</th>
-                  <th scope="col">제목</th>
-                  <th scope="col">요청자</th>
-                  <th scope="col" className="num">
-                    금액
-                  </th>
-                  <th scope="col">상신</th>
-                  <th scope="col">상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.items.map((d) => {
-                  const st = DOC_STATUS[d.status]
-                  return (
-                    <tr key={d.id} aria-current={open?.id === d.id ? 'true' : undefined}>
-                      <td>{d.formName}</td>
-                      <td>
-                        <button type="button" id={`doc-open-${d.id}`} className="link" onClick={() => setOpen(d)}>
+            <ul className="doc-rows">
+              {list.items.map((d) => {
+                const Icon = FORM_ICON[d.formId] ?? FileText
+                const st = DOC_STATUS[d.status]
+                const settled = d.status !== 'in_progress'
+                return (
+                  <li key={d.id}>
+                    <button
+                      type="button"
+                      id={`doc-open-${d.id}`}
+                      className="doc-row"
+                      aria-current={open?.id === d.id ? 'true' : undefined}
+                      aria-labelledby={`doc-t-${d.id}`}
+                      aria-describedby={`doc-s-${d.id} doc-e-${d.id}`}
+                      onClick={() => setOpen(d)}
+                    >
+                      <span className="doc-row__ico" aria-hidden>
+                        <Icon />
+                      </span>
+                      <span className="doc-row__main">
+                        <span id={`doc-t-${d.id}`} className="doc-row__title">
                           {d.title}
-                        </button>
-                        {d.viaDelegation && <Badge tone="warning">대결: {d.viaDelegation.originalApproverName}</Badge>}
-                      </td>
-                      <td>{d.requesterName}</td>
-                      <td className="num mono">{formatAmount(d.amount)}</td>
-                      <td className="mono">{formatDateTime(d.createdAt)}</td>
-                      <td>
-                        <Badge tone={st.tone}>{st.label}</Badge>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-          {open && (
-            <DocDetail
-              key={open.id}
-              doc={open}
-              form={forms.find((f) => f.id === open.formId)}
-              canDecide={canDecide}
-              onDecided={(m) => void onDecided(m)}
-              onReload={reloadOpen}
-              onClose={() => closeDoc(open.id)}
-            />
+                        </span>
+                        <span id={`doc-s-${d.id}`} className="doc-row__sub">
+                          {[d.formName, d.requesterName, d.viaDelegation && `${d.viaDelegation.originalApproverName} 대신`, settled && d.amount != null && formatWon(d.amount)]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      </span>
+                      <span id={`doc-e-${d.id}`} className="doc-row__end">
+                        {settled ? (
+                          <span className={`status status--${TONE_DOT[st.tone]}`}>{st.label}</span>
+                        ) : (
+                          d.amount != null && <span className="doc-row__amt">{formatWon(d.amount)}</span>
+                        )}
+                        <small>{formatWhen(d.createdAt)}</small>
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
           )}
         </div>
-      </main>
-    </div>
+        {open ? (
+          <DocDetail
+            key={open.id}
+            doc={open}
+            form={forms.find((f) => f.id === open.formId)}
+            canDecide={canDecide}
+            onDecided={(m) => void onDecided(m)}
+            onReload={reloadOpen}
+            onClose={() => closeDoc(open.id)}
+          />
+        ) : (
+          <div className="detail detail--empty">
+            <p>왼쪽 목록에서 문서를 고르세요.</p>
+          </div>
+        )}
+      </div>
+    </main>
   )
 }

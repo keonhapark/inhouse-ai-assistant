@@ -4,7 +4,7 @@ import type { BadgeTone } from '../components/Badge'
 type Label = { label: string; tone: BadgeTone }
 
 export const DOC_STATUS: Record<Schemas['ApprovalStatus'], Label> = {
-  in_progress: { label: '진행', tone: 'accent' },
+  in_progress: { label: '진행 중', tone: 'accent' },
   approved: { label: '승인', tone: 'success' },
   rejected: { label: '반려', tone: 'danger' },
   withdrawn: { label: '회수', tone: 'neutral' },
@@ -15,7 +15,7 @@ export const STEP_STATUS: Record<Schemas['ApprovalStep']['status'], Label> = {
   pending: { label: '결재 차례', tone: 'accent' },
   approved: { label: '승인', tone: 'success' },
   rejected: { label: '반려', tone: 'danger' },
-  skipped: { label: '건너뜀', tone: 'neutral' },
+  skipped: { label: '생략', tone: 'neutral' },
 }
 
 export const DELEGATION_STATUS: Record<Schemas['Delegation']['status'], Label> = {
@@ -26,10 +26,10 @@ export const DELEGATION_STATUS: Record<Schemas['Delegation']['status'], Label> =
 }
 
 export const BOXES = [
-  { box: 'inbox', label: '내 차례' },
-  { box: 'delegated', label: '대결' },
-  { box: 'done', label: '처리함' },
-  { box: 'outbox', label: '올린 것' },
+  { box: 'inbox', label: '결재 대기' },
+  { box: 'delegated', label: '대결 대기' },
+  { box: 'done', label: '결재 완료' },
+  { box: 'outbox', label: '기안함' },
 ] as const
 
 export type Box = (typeof BOXES)[number]['box']

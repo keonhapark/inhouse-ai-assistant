@@ -138,3 +138,47 @@
   border-radius: var(--radius-control);
   color: var(--danger);
 }
+
+/* 값 행 묶음(3.4): 라벨 84px 왼쪽, 값 오른쪽 정렬, 0.5px 구분선(왼쪽 16px 들여씀) */
+.rows {
+  margin: 0;
+  overflow: hidden;
+  border: 0.5px solid var(--sep);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+
+.rows > .row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-h);
+  padding: 10px var(--space-4);
+}
+
+.rows > .row + .row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: var(--space-4);
+  height: 0.5px;
+  background: var(--sep);
+}
+
+.row__label {
+  flex: none;
+  width: var(--label-w);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+}
+
+.rows dd {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-body);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
