@@ -134,3 +134,48 @@ def test_training_kwargs_use_transformers5_names(tmp_path: Path) -> None:
 def test_check_training_setup_catches_unknown_argument() -> None:
     pytest.importorskip("transformers")  # agent 환경에는 없음. 학습 환경에서만 돕니다
     assert train_qlora.check_training_setup({"warmup_ratio": 0.03}, [], []) == ["TrainingArguments에 없는 인자: warmup_ratio"]
+
+
+def test_last_checkpoint_skips_incomplete(tmp_path: Path) -> None:
+    assert train_qlora.last_checkpoint(tmp_path) is None
+    for step, complete in ((40, True), (120, True), (160, False), (9, True)):
+        d = tmp_path / "checkpoints" / f"checkpoint-{step}"
+        d.mkdir(parents=True)
+        if complete:
+            (d / "trainer_state.json").write_text("{}")
+    assert train_qlora.last_checkpoint(tmp_path).name == "checkpoint-120"
+
+
+def test_timed_save_due() -> None:
+    assert train_qlora.due(1000 + 25 * 60, 1000, 25) and not train_qlora.due(1000 + 60, 1000, 25)
+    assert not train_qlora.due(10**9, 0, 0)  # 0이면 시간 저장 끔
+    a = train_qlora.parse(["--data", "d", "--out", "o", "--resume"])
+    assert a.resume and a.save_minutes == 25
+
+
+def test_sync_run_copies_new_and_changed_files(tmp_path: Path) -> None:
+    import functools
+    import http.server
+    import threading
+
+    import sync_run
+
+    src, dst = tmp_path / "remote", tmp_path / "local"
+    (src / "checkpoints" / "checkpoint-40").mkdir(parents=True)
+    (src / "run.json").write_text("{}")
+    (src / "checkpoints" / "checkpoint-40" / "adapter_model.safetensors").write_bytes(b"x" * 1000)
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(src))
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_address[1]}"
+    try:
+        assert sync_run.main(["--url", url, "--to", str(dst), "--every", "0"]) == 0
+        assert (dst / "checkpoints" / "checkpoint-40" / "adapter_model.safetensors").read_bytes() == b"x" * 1000
+        import httpx
+        with httpx.Client() as c:
+            assert sync_run.sync_once(c, url + "/", dst) == {"downloaded": 0, "unchanged": 2}
+            (src / "run.json").write_text('{"done": true}')
+            assert sync_run.sync_once(c, url + "/", dst) == {"downloaded": 1, "unchanged": 1}
+        assert (dst / "run.json").read_text() == '{"done": true}'
+    finally:
+        server.shutdown()
