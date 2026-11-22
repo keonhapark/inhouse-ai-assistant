@@ -27,6 +27,26 @@ class KoTest {
         // 따옴표·괄호는 건너뛰고 그 안 끝 글자로
         assertThat(Ko.eul("'출장비 정산'")).isEqualTo("'출장비 정산'을");
         assertThat(Ko.eul("'노트북 교체'")).isEqualTo("'노트북 교체'를");
+        // 괄호로 끝나면 괄호 앞 말에 맞춤
+        assertThat(Ko.wa("수량 × 단가(5,000원)")).isEqualTo("수량 × 단가(5,000원)와");
+        assertThat(Ko.eul("'VPN 오류(재발)'")).isEqualTo("'VPN 오류(재발)'를");
+        assertThat(Ko.wa("합계")).isEqualTo("합계와");
+        assertThat(Ko.wa("금액")).isEqualTo("금액과");
+    }
+
+    @Test
+    void latinWordsUseEndSoundAndInitialismsUseLetterNames() {
+        assertThat(Ko.eul("'Printer'")).isEqualTo("'Printer'를");
+        assertThat(Ko.eul("Server")).isEqualTo("Server를");
+        assertThat(Ko.eul("Outlook")).isEqualTo("Outlook을");
+        assertThat(Ko.eul("Slack")).isEqualTo("Slack을");
+        assertThat(Ko.eul("Internet")).isEqualTo("Internet을");
+        assertThat(Ko.eul("Chrome")).isEqualTo("Chrome을");
+        assertThat(Ko.eul("Office")).isEqualTo("Office를");
+        assertThat(Ko.eul("Excel")).isEqualTo("Excel을");
+        assertThat(Ko.ro("Excel")).isEqualTo("Excel로");
+        assertThat(Ko.eul("VPN")).isEqualTo("VPN을");
+        assertThat(Ko.eul("PC")).isEqualTo("PC를");
     }
 
     @Test
@@ -44,6 +64,8 @@ class KoTest {
         assertThat(Ko.when(s)).isEqualTo("11월 21일 14:00");
         assertThat(Ko.span(s, s.plusHours(1))).isEqualTo("11월 21일 14:00~15:00");
         assertThat(Ko.span(s, s.plusDays(1).plusHours(4))).isEqualTo("11월 21일 14:00 ~ 11월 22일 18:00");
+        ZonedDateTime dec = ZonedDateTime.of(2026, 12, 28, 9, 0, 0, 0, z);
+        assertThat(Ko.span(dec, dec.plusDays(6))).isEqualTo("2026년 12월 28일 09:00 ~ 2027년 1월 3일 09:00");
     }
 
     @Test

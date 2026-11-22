@@ -68,20 +68,20 @@ public class QuoteController {
         Bodies.check(body, Set.of("customerId", "lines", "validUntil", "note"), Set.of("customerId", "lines"));
         JsonNode raw = body.get("lines");
         if (!raw.isArray() || raw.isEmpty() || raw.size() > MAX_LINES) {
-            throw ApiException.validation("lines", "1~" + MAX_LINES + "줄");
+            throw ApiException.invalid("lines", "견적 품목은 1~" + MAX_LINES + "줄까지 쓸 수 있습니다.");
         }
         List<QuoteService.LineRequest> lines = new ArrayList<>();
         for (JsonNode l : raw) {
-            String at = "lines/" + lines.size();
+            int index = lines.size();
             try {
                 Bodies.check(l, Set.of("itemCode", "quantity"), Set.of("itemCode", "quantity"));
                 int qty = Bodies.integer(l, "quantity");
                 if (qty < 1 || qty > 1_000_000) {
-                    throw ApiException.validation("quantity", "1~1000000");
+                    throw ApiException.invalid("quantity", "수량은 1부터 1,000,000까지 입력하세요.");
                 }
                 lines.add(new QuoteService.LineRequest(Bodies.text(l, "itemCode", 32), qty));
             } catch (ApiException e) {
-                throw prefixed(at, e);
+                throw prefixed(index, e);
             }
         }
         LocalDate valid = null;
@@ -100,11 +100,13 @@ public class QuoteController {
     }
 
     /** 줄 안 오류의 필드 이름에 lines/{i}/를 붙입니다(줄이 객체가 아니면 lines/{i}). */
-    private static ApiException prefixed(String at, ApiException e) {
+    /** 품목 줄의 오류: 칸은 lines/n/필드, detail은 "n번째 품목: 문장"입니다. */
+    private static ApiException prefixed(int index, ApiException e) {
+        String at = "lines/" + index;
         List<ApiException.FieldError> errors = e.errors().isEmpty()
                 ? List.of(new ApiException.FieldError(at, "object with itemCode, quantity required"))
                 : e.errors().stream().map(f -> new ApiException.FieldError(at + "/" + f.field(), f.message())).toList();
-        return new ApiException(e.status(), e.code(), at + ": " + e.detail(), errors);
+        return new ApiException(e.status(), e.code(), (index + 1) + "번째 품목: " + e.detail(), errors);
     }
 
     @PostMapping("/sales/quotes/{quoteId}/issue")

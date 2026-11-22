@@ -18,7 +18,7 @@ public final class Problems {
     public static final MediaType PROBLEM_JSON = MediaType.APPLICATION_PROBLEM_JSON;
 
     private static final Map<String, String> TITLES = Map.ofEntries(
-            Map.entry("unauthorized", "로그인이 필요합니다"),
+            Map.entry("unauthorized", "로그인하지 못했습니다"),
             Map.entry("forbidden", "권한이 없습니다"),
             Map.entry("scope-missing", "위임 토큰에 필요한 scope가 없습니다"),
             Map.entry("delegation-token-not-allowed", "사람 화면 전용 기능입니다"),

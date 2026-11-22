@@ -67,7 +67,7 @@ public class DefectReportController {
         }
         int quantity = Bodies.integer(body, "quantity");
         if (quantity < 1 || quantity > 1_000_000) {
-            throw ApiException.validation("quantity", "1~1000000");
+            throw ApiException.invalid("quantity", "수량은 1부터 1,000,000까지 입력하세요.");
         }
         DefectReportService.CreateRequest req = new DefectReportService.CreateRequest(
                 nonBlank(body, "itemCode", 32), nonBlank(body, "defectType", 50), severity, quantity,

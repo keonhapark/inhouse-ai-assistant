@@ -171,7 +171,7 @@ public class TicketService {
         TicketStatusChange c = changes.findById(changeId).orElseThrow();
         Ticket t = tickets.lockById(c.getTicketId()).orElseThrow();
         if (t.getVersion() != c.getVersionAfter()) {
-            throw new ApiException(409, "undo-conflict", "티켓을 새로 고쳐 지금 상태를 확인하세요.");
+            throw new ApiException(409, "undo-conflict", "그사이 티켓 상태가 다시 바뀌었습니다. 티켓을 새로 고쳐 지금 상태를 확인하세요.");
         }
         return statusOutcome(t, c.getFromStatus(), "IT 티켓 상태를 원래대로 돌렸습니다", false);
     }

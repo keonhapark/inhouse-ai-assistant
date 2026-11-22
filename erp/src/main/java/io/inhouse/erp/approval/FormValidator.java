@@ -12,6 +12,7 @@ import io.inhouse.erp.pack.Pack;
 import java.math.BigInteger;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
@@ -57,10 +58,10 @@ public class FormValidator {
         }
         BigInteger amount = fields.path(form.amountField()).bigIntegerValue();
         if (!amount.equals(want)) {
-            String detail = Ko.i(label(form, form.amountField())) + " "
-                    + String.join(" × ", form.amountProductOf().stream().map(n -> label(form, n)).toList())
-                    + "(" + String.format("%,d", want) + "원)과 다릅니다. " + Ko.eul(label(form, form.amountField()))
-                    + " 다시 확인하세요.";
+            String product = String.join(" × ", form.amountProductOf().stream().map(n -> label(form, n)).toList())
+                    + "(" + String.format(Locale.KOREA, "%,d", want) + "원)";
+            String detail = Ko.i(label(form, form.amountField())) + " " + Ko.wa(product) + " 다릅니다. "
+                    + Ko.eul(label(form, form.amountField())) + " 다시 확인하세요.";
             throw new ApiException(422, "form-validation-failed", detail,
                     List.of(new ApiException.FieldError(form.amountField(), "mismatch")));
         }
