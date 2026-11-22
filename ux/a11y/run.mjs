@@ -99,6 +99,24 @@ const screens = [
   }],
 ]
 
+// 캡처 파일 이름. CI 경로 검사가 한글 파일 이름을 읽지 못해 영문으로 둡니다.
+const SLUG = {
+  '로그인 오류': 'login-error',
+  '로그인': 'login',
+  '채팅 빈 화면': 'chat-empty',
+  '채팅 답·근거·실행한 일': 'chat-answer',
+  '채팅 실행 미리보기': 'chat-preview',
+  '승인함 내 차례': 'inbox',
+  '승인함 문서 상세(대결)': 'inbox-doc-delegated',
+  '승인함 위임 미리보기': 'inbox-delegation-preview',
+  '조직도': 'org',
+  '에이전트': 'agents',
+  '관리 운영 지표': 'admin-metrics',
+  '관리 외부 전송 기록': 'admin-egress',
+  '관리 감사 로그': 'admin-audit',
+  '평가 리포트': 'eval',
+}
+
 buildMockWeb()
 const { server, url } = await serve()
 const browser = await chromium.launch()
@@ -110,7 +128,7 @@ for (const scheme of ['light', 'dark']) {
     if (account) await login(page, url, account)
     else await page.goto(`${url}/login`)
     await prepare(page)
-    await page.screenshot({ path: `${shotDir}/${scheme}-${name.replace(/[ ·()]+/g, '-').replace(/-$/, '')}.jpg`, type: 'jpeg', quality: 70, fullPage: true })
+    await page.screenshot({ path: `${shotDir}/${scheme}-${SLUG[name]}.jpg`, type: 'jpeg', quality: 70, fullPage: true })
     const r = await new AxeBuilder({ page }).withTags(TAGS).analyze()
     const violations = r.violations.map((v) => ({
       id: v.id,
