@@ -1,0 +1,39 @@
+{
+  "incidentId": "erp_memory-02",
+  "runId": "20261122-0858",
+  "fault": "erp_memory",
+  "title": "erp 메모리 부족",
+  "rootService": "erp",
+  "kind": "resource_exhaustion",
+  "window": {
+    "start": "2026-11-22T09:01:14.834100+09:00",
+    "end": "2026-11-22T09:03:50.235404+09:00"
+  },
+  "injectedAt": "2026-11-22T09:01:59.836915+09:00",
+  "recoverStartedAt": "2026-11-22T09:03:02.268239+09:00",
+  "recoveredAt": "2026-11-22T09:03:12.995250+09:00",
+  "ticket": {
+    "id": "tkt_d9ebf26858cd",
+    "requesterId": "E0036",
+    "title": "휴가 신청 중 오류",
+    "description": "휴가 신청 버튼을 누르자 서버에 연결할 수 없다고 나왔습니다.",
+    "createdAt": "2026-11-22T09:03:50.36197776+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 0,
+    "logs/erp.log": 351,
+    "logs/rag.log": 32,
+    "logs/agent.log": 48,
+    "logs/litellm.log": 93,
+    "logs/gateway.log": 51,
+    "audit/gateway_egress.jsonl": 1,
+    "audit/gateway_audit.jsonl": 13,
+    "audit/rag.jsonl": 1,
+    "audit/agent.jsonl": 5,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 14
+  },
+  "trafficErrors": 566,
+  "trafficTotal": 1163,
+  "injection": "erp 컨테이너를 메모리 상한 320m(스왑 없음)로 다시 만듦. 기동한 뒤 평소 요청으로 상한을 넘김"
+}

@@ -10,6 +10,7 @@ import os
 import tempfile
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
 from incident.stack import Stack
@@ -29,7 +30,8 @@ class Fault:
     """정답 원인 종류: dependency_down, lock_contention, resource_exhaustion, dependency_timeout,
     data_corruption, bad_config."""
     duration_s: int
-    inject: Callable[[Stack, int], None]
+    inject: Callable[[Stack, int], str | None]
+    """주입. 방식을 truth.json에 남길 설명이 있으면 돌려줍니다(injection)."""
     recover: Callable[[Stack], None]
 
 
@@ -85,16 +87,27 @@ def _db_lock_recover(stack: Stack) -> None:
     wait_erp(stack)
 
 
-def _erp_memory(stack: Stack, _: int) -> None:
-    # 실행 중인 erp 컨테이너의 메모리 상한을 JVM이 쓰는 양보다 낮춥니다. 커널이 프로세스를 죽이거나 GC가 멈춥니다.
-    stack.docker("update", "--memory", "160m", "--memory-swap", "160m", stack.container("erp"))
+# erp 메모리 상한(스왑 없음). 실행 중인 컨테이너의 상한을 docker update로 내리는 방식은 cgroup v1(WSL 도커)에서
+# 메모리+스왑 상한을 지금 쓰는 양보다 낮게 못 내려(device or resource busy) 쓰지 않고, 상한을 건 erp를 다시 만듭니다.
+# 160~288MB는 요청 없이도 기동 중에 죽고, 352MB는 평소 요청 속에서 3회 중 1회만 죽었습니다. 320MB는 평소 요청 속에서
+# 3회 모두 다시 만든 지 8~9초 만에 커널이 죽였습니다(2026-11-22 데스크탑 WSL, JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75).
+ERP_MEMORY_LIMIT = "320m"
+ERP_MEMORY_INJECTION = (f"erp 컨테이너를 메모리 상한 {ERP_MEMORY_LIMIT}(스왑 없음)로 다시 만듦. "
+                        "기동한 뒤 평소 요청으로 상한을 넘김")
+
+
+def _erp_memory(stack: Stack, _: int) -> str:
+    with tempfile.TemporaryDirectory(prefix="incident-erp-") as d:
+        override = Path(d) / "erp-memory.yaml"
+        override.write_text(f"services:\n  erp:\n    mem_limit: {ERP_MEMORY_LIMIT}\n"
+                            f"    memswap_limit: {ERP_MEMORY_LIMIT}\n", encoding="utf-8")
+        stack.compose("up", "-d", "--no-deps", "--force-recreate", "erp", files=(override,))
+    return ERP_MEMORY_INJECTION
 
 
 def _erp_memory_recover(stack: Stack) -> None:
-    stack.docker("update", "--memory", "4g", "--memory-swap", "4g", stack.container("erp"), check=False)
-    state = stack.docker("inspect", "-f", "{{.State.Status}}", stack.container("erp"), check=False).stdout.strip()
-    if state != "running":
-        stack.docker("start", stack.container("erp"))
+    # 덮어쓰기 없이 다시 만들어 상한을 풉니다(볼륨·DB는 그대로).
+    stack.compose("up", "-d", "--no-deps", "--force-recreate", "erp")
     wait_erp(stack)
 
 

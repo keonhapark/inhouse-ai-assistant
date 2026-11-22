@@ -83,10 +83,12 @@ class Stack:
     def env(self, **override: str) -> dict[str, str]:
         return {**os.environ, **session_env(self.session), **self.extra_env, **override}
 
-    def compose(self, *args: str, check: bool = True, timeout: float | None = 600,
+    def compose(self, *args: str, check: bool = True, timeout: float | None = 600, files: tuple[Path, ...] = (),
                 **override: str) -> subprocess.CompletedProcess[str]:
-        cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "--env-file", str(self.env_file), "-p", self.project,
-               "--profile", "full", *args]
+        """files: compose 덮어쓰기 파일(장애 주입용). 기본 compose 뒤에 겹칩니다."""
+        extra = [a for f in files for a in ("-f", str(f))]
+        cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), *extra, "--env-file", str(self.env_file), "-p",
+               self.project, "--profile", "full", *args]
         return self.runner(cmd, env=self.env(**override), check=check, timeout=timeout)
 
     def container(self, service: str) -> str:

@@ -58,7 +58,7 @@ def run_one(stack: Stack, fault: F.Fault, run_dir: Path, n: int, rng: random.Ran
     traffic.start()
     time.sleep(baseline_s)
     injected = datetime.now(KST)
-    fault.inject(stack, fault.duration_s)
+    injection = fault.inject(stack, fault.duration_s)
     time.sleep(fault.duration_s)
     recover_started = datetime.now(KST)
     before_recovery = service_logs(stack, start, recover_started)
@@ -87,6 +87,8 @@ def run_one(stack: Stack, fault: F.Fault, run_dir: Path, n: int, rng: random.Ran
         "trafficErrors": sum(1 for r in records if r["error"] or (r["status"] or 0) >= 500),
         "trafficTotal": len(records),
     }
+    if injection:
+        truth["injection"] = injection
     (out / "truth.json").write_text(json.dumps(truth, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return truth
 
