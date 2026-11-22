@@ -14,3 +14,4 @@
 | 2026-11-22 | gateway | #465 | gateway.yaml LLM 출구 머리말에 의미 캐시 응답 머리글 `X-Cache: hit|miss`(켠 경우만)와 적중 조건 | 권한 범위를 키에 넣은 의미 캐시(기획서 2단계) | contract/gateway-semantic-cache PR, 구현 gateway #465 |
 | 2026-11-22 | gateway | #484 | gateway.yaml 의미 캐시 적중 조건에 요청자(토큰 `sub`) 추가와 그 이유 | 권한이 같은 직원 사이에 이름·사유가 든 답이 섞이지 않게(리드 결정) | contract/gateway-cache-sub PR, 구현 gateway #484 |
 | 2026-11-22 | agent | #519 | tools.json `item_search` stage 3 → 2 | 2단계 구매자재 에이전트의 재고 조회(#466). erp listItems는 기능 묶음 제한이 없어 2단계에서도 동작 | contract/agent-item-search-stage PR, 팩 #466 |
+| 2026-11-22 | gateway | #485 | audit.schema.json `model.cacheHit`(선택), gateway.yaml 의미 캐시 적중을 운영 지표 `llmRequests`·ChatEvent `model`에 세지 않음 | 캐시 적중이 외부 전송·LLM 요청으로 세지는 것을 막음 | contract/gateway-cache-hit-audit PR, 구현 gateway #485 |

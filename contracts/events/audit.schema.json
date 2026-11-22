@@ -68,7 +68,8 @@
         "name": {"type": "string"},
         "location": {"enum": ["local", "external"]},
         "externalSent": {"type": "boolean"},
-        "redactions": {"type": "integer", "minimum": 0}
+        "redactions": {"type": "integer", "minimum": 0},
+        "cacheHit": {"type": "boolean", "description": "gateway 의미 캐시 적중(#485). true면 LLM을 부르지 않았고 externalSent는 false입니다. LLM 요청 수에 세지 않습니다"}
       }
     },
     "result": {"enum": ["ok", "denied", "conflict", "error", "pending"]},
