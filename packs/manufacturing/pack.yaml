@@ -18,4 +18,5 @@ requires_erp_features:
   - tickets
   - quality
   - sales
-stage: 2
+# 3단계(품질·연구소·영업 에이전트, #109)까지 구현해 기본을 3으로 둡니다. 1·2단계 평가를 다시 잴 때는 PACK_STAGE로 낮춥니다.
+stage: 3
