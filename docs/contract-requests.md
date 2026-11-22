@@ -15,4 +15,4 @@
 | 2026-11-22 | gateway | #484 | gateway.yaml 의미 캐시 적중 조건에 요청자(토큰 `sub`) 추가와 그 이유 | 권한이 같은 직원 사이에 이름·사유가 든 답이 섞이지 않게(리드 결정) | contract/gateway-cache-sub PR, 구현 gateway #484 |
 | 2026-11-22 | agent | #519 | tools.json `item_search` stage 3 → 2 | 2단계 구매자재 에이전트의 재고 조회(#466). erp listItems는 기능 묶음 제한이 없어 2단계에서도 동작 | contract/agent-item-search-stage PR, 팩 #466 |
 | 2026-11-22 | gateway | #485 | audit.schema.json `model.cacheHit`(선택), gateway.yaml 의미 캐시 적중을 운영 지표 `llmRequests`·ChatEvent `model`에 세지 않음 | 캐시 적중이 외부 전송·LLM 요청으로 세지는 것을 막음 | contract/gateway-cache-hit-audit PR, 구현 gateway #485 |
-| 2026-11-22 | agent | #530 | agent.yaml ToolPreview·gateway.yaml ChatEvent approval `fromAttachments` 설명: 그 턴 → 이 대화에서 읽은 적이 있으면(읽은 턴과 그 뒤 턴) | 되물은 뒤 다음 턴 카드에서 '확인 필요'가 빠짐(#528 관찰). 결정 0004와 같은 방향으로 true가 되는 경우만 넓힘 | contract/agent-from-attachments-conversation PR, 구현 agent #530 |
+| 2026-11-22 | agent | #530 | agent.yaml ToolPreview·gateway.yaml ChatEvent approval `fromAttachments` 설명: 그 턴 → 이 대화에서 읽은 적이 있으면(읽은 턴과 그 뒤 턴) | 되물은 뒤 다음 턴 카드에서 '확인 필요'가 빠짐(#528 관찰). 결정 0004와 같은 방향으로 true가 되는 경우만 넓힘(의미 넓힘, 리드 승인) | contract/agent-from-attachments-conversation PR, 구현 agent #530 |
