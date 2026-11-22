@@ -42,7 +42,7 @@ function iso(offsetMs: number) {
   return new Date(Date.now() + offsetMs).toISOString()
 }
 
-/** 모의 결재 문서와 위임을 처음 상태로 되돌립니다. */
+/** 모의 결재 문서와 대결을 처음 상태로 되돌립니다. */
 export function resetMockInbox() {
   idSeq = 0
   const step = (order: number, approverId: string, status: Schemas['ApprovalStep']['status'], extra: object = {}) => ({
@@ -327,7 +327,7 @@ export const inboxHandlers = [
     if (!dryRun && !hasKey(request)) return keyRequired()
     const body = (await request.json()) as Schemas['DelegationCreate']
     if (body.delegateId === me.id) return problem(422, 'delegation-self', '자기 자신을 대결자로 지정할 수 없습니다.')
-    if (!directory[body.delegateId]) return problem(422, 'validation', '대리인을 찾지 못했습니다.')
+    if (!directory[body.delegateId]) return problem(422, 'validation', '대결자를 찾지 못했습니다.')
     if (Date.parse(body.endsAt) <= Date.parse(body.startsAt)) {
       return problem(422, 'validation', '끝 시각은 시작 시각보다 뒤여야 합니다.')
     }

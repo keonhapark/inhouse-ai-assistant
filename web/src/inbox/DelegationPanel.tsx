@@ -28,8 +28,8 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  // 미리보기를 만든 요청 본문과 멱등 키를 묶어 둡니다. 등록은 이 본문을 그대로 보내
-  // 미리보기와 다른 위임이 등록되지 않게 하고, 다시 눌러도 같은 키로 한 번만 등록되게 합니다.
+  // 확인 카드를 만든 요청 본문과 멱등 키를 묶어 둡니다. 지정은 이 본문을 그대로 보내
+  // 확인한 내용과 다른 대결이 지정되지 않게 하고, 다시 눌러도 같은 키로 한 번만 지정되게 합니다.
   const [previewed, setPreviewed] = useState<{ body: DelegationCreate; key: string } | null>(null)
 
   async function refresh() {
@@ -61,7 +61,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
 
   function edit(patch: Partial<Draft>) {
     setDraft((d) => ({ ...d, ...patch }))
-    // 내용이 바뀌면 이전 미리보기는 맞지 않으므로 지웁니다.
+    // 내용이 바뀌면 이전 확인 카드는 맞지 않으므로 지웁니다.
     setPreview(null)
     setPreviewed(null)
   }
@@ -133,7 +133,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
   const ready = draft.delegateId && draft.startsAt && draft.endsAt && draft.reason.trim() && draft.formTypes.length > 0
 
   return (
-    <section className="delegation" aria-label="대결 설정">
+    <section className="delegation">
       <p className="muted">자리를 비우는 동안 다른 사람이 내 결재를 대신 처리하게 지정합니다.</p>
 
       {listError && (
@@ -173,7 +173,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
 
       <form className="delegation__form" onSubmit={onPreview}>
         <h2>새 대결 지정</h2>
-        {/* 요청이 오가는 동안 입력을 막아 미리보기와 다른 값이 섞이지 않게 합니다. */}
+        {/* 요청이 오가는 동안 입력을 막아 확인 카드와 다른 값이 섞이지 않게 합니다. */}
         <fieldset className="delegation__fields" disabled={busy}>
         <DelegatePicker value={draft.delegateId} excludeId={meId} onChange={(delegateId) => edit({ delegateId })} />
         <label>

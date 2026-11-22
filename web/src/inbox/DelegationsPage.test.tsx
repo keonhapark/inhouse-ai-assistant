@@ -27,14 +27,14 @@ const problemJson = (status: number, code: string, title: string) =>
 describe('대결 설정', () => {
   it('받은 대결은 보이지만 해제할 수 없습니다', async () => {
     renderDelegations()
-    const panel = await screen.findByRole('region', { name: '대결 설정' })
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
     expect(await within(panel).findByText('윤서진 → 서도윤')).toBeInTheDocument()
     expect(within(panel).queryByRole('button', { name: /해제$/ })).toBeNull()
   })
 
   it('대결자를 찾아 내용을 확인한 뒤 지정하고, 해제합니다', async () => {
     const user = renderDelegations()
-    const panel = await screen.findByRole('region', { name: '대결 설정' })
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
     await user.type(within(panel).getByLabelText('이름으로 찾기'), '한지')
     await user.click(await within(panel).findByRole('radio', { name: /한지우/ }))
     await user.type(within(panel).getByLabelText('사유'), '교육 참석')
@@ -54,7 +54,7 @@ describe('대결 설정', () => {
 
   it('양식을 골라 범위를 좁힙니다', async () => {
     const user = renderDelegations()
-    const panel = await screen.findByRole('region', { name: '대결 설정' })
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
     await user.click(within(panel).getByRole('checkbox', { name: '모든 양식' }))
     await user.click(await within(panel).findByRole('checkbox', { name: '휴가 신청' }))
     await user.type(within(panel).getByLabelText('이름으로 찾기'), '박하')
@@ -68,7 +68,7 @@ describe('대결 설정', () => {
   it('서버가 거절하면 problem title을 그대로 보여 줍니다', async () => {
     server.use(http.post('*/api/delegations', () => problemJson(422, 'delegation-out-of-period', '위임 기간이 올바르지 않습니다.')))
     const user = renderDelegations()
-    const panel = await screen.findByRole('region', { name: '대결 설정' })
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
     await user.type(within(panel).getByLabelText('이름으로 찾기'), '한지')
     await user.click(await within(panel).findByRole('radio', { name: /한지우/ }))
     await user.type(within(panel).getByLabelText('사유'), '출장')
@@ -77,7 +77,7 @@ describe('대결 설정', () => {
   })
   it('내용 확인 뒤 입력을 바꾸면 확인 카드와 대결 지정 버튼을 지웁니다', async () => {
     const user = renderDelegations()
-    const panel = await screen.findByRole('region', { name: '대결 설정' })
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
     await user.type(within(panel).getByLabelText('이름으로 찾기'), '한지')
     await user.click(await within(panel).findByRole('radio', { name: /한지우/ }))
     await user.type(within(panel).getByLabelText('사유'), '출장')
