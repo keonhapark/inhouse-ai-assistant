@@ -3,59 +3,65 @@
  * 모르는 이름은 그대로 돌려줘, 새 도구·역할이 생겨도 화면이 깨지지 않습니다.
  */
 
-/** 도구 표시 이름. 세 팩(제조·금융·IT 서비스)의 도구 */
+/** 도구 표시 이름. 세 팩(제조·금융·IT 서비스)의 도구. 동사 명사형으로, 실행 전 확인의 버튼 이름과 같습니다(ux/copy-guide.md 1.5) */
 export const TOOL_LABELS: Record<string, string> = {
-  hr_get_my_profile: '내 인사 정보 보기',
-  org_search_employees: '동료 찾기',
-  leave_get_balance: '연차 잔여 보기',
+  hr_get_my_profile: '내 인사 정보 조회',
+  org_search_employees: '직원 검색',
+  leave_get_balance: '남은 연차 조회',
   leave_request: '휴가 신청',
-  approval_list_mine: '내 결재 목록 보기',
-  approval_get: '결재 문서 보기',
+  approval_list_mine: '내 결재 목록 조회',
+  approval_get: '결재 문서 조회',
   approval_withdraw: '결재 회수',
-  delegation_list: '대결 목록 보기',
-  delegation_register: '대결 등록',
-  delegation_revoke: '대결 해지',
-  room_list_availability: '빈 회의실 찾기',
-  room_list_my_reservations: '내 회의실 예약 보기',
+  delegation_list: '대결 목록 조회',
+  delegation_register: '대결 지정',
+  delegation_revoke: '대결 해제',
+  room_list_availability: '빈 회의실 검색',
+  room_list_my_reservations: '내 회의실 예약 조회',
   room_reserve: '회의실 예약',
   room_cancel_reservation: '회의실 예약 취소',
   policy_search: '규정 검색',
-  expense_request: '경비 정산 올리기',
-  purchase_request: '구매 요청 올리기',
-  ticket_list: 'IT 티켓 목록 보기',
-  ticket_get: 'IT 티켓 보기',
-  ticket_create: 'IT 티켓 올리기',
-  ticket_comment: 'IT 티켓 댓글 달기',
+  expense_request: '경비 정산 상신',
+  purchase_request: '구매 요청 상신',
+  ticket_list: 'IT 티켓 목록 조회',
+  ticket_get: 'IT 티켓 조회',
+  ticket_create: 'IT 티켓 등록',
+  ticket_comment: 'IT 티켓 댓글 등록',
   incident_analyze: '장애 분석',
-  defect_report_draft: '불량 보고서 초안 쓰기',
-  defect_report_list: '불량 보고서 목록 보기',
-  defect_report_get: '불량 보고서 보기',
-  quote_draft: '견적 초안 쓰기',
-  quote_list: '견적 목록 보기',
-  quote_get: '견적 보기',
-  item_search: '품목 찾기',
-  customer_search: '고객사 찾기',
-  loan_request: '여신 품의 올리기',
+  defect_report_draft: '불량 보고서 초안 작성',
+  defect_report_list: '불량 보고서 목록 조회',
+  defect_report_get: '불량 보고서 조회',
+  quote_draft: '견적 초안 작성',
+  quote_list: '견적 목록 조회',
+  quote_get: '견적 조회',
+  item_search: '품목 검색',
+  customer_search: '고객사 검색',
+  loan_request: '여신 품의 상신',
   effort_report: '공수 보고',
 }
 export const toolName = (name: string) => TOOL_LABELS[name] ?? name
 
-/** 역할 표시 이름. 세 팩 org.yaml roles */
+/** 역할 표시 이름. 세 팩 org.yaml roles. "○○ 담당"으로 통일하고 감사 조회만 그대로 둡니다(ux/copy-guide.md 1.5) */
 const ROLE_LABELS: Record<string, string> = {
   employee: '직원',
   hr_staff: '인사 담당',
   finance_staff: '재무 담당',
-  quality_staff: '품질 확인',
+  quality_staff: '품질 담당',
   sales_staff: '영업 담당',
-  it_admin: 'IT 관리자',
+  it_admin: 'IT 관리 담당',
   auditor: '감사 조회',
   credit_officer: '여신 담당',
   compliance_officer: '내부통제 담당',
-  project_staff: '프로젝트 수행',
+  project_staff: '프로젝트 담당',
   account_manager: '고객사 담당',
   service_desk: '운영 티켓 담당',
 }
 export const roleName = (id: string) => ROLE_LABELS[id] ?? id
+
+/**
+ * 대화 안에서 부르는 에이전트 이름: 팩의 부서 이름(재무) → "재무 담당 AI"(ux/copy-guide.md 1.2).
+ * 전사 비서처럼 부서가 아닌 이름은 그대로 둡니다.
+ */
+export const agentLabel = (name: string) => (/(비서|AI)$/.test(name) ? name : `${name} 담당 AI`)
 
 /** 직급 표시 이름(세 팩 공통 grades) */
 const GRADE_LABELS: Record<string, string> = { staff: '팀원', team_leader: '팀장', division_head: '본부장', ceo: '대표이사' }

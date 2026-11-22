@@ -10,8 +10,8 @@ export function Badge({ tone = 'neutral', children }: { tone?: BadgeTone; childr
 
 const RISK: Record<Risk, { tone: BadgeTone; label: string }> = {
   read: { tone: 'neutral', label: '조회' },
-  reversible_write: { tone: 'warning', label: '되돌릴 수 있음' },
-  irreversible: { tone: 'danger', label: '되돌릴 수 없음' },
+  reversible_write: { tone: 'warning', label: '실행 취소 가능' },
+  irreversible: { tone: 'danger', label: '실행 취소 불가' },
 }
 
 export function RiskBadge({ risk }: { risk: Risk }) {
@@ -20,5 +20,5 @@ export function RiskBadge({ risk }: { risk: Risk }) {
 }
 
 export function LocalBadge() {
-  return <Badge tone="local">로컬에서 처리</Badge>
+  return <Badge tone="local">사내 처리</Badge>
 }

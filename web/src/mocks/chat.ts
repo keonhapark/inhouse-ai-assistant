@@ -75,11 +75,11 @@ function scenario(c: Conv, content: string): Draft[] {
       conv: c.summary.conversationId,
       tool: 'approval_withdraw',
       summary: '휴가 결재 APR-0042를 회수했습니다.',
-      done: '회수했습니다. 회수한 결재는 되돌릴 수 없어 다시 올려야 합니다.',
+      done: '결재를 회수했습니다. 회수한 결재는 다시 상신해야 합니다.',
       rejected: '회수하지 않았습니다.',
       undoable: false,
     })
-    const text = '결재 중인 휴가 결재 APR-0042(11/24 오후 반차)를 찾았습니다. 회수하면 되돌릴 수 없습니다.'
+    const text = '결재 중인 휴가 결재 APR-0042(11/24 오후 반차)를 찾았습니다. 회수하면 실행 취소할 수 없습니다.'
     return [
       ...route(c, 'hr', 'keyword', '결재 회수 요청'),
       { type: 'tool_call', toolCall: { tool: 'approval_list_mine', risk: 'read', status: 'ok' } },
@@ -118,7 +118,7 @@ function scenario(c: Conv, content: string): Draft[] {
     const actionId = `act-${++idSeq}`
     const summary = '3층 소회의실을 내일 14:00–15:00에 예약했습니다.'
     actions.set(actionId, { undone: false, summary, undoable: true })
-    const text = '내일 14:00–15:00에 3층 소회의실(6인)을 예약했습니다. 필요 없으면 되돌리기를 누르면 됩니다.'
+    const text = '내일 14:00–15:00에 3층 소회의실(6인)을 예약했습니다. 필요 없으면 실행 취소를 누르세요.'
     return [
       ...route(c, 'assistant', 'keyword', '회의실 예약 요청'),
       { type: 'tool_call', toolCall: { tool: 'room_list_availability', risk: 'read', status: 'ok' } },
@@ -175,12 +175,12 @@ function receipt(c: Conv): Draft[] {
   approvals.set(approvalId, {
     conv: c.summary.conversationId,
     tool: 'expense_request',
-    summary: '경비 정산 결재 EXP-0107(42,000원)을 올렸습니다.',
-    done: '올렸습니다. 필요 없으면 되돌리기를 누르면 됩니다.',
-    rejected: '올리지 않았습니다.',
+    summary: '경비 정산 결재 EXP-0107(42,000원)을 상신했습니다.',
+    done: '경비 정산을 상신했습니다. 필요 없으면 실행 취소를 누르세요.',
+    rejected: '상신하지 않았습니다.',
     undoable: true,
   })
-  const text = '영수증에서 가맹점·날짜·금액을 읽었습니다. 아래 내용으로 경비 정산을 올릴까요?'
+  const text = '영수증에서 가맹점·날짜·금액을 읽었습니다. 아래 내용으로 경비 정산을 상신할까요?'
   return [
     ...route(c, 'finance', 'llm', '영수증 경비 정산'),
     ...words(text),
@@ -190,7 +190,7 @@ function receipt(c: Conv): Draft[] {
       approval: {
         approvalId,
         tool: 'expense_request',
-        toolLabel: '경비 정산',
+        toolLabel: '경비 정산 상신',
         risk: 'reversible_write',
         fromAttachments: true,
         expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),

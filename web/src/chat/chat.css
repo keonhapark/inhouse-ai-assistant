@@ -1,36 +1,63 @@
+/* AI 비서(ux/design-system.md 3.8): 대화 목록 272px | 툴바 + 대화(최대 680px) + 입력창 */
+
 .chat {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: var(--list-w) minmax(0, 1fr);
   height: 100dvh;
   min-height: 0;
 }
 
-.chat__list {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: var(--sp-12);
-  align-content: start;
-  padding: var(--sp-16);
-  border-right: 1px solid var(--border);
+/* 대화 목록 */
+.convs {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 0.5px solid var(--sep);
   background: var(--surface);
-  overflow-y: auto;
 }
 
-.chat__list ul {
-  display: grid;
-  align-content: start;
-  gap: var(--sp-4);
+.convs__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--toolbar-h);
+  flex: none;
+  padding: 0 var(--space-3) 0 var(--space-5);
+  border-bottom: 0.5px solid var(--sep);
+}
+
+.convs__head h2 {
   margin: 0;
-  padding: 0;
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-semibold);
+}
+
+.convs ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: var(--space-2);
+  overflow-y: auto;
   list-style: none;
 }
 
-.chat__item {
+.convs__empty {
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+}
+
+.conv {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  row-gap: 2px;
+  column-gap: var(--space-2);
   width: 100%;
-  padding: var(--sp-8);
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
+  padding: 9px var(--space-3);
+  border: 0;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text);
   font: inherit;
@@ -38,101 +65,157 @@
   cursor: pointer;
 }
 
-.chat__item:hover {
-  border-color: var(--border);
+.conv:hover {
+  background: var(--fill-2);
 }
 
-.chat__item[aria-current='true'] {
-  border-color: var(--accent);
+.conv[aria-current='true'] {
+  background: var(--sel);
 }
 
-.chat__item span {
+.conv__title {
   overflow: hidden;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.chat__item-title {
-  font-weight: 600;
+.conv__when {
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
 }
 
-.chat__item .muted {
-  font-size: var(--fs-12);
+.conv__sub {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text-2);
+  font-size: var(--fs-caption);
 }
 
+/* 대화 */
 .chat__main {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   min-height: 0;
+  background: var(--bg);
 }
 
-.chat__head {
-  display: flex;
-  align-items: center;
-  min-height: 49px;
-  padding: var(--sp-8) var(--sp-24);
-  border-bottom: 1px solid var(--border);
+.route {
+  position: relative;
+  color: var(--text-2);
+  font-size: var(--fs-caption);
 }
 
-.chat__agent {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-8);
-  font-size: var(--fs-14);
+.route summary {
+  padding: 2px var(--space-2);
+  border-radius: var(--r-tag);
+  background: var(--fill-2);
+  cursor: pointer;
+  list-style: none;
 }
 
-select,
-textarea {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--surface);
+.route summary::-webkit-details-marker {
+  display: none;
+}
+
+.route p {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-popover);
+  width: max-content;
+  max-width: 320px;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--popover-bg);
+  box-shadow: var(--shadow-pop);
   color: var(--text);
-  font: inherit;
-}
-
-select {
-  height: var(--control-h);
-  padding: 0 var(--sp-8);
 }
 
 .chat__log {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-12);
-  padding: var(--sp-24);
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-7) var(--space-8) var(--space-3);
   overflow-y: auto;
 }
 
-.chat__log > * {
-  max-width: 720px;
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  max-width: var(--reading-w);
+  margin: 0 auto;
+}
+
+.chat__bottom {
+  gap: var(--space-2);
+  padding: 0 var(--space-8) var(--space-5);
+  box-sizing: content-box;
+}
+
+.chat__bottom p {
+  margin: 0;
+}
+
+.chat__empty,
+.chat__hint {
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
 }
 
 .chat__empty {
-  margin: auto;
+  margin: var(--space-8) 0 0;
   text-align: center;
 }
 
+/* 말풍선: 내 말은 오른쪽 면, 답은 면 없이 */
 .msg {
   margin: 0;
 }
 
 .msg--user {
   align-self: flex-end;
-  padding: var(--sp-8) var(--sp-12);
-  border-radius: var(--radius-card);
-  background: var(--accent);
-  color: var(--on-fill);
+  max-width: 75%;
+  padding: 9px 14px;
+  border-radius: var(--r-bubble) var(--r-bubble) var(--r-tag) var(--r-bubble);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-size: var(--fs-body);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .msg--assistant {
-  display: grid;
-  justify-items: start;
-  gap: var(--sp-8);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-body);
+}
+
+.msg__who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}
+
+.msg__who b {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
 }
 
 .msg__text {
   margin: 0;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 
@@ -146,32 +229,32 @@ select {
 }
 
 .md > :is(p, ul, ol, pre, hr) + :is(p, ul, ol, pre, hr) {
-  margin-top: var(--sp-8);
+  margin-top: var(--space-2);
 }
 
 .md ul,
 .md ol {
-  padding-left: var(--sp-24);
+  padding-left: var(--space-6);
 }
 
 .md li + li,
 .md li > ul,
 .md li > ol {
-  margin-top: var(--sp-4);
+  margin-top: var(--space-1);
 }
 
 .md code {
-  padding: 0 var(--sp-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  padding: 0 var(--space-1);
+  border: 0.5px solid var(--sep);
+  border-radius: var(--r-sm);
   background: var(--surface);
   font-size: 0.92em;
 }
 
 .md pre {
-  padding: var(--sp-8) var(--sp-12);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  padding: var(--space-2) var(--space-3);
+  border: 0.5px solid var(--sep);
+  border-radius: var(--r-sm);
   background: var(--surface);
   white-space: pre-wrap;
   overflow-x: auto;
@@ -185,7 +268,7 @@ select {
 
 .md hr {
   border: 0;
-  border-top: 1px solid var(--border);
+  border-top: 0.5px solid var(--sep);
 }
 
 .msg__cursor {
@@ -194,7 +277,7 @@ select {
   height: 1em;
   margin-left: 2px;
   vertical-align: text-bottom;
-  background: var(--text-muted);
+  background: var(--text-2);
   animation: blink 1s steps(2) infinite;
 }
 
@@ -210,21 +293,23 @@ select {
   }
 }
 
+/* 근거 규정·처리 과정: 접어 두는 보조 줄 */
 .citations,
-.tool {
-  color: var(--text-muted);
-  font-size: var(--fs-12);
+.steps {
+  color: var(--text-2);
+  font-size: var(--fs-caption);
 }
 
 .citations summary,
-.tool summary {
+.steps summary {
+  width: fit-content;
   cursor: pointer;
 }
 
 .citations ul {
   display: grid;
-  gap: var(--sp-8);
-  margin: var(--sp-8) 0 0;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -233,18 +318,32 @@ select {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--sp-8);
+  gap: var(--space-2);
   color: var(--text);
 }
 
-.citations blockquote {
-  margin: var(--sp-4) 0 0;
-  padding-left: var(--sp-8);
-  border-left: 2px solid var(--border);
+.citations__unverified {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-2);
 }
 
-.tool .row {
-  margin-top: var(--sp-4);
+.citations__unverified svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--warning);
+}
+
+.citations blockquote {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--sep-strong);
+}
+
+.steps ol {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-6);
 }
 
 .preview,
@@ -254,20 +353,20 @@ select {
 
 .changes {
   display: grid;
-  gap: var(--sp-4);
-  margin-top: var(--sp-8);
+  gap: var(--space-1);
+  margin-top: var(--space-2);
 }
 
 .changes dl {
   display: grid;
-  gap: var(--sp-4);
+  gap: var(--space-1);
   margin: 0;
 }
 
 .changes__row {
   display: grid;
   grid-template-columns: 120px 1fr;
-  gap: var(--sp-8);
+  gap: var(--space-2);
 }
 
 .changes__row dd {
@@ -275,36 +374,36 @@ select {
 }
 
 .changes__before {
-  color: var(--text-muted);
+  color: var(--text-2);
   text-decoration: line-through;
 }
 
 .changes__line ol {
-  margin: var(--sp-4) 0 0;
-  padding-left: var(--sp-24);
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-6);
 }
 
 .changes__raw summary {
-  color: var(--text-muted);
-  font-size: var(--fs-12);
+  color: var(--text-2);
+  font-size: var(--fs-caption);
   cursor: pointer;
 }
 
 .changes__raw dl {
-  margin-top: var(--sp-4);
-  font-size: var(--fs-12);
+  margin-top: var(--space-1);
+  font-size: var(--fs-caption);
 }
 
 .warning-line {
-  margin: var(--sp-8) 0 0;
-  padding-left: var(--sp-8);
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-2);
   border-left: 3px solid var(--warning);
 }
 
 .action__row {
   display: flex;
   align-items: center;
-  gap: var(--sp-8);
+  gap: var(--space-2);
 }
 
 .action__undo {
@@ -312,50 +411,115 @@ select {
 }
 
 .action--undone {
-  color: var(--text-muted);
+  color: var(--text-2);
   box-shadow: none;
 }
 
+/* 처리할 수 없는 요청·오류 */
 .notice {
   display: flex;
-  align-items: center;
-  gap: var(--sp-8);
-  padding: var(--sp-8) var(--sp-12);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--danger);
-  border-radius: var(--radius-control);
-  background: var(--surface);
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--r-md);
+  background: var(--fill-2);
+  font-size: var(--fs-footnote);
 }
 
-.chat__composer {
+.notice > svg {
+  width: var(--icon);
+  height: var(--icon);
+  flex: none;
+  margin-top: 1px;
+  color: var(--warning);
+}
+
+.notice--error > svg {
+  color: var(--danger);
+}
+
+.notice p {
+  margin: 2px 0 0;
+  color: var(--text-2);
+}
+
+.notice .btn {
+  margin-left: auto;
+}
+
+/* 입력창: 아래 고정, 왼쪽 아래 칩, 오른쪽 아래 둥근 보내기 */
+.composer {
   display: grid;
-  gap: var(--sp-8);
-  padding: var(--sp-12) var(--sp-24) var(--sp-16);
-  border-top: 1px solid var(--border);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2) var(--space-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
 }
 
-.chat__composer p {
-  margin: 0;
-}
-
-.chat__input {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--sp-8);
-}
-
-.chat__input textarea {
-  flex: 1;
-  padding: var(--sp-8);
+.composer textarea {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-body);
   resize: none;
+}
+
+.composer textarea:focus {
+  outline: none;
+}
+
+.composer:focus-within {
+  box-shadow: var(--shadow-pop), 0 0 0 2px var(--focus);
+}
+
+.composer textarea::placeholder {
+  color: var(--text-2);
+}
+
+.composer__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.composer__spacer {
+  flex: 1;
+}
+
+.send {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  cursor: pointer;
+}
+
+.send svg {
+  width: var(--icon);
+  height: var(--icon);
+}
+
+.send:disabled {
+  background: var(--fill);
+  color: var(--text-2);
+  cursor: default;
 }
 
 /* 보낸 메시지의 사진과 보낼 사진 */
 .msg__images {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-4);
-  margin: var(--sp-8) 0 0;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -364,16 +528,22 @@ select {
   display: block;
   width: 96px;
   height: 96px;
-  border-radius: var(--radius-control);
+  border-radius: var(--r-sm);
   object-fit: cover;
   background: var(--surface);
 }
 
 .msg__attached {
-  display: block;
-  margin-top: var(--sp-4);
-  font-size: var(--fs-12);
-  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: var(--space-1);
+  font-size: var(--fs-caption);
+}
+
+.msg__attached svg {
+  width: 13px;
+  height: 13px;
 }
 
 .attach__errors:empty {
@@ -382,13 +552,13 @@ select {
 
 .attach__errors {
   display: grid;
-  gap: var(--sp-4);
+  gap: var(--space-1);
 }
 
 .attach {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-8);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -397,66 +567,71 @@ select {
 .attach__item {
   display: flex;
   align-items: center;
-  gap: var(--sp-8);
+  gap: var(--space-2);
   max-width: 100%;
-  padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-1);
+  border: 0.5px solid var(--sep);
+  border-radius: var(--r-sm);
   background: var(--surface);
 }
 
 .attach__item img {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-control);
+  border-radius: var(--r-sm);
   object-fit: cover;
 }
 
 .attach__name {
   max-width: 200px;
   overflow: hidden;
-  font-size: var(--fs-12);
+  font-size: var(--fs-caption);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .attach__remove {
+  display: grid;
+  place-items: center;
   width: 28px;
   height: 28px;
+  padding: 0;
   border: 0;
-  border-radius: var(--radius-control);
+  border-radius: var(--r-sm);
   background: transparent;
-  color: var(--text-muted);
-  font-size: var(--fs-16);
+  color: var(--text-2);
   cursor: pointer;
 }
 
+.attach__remove svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
 .attach__remove:hover {
-  background: var(--bg);
+  background: var(--fill-2);
   color: var(--text);
 }
 
 @media (max-width: 720px) {
-  .chat__input {
-    flex-wrap: wrap;
-  }
-
-  .chat__input textarea {
-    flex-basis: 100%;
-  }
-
   .chat {
     grid-template-columns: 1fr;
     height: auto;
   }
 
-  .chat__list {
+  .convs {
+    max-height: 40dvh;
     border-right: 0;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 0.5px solid var(--sep);
+  }
+
+  .chat__log,
+  .chat__bottom {
+    padding-inline: var(--space-4);
   }
 }
 
 .md__host {
-  color: var(--text-muted);
-  font-size: var(--fs-12);
+  color: var(--text-2);
+  font-size: var(--fs-caption);
 }
