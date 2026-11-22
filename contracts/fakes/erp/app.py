@@ -38,8 +38,10 @@ DEFAULT_SECRET = "fake-erp-only-not-a-real-secret-0000000000"
 
 
 def problem(status: int, code: str, detail: str = "", errors: list | None = None) -> JSONResponse:
-    body: dict[str, Any] = {"type": f"urn:problem:{code}", "title": TITLES.get(code, code), "status": status}
-    if detail:
+    title = TITLES.get(code, code)
+    body: dict[str, Any] = {"type": f"urn:problem:{code}", "title": title, "status": status}
+    # 실제 erp와 같이 detail이 제목과 같으면(끝 마침표 무시) 뺍니다. 화면이 제목과 detail을 이어 보여 주기 때문입니다.
+    if detail and detail.strip().removesuffix(".") != title:
         body["detail"] = detail
     if errors:
         body["errors"] = errors
