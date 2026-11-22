@@ -25,7 +25,7 @@ export function AdminPage() {
   const params = useParams()
   const navigate = useNavigate()
   const tab: Tab = isTab(params.tab) ? params.tab : 'metrics'
-  const setTab = (t: Tab) => navigate(`/ops/${t}`)
+  const setTab = (t: Tab) => navigate(`/ops/${t}`, { replace: true })
   const [period, setPeriod] = useState<Period>({ kind: 'preset', preset: '24h' })
   // 기간은 적용할 때 한 번 시각으로 바꿔 둡니다. 다시 그릴 때마다 '지금'이 바뀌어 다시 불러오지 않게 합니다.
   const [range, setRange] = useState<Range>(() => toRange({ kind: 'preset', preset: '24h' })!)

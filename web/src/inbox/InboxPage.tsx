@@ -6,6 +6,7 @@ import { DocDetail } from './DocDetail'
 import { BOXES, DOC_STATUS, formatAmount, formatDateTime, type Box } from './labels'
 import { toInboxItem, type InboxItem } from './types'
 import './inbox.css'
+import { notifyInboxChanged } from '../shell/pending'
 
 
 type ListState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ok'; items: InboxItem[] }
@@ -96,6 +97,7 @@ export function InboxPage() {
   }
 
   async function onDecided(message: string) {
+    notifyInboxChanged()
     setOpen(null)
     setNotice(message)
     // 처리한 행은 목록에서 빠지므로 초점을 결재함 영역으로 옮깁니다.

@@ -29,15 +29,19 @@ export function Sidebar({ me, collapsed, onToggle, onOpenPalette, onLogout }: Pr
           <Sparkles />
         </span>
         <span className="sidebar__label">사내 AI 비서</span>
-        <button type="button" className="icon-btn sidebar__toggle" aria-label={collapsed ? '탐색 막대 펼치기' : '탐색 막대 접기'} aria-pressed={collapsed} onClick={onToggle}>
+        <button type="button" className="icon-btn sidebar__toggle" aria-label="탐색 막대 접기" aria-pressed={collapsed} onClick={onToggle}>
           <PanelLeft aria-hidden />
         </button>
       </div>
 
-      <button type="button" className="sidebar__search" onClick={onOpenPalette} aria-keyshortcuts="Control+K">
+      <button type="button" className="sidebar__search" onClick={onOpenPalette} aria-label="찾기·이동" aria-keyshortcuts="Control+K Meta+K" title={collapsed ? '찾기·이동' : undefined}>
         <Search aria-hidden />
-        <span className="sidebar__label">찾기·이동</span>
-        <kbd className="sidebar__label">Ctrl K</kbd>
+        <span className="sidebar__label" aria-hidden>
+          찾기·이동
+        </span>
+        <kbd className="sidebar__label" aria-hidden>
+          Ctrl K
+        </kbd>
       </button>
 
       {navFor(me).map((g) => (
@@ -52,9 +56,12 @@ export function Sidebar({ me, collapsed, onToggle, onOpenPalette, onLogout }: Pr
                   <it.icon aria-hidden />
                   <span className="sidebar__label">{it.label}</span>
                   {it.to === '/approvals' && pending ? (
-                    <span className="sidebar__count" aria-label={`결재할 문서 ${pending}건`}>
-                      {pending}
-                    </span>
+                    <>
+                      <span className="sidebar__count" aria-hidden>
+                        {pending}
+                      </span>
+                      <span className="visually-hidden">, 결재할 문서 {pending}건</span>
+                    </>
                   ) : null}
                 </NavLink>
               </li>

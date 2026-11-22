@@ -19,10 +19,11 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return children
 }
 
-/** 명령 팔레트의 "새 대화"는 주소 상태(newChat)로 옵니다. 값이 바뀌면 채팅 화면을 새로 열어 빈 대화로 시작합니다 */
-function ChatRoute() {
-  const newChat = (useLocation().state as { newChat?: number } | null)?.newChat
-  return <ChatPage key={newChat ?? 'chat'} />
+/** 운영 화면(감사 조회 역할만). 메뉴에 없을 뿐 아니라 주소로 들어와도 AI 비서로 보냅니다 */
+function RequireAuditor({ children }: { children: ReactNode }) {
+  const { state } = useAuth()
+  if (state.status === 'signed-in' && !state.employee.roles.includes('auditor')) return <Navigate to="/" replace />
+  return children
 }
 
 export function App() {
@@ -37,12 +38,12 @@ export function App() {
           </RequireAuth>
         }
       >
-        <Route path="/" element={<ChatRoute />} />
+        <Route path="/" element={<ChatPage />} />
         <Route path="/approvals" element={<InboxPage />} />
         <Route path="/org" element={<OrgPage />} />
         <Route path="/agents" element={<AgentRegistryPage />} />
-        <Route path="/ops/eval" element={<EvalReportPage />} />
-        <Route path="/ops/:tab" element={<AdminPage />} />
+        <Route path="/ops/eval" element={<RequireAuditor><EvalReportPage /></RequireAuditor>} />
+        <Route path="/ops/:tab" element={<RequireAuditor><AdminPage /></RequireAuditor>} />
         {/* 예전 주소(ux/research/ia.md 2절에서 바뀜) */}
         <Route path="/inbox" element={<Navigate to="/approvals" replace />} />
         <Route path="/admin" element={<Navigate to="/ops/metrics" replace />} />

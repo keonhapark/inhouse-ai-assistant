@@ -31,7 +31,8 @@ describe('왼쪽 탐색 막대', () => {
     const n = await nav()
     expect(within(n).getByRole('group', { name: '업무' })).toBeInTheDocument()
     expect(within(n).getByRole('link', { name: 'AI 비서' })).toHaveAttribute('aria-current', 'page')
-    expect(await within(n).findByLabelText(/^결재할 문서 \d+건$/)).toBeInTheDocument()
+    // 건수는 숫자로 보이고, 화면 낭독기에는 "결재, 결재할 문서 n건"으로 읽힙니다
+    expect(await within(n).findByRole('link', { name: /^결재, 결재할 문서 \d+건$/ })).toBeInTheDocument()
     expect(within(n).queryByRole('group', { name: '운영' })).toBeNull()
   })
 
@@ -42,12 +43,16 @@ describe('왼쪽 탐색 막대', () => {
     expect(within(ops).getByRole('link', { name: '감사 로그' })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('접기 단추로 아이콘만 남기고, 다시 누르면 펼칩니다', async () => {
+  it('접기 단추로 아이콘만 남기고, 다시 누르면 펼칩니다. 접혀도 메뉴 이름은 읽힙니다', async () => {
     const user = renderApp('/', 'mock.emp-1001')
     const n = await nav()
-    await user.click(within(n).getByRole('button', { name: '탐색 막대 접기' }))
+    const toggle = within(n).getByRole('button', { name: '탐색 막대 접기' })
+    await user.click(toggle)
     expect(n).toHaveAttribute('data-collapsed', 'true')
-    await user.click(within(n).getByRole('button', { name: '탐색 막대 펼치기' }))
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(within(n).getByRole('link', { name: '조직도' })).toBeInTheDocument()
+    expect(within(n).getByRole('button', { name: '찾기·이동' })).toBeInTheDocument()
+    await user.click(toggle)
     expect(n).not.toHaveAttribute('data-collapsed')
   })
 
@@ -76,11 +81,11 @@ describe('명령 팔레트', () => {
 
   it('"찾기·이동"으로 열고 테마를 바꾸며, Esc로 닫습니다', async () => {
     const user = renderApp('/', 'mock.emp-1001')
-    await user.click(within(await nav()).getByRole('button', { name: /찾기·이동/ }))
+    await user.click(within(await nav()).getByRole('button', { name: '찾기·이동' }))
     const dialog = await screen.findByRole('dialog', { name: '찾기·이동' })
     await user.click(within(dialog).getByRole('option', { name: /테마: 어두움/ }))
     expect(document.documentElement.dataset.theme).toBe('dark')
-    await user.click(within(await nav()).getByRole('button', { name: /찾기·이동/ }))
+    await user.click(within(await nav()).getByRole('button', { name: '찾기·이동' }))
     await screen.findByRole('dialog')
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -122,7 +127,16 @@ describe('역할별 첫 화면', () => {
 
   it('결재할 문서가 있으면 결재로 들어갑니다', async () => {
     const n = await loginAs('E2001')
-    expect(await within(n).findByRole('link', { name: /^결재/ })).toHaveAttribute('aria-current', 'page')
+    await waitFor(() => expect(within(n).getByRole('link', { name: /^결재(,|$)/ })).toHaveAttribute('aria-current', 'page'))
+  })
+
+  it('로그인하지 않고 첫 주소(/)로 들어와도 로그인 뒤 역할별 첫 화면으로 갑니다', async () => {
+    const user = renderApp('/')
+    await user.type(await screen.findByLabelText('사번'), 'E2008')
+    await user.type(screen.getByLabelText('비밀번호'), 'demo')
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+    const n = await nav()
+    await waitFor(() => expect(within(n).getByRole('link', { name: '운영 지표' })).toHaveAttribute('aria-current', 'page'))
   })
 
   it('그 밖에는 AI 비서로 들어갑니다', async () => {
@@ -131,9 +145,17 @@ describe('역할별 첫 화면', () => {
   })
 })
 
+describe('운영 화면 권한', () => {
+  it.each(['/ops/audit', '/ops/eval'])('감사 조회 역할이 아니면 %s 주소로 들어와도 AI 비서로 보냅니다', async (path) => {
+    renderApp(path, 'mock.emp-1001')
+    const n = await nav()
+    await waitFor(() => expect(within(n).getByRole('link', { name: 'AI 비서' })).toHaveAttribute('aria-current', 'page'))
+  })
+})
+
 describe('예전 주소', () => {
   it.each([
-    ['/inbox', /^결재/, 'mock.emp-2001'],
+    ['/inbox', /^결재(,|$)/, 'mock.emp-2001'],
     ['/admin', '운영 지표', 'mock.emp-2008'],
     ['/eval', '평가 리포트', 'mock.emp-2008'],
   ])('%s는 새 주소로 옮깁니다', async (path, name, token) => {

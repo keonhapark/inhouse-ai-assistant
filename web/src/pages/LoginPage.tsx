@@ -15,8 +15,9 @@ export function LoginPage() {
   const [pending, setPending] = useState(false)
 
   if (state.status === 'signed-in') {
+    // 가려던 화면이 AI 비서 첫 주소('/')뿐이면 역할별 첫 화면으로 보냅니다
     const from = (location.state as { from?: string } | null)?.from
-    return from ? <Navigate to={from} replace /> : <FirstScreen roles={state.employee.roles} />
+    return from && from !== '/' ? <Navigate to={from} replace /> : <FirstScreen roles={state.employee.roles} />
   }
 
   async function onSubmit(e: FormEvent) {

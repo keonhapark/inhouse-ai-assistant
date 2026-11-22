@@ -2,15 +2,13 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { Command } from 'cmdk'
 import { FileCheck2, Monitor, Moon, SquarePen, Sun } from 'lucide-react'
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import type { Schemas } from '../api/client'
+import { isPaletteKey, NEW_CHAT } from './events'
 import { navFor } from './nav'
 import { THEMES, useTheme, type Theme } from './theme'
 
 const THEME_ICON: Record<Theme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor }
-
-/** 채팅 화면이 "새 대화"를 알아보는 주소 상태. 같은 화면에서 다시 골라도 값이 바뀌게 시각을 씁니다 */
-const newChatState = () => ({ newChat: Date.now() })
 
 type Props = { me: Schemas['Employee']; open: boolean; onOpenChange(open: boolean): void }
 
@@ -20,12 +18,13 @@ type Props = { me: Schemas['Employee']; open: boolean; onOpenChange(open: boolea
  */
 export function CommandPalette({ me, open, onOpenChange }: Props) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [theme, setTheme] = useTheme()
 
   // Ctrl K(맥은 ⌘ K)로 열고 닫습니다
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      if (isPaletteKey(e)) {
         e.preventDefault()
         onOpenChange(!open)
       }
@@ -50,7 +49,7 @@ export function CommandPalette({ me, open, onOpenChange }: Props) {
             <Command.List className="palette__list">
               <Command.Empty className="palette__empty">맞는 항목이 없습니다.</Command.Empty>
               <Command.Group heading="할 일">
-                <Command.Item onSelect={run(() => navigate('/', { state: newChatState() }))}>
+                <Command.Item onSelect={run(() => (pathname === '/' ? window.dispatchEvent(new Event(NEW_CHAT)) : navigate('/')))}>
                   <SquarePen aria-hidden />새 대화
                 </Command.Item>
                 <Command.Item onSelect={run(() => navigate('/approvals'))}>

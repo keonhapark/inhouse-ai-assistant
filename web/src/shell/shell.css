@@ -213,8 +213,16 @@
   font-weight: var(--fw-semibold);
 }
 
-/* 접힘: 아이콘만 */
-.sidebar[data-collapsed] .sidebar__label,
+/* 접힘: 아이콘만. 라벨은 화면 낭독기가 읽게 시각적으로만 숨깁니다 */
+.sidebar[data-collapsed] .sidebar__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .sidebar[data-collapsed] .sidebar__count {
   display: none;
 }
@@ -238,7 +246,15 @@
     grid-template-columns: 60px minmax(0, 1fr);
   }
 
-  .sidebar .sidebar__label,
+  .sidebar .sidebar__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
   .sidebar .sidebar__count {
     display: none;
   }
@@ -283,7 +299,11 @@
   border-radius: var(--r-xs);
   color: var(--text);
   cursor: default;
-  outline: none;
+}
+
+.menu__item:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
 }
 
 .menu__item svg {
@@ -343,7 +363,8 @@
 }
 
 .palette__input:focus-visible {
-  outline: none;
+  outline: var(--focus-ring);
+  outline-offset: -2px;
 }
 
 .palette__list {
