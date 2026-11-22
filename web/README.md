@@ -123,6 +123,12 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 |---|---|
 | ![근거](docs/images/chat-citations-light.png) | ![다크](docs/images/chat-preview-dark.png) |
 
+| 답의 마크다운(굵게·목록·코드) | 다크 모드 |
+|---|---|
+| ![마크다운](docs/images/chat-markdown-light.png) | ![마크다운 다크](docs/images/chat-markdown-dark.png) |
+
+채팅 답의 마크다운은 일부만 그립니다(`src/chat/markdown.tsx`): 문단·줄바꿈, `*`·`-`·번호 목록과 들여 쓴 하위 목록, 굵게·기울임, 인라인 코드와 코드 블록, 제목 줄(굵은 문단), 구분선, 링크. HTML 문자열을 만들지 않고 React 요소로만 그려 답에 든 HTML은 글자 그대로 보입니다. 링크는 http·https만 새 창으로 열고 실제로 가는 host를 옆에 보입니다. 사용자 정보가 든 주소(`https://a@b`)와 그 밖의 주소(`javascript:` 등)는 글자로 둡니다. 답에는 사진·문서에서 읽은 신뢰할 수 없는 글이 섞일 수 있어서입니다(결정 0004). 스트리밍 중 닫히지 않은 `**`는 글자로 두었다가 짝이 오면 굵게 바뀝니다.
+
 | 승인함과 대결 설정 | 다크 모드 |
 |---|---|
 | ![승인함](docs/images/inbox-light.png) | ![승인함 다크](docs/images/inbox-dark.png) |

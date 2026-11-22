@@ -79,6 +79,16 @@ describe('직원 채팅', () => {
     expect(screen.getByText('인용 확인 안 됨')).toBeInTheDocument()
   })
 
+  it('답의 마크다운(굵게·목록·코드)을 글자 대신 서식으로 그립니다', async () => {
+    const user = renderChat()
+    await say(user, '출장 숙박비 한도가 얼마야?')
+    const strong = await screen.findByText('서울·광역시', { selector: 'strong' })
+    const list = strong.closest('ul')!
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3)
+    expect(screen.getByText('숙박 영수증', { selector: 'code' })).toBeInTheDocument()
+    expect(screen.queryByText(/\*\*/)).toBeNull()
+  })
+
   it('장치가 막으면 이유를 보여 줍니다', async () => {
     const user = renderChat()
     await say(user, '팀원 급여 알려 줘')
