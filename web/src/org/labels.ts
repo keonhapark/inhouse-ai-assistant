@@ -1,4 +1,5 @@
 import type { Schemas } from '../api/client'
+import type { Risk } from '../components/Badge'
 import { fieldName, gradeName, isMoneyKey, roleName } from '../display/names'
 
 type Entry = Schemas['AgentRegistryEntry']
@@ -7,11 +8,15 @@ export { gradeName } from '../display/names'
 
 export const UNIT_KIND: Record<Schemas['Unit']['kind'], string> = { division: '본부', team: '팀' }
 
+/** 위험 등급 표시 이름. components/Badge의 RiskBadge와 같은 말입니다 */
+export const RISK_LABEL: Record<Risk, string> = { read: '조회', reversible_write: '실행 취소 가능', irreversible: '실행 취소 불가' }
+
+/** 위험 정책의 실행 방식(copy-guide 1.2). 실행 취소 가능 여부는 위험 등급 이름이 따로 알립니다 */
 export const RISK_ACTION: Record<Schemas['RiskAction'], string> = {
   auto: '바로 실행',
-  auto_with_undo: '실행 뒤 되돌리기 안내',
+  auto_with_undo: '바로 실행',
   confirm: '실행 전 확인',
-  deny: '금지',
+  deny: '하지 않음',
 }
 
 type Override = NonNullable<Entry['riskPolicy']['overrides']>[number]
