@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Ids;
+import io.inhouse.erp.common.Ko;
 import io.inhouse.erp.org.OrgService;
 import io.inhouse.erp.pack.Pack;
 import io.inhouse.erp.write.Change;
@@ -68,7 +69,7 @@ public class TicketService {
             throw ApiException.validation("status", "unknown");
         }
         if ("all".equals(box) && !org.isTicketHandler(employeeId)) {
-            throw ApiException.forbidden("티켓 담당만 전체를 봅니다");
+            throw ApiException.forbidden("전체 목록은 티켓 담당만 볼 수 있습니다.");
         }
         String requester = "mine".equals(box) ? employeeId : null;
         return tickets.search(requester, status, Limit.of(Math.max(1, Math.min(limit, 100)))).stream()
@@ -92,7 +93,7 @@ public class TicketService {
         Ticket t = tickets.saveAndFlush(new Ticket(Ids.next("tkt"), p.employeeId(), req.category(), req.priority(),
                 req.title(), req.description(), "open", now));
         TicketView after = view(t);
-        return WriteOutcome.of("IT 티켓 '" + t.getTitle() + "'을 올립니다",
+        return WriteOutcome.of("IT 티켓 " + Ko.eul("'" + t.getTitle() + "'") + " 올립니다",
                 new Change("create", "ticket", t.getId(), null, json(after)), true, after, t.getId());
     }
 
@@ -100,16 +101,16 @@ public class TicketService {
     public WriteOutcome undoCreate(String ticketId) {
         Ticket t = tickets.lockById(ticketId).orElseThrow();
         if (!"open".equals(t.getStatus()) || comments.countByTicketId(ticketId) > 0) {
-            throw new ApiException(409, "undo-conflict", "그사이 댓글이 달렸거나 처리가 시작됐습니다");
+            throw new ApiException(409, "undo-conflict", "그사이 댓글이 달렸거나 처리가 시작돼 실행 취소할 수 없습니다.");
         }
-        return statusOutcome(t, "cancelled", "IT 티켓 작성을 되돌렸습니다(취소)", false);
+        return statusOutcome(t, "cancelled", "IT 티켓을 취소했습니다", false);
     }
 
     /** 올린 사람과 담당만 씁니다(그 밖에는 404). closed·cancelled면 409입니다. */
     public WriteOutcome comment(ErpPrincipal p, String ticketId, String body) {
         Ticket t = visible(p.employeeId(), tickets.lockById(ticketId).orElse(null));
         if (t.isFinished()) {
-            throw new ApiException(409, "invalid-state", t.getStatus() + " 티켓에는 댓글을 달 수 없습니다");
+            throw new ApiException(409, "invalid-state", Ko.ticketStatus(t.getStatus()) + "된 티켓에는 댓글을 달 수 없습니다.");
         }
         OffsetDateTime now = OffsetDateTime.now(clock);
         TicketComment c = comments.saveAndFlush(new TicketComment(Ids.next("tcm"), t.getId(), p.employeeId(), body,
@@ -126,7 +127,7 @@ public class TicketService {
         TicketComment c = comments.findById(commentId).orElseThrow();
         Ticket t = tickets.lockById(c.getTicketId()).orElseThrow();
         if (t.isFinished()) {
-            throw new ApiException(409, "undo-conflict", "티켓이 " + t.getStatus() + "입니다");
+            throw new ApiException(409, "undo-conflict", Ko.ticketStatus(t.getStatus()) + "된 티켓이라 댓글을 지울 수 없습니다.");
         }
         CommentView before = view(c);
         comments.delete(c);
@@ -142,16 +143,18 @@ public class TicketService {
     public WriteOutcome changeStatus(ErpPrincipal p, String ticketId, String status, int version) {
         Ticket t = visible(p.employeeId(), tickets.lockById(ticketId).orElse(null));
         if (!org.isTicketHandler(p.employeeId())) {
-            throw ApiException.forbidden("티켓 담당만 상태를 바꿉니다");
+            throw ApiException.forbidden("티켓 상태는 티켓 담당만 바꿀 수 있습니다.");
         }
         if (version != t.getVersion()) {
-            throw new ApiException(409, "version-conflict", "그사이 티켓이 바뀌었습니다");
+            throw new ApiException(409, "version-conflict", "그사이 티켓이 바뀌었습니다. 새로 고친 뒤 다시 시도하세요.");
         }
         if (!Ticket.TRANSITIONS.getOrDefault(t.getStatus(), java.util.Set.of()).contains(status)) {
-            throw new ApiException(409, "invalid-state", t.getStatus() + "에서 " + status + "로 바꿀 수 없습니다");
+            throw new ApiException(409, "invalid-state", Ko.ticketStatus(t.getStatus()) + " 상태에서 "
+                    + Ko.ro(Ko.ticketStatus(status)) + " 바꿀 수 없습니다.");
         }
         String from = t.getStatus();
-        WriteOutcome out = statusOutcome(t, status, "IT 티켓 '" + t.getTitle() + "'을 " + status + "로 바꿉니다", true);
+        WriteOutcome out = statusOutcome(t, status, "IT 티켓 " + Ko.eul("'" + t.getTitle() + "'") + " "
+                + Ko.ro(Ko.ticketStatus(status)) + " 바꿉니다", true);
         TicketStatusChange log = changes.saveAndFlush(new TicketStatusChange(Ids.next("tsc"), t.getId(), from, status,
                 t.getVersion(), p.employeeId(), t.getUpdatedAt()));
         return new WriteOutcome(out.summary(), out.changes(), true, out.resource(), log.getId(), null, null);
@@ -163,14 +166,14 @@ public class TicketService {
      */
     public WriteOutcome undoStatus(String changeId, String actorId) {
         if (!org.isTicketHandler(actorId)) {
-            throw ApiException.forbidden("티켓 담당만 상태 변경을 되돌립니다");
+            throw ApiException.forbidden("티켓 상태 변경은 티켓 담당만 실행 취소할 수 있습니다.");
         }
         TicketStatusChange c = changes.findById(changeId).orElseThrow();
         Ticket t = tickets.lockById(c.getTicketId()).orElseThrow();
         if (t.getVersion() != c.getVersionAfter()) {
-            throw new ApiException(409, "undo-conflict", "그사이 상태가 다시 바뀌었습니다");
+            throw new ApiException(409, "undo-conflict", "그사이 티켓 상태가 다시 바뀌었습니다. 티켓을 새로 고쳐 지금 상태를 확인하세요.");
         }
-        return statusOutcome(t, c.getFromStatus(), "IT 티켓 상태 변경을 되돌렸습니다", false);
+        return statusOutcome(t, c.getFromStatus(), "IT 티켓 상태를 원래대로 돌렸습니다", false);
     }
 
     private WriteOutcome statusOutcome(Ticket t, String status, String summary, boolean undoable) {

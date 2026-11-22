@@ -35,7 +35,7 @@ public class AuditController {
                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime since,
                                 @RequestParam(defaultValue = "100") int limit) {
         if (!org.isAuditor(p.employeeId())) {
-            throw ApiException.forbidden("감사 조회 역할만 봅니다");
+            throw ApiException.forbidden("감사 기록은 감사 조회 역할이 있어야 볼 수 있습니다.");
         }
         return new Items<>(audit.list(actorId, actionId, since, limit));
     }

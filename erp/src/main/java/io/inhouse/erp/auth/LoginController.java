@@ -47,7 +47,7 @@ public class LoginController {
         boolean passwordOk = MessageDigest.isEqual(password, given.getBytes(StandardCharsets.UTF_8));
         Employee e = req.employeeNo() == null ? null : employees.findByEmployeeNo(req.employeeNo()).orElse(null);
         if (e == null || !passwordOk) {
-            throw new ApiException(401, "unauthorized", "사번이나 비밀번호가 틀렸습니다");
+            throw new ApiException(401, "unauthorized", "사번이나 비밀번호가 틀렸습니다. 다시 입력하세요.");
         }
         audit.recordSeparately(ErpPrincipal.employee(e.getId()), "auth.login", "login", "ok",
                 AuditService.Extra.NONE, null, null);
