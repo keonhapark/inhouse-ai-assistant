@@ -49,7 +49,7 @@ def form_tools(forms_doc: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
-PACK_LOCAL_REASON = "팩 단위 외부 LLM 금지(pack.yaml model_policy_override)"
+PACK_LOCAL_REASON = "회사 설정으로 외부 모델을 쓰지 않습니다"  # pack.yaml model_policy_override: local_only(#384)
 
 
 @dataclass(frozen=True)

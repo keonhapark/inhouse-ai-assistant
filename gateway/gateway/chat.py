@@ -48,6 +48,13 @@ EVAL_MODEL_OVERRIDES = {
     "external=external-exaone": {"external": "external-exaone"},   # K-EXAONE 2.5 API(#436)
 }
 MAX_CONTENT = 4000
+AWAITING_CONFIRM = "실행 전 확인이 남아 있습니다. 확인 카드에서 먼저 결정하세요."
+BLOCKED_DEFAULT = "회사 정책상 처리할 수 없는 요청입니다. 다른 방법으로 요청하거나 담당 부서에 문의하세요."
+
+
+def agent_label(name: str) -> str:
+    """대화 안에서 부르는 AI 에이전트 이름(ux/copy-guide.md 1.2). 부서 이름이면 "○○ 담당 AI", "비서"·"AI"로 끝나면 그대로."""
+    return name if name.endswith(("비서", "AI")) else f"{name} 담당 AI"
 MAX_ATTACHMENTS = 3  # contracts/openapi/gateway.yaml postMessage attachments maxItems
 
 
@@ -59,7 +66,7 @@ def check_attachments(value: Any) -> tuple[list[dict[str, str]], list[dict[str, 
     메타에는 이미지 본문이 없습니다.
     """
     if not isinstance(value, list) or not 1 <= len(value) <= MAX_ATTACHMENTS:
-        raise ProblemError(422, "validation", f"attachments는 1~{MAX_ATTACHMENTS}개 배열이어야 합니다")
+        raise ProblemError(422, "validation", f"사진은 한 번에 {MAX_ATTACHMENTS}장까지 첨부할 수 있습니다.")
     clean: list[dict[str, str]] = []
     metas: list[dict[str, Any]] = []
     for i, a in enumerate(value, 1):
@@ -228,7 +235,8 @@ class ChatService:
     def _state_events(self, c: Conversation, who: Requester, state: dict[str, Any],
                       model: dict[str, str] | None = None) -> list[dict[str, Any]]:
         if not self._valid_state(state):
-            return [c.event("error", error={"message": "에이전트 응답 형식이 틀렸습니다", "retryable": False})]
+            return [c.event("error", error={"message": "AI 에이전트의 답을 읽지 못했습니다. 다시 보내 주세요.",
+                                            "retryable": False})]
         out = []
         for a in state.get("actions") or []:
             out.append(c.event("action", action={k: a[k] for k in ("actionId", "tool", "summary", "undoable")}))
@@ -254,14 +262,15 @@ class ChatService:
         else:
             c.status, c.pending = "active", None
         if status == "blocked":
-            out.append(c.event("blocked", blocked={"reason": state.get("blockedReason") or "장치가 막았습니다",
+            out.append(c.event("blocked", blocked={"reason": state.get("blockedReason") or BLOCKED_DEFAULT,
                                                    "code": "policy_denied"}))
         elif status == "failed":
-            out.append(c.event("error", error={"message": "에이전트 실행이 실패했습니다", "retryable": False}))
+            out.append(c.event("error", error={"message": "AI 에이전트가 요청을 끝내지 못했습니다. 다시 보내 주세요.",
+                                               "retryable": False}))
         return out
 
     def _agent_down(self, c: Conversation) -> dict[str, Any]:
-        return c.event("error", error={"message": "에이전트가 답하지 않았습니다. 잠시 뒤 다시 보내 주세요",
+        return c.event("error", error={"message": "AI 에이전트가 답하지 않았습니다. 잠시 뒤 다시 보내 주세요.",
                                        "retryable": True})
 
     # ---------- 메시지 ----------
@@ -273,7 +282,7 @@ class ChatService:
                 ap = self.approvals.get(c.pending or "")
                 if ap is None or ap.decided or now() <= ap.expires_at:
                     # 앞 메시지가 승인 대기로 끝났으면 이 메시지는 받지 않습니다
-                    yield c.event("error", error={"message": "실행 승인을 기다리는 중입니다", "retryable": False})
+                    yield c.event("error", error={"message": AWAITING_CONFIRM, "retryable": False})
                     yield c.event("done")
                     return
                 # 시간이 지난 승인은 거절로 처리해 agent의 대기를 풀고 새 메시지를 이어 갑니다.
@@ -292,7 +301,8 @@ class ChatService:
                         return
                     agent = self.registry.get(d.get("agentId", ""))
                     if agent is None:
-                        yield c.event("error", error={"message": "등록부에 없는 에이전트로 라우팅됐습니다",
+                        yield c.event("error", error={"message": "요청을 맡을 AI 에이전트를 찾지 못했습니다. "
+                                                                 "AI 에이전트를 직접 골라 다시 보내세요.",
                                                       "retryable": False})
                         yield c.event("done")
                         return
@@ -301,7 +311,7 @@ class ChatService:
                 else:
                     agent = self.registry.get(c.agent_id)
                     route = {"agentId": agent.id, "agentName": agent.name, "method": "explicit",
-                             "reason": "직원이 골랐습니다", "suggestedAgentId": None}
+                             "reason": "직접 골랐습니다", "suggestedAgentId": None}
                 if not grant_matches(agent.callable_by, who):
                     # 운영 지표의 차단 수(agent_not_callable)에 들어가도록 거절한 라우팅도 감사 이벤트로 남깁니다.
                     self.audit.event("route.decided", employee_id=who.id, channel=who.channel, agent_id=agent.id, via_token=False,
@@ -309,7 +319,8 @@ class ChatService:
                                      problem_type="urn:problem:agent-not-callable",
                                      routing={"agentId": agent.id, "method": route["method"],
                                               "reason": "요청자가 부를 수 없는 에이전트"})
-                    yield c.event("blocked", blocked={"reason": f"{agent.name} 에이전트를 부를 수 없습니다",
+                    yield c.event("blocked", blocked={"reason": f"{agent_label(agent.name)}는 사용할 권한이 없습니다. "
+                                                                "다른 AI 에이전트를 고르세요.",
                                                       "code": "agent_not_callable"})
                     yield c.event("done")
                     return
@@ -368,15 +379,15 @@ class ChatService:
         """확인하고 바로 결정을 적어 둡니다. 사이에 await가 없어 같은 승인을 두 번 결정하지 못합니다."""
         ap = self.approvals.get(approval_id)
         if ap is None:
-            raise ProblemError(404, "not-found", "실행 승인이 없습니다")
+            raise ProblemError(404, "not-found", "확인할 실행이 없습니다.")
         if ap.owner != who.id:
-            raise ProblemError(403, "forbidden", "요청한 직원만 결정합니다")
+            raise ProblemError(403, "forbidden", "요청한 사람만 확인할 수 있습니다.")
         c = self.conversations[ap.conversation_id]
         if ap.decided or c.pending != ap.id:
-            raise ProblemError(409, "invalid-state", "이미 결정했거나 기다리는 승인이 아닙니다")
+            raise ProblemError(409, "invalid-state", "이미 처리한 실행 전 확인입니다.")
         if now() > ap.expires_at:
-            raise ProblemError(409, "invalid-state", "승인 시간이 지났습니다",
-                               "새 메시지를 보내면 이 실행은 거절로 처리하고 대화를 이어 갑니다")
+            raise ProblemError(409, "invalid-state", "확인 시간이 지났습니다.",
+                               "이 실행은 하지 않았습니다. 다시 하려면 새 메시지를 보내세요.")
         ap.decided = decision
         return ap, c
 
@@ -402,7 +413,7 @@ class ChatService:
             model = self.usage.take(c.id)
             if r.status_code == 409:
                 c.status, c.pending = "active", None
-                yield c.event("error", error={"message": "에이전트가 이 승인을 기다리고 있지 않습니다",
+                yield c.event("error", error={"message": "이미 끝난 실행 전 확인입니다. 새 메시지를 보내세요.",
                                               "retryable": False})
             elif r.status_code != 200:
                 ap.decided = None
@@ -439,7 +450,7 @@ def stream(c: Conversation, events: AsyncIterator[dict[str, Any]],
             log.exception("대화 처리 중 오류 conversation=%s", c.id)
             if on_fail:
                 on_fail()
-            message = e.title if isinstance(e, ProblemError) else "처리 중 오류가 났습니다"
+            message = e.title if isinstance(e, ProblemError) else "메시지를 처리하지 못했습니다. 다시 보내 주세요."
             q.put_nowait(c.event("error", error={"message": message, "retryable": False}))
             q.put_nowait(c.event("done"))
         finally:
@@ -523,7 +534,7 @@ def build_router(chat: ChatService) -> APIRouter:
         if agent_id is not None:
             agent = chat.registry.get(agent_id)
             if agent is None or not grant_matches(agent.callable_by, who):
-                raise ProblemError(403, "forbidden", "이 에이전트를 부를 수 없습니다", str(agent_id))
+                raise ProblemError(403, "forbidden", "이 AI 에이전트를 사용할 권한이 없습니다.", "다른 AI 에이전트를 고르세요.")
         c = Conversation(id="conv_" + uuid.uuid4().hex, owner=who.id, created_at=now(), agent_id=agent_id,
                          condition=condition, model_override=dict(EVAL_MODEL_OVERRIDES.get(override or "", {})))
         chat.conversations[c.id] = c
@@ -540,12 +551,14 @@ def build_router(chat: ChatService) -> APIRouter:
         c = chat.owned(conversation_id, who)
         body = await json_body(request)
         content = body.get("content")
-        if not isinstance(content, str) or not content.strip() or len(content) > MAX_CONTENT \
-                or set(body) - {"content", "attachments"}:
-            raise ProblemError(422, "validation", f"content는 1~{MAX_CONTENT}자 문자열이어야 합니다")
+        if isinstance(content, str) and len(content) > MAX_CONTENT:
+            raise ProblemError(422, "validation", f"메시지는 {MAX_CONTENT:,}자까지 보낼 수 있습니다.",
+                               "줄여서 다시 보내세요.")
+        if not isinstance(content, str) or not content.strip() or set(body) - {"content", "attachments"}:
+            raise ProblemError(422, "validation", "보낼 메시지가 없습니다.", "내용을 쓰고 다시 보내세요.")
         attachments, metas = check_attachments(body["attachments"]) if "attachments" in body else (None, None)
         if c.status == "awaiting_approval" and not chat.expired_pending(c):
-            raise ProblemError(409, "invalid-state", "실행 승인을 기다리는 중입니다")
+            raise ProblemError(409, "invalid-state", "실행 전 확인이 남아 있습니다.", "확인 카드에서 먼저 결정하세요.")
         return stream(c, chat.message_events(c, who, content, attachments, metas))
 
     @api.post("/execution-approvals/{approval_id}")
@@ -553,9 +566,12 @@ def build_router(chat: ChatService) -> APIRouter:
         who = await requester(request)
         body = await json_body(request)
         decision, comment = body.get("decision"), body.get("comment")
+        if comment is not None and isinstance(comment, str) and len(comment) > 200:
+            raise ProblemError(422, "validation", "의견은 200자까지 쓸 수 있습니다.")
         if decision not in ("approve", "reject") or set(body) - {"decision", "comment"} or (
-                comment is not None and (not isinstance(comment, str) or len(comment) > 200)):
-            raise ProblemError(422, "validation", "decision은 approve·reject, comment는 200자 이하입니다")
+                comment is not None and not isinstance(comment, str)):
+            # 화면 코드가 만드는 값이라 직원이 일으킬 수 없는 오류입니다(개발자용).
+            raise ProblemError(422, "validation", "decision은 approve·reject, comment는 문자열입니다")
         ap, c = chat.claim_approval(approval_id, who, decision)
 
         def release() -> None:
