@@ -3,6 +3,7 @@ import { cleanup } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 import { resetMockChat } from '../mocks/chat'
 import { resetMockInbox } from '../mocks/inbox'
+import { resetLookups } from '../display/useLookups'
 import { server } from '../mocks/node'
 
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
@@ -11,6 +12,7 @@ afterEach(() => {
   server.resetHandlers()
   resetMockChat()
   resetMockInbox()
+  resetLookups()
   sessionStorage.clear()
 })
 afterAll(() => server.close())

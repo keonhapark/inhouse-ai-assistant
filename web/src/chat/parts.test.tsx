@@ -25,8 +25,10 @@ describe('PreviewCard', () => {
     expect(screen.getByText('되돌릴 수 없음')).toBeInTheDocument()
     expect(screen.getByText('실행하면 되돌릴 수 없습니다.')).toBeInTheDocument()
     expect(screen.getByText('회수하면 결재선이 처음부터 다시 시작됩니다.')).toBeInTheDocument()
-    expect(screen.getByText('pending')).toHaveClass('changes__before')
-    expect(screen.getByText('withdrawn')).toBeInTheDocument()
+    // 상태는 한국어로, API 값은 "자세히" 안에만
+    expect(screen.getByText('대기')).toHaveClass('changes__before')
+    expect(screen.getByText('회수')).toBeInTheDocument()
+    expect(screen.getByText('자세히').closest('details')).toHaveTextContent('withdrawn')
   })
 
   it('만료되면 실행·취소를 막고 onExpire를 한 번 부릅니다', () => {

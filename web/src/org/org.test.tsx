@@ -126,11 +126,12 @@ describe('에이전트 등록부', () => {
     expect(within(assistant).getByText('기본 에이전트')).toBeInTheDocument()
     expect(within(assistant).getByText('외부 모델 허용')).toBeInTheDocument()
     expect(within(assistant).getByText('허용 안 함')).toBeInTheDocument()
+    expect(within(assistant).getByText('회의실 예약')).toBeInTheDocument()
     expect(within(assistant).getByText('room_reserve')).toBeInTheDocument()
     expect(screen.getAllByRole('region')).toHaveLength(4)
 
     const finance = screen.getByRole('region', { name: '재무' })
-    expect(within(finance).getByText(/amount가 1,000,000보다 클 때 실행 전 확인/)).toBeInTheDocument()
+    expect(within(finance).getByText(/금액이 1,000,000원보다 클 때 실행 전 확인/)).toBeInTheDocument()
   })
 
   it('#agent-<id>로 들어오면 그 카드 제목에 포커스를 둡니다', async () => {

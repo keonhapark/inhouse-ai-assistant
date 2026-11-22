@@ -117,6 +117,8 @@ describe('직원 채팅', () => {
     await user.click(within(list).getByRole('button', { name: /연차 규정/ }))
     expect(await screen.findByText('로컬에서 처리')).toBeInTheDocument()
     expect(screen.getByText('연차 규정', { selector: '.msg--user' })).toBeInTheDocument()
+    // 같은 말로 시작한 대화도 에이전트·시각으로 구별합니다(#556)
+    expect(within(list).getByText(/^인사 · 오늘 \d{2}:\d{2}$/)).toBeInTheDocument()
   })
 
   it('서버 오류면 problem title과 다시 보내기를 보여 줍니다', async () => {

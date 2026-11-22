@@ -4,7 +4,7 @@ import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { newIdempotencyKey } from '../chat/api'
-import { fieldRows } from './fields'
+import { formRows } from '../display/preview'
 import { type InboxItem, type Step } from './types'
 import { DOC_STATUS, formatAmount, formatDateTime, STEP_STATUS } from './labels'
 
@@ -118,7 +118,10 @@ export function DocDetail({ doc, form, canDecide, onDecided, onReload, onClose }
           <dt>상신</dt>
           <dd className="mono">{formatDateTime(doc.createdAt)}</dd>
         </div>
-        {fieldRows(doc.fields, form).map((r) => (
+        {/* 금액은 위 '금액' 줄과 같은 값이라 양식의 금액 필드는 뺍니다 */}
+        {formRows(doc.fields, form)
+          .filter((r) => r.key !== form?.amountField)
+          .map((r) => (
           <div key={r.key}>
             <dt>{r.label}</dt>
             <dd>{r.value}</dd>

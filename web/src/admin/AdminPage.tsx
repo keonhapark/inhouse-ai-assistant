@@ -6,6 +6,7 @@ import { MetricsPanel } from './MetricsPanel'
 import { PRESETS, toRange, ymd, type Period } from './period'
 import '../inbox/inbox.css'
 import './admin.css'
+import { formatDateRange } from '../display/format'
 
 const TABS = [
   { id: 'metrics', label: '운영 지표' },
@@ -87,7 +88,7 @@ export function AdminPage() {
         </p>
       )}
       <p className="muted admin__period" aria-live="polite">
-        {period.kind === 'custom' ? `${period.from} ~ ${period.to}` : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}을 보고 있습니다.
+        {period.kind === 'custom' ? formatDateRange(period.from, period.to) : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}을 보고 있습니다.
       </p>
 
       <div role="tablist" aria-label="관리자 콘솔" className="tabs">
