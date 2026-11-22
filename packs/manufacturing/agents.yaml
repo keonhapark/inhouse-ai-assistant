@@ -124,6 +124,7 @@ agents:
       - approval_list_mine
       - approval_get
       - approval_withdraw
+      - item_search
       - policy_search
     allowed_risk: [read, reversible_write, irreversible]
     doc_scopes: [public, purchase-policy]
