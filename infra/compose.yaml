@@ -53,7 +53,7 @@ services:
       ERP_DEMO_PASSWORD: ${ERP_DEMO_PASSWORD}
       DELEGATION_TOKEN_PUBLIC_KEY: /keys/delegation-es256.pub.pem
       ERP_EVAL_RESET: ${ERP_EVAL_RESET:-}
-      ERP_STAGE: ${PACK_STAGE:-}
+      ERP_STAGE: ${PACK_STAGE:-3}
       ERP_SERVICE_LOGIN_SECRET: ${ERP_SERVICE_LOGIN_SECRET:-}
     volumes:
       - ../packs:/packs:ro
@@ -101,7 +101,7 @@ services:
       RAG_BASE_URL: http://rag:8000
       DELEGATION_JWKS_URL: http://gateway:8000/api/.well-known/jwks.json
       AGENT_AUDIT_LOG: /audit/agent.jsonl
-      AGENT_PACK_STAGE: ${PACK_STAGE:-}
+      AGENT_PACK_STAGE: ${PACK_STAGE:-3}
       # 장애 분석은 compose 밖 호스트 로컬 도구(incident/README.md). 도커 브리지 주소(172.17.0.1)에 열어 둔 것을 부릅니다
       INCIDENT_BASE_URL: http://host.docker.internal:${PORT_INCIDENT:-8070}
     volumes:
@@ -148,7 +148,7 @@ services:
       AUDIT_EVENT_FILES: /audit/agent.jsonl,/audit/rag.jsonl
       GATEWAY_EVAL_MODE: ${GATEWAY_EVAL_MODE:-}
       GATEWAY_EXTERNAL_LOG: ${GATEWAY_EXTERNAL_LOG:-}
-      GATEWAY_PACK_STAGE: ${PACK_STAGE:-}
+      GATEWAY_PACK_STAGE: ${PACK_STAGE:-3}
       SLACK_BRIDGE_SECRET: ${SLACK_BRIDGE_SECRET:-}
       SLACK_USERS_FILE: /slack/slack-users.json
       GATEWAY_EVAL_REPORTS_DIR: /eval-reports
