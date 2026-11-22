@@ -146,7 +146,8 @@ class Runner:
             state["messages"] = [{"role": "assistant", "content": "실행 전에 아래 내용을 확인해 주세요."}]
             state["pendingApproval"] = {"approvalId": p["approvalId"], "toolPreview": {
                 "tool": p["tool"], "risk": p["risk"], "arguments": p["arguments"], "preview": p["preview"],
-                # 이 턴에 첨부 이미지를 읽었으면 인자 일부가 이미지에서 읽은 신뢰 불가 값일 수 있습니다(#394, 결정 0004)
+                # 이 대화에서 첨부 이미지를 읽었으면 인자 일부가 이미지에서 읽은 신뢰 불가 값일 수 있습니다(#394·#530, 결정 0004).
+                # 되물은 뒤 다음 턴에도 읽은 값이 인자로 쓰일 수 있어 대화 끝까지 표시합니다.
                 "fromAttachments": bool(v.get("attachments_read"))}}
             return state
         state["status"] = v.get("status") or "completed"
