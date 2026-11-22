@@ -85,9 +85,10 @@ class Deps:
     trusted_docs: frozenset[str]
     timezone: str = "Asia/Seoul"
     now: Any = None  # 시험에서 날짜를 고정할 때 씁니다(callable)
-    # 로컬로 가는 계획 호출의 reasoning_effort(#423). 로컬 qwen3.5:9b가 생각 모드로 길게 생각해 여러 턴 대화에서
-    # gateway 시간 제한(60초)을 넘겼습니다. None이면 보내지 않습니다(모델 기본값). 외부 정책 호출에는 보내지 않습니다.
-    plan_reasoning_effort: str | None = "none"
+    # 로컬로 가는 계획 호출의 reasoning_effort(#423). None이면 보내지 않습니다(모델 기본값, 생각 켬). 외부 정책 호출에는
+    # 보내지 않습니다. 생각을 끄면 지연은 줄지만 도구를 부르지 않고 말로만 답하는 경우가 많아(#423 측정, 기대 도구 28/46 vs 44/46)
+    # 기본은 켭니다(결정 0008, #535).
+    plan_reasoning_effort: str | None = None
 
 
 def system_prompt(agent: Agent, condition: str, today: datetime, has_tools: bool,
