@@ -88,6 +88,20 @@ def check_training_setup(kw: dict[str, Any], train: list[Any], valid: list[Any])
     return problems
 
 
+def last_checkpoint(out: Path) -> Path | None:
+    """`checkpoints/checkpoint-<단계>` 중 단계가 가장 큰 것. trainer_state.json이 없는(저장 중 끊긴) 것은 건너뜁니다."""
+    found = []
+    for d in (out / "checkpoints").glob("checkpoint-*"):
+        step = d.name.removeprefix("checkpoint-")
+        if step.isdigit() and (d / "trainer_state.json").exists():
+            found.append((int(step), d))
+    return max(found)[1] if found else None
+
+
+def due(now: float, last: float, minutes: float) -> bool:
+    return minutes > 0 and now - last >= minutes * 60
+
+
 def outside_repo(path: Path) -> Path:
     p = path.expanduser().resolve()
     if p == REPO or REPO in p.parents:
@@ -119,6 +133,10 @@ def parse(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--max-len", type=int, default=2048, help="기본 데이터는 최대 1,834토큰(Qwen3.5 토크나이저)")
     ap.add_argument("--batch", type=int, default=1)
     ap.add_argument("--grad-accum", type=int, default=8)
+    ap.add_argument("--save-minutes", type=float, default=25,
+                    help="이 간격(분)마다 체크포인트 저장(epoch 끝 저장과 별도). 세션이 끊겨도 --resume으로 이어 갑니다")
+    ap.add_argument("--resume", action="store_true",
+                    help="--out/checkpoints의 마지막 체크포인트에서 이어 돌림(없으면 처음부터)")
     ap.add_argument("--progress-minutes", type=float, default=3,
                     help="이 간격(분)마다 단계·손실·남은 시간을 한 줄로 출력(노트북 셀 출력용)")
     ap.add_argument("--dry-run", action="store_true")
@@ -211,9 +229,24 @@ def main(argv: list[str] | None = None) -> int:
                 self.last = now
                 print(progress_line(state.global_step, state.max_steps, self.loss, now - started), flush=True)
 
+    class TimedSave(TrainerCallback):
+        """epoch 끝 저장과 별도로 --save-minutes마다 체크포인트를 남깁니다(save_total_limit로 오래된 것은 지움)."""
+
+        def __init__(self) -> None:
+            self.last = time.time()
+
+        def on_step_end(self, args_, state, control, **kw):  # noqa: ANN001
+            if due(time.time(), self.last, args.save_minutes):
+                self.last = time.time()
+                control.should_save = True
+                print(f"체크포인트 저장: 단계 {state.global_step}", flush=True)
+
     trainer.add_callback(Progress())
+    trainer.add_callback(TimedSave())
+    resume = last_checkpoint(out) if args.resume else None
+    print(f"이어 돌리기: {resume.name if resume else '없음(처음부터)'}", flush=True)
     started = time.time()
-    trainer.train()
+    trainer.train(resume_from_checkpoint=str(resume) if resume else None)
     model.save_pretrained(out / "adapter")
     tok.save_pretrained(out / "adapter")
 
@@ -221,6 +254,7 @@ def main(argv: list[str] | None = None) -> int:
     import transformers
     manifest = json.loads((data / "manifest.json").read_text("utf-8")) if (data / "manifest.json").exists() else None
     run = {"finishedAt": datetime.now(timezone.utc).isoformat(), "seconds": round(time.time() - started),
+           "resumedFrom": resume.name if resume else None,
            "baseModel": args.base_model, "revision": revision, "args": {k: v for k, v in vars(args).items()
                                                                        if k not in ("data", "out")},
            "data": {"manifest": manifest, "encode": summary}, "repoCommit": git_commit(),

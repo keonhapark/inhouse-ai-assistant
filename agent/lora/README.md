@@ -58,3 +58,10 @@ Kaggle 노트북(T4 x2)에 Ollama와 터널을 띄운 셀이 돌고 있을 때, 
 6. `export_ollama.py --ollama http://localhost:11434`로 `qwen3.5-9b-toolcall-lora`를 만들고 `run.json`·`ollama.json` 요약을 출력합니다
 
 평가(개발 묶음, 생각 끔·켬, 기본 대비)는 GPU 사용권 `kaggle`을 받아 터널 주소로 `eval_dev/first_call_run.py`와 `lora/compare_runs.py`를 돌립니다.
+
+### 세션이 끊겨도 남기기(#587)
+
+- 중간 저장: `train_qlora.py`는 epoch 끝과 별도로 `--save-minutes`(기본 25)마다 `checkpoints/checkpoint-<단계>`를 남깁니다(최근 2개만 유지)
+- 이어 돌리기: 같은 `--data`·`--out`·설정으로 `--resume`을 붙이면 저장이 끝난 마지막 체크포인트(`trainer_state.json`이 있는 것)에서 이어 갑니다. `run.json`의 `resumedFrom`에 이어 간 체크포인트가 남습니다
+- 데스크탑으로 가져오기(대화형 세션): 원격에서 학습 결과 폴더만 읽기 전용 HTTP(`python -m http.server --directory <out>`)와 터널로 내보내고, 데스크탑에서 `uv run python lora/sync_run.py --url "$KAGGLE_RUN_URL" --to ~/.local/share/inhouse-ai/runs/551/kaggle-sync --every 900`으로 15분마다 바뀐 파일만 받습니다. 주소는 환경 변수로만 다룹니다
+- Kaggle 백그라운드 실행(Save Version)용 노트북은 저장소 밖에 둡니다. 학습 → Ollama 등록 → 개발 묶음 평가까지 한 번에 돌고 결과는 `/kaggle/working`(노트북 버전 출력)에 남습니다
