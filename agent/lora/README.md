@@ -4,14 +4,17 @@
 
 ```bash
 cd agent
-uv run python lora/make_toolcall_data.py --out <저장소 밖 폴더> [--per-tool 40] [--seed 7] [--valid-ratio 0.1]
+uv run python lora/make_toolcall_data.py --out <저장소 밖 폴더> [--per-tool 150] [--seed 7] [--valid-ratio 0.1] \
+  [--exclude <toolcall-v1 확인 묶음 jsonl>]
 ```
 
 - 예시 하나는 업무 실행의 첫 계획 호출과 같은 모양입니다: 에이전트 system 프롬프트(`run/graph.py` `system_prompt`, 조건 `full`), 그 에이전트가 보는 2단계 이하 도구 정의(`contracts/mcp/tools.json`), 사용자 발화, 정답 행동
 - 정답 종류: `direct`(바로 부름), `resolve`(이름·ID가 없어 조회 도구를 먼저 부름), `clarify`(필수 값이 빠져 그 값만 물음)
 - 값은 도구 계약과 팩 고정 데이터(직원·회의실·품목·양식)에서만 고릅니다. 문장 틀은 생성기에 직접 썼습니다
-- 평가와 섞지 않으려고 확인 묶음은 읽지 않고, 개발 묶음(`eval_dev/tool_calls.jsonl`)과 같은 문장은 버립니다. 문장과 정답이 같은 예시는 하나만 둡니다
-- 출력: `train.jsonl`·`valid.jsonl`(줄마다 `{id, agent, kind, tool, today, tools, messages}`), `manifest.json`(개수·시드·입력 해시). 도구 호출은 `tool_calls[].function.arguments`가 객체인 Hugging Face chat template 형식입니다
-- 같은 시드면 같은 데이터입니다. 기본 설정(시드 7, 도구당 40)으로 374개(학습 337, 검증 37)가 나옵니다
+- 평가와 겹치지 않게 개발 묶음(`eval_dev/tool_calls.jsonl`)과 `--exclude`로 준 묶음(toolcall-v1 형식)의 문장과 정확히 같거나(띄어쓰기·문장부호 무시) 가까운(글자 3-gram 자카드 0.6 이상) 생성 문장은 버립니다(#544). 생성에는 평가 묶음을 쓰지 않고, 겹침 검사에만 씁니다. 문장과 정답이 같은 예시는 하나만 둡니다
+- 문장 틀: 말끝(해 줘·해 주세요·부탁해요 등), 날짜(내일·모레·이번 주/다음 주 요일·지난주 요일·다음 달 D일·M/D·M월 D일), 시각(오후 2시·14시·오후 두 시·2시 반·14:30)과 길이(30분~두 시간), 생략(사유·날짜·시간·목적·금액·수량·맡을 사람이 빠진 되묻기), 선택 값이 들어간 경우(회수 사유, 대결 금액 한도, 사업자번호, 티켓 우선순위)
+- 출력: `train.jsonl`·`valid.jsonl`(줄마다 `{id, agent, kind, tool, today, tools, messages}`), `manifest.json`(개수, 종류·정답 도구별 수, 시드, 대조한 묶음의 이름·해시·문장 수(경로는 남기지 않음), 걸러낸 문장 수). 도구 호출은 `tool_calls[].function.arguments`가 객체인 Hugging Face chat template 형식입니다
+- 같은 시드면 같은 데이터입니다. 기본 설정(시드 7, 문장 틀 묶음당 150, 개발 묶음만 대조)으로 1,382개(학습 1,244, 검증 138, 서로 다른 문장 1,381)가 나옵니다. 바로 부름 1,053, 조회 먼저 148, 되묻기 181이고 정답 도구는 21종입니다. 개발 묶음과 겹쳐 버린 문장은 정확 일치 3, 근접 4입니다
+- 날짜가 없는 조회(잔여 휴가 9, 인사 정보 7, 규정 16)는 문장 틀 수만큼만 나옵니다
 
-시험: `uv run pytest -q tests/test_lora_data.py`(정답 인자가 도구 입력 스키마에 맞는지, 도구가 그 에이전트 것인지, system 프롬프트가 업무 프롬프트와 같은지, 개발 묶음 문장과 겹치지 않는지, 재현성).
+시험: `uv run pytest -q tests/test_lora_data.py`(정답 인자가 도구 입력 스키마에 맞는지, 도구가 그 에이전트 것인지, system 프롬프트가 업무 프롬프트와 같은지, 개발 묶음과 정확·근접 중복이 없는지, `--exclude` 검사, 조사, 문장 다양성, 재현성).

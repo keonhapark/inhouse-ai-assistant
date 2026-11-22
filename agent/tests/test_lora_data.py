@@ -87,8 +87,43 @@ def test_split_is_disjoint_and_cli_writes_files(tmp_path: Path, rows: list[dict]
     lines = (tmp_path / "train.jsonl").read_text("utf-8").splitlines() + \
         (tmp_path / "valid.jsonl").read_text("utf-8").splitlines()
     assert manifest["train"] + manifest["valid"] == len(lines) == 3 * len(gen.MAKERS)
+    # 저장소 밖 평가 묶음 경로는 남기지 않고 이름·해시·문장 수만
+    assert [e["name"] for e in manifest["excluded"]] == ["tool_calls.jsonl"]
+    assert str(tmp_path) not in json.dumps(manifest)
+
+
+def test_exclude_drops_exact_and_near_duplicates(tmp_path: Path) -> None:
+    bundle = tmp_path / "bundle.jsonl"
+    bundle.write_text(json.dumps({"utterance": "연차 며칠 남았어?"}, ensure_ascii=False) + "\n" +
+                      json.dumps({"utterance": "남은 휴가 일수 알려 줘"}, ensure_ascii=False) + "\n", "utf-8")
+    ex = gen.Excluded([bundle])
+    assert ex.hit("연차 며칠 남았어 ?")                 # 띄어쓰기·문장부호만 다름 → 정확 일치
+    assert ex.hit("남은 휴가 일수 알려 주세요")          # 말끝만 다름 → 근접 중복
+    assert not ex.hit("결재 doc-1234 회수해 줘")
+    assert ex.dropped == {"exact": 1, "near": 1}
+    rows = gen.generate(PACK_DIR, per_tool=12, seed=3, excluded=gen.Excluded([gen.DEV_SET, bundle]))
+    texts = [r["messages"][1]["content"] for r in rows]
+    assert not [t for t in texts if gen._norm(t) in {gen._norm("연차 며칠 남았어?"), gen._norm("남은 휴가 일수 알려 줘")}]
+
+
+def test_no_near_duplicate_of_dev_set(rows: list[dict]) -> None:
+    dev = gen.Excluded([gen.DEV_SET])
+    assert not [r["messages"][1]["content"] for r in rows if dev.hit(r["messages"][1]["content"])]
 
 
 def test_clarify_text_particle() -> None:
     assert gen.clarify_text(["사유"]) == "사유를 알려 주세요."
     assert gen.clarify_text(["날짜", "시간"]) == "날짜, 시간을 알려 주세요."
+
+
+def test_particles_follow_final_sound() -> None:
+    assert gen.ira("출장") == "출장이라" and gen.ira("휴가") == "휴가라"
+    assert gen.euro("결혼") == "결혼으로" and gen.euro("이사") == "이사로" and gen.euro("야근 식대") == "야근 식대로"
+    assert gen.euro("택배 발송") == "택배 발송으로" and gen.euro("회의실 A") == "회의실 A로"
+    assert gen.ieyo("감기 몸살") == "감기 몸살이에요" and gen.ieyo("두통") == "두통이에요"
+
+
+def test_utterances_are_varied(rows: list[dict]) -> None:
+    texts = [r["messages"][1]["content"] for r in rows]
+    assert len(set(texts)) >= 0.95 * len(texts)
+    assert not [t for t in texts if "부탁부탁" in t or "?." in t or "  " in t]
