@@ -44,3 +44,16 @@ uv run python lora/compare_runs.py ~/lora/base-nothink.jsonl ~/lora/lora-nothink
 - 내보내기(`export_ollama.py`): PEFT 어댑터를 llama.cpp `convert_lora_to_gguf.py`로 GGUF 어댑터로 바꾸고, Ollama API(`/api/blobs`, `/api/create`의 `adapters`)로 `qwen3.5:9b` 위에 얹은 모델을 만듭니다. 학습은 bf16 원본, 실행은 Q4_K_M 기본 모델이라 수치가 조금 다릅니다
 - 비교(`compare_runs.py`): `eval_dev/first_call_run.py` 두 실행의 개발 묶음 항목만 견줍니다(기대 도구, 되묻기 정답에서 도구 없이 답함, 지연, 좋아진·나빠진 항목). 확인 묶음 평가는 eval이 합니다
 - 의존성 판(`install_qlora.sh`): torch 2.14.1, transformers 5.22.2, peft 0.21.2, bitsandbytes 0.50.2, accelerate 1.15.0, gguf 0.19.0. 실제 판과 llama.cpp 커밋은 가상환경의 `install.json`에 남습니다
+
+### Kaggle에서 학습하기(#551)
+
+Kaggle 노트북(T4 x2)에 Ollama와 터널을 띄운 셀이 돌고 있을 때, 셀 하나로 학습부터 Ollama 등록까지 끝까지 가게 합니다. 셀 코드는 저장소 밖에 두고(노트북에 붙여 넣음), 순서는 아래와 같습니다.
+
+1. 디스크·GPU·Ollama 확인. 기본 모델(약 19GB)은 `/kaggle/working`(20GB) 밖(`HF_HOME=/tmp/hf`)에 받고, 사용 중 메모리가 가장 적은 GPU를 `CUDA_VISIBLE_DEVICES`로 고릅니다(Ollama가 덜 쓰는 쪽)
+2. 공개 저장소를 받아 커밋을 고정
+3. `QLORA_SYSTEM=1 bash lora/install_qlora.sh`: 새 가상환경 없이 Kaggle 파이썬에 학습 패키지와 llama.cpp `gguf-py`를 넣습니다(Kaggle torch 그대로)
+4. `uv run python lora/make_toolcall_data.py --out …`(agent는 파이썬 3.12가 필요해 uv로). 기본 시드, 개발 묶음만 대조합니다. 확인 묶음 겹침 검사는 eval이 따로 합니다(#544)
+5. `train_qlora.py --dry-run` 뒤 학습. 학습은 백그라운드로 돌리고 `--progress-minutes 3` 진행 줄(단계·손실·경과·남은 시간)을 셀 출력에 옮겨 적습니다. T4는 bf16이 없어 fp16으로 계산합니다
+6. `export_ollama.py --ollama http://localhost:11434`로 `qwen3.5-9b-toolcall-lora`를 만들고 `run.json`·`ollama.json` 요약을 출력합니다
+
+평가(개발 묶음, 생각 끔·켬, 기본 대비)는 GPU 사용권 `kaggle`을 받아 터널 주소로 `eval_dev/first_call_run.py`와 `lora/compare_runs.py`를 돌립니다.
