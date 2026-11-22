@@ -77,7 +77,8 @@ web이 부르는 유일한 서버입니다. 계약은 `contracts/openapi/gateway
     아니라 감사 `externalSent`는 false이고, 호출자는 `X-Cache: hit`이면 `X-Egress-Location`이 external이어도 외부 전송으로 세지 않습니다.
     찾았는데 없으면 `X-Cache: miss`입니다. 임베딩은 2초 안에 답하지 않거나 실패하면 캐시 없이 보냅니다. 만료 항목은 저장할 때마다 지웁니다.
     같은 사람 안에서도 숫자가 아닌 부분(이름·지명·승인과 반려)만 다른 문장은 임베딩이 비슷할 수 있어, 켜기 전에 문턱값을 잴 때 이런
-    음성 쌍(달라야 하는 쌍)에서 적중이 0건인 문턱을 고릅니다(#484). 문턱과 적중률은 아직 실제 임베딩으로 재지 않아 기본은 끔입니다.
+    음성 쌍(달라야 하는 쌍)에서 적중이 0건인 문턱을 고릅니다(#484). 2026-11-22 bge-m3 측정([bench/README.md](bench/README.md))에서
+    기본 0.95는 음성 쌍 1/23("이번 달/지난달 경비 합계")이 적중했고, 음성 0건인 0.96에서는 같은 뜻 쌍이 1/20만 적중해 기본은 끔입니다.
   - 별칭 설정 `model_info.drop_params`에 적은 필드는 보내기 전에 뺍니다. `external`(Claude Haiku 5.5)은 기본값이 아닌
     `temperature`·`top_p`를 400으로 거절해 둘을 뺍니다(LiteLLM 1.108.1도 빼지만 판이 바뀌어도 안전하게).
     `reasoning_effort`는 LiteLLM이 `thinking: adaptive`와 `output_config.effort`로 바꿔 넘깁니다(실측).

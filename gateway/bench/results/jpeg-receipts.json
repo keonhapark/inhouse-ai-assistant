@@ -1,0 +1,1605 @@
+{
+  "meta": {
+    "at": "2026-11-22T09:27:29+09:00",
+    "device": "코랩 T4, 터널 경유",
+    "commit": "6a4aee2",
+    "python": "3.12.3",
+    "model": "ollama_chat/qwen3.5:9b (Q4_K_M, vision)",
+    "litellm": "1.108.1",
+    "n": 40,
+    "font": "NotoSansKR-Regular.ttf sha256=9db318b65ee9c575a43e7efd273dbdd1afef26e467eea3e1073a50e1a6595f6d",
+    "originalJpegQuality": 90,
+    "recompressQuality": 95,
+    "reasoningEffort": "none"
+  },
+  "summary": {
+    "original": {
+      "amount": 36,
+      "date": 32,
+      "merchant": 33,
+      "bizNo": 38,
+      "allCorrect": 23,
+      "errors": 0,
+      "n": 40,
+      "medianSeconds": 3.31
+    },
+    "recompressed": {
+      "amount": 34,
+      "date": 31,
+      "merchant": 33,
+      "bizNo": 37,
+      "allCorrect": 25,
+      "errors": 0,
+      "n": 40,
+      "medianSeconds": 3.31
+    },
+    "allCorrectFlips": {
+      "originalOnly": 1,
+      "recompressedOnly": 3
+    },
+    "meanAbsPixelDiff": 0.091,
+    "exifGoneAll": true
+  },
+  "rows": [
+    {
+      "id": "rcp-dev-001",
+      "bytes": {
+        "original": 31662,
+        "recompressed": 40305
+      },
+      "meanAbsPixelDiff": 0.079,
+      "exifGone": true,
+      "original": {
+        "seconds": 9.5,
+        "error": null,
+        "prediction": {
+          "amount": 12300,
+          "date": "2027-02-24",
+          "merchant": "하늘빛안경",
+          "bizNo": "255-99-79421"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.63,
+        "error": null,
+        "prediction": {
+          "amount": 12300,
+          "date": "2027-02-24",
+          "merchant": "하늘빛안경",
+          "bizNo": "255-99-79421"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-002",
+      "bytes": {
+        "original": 26950,
+        "recompressed": 35392
+      },
+      "meanAbsPixelDiff": 0.079,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.13,
+        "error": null,
+        "prediction": {
+          "amount": 5827,
+          "date": "2026-09-30",
+          "merchant": "가맹점 바른마트 역삼점",
+          "bizNo": "581-31-95714"
+        },
+        "amount": false,
+        "date": true,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "original": {
+        "seconds": 3.23,
+        "error": null,
+        "prediction": {
+          "amount": 5727,
+          "date": "2026-09-30",
+          "merchant": "역삼점",
+          "bizNo": "581-31-95714"
+        },
+        "amount": false,
+        "date": true,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-003",
+      "bytes": {
+        "original": 41229,
+        "recompressed": 52465
+      },
+      "meanAbsPixelDiff": 0.083,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.32,
+        "error": null,
+        "prediction": {
+          "amount": 91956,
+          "date": "2024-03-27",
+          "merchant": "바른마트역삼점",
+          "bizNo": "486-13-06912"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "recompressed": {
+        "seconds": 3.36,
+        "error": null,
+        "prediction": {
+          "amount": 91956,
+          "date": "2024-03-27",
+          "merchant": "바른마트 역삼점",
+          "bizNo": "486-13-06912"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-004",
+      "bytes": {
+        "original": 36361,
+        "recompressed": 46876
+      },
+      "meanAbsPixelDiff": 0.069,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.75,
+        "error": null,
+        "prediction": {
+          "amount": 73489,
+          "date": "2026-11-25",
+          "merchant": "청솔한식뷔페",
+          "bizNo": "642-29-66239"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 3.85,
+        "error": null,
+        "prediction": {
+          "amount": 73489,
+          "date": "2026-11-25",
+          "merchant": "청솔한식뷔페",
+          "bizNo": "642-29-66239"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-005",
+      "bytes": {
+        "original": 36385,
+        "recompressed": 45888
+      },
+      "meanAbsPixelDiff": 0.055,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.37,
+        "error": null,
+        "prediction": {
+          "amount": 48400,
+          "date": "26/05/08",
+          "merchant": "한빛문구",
+          "bizNo": "484-82-16818"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.47,
+        "error": null,
+        "prediction": {
+          "amount": 48400,
+          "date": "2026-05-08",
+          "merchant": "한빛문구",
+          "bizNo": "484-82-16818"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-006",
+      "bytes": {
+        "original": 48953,
+        "recompressed": 63951
+      },
+      "meanAbsPixelDiff": 0.116,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.49,
+        "error": null,
+        "prediction": {
+          "amount": 75000,
+          "date": "2026-01-04",
+          "merchant": "새솔약국",
+          "bizNo": "729-70-84555"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 3.46,
+        "error": null,
+        "prediction": {
+          "amount": 75000,
+          "date": "2026-01-04",
+          "merchant": "새솔약국",
+          "bizNo": "729-70-84555"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-007",
+      "bytes": {
+        "original": 42469,
+        "recompressed": 54139
+      },
+      "meanAbsPixelDiff": 0.137,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.55,
+        "error": null,
+        "prediction": {
+          "amount": 43378,
+          "date": "2026-10-07",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "724-61-15726"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.2,
+        "error": null,
+        "prediction": {
+          "amount": 43378,
+          "date": "20261007",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "724-61-15726"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-008",
+      "bytes": {
+        "original": 56972,
+        "recompressed": 73034
+      },
+      "meanAbsPixelDiff": 0.128,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 4.34,
+        "error": null,
+        "prediction": {
+          "amount": 126500,
+          "date": "2026-01-15",
+          "merchant": "한빛문구",
+          "bizNo": "448-30-37967"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 4.48,
+        "error": null,
+        "prediction": {
+          "amount": 126500,
+          "date": "2026-01-15",
+          "merchant": "한빛문구",
+          "bizNo": "448-30-37967"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-009",
+      "bytes": {
+        "original": 38331,
+        "recompressed": 50191
+      },
+      "meanAbsPixelDiff": 0.122,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.32,
+        "error": null,
+        "prediction": {
+          "amount": 13689,
+          "date": "2026-07-16",
+          "merchant": "은하분식",
+          "bizNo": null
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": false,
+        "allCorrect": false
+      },
+      "recompressed": {
+        "seconds": 3.1,
+        "error": null,
+        "prediction": {
+          "amount": 13689,
+          "date": "2026-07-16",
+          "merchant": "은하분식",
+          "bizNo": "890-07-50917"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-010",
+      "bytes": {
+        "original": 27042,
+        "recompressed": 34056
+      },
+      "meanAbsPixelDiff": 0.067,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.03,
+        "error": null,
+        "prediction": {
+          "amount": 30900,
+          "date": "2026-06-23",
+          "merchant": "가맹점 온누리편의점 서초점",
+          "bizNo": null
+        },
+        "amount": true,
+        "date": true,
+        "merchant": false,
+        "bizNo": false,
+        "allCorrect": false
+      },
+      "original": {
+        "seconds": 3.54,
+        "error": null,
+        "prediction": {
+          "amount": 32809,
+          "date": "2026-06-23",
+          "merchant": "가맹점 온누리편의점 서초점",
+          "bizNo": "159-75-37296"
+        },
+        "amount": false,
+        "date": true,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-011",
+      "bytes": {
+        "original": 26170,
+        "recompressed": 33061
+      },
+      "meanAbsPixelDiff": 0.06,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.28,
+        "error": null,
+        "prediction": {
+          "amount": 20000,
+          "date": "2009-03-26",
+          "merchant": "늘봄베이커리",
+          "bizNo": "523-92-80690"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "recompressed": {
+        "seconds": 3.0,
+        "error": null,
+        "prediction": {
+          "amount": 20000,
+          "date": "2009-03-26",
+          "merchant": "늘봄베이커리",
+          "bizNo": "523-92-80690"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-012",
+      "bytes": {
+        "original": 36063,
+        "recompressed": 45909
+      },
+      "meanAbsPixelDiff": 0.144,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 2.87,
+        "error": null,
+        "prediction": {
+          "amount": 31636,
+          "date": "2026-03-17",
+          "merchant": "가맹점 다래서점",
+          "bizNo": "null"
+        },
+        "amount": false,
+        "date": true,
+        "merchant": false,
+        "bizNo": false,
+        "allCorrect": false
+      },
+      "original": {
+        "seconds": 3.26,
+        "error": null,
+        "prediction": {
+          "amount": 31636,
+          "date": "2026-03-17",
+          "merchant": "다래서점",
+          "bizNo": "251-90-72592"
+        },
+        "amount": false,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-013",
+      "bytes": {
+        "original": 33463,
+        "recompressed": 43655
+      },
+      "meanAbsPixelDiff": 0.067,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.42,
+        "error": null,
+        "prediction": {
+          "amount": 34300,
+          "date": "2026-10-04",
+          "merchant": "(주)나래상사",
+          "bizNo": "711-35-64519"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 4.2,
+        "error": null,
+        "prediction": {
+          "amount": 34300,
+          "date": "2026-10-04",
+          "merchant": "(주)나래상사",
+          "bizNo": "711-35-64519"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-014",
+      "bytes": {
+        "original": 21666,
+        "recompressed": 26696
+      },
+      "meanAbsPixelDiff": 0.045,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.46,
+        "error": null,
+        "prediction": {
+          "amount": 7000,
+          "date": "2026-01-27",
+          "merchant": "(주)솔빛유통",
+          "bizNo": "713-23-70504"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 3.2,
+        "error": null,
+        "prediction": {
+          "amount": 7000,
+          "date": "2026-01-27",
+          "merchant": " (주)솔빛유통",
+          "bizNo": "713-23-70504"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-015",
+      "bytes": {
+        "original": 38645,
+        "recompressed": 50998
+      },
+      "meanAbsPixelDiff": 0.144,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.04,
+        "error": null,
+        "prediction": {
+          "amount": 5391,
+          "date": "2026-12-09",
+          "merchant": "다래서점",
+          "bizNo": "874-69-91097"
+        },
+        "amount": false,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "recompressed": {
+        "seconds": 2.99,
+        "error": null,
+        "prediction": {
+          "amount": 5391,
+          "date": "2026-12-09",
+          "merchant": "다래서점",
+          "bizNo": "874-69-91097"
+        },
+        "amount": false,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-016",
+      "bytes": {
+        "original": 34298,
+        "recompressed": 43031
+      },
+      "meanAbsPixelDiff": 0.053,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.6,
+        "error": null,
+        "prediction": {
+          "amount": 75500,
+          "date": "2026-05-04",
+          "merchant": "푸른주유소",
+          "bizNo": "709-73-08189"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 3.64,
+        "error": null,
+        "prediction": {
+          "amount": 75500,
+          "date": "2026-05-04",
+          "merchant": "푸른주유소",
+          "bizNo": "709-73-08189"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-017",
+      "bytes": {
+        "original": 37477,
+        "recompressed": 49058
+      },
+      "meanAbsPixelDiff": 0.129,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.31,
+        "error": null,
+        "prediction": {
+          "amount": 19000,
+          "date": "2007-01-27",
+          "merchant": "하늘빛안경",
+          "bizNo": "349-20-79147"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "recompressed": {
+        "seconds": 3.26,
+        "error": null,
+        "prediction": {
+          "amount": 19000,
+          "date": "27/01/07",
+          "merchant": "하늘빛안경",
+          "bizNo": "349-20-79147"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-018",
+      "bytes": {
+        "original": 43663,
+        "recompressed": 55107
+      },
+      "meanAbsPixelDiff": 0.131,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.21,
+        "error": null,
+        "prediction": {
+          "amount": 117400,
+          "date": "2024-02-26",
+          "merchant": "새솔약국",
+          "bizNo": "480-12-74827"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "original": {
+        "seconds": 3.45,
+        "error": null,
+        "prediction": {
+          "amount": 117400,
+          "date": "2024-02-26",
+          "merchant": "새솔약국",
+          "bizNo": "480-12-74827"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-019",
+      "bytes": {
+        "original": 31956,
+        "recompressed": 40448
+      },
+      "meanAbsPixelDiff": 0.102,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.02,
+        "error": null,
+        "prediction": {
+          "amount": 77600,
+          "date": "2026-02-07",
+          "merchant": "새벽택배 영업소",
+          "bizNo": "596-50-41472"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.01,
+        "error": null,
+        "prediction": {
+          "amount": 77600,
+          "date": "2026-02-07",
+          "merchant": "새벽택배 영업소",
+          "bizNo": "596-50-41472"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-020",
+      "bytes": {
+        "original": 34835,
+        "recompressed": 44262
+      },
+      "meanAbsPixelDiff": 0.083,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.19,
+        "error": null,
+        "prediction": {
+          "amount": 18000,
+          "date": "2026-10-20",
+          "merchant": "(주)나래상사",
+          "bizNo": "537-64-28803"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 3.25,
+        "error": null,
+        "prediction": {
+          "amount": 18000,
+          "date": "2026-10-20",
+          "merchant": "(주)나래상사",
+          "bizNo": "537-64-28803"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-021",
+      "bytes": {
+        "original": 50376,
+        "recompressed": 64144
+      },
+      "meanAbsPixelDiff": 0.102,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.38,
+        "error": null,
+        "prediction": {
+          "amount": 68900,
+          "date": "2026-10-24",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "414-24-22010"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.43,
+        "error": null,
+        "prediction": {
+          "amount": 68900,
+          "date": "2026-10-24",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "414-24-22010"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-022",
+      "bytes": {
+        "original": 25810,
+        "recompressed": 32084
+      },
+      "meanAbsPixelDiff": 0.049,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.73,
+        "error": null,
+        "prediction": {
+          "amount": 30000,
+          "date": "2026-10-27",
+          "merchant": "모아철물",
+          "bizNo": "874-48-38632"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 3.0,
+        "error": null,
+        "prediction": {
+          "amount": 30000,
+          "date": "2026-10-27",
+          "merchant": "모아철물",
+          "bizNo": "874-48-38632"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-023",
+      "bytes": {
+        "original": 23646,
+        "recompressed": 29553
+      },
+      "meanAbsPixelDiff": 0.048,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.08,
+        "error": null,
+        "prediction": {
+          "amount": 75000,
+          "date": "2026-01-26",
+          "merchant": "은하분식",
+          "bizNo": "539-05-60253"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 4.53,
+        "error": null,
+        "prediction": {
+          "amount": 75000,
+          "date": "2026-01-26",
+          "merchant": "은하분식",
+          "bizNo": "539-05-60253"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-024",
+      "bytes": {
+        "original": 29142,
+        "recompressed": 36766
+      },
+      "meanAbsPixelDiff": 0.054,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.31,
+        "error": null,
+        "prediction": {
+          "amount": 25000,
+          "date": "2026-02-23",
+          "merchant": "바른마트 역삼점",
+          "bizNo": "603-78-38395"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 3.26,
+        "error": null,
+        "prediction": {
+          "amount": 25000,
+          "date": "2026-02-23",
+          "merchant": "바른마트역삼점",
+          "bizNo": "603-78-38395"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-025",
+      "bytes": {
+        "original": 43525,
+        "recompressed": 56393
+      },
+      "meanAbsPixelDiff": 0.132,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.17,
+        "error": null,
+        "prediction": {
+          "amount": 41800,
+          "date": "2026-01-19",
+          "merchant": "새벽택배 영업소",
+          "bizNo": "863-31-97424"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.21,
+        "error": null,
+        "prediction": {
+          "amount": 41800,
+          "date": "2026.01.19",
+          "merchant": "새벽택배 영업소",
+          "bizNo": "863-31-97424"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-026",
+      "bytes": {
+        "original": 36198,
+        "recompressed": 47605
+      },
+      "meanAbsPixelDiff": 0.135,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.45,
+        "error": null,
+        "prediction": {
+          "amount": 65489,
+          "date": "2026-09-09",
+          "merchant": "가맹점 한결세탁",
+          "bizNo": "313-62-16158"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "original": {
+        "seconds": 3.41,
+        "error": null,
+        "prediction": {
+          "amount": 65489,
+          "date": "2026-09-09",
+          "merchant": "가맹점 한결세탁",
+          "bizNo": "313-62-16158"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-027",
+      "bytes": {
+        "original": 28647,
+        "recompressed": 37594
+      },
+      "meanAbsPixelDiff": 0.07,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.18,
+        "error": null,
+        "prediction": {
+          "amount": 5378,
+          "date": "2026-06-01",
+          "merchant": "늘봄베이커리",
+          "bizNo": "881-75-08919"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.31,
+        "error": null,
+        "prediction": {
+          "amount": 5378,
+          "date": "2026-06-01",
+          "merchant": "늘봄베이커리",
+          "bizNo": "881-75-08919"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-028",
+      "bytes": {
+        "original": 35279,
+        "recompressed": 44681
+      },
+      "meanAbsPixelDiff": 0.092,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.21,
+        "error": null,
+        "prediction": {
+          "amount": 30000,
+          "date": "2026-06-13",
+          "merchant": "청솔한식뷔페",
+          "bizNo": "358-38-20077"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 2.7,
+        "error": null,
+        "prediction": {
+          "amount": 30000,
+          "date": "2026-06-13",
+          "merchant": "청솔한식뷔페",
+          "bizNo": null
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": false,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-029",
+      "bytes": {
+        "original": 33342,
+        "recompressed": 42045
+      },
+      "meanAbsPixelDiff": 0.145,
+      "exifGone": true,
+      "original": {
+        "seconds": 2.87,
+        "error": null,
+        "prediction": {
+          "amount": 3600,
+          "date": "2024-07-27",
+          "merchant": "한빛문구",
+          "bizNo": "176-71-12671"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "recompressed": {
+        "seconds": 3.62,
+        "error": null,
+        "prediction": {
+          "amount": 3600,
+          "date": "2027-07-26",
+          "merchant": "한빛문구",
+          "bizNo": "176-71-12671"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-030",
+      "bytes": {
+        "original": 27219,
+        "recompressed": 34350
+      },
+      "meanAbsPixelDiff": 0.064,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.42,
+        "error": null,
+        "prediction": {
+          "amount": 32067,
+          "date": "2016-12-26",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "190-62-93208"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "original": {
+        "seconds": 3.18,
+        "error": null,
+        "prediction": {
+          "amount": 32067,
+          "date": "2016-12-26",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "190-62-93208"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-031",
+      "bytes": {
+        "original": 35893,
+        "recompressed": 45771
+      },
+      "meanAbsPixelDiff": 0.13,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.23,
+        "error": null,
+        "prediction": {
+          "amount": 19200,
+          "date": "2026-04-25",
+          "merchant": "들꽃꽃집",
+          "bizNo": "274-93-61459"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.24,
+        "error": null,
+        "prediction": {
+          "amount": 19200,
+          "date": "2026-04-25",
+          "merchant": "들꽃꽃집",
+          "bizNo": "274-93-61459"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-032",
+      "bytes": {
+        "original": 26235,
+        "recompressed": 33117
+      },
+      "meanAbsPixelDiff": 0.062,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 2.82,
+        "error": null,
+        "prediction": {
+          "amount": 123955,
+          "date": "2017-08-26",
+          "merchant": "가맹점 다운카페 본점",
+          "bizNo": null
+        },
+        "amount": false,
+        "date": false,
+        "merchant": false,
+        "bizNo": false,
+        "allCorrect": false
+      },
+      "original": {
+        "seconds": 3.49,
+        "error": null,
+        "prediction": {
+          "amount": 113900,
+          "date": "2017-08-26",
+          "merchant": "다운카페 본점",
+          "bizNo": "348-31-86471"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-033",
+      "bytes": {
+        "original": 25193,
+        "recompressed": 31464
+      },
+      "meanAbsPixelDiff": 0.062,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.04,
+        "error": null,
+        "prediction": {
+          "amount": 27000,
+          "date": "2031-03-27",
+          "merchant": "다운카페 본점",
+          "bizNo": "884-31-76576"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "recompressed": {
+        "seconds": 3.0,
+        "error": null,
+        "prediction": {
+          "amount": 27455,
+          "date": "2023-03-27",
+          "merchant": "다운카фе 본점",
+          "bizNo": "884-31-76576"
+        },
+        "amount": false,
+        "date": false,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-034",
+      "bytes": {
+        "original": 34844,
+        "recompressed": 44265
+      },
+      "meanAbsPixelDiff": 0.143,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.29,
+        "error": null,
+        "prediction": {
+          "amount": 44073,
+          "date": "2026-10-18",
+          "merchant": "하늘빛안경",
+          "bizNo": "477-72-51138"
+        },
+        "amount": false,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "original": {
+        "seconds": 3.41,
+        "error": null,
+        "prediction": {
+          "amount": 40400,
+          "date": "2026-10-18",
+          "merchant": "가맹점 하늘빛안경",
+          "bizNo": "477-72-51138"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    },
+    {
+      "id": "rcp-dev-035",
+      "bytes": {
+        "original": 36483,
+        "recompressed": 46056
+      },
+      "meanAbsPixelDiff": 0.055,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.35,
+        "error": null,
+        "prediction": {
+          "amount": 27956,
+          "date": "2027-02-19",
+          "merchant": "가람식당",
+          "bizNo": "117-57-66755"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.37,
+        "error": null,
+        "prediction": {
+          "amount": 27956,
+          "date": "2027-02-19",
+          "merchant": "가람식당",
+          "bizNo": "117-57-66755"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-036",
+      "bytes": {
+        "original": 33871,
+        "recompressed": 43166
+      },
+      "meanAbsPixelDiff": 0.102,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.39,
+        "error": null,
+        "prediction": {
+          "amount": 25300,
+          "date": "2026-11-05",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "796-43-29333"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 3.16,
+        "error": null,
+        "prediction": {
+          "amount": 25300,
+          "date": "2026.11.05",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "796-43-29333"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-037",
+      "bytes": {
+        "original": 37049,
+        "recompressed": 46960
+      },
+      "meanAbsPixelDiff": 0.078,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.65,
+        "error": null,
+        "prediction": {
+          "amount": 44000,
+          "date": "2026-05-11",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "173-49-96803"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 4.31,
+        "error": null,
+        "prediction": {
+          "amount": 44000,
+          "date": "2026-05-11",
+          "merchant": "온누리편의점 서초점",
+          "bizNo": "173-49-96803"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-038",
+      "bytes": {
+        "original": 24933,
+        "recompressed": 31284
+      },
+      "meanAbsPixelDiff": 0.061,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.28,
+        "error": null,
+        "prediction": {
+          "amount": 26600,
+          "date": "2026-05-27",
+          "merchant": "새솔약국",
+          "bizNo": "566-70-61698"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "original": {
+        "seconds": 3.31,
+        "error": null,
+        "prediction": {
+          "amount": 26600,
+          "date": "2026-05-27",
+          "merchant": "새솔약국",
+          "bizNo": "566-70-61698"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-039",
+      "bytes": {
+        "original": 32942,
+        "recompressed": 43328
+      },
+      "meanAbsPixelDiff": 0.111,
+      "exifGone": true,
+      "original": {
+        "seconds": 3.26,
+        "error": null,
+        "prediction": {
+          "amount": 4000,
+          "date": "2026-04-09",
+          "merchant": "은하분식",
+          "bizNo": "521-42-19684"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      },
+      "recompressed": {
+        "seconds": 3.25,
+        "error": null,
+        "prediction": {
+          "amount": 4000,
+          "date": "2026-04-09",
+          "merchant": "은하분식",
+          "bizNo": "521-42-19684"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": true,
+        "bizNo": true,
+        "allCorrect": true
+      }
+    },
+    {
+      "id": "rcp-dev-040",
+      "bytes": {
+        "original": 23277,
+        "recompressed": 28844
+      },
+      "meanAbsPixelDiff": 0.058,
+      "exifGone": true,
+      "recompressed": {
+        "seconds": 3.03,
+        "error": null,
+        "prediction": {
+          "amount": 55800,
+          "date": "2002-03-27",
+          "merchant": "가맹점 모아철물",
+          "bizNo": "271-56-89017"
+        },
+        "amount": true,
+        "date": false,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      },
+      "original": {
+        "seconds": 3.79,
+        "error": null,
+        "prediction": {
+          "amount": 55800,
+          "date": "2027-03-02",
+          "merchant": "가맹점 모아철물",
+          "bizNo": "271-56-89017"
+        },
+        "amount": true,
+        "date": true,
+        "merchant": false,
+        "bizNo": true,
+        "allCorrect": false
+      }
+    }
+  ]
+}
