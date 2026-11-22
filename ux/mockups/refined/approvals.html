@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>결재 · 다듬은 판 시안</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="refined.css">
+</head>
+<body class="screen-approvals">
+<div class="app">
+<aside class="sidebar" aria-label="메뉴">
+    <div class="brand"><span class="brand__mark" aria-hidden="true"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /> <path d="M20 2v4" /> <path d="M22 4h-4" /> <circle cx="4" cy="20" r="2" /> </svg></span><b>한결정밀</b></div>
+    <button class="search" type="button"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="m21 21-4.34-4.34" /> <circle cx="11" cy="11" r="8" /> </svg><span>찾기·이동</span><kbd>Ctrl K</kbd></button>
+    <nav class="nav"><div><div class="nav__label">업무</div><a class="nav__item" href="#"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /> <path d="M20 2v4" /> <path d="M22 4h-4" /> <circle cx="4" cy="20" r="2" /> </svg><span>AI 비서</span></a><a class="nav__item is-active" href="#" aria-current="page"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /> <path d="M14 2v5a1 1 0 0 0 1 1h5" /> <path d="m9 15 2 2 4-4" /> </svg><span>결재</span><span class="nav__count" aria-label="결재 대기 3건">3</span></a><a class="nav__item" href="#"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="m16 3 4 4-4 4" /> <path d="M20 7H4" /> <path d="m8 21-4-4 4-4" /> <path d="M4 17h16" /> </svg><span>대결 설정</span></a></div><div><div class="nav__label">회사</div><a class="nav__item" href="#"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 12h4" /> <path d="M10 8h4" /> <path d="M14 21v-3a2 2 0 0 0-4 0v3" /> <path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2" /> <path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" /> </svg><span>조직도</span></a><a class="nav__item" href="#"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg><span>AI 에이전트</span></a></div></nav>
+    <div class="me"><span class="avatar">도윤</span><span class="me__text"><b>서도윤</b><span>생산관리팀 팀장</span></span></div>
+  </aside>
+<main class="main">
+    <header class="toolbar"><h1>결재</h1><span class="toolbar__spacer"></span><div class="seg" role="tablist" aria-label="결재함">
+    <button class="is-on" role="tab" aria-selected="true" type="button">결재 대기 <span class="n">3</span></button>
+    <button role="tab" aria-selected="false" type="button">대결 대기 <span class="n">1</span></button>
+    <button role="tab" aria-selected="false" type="button">결재 완료</button>
+    <button role="tab" aria-selected="false" type="button">기안함</button>
+  </div><span class="toolbar__spacer"></span><button class="icon-btn" type="button" aria-label="알림, 새 알림 있음"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10.268 21a2 2 0 0 0 3.464 0" /> <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" /> </svg><i class="ping"></i></button></header>
+    <div class="approvals">
+      <section class="list-pane" aria-label="결재 목록">
+        <p class="pane-note"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="m16 3 4 4-4 4" /> <path d="M20 7H4" /> <path d="m8 21-4-4 4-4" /> <path d="M4 17h16" /> </svg>11월 24일까지 윤서진 팀장의 대결자입니다. 대결 대기 1건</p>
+        <ul class="group rows"><li class="doc-row is-selected"><a href="#" aria-current="true">
+      <span class="ico"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M12 17V7" /> <path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8" /> <path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z" /> </svg></span>
+      <span><span class="doc-row__title">팀 점심 식대<span class="tag"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <rect width="18" height="18" x="3" y="3" rx="2" ry="2" /> <circle cx="9" cy="9" r="2" /> <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /> </svg>사진에서 읽은 값</span></span><span class="doc-row__sub">경비 정산 · 오지현</span></span>
+      <span class="doc-row__amt">42,000원<small>18분 전</small></span></a></li><li class="doc-row"><a href="#">
+      <span class="ico"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M16 2v3" /> <path d="M17 15.5v1.7l1 .625" /> <path d="M21 8.936V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h3.935" /> <path d="M3 9h9.873" /> <path d="M8 2v3" /> <circle cx="17" cy="17" r="5" /> </svg></span>
+      <span><span class="doc-row__title">연차 11월 26일~27일</span><span class="doc-row__sub">휴가 신청 · 김태윤</span></span>
+      <span class="doc-row__amt">2일<small>어제</small></span></a></li><li class="doc-row"><a href="#">
+      <span class="ico"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /> <path d="M12 22V12" /> <polyline points="3.29 7 12 12 20.71 7" /> <path d="m7.5 4.27 9 5.15" /> </svg></span>
+      <span><span class="doc-row__title">오일 실 35×52×8 200개</span><span class="doc-row__sub">구매 요청 · 박세영 · 결재선 1/2</span></span>
+      <span class="doc-row__amt">380,000원<small>11월 18일</small></span></a></li></ul>
+        <div><h2 class="group__head"><span>오늘 결재 완료</span><span>3건</span></h2><ul class="group rows rows--muted"><li class="doc-row"><a href="#">
+      <span class="ico"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M16 2v3" /> <path d="M17 15.5v1.7l1 .625" /> <path d="M21 8.936V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h3.935" /> <path d="M3 9h9.873" /> <path d="M8 2v3" /> <circle cx="17" cy="17" r="5" /> </svg></span>
+      <span><span class="doc-row__title">오후 반차 11월 23일</span><span class="doc-row__sub">휴가 신청 · 김태윤</span></span>
+      <span class="doc-row__amt"><span class="status status--green">승인</span><small>오늘 09:12</small></span></a></li><li class="doc-row"><a href="#">
+      <span class="ico"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M12 17V7" /> <path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8" /> <path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z" /> </svg></span>
+      <span><span class="doc-row__title">창원 출장 교통비</span><span class="doc-row__sub">경비 정산 · 박세영 · 86,400원</span></span>
+      <span class="doc-row__amt"><span class="status status--green">승인</span><small>오늘 08:57</small></span></a></li><li class="doc-row"><a href="#">
+      <span class="ico"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /> <path d="M12 22V12" /> <polyline points="3.29 7 12 12 20.71 7" /> <path d="m7.5 4.27 9 5.15" /> </svg></span>
+      <span><span class="doc-row__title">버니어 캘리퍼스 2개</span><span class="doc-row__sub">구매 요청 · 이준서 · 214,000원</span></span>
+      <span class="doc-row__amt"><span class="status status--red">반려</span><small>오늘 08:40</small></span></a></li></ul></div>
+      </section>
+      <article class="detail" aria-label="결재 문서: 팀 점심 식대">
+        <div class="detail__scroll">
+          <header>
+            <p class="detail__kicker"><span>경비 정산</span><span class="tnum">EXP-0107</span><span class="status status--blue">결재 대기</span></p>
+            <h2>팀 점심 식대</h2>
+            <div class="detail__who"><span class="avatar">지현</span><b>오지현</b><span>생산관리팀, 2026년 11월 20일 12:44 상신</span></div>
+            <ol class="timeline" aria-label="결재선">
+              <li class="done"><span class="dot"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M20 6 9 17l-5-5" /> </svg></span><b>오지현</b><small>기안</small></li>
+              <li class="now"><span class="dot"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <circle cx="12" cy="12" r="10" /> <path d="M12 6v6l4 2" /> </svg></span><b>서도윤 팀장</b><small>결재 대기</small></li>
+            </ol>
+          </header>
+          <div class="amount-hero"><b>42,000원</b><span>1인 10,500원 / 한도 15,000원 <svg class="i ok" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <circle cx="12" cy="12" r="10" /> <path d="m16 9-5.5 5.5L8 12" /> </svg>식대 한도 안</span></div>
+          <div class="detail__grid">
+            <div>
+              <ul class="group rows"><li class="row"><span class="row__label">가맹점</span><span class="row__value">가온식당 성수점</span></li><li class="row"><span class="row__label">사용일</span><span class="row__value">2026년 11월 19일 (목)</span></li><li class="row"><span class="row__label">용도</span><span class="row__value">식대, 팀 점심 4명</span></li><li class="row"><span class="row__label">사업자번호</span><span class="row__value">123-45-67890</span></li><li class="row"><span class="row__label">결제 수단</span><span class="row__value">법인카드 ****-1460</span></li><li class="row"><span class="row__label">참석자</span><span class="row__value">오지현 외 3명</span></li><li class="row"><span class="row__label">계정과목</span><span class="row__value">복리후생비(식대)</span></li></ul>
+              <p class="note"><svg class="i " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /> <path d="M20 2v4" /> <path d="M22 4h-4" /> <circle cx="4" cy="20" r="2" /> </svg><span>AI 비서가 사진에서 읽고 기안자가 확인했습니다.</span></p>
+            </div>
+            <div class="receipt-wrap"><svg class="receipt" viewBox="0 0 200 284" width="120" height="170" role="img" aria-label="영수증 사진: 가온식당 성수점, 합계 42,000원">
+  <defs><filter id="paper"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/><feColorMatrix in="n" type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer><feBlend in="SourceGraphic" mode="multiply"/></filter></defs>
+  <g transform="rotate(-1.2 100 142)">
+    <path d="M4 2h192v272l-8 6-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6z" fill="#FBFAF7" stroke="#D9D6CF" stroke-width=".8" filter="url(#paper)"/>
+    <g font-size="9.5" fill="#33302B" font-family="inherit">
+      <text x="100" y="24" text-anchor="middle" font-size="12" font-weight="700">가온식당 성수점</text>
+      <text x="100" y="40" text-anchor="middle" fill="#6B665D">사업자 123-45-67890</text>
+      <text x="100" y="53" text-anchor="middle" fill="#6B665D">서울 성동구 성수이로 00</text>
+      <text x="14" y="78">2026-11-19 12:38</text>
+      <line x1="14" x2="186" y1="90" y2="90" stroke="#B9B4AA" stroke-dasharray="2 2"/>
+      <text x="14" y="104" fill="#6B665D">품목</text><text x="128" y="104" text-anchor="end" fill="#6B665D">수량</text><text x="186" y="104" text-anchor="end" fill="#6B665D">금액</text>
+      <text x="14" y="118">점심 정식</text><text x="128" y="118" text-anchor="end">4</text><text x="186" y="118" text-anchor="end">40,000</text><text x="14" y="134">공깃밥 추가</text><text x="128" y="134" text-anchor="end">2</text><text x="186" y="134" text-anchor="end">2,000</text>
+      <line x1="14" x2="186" y1="160" y2="160" stroke="#B9B4AA" stroke-dasharray="2 2"/>
+      <text x="14" y="180" font-size="11.5" font-weight="700">합계</text><text x="186" y="180" text-anchor="end" font-size="11.5" font-weight="700">42,000원</text>
+      <text x="14" y="198" fill="#6B665D">법인카드 ****-1460</text>
+      <text x="14" y="212" fill="#6B665D">승인 12:38 일시불</text>
+      <g fill="#33302B"><rect x="22" y="230" width="2.8" height="22"/><rect x="26.6" y="230" width="1.6" height="22"/><rect x="31.2" y="230" width="1.6" height="22"/><rect x="35.8" y="230" width="2.8" height="22"/><rect x="40.4" y="230" width="1.6" height="22"/><rect x="45" y="230" width="1.6" height="22"/><rect x="49.599999999999994" y="230" width="2.8" height="22"/><rect x="54.199999999999996" y="230" width="1.6" height="22"/><rect x="58.8" y="230" width="1.6" height="22"/><rect x="63.4" y="230" width="2.8" height="22"/><rect x="68" y="230" width="1.6" height="22"/><rect x="72.6" y="230" width="1.6" height="22"/><rect x="77.19999999999999" y="230" width="2.8" height="22"/><rect x="81.8" y="230" width="1.6" height="22"/><rect x="86.39999999999999" y="230" width="1.6" height="22"/><rect x="91" y="230" width="2.8" height="22"/><rect x="95.6" y="230" width="1.6" height="22"/><rect x="100.19999999999999" y="230" width="1.6" height="22"/><rect x="104.8" y="230" width="2.8" height="22"/><rect x="109.39999999999999" y="230" width="1.6" height="22"/><rect x="114" y="230" width="1.6" height="22"/><rect x="118.6" y="230" width="2.8" height="22"/><rect x="123.19999999999999" y="230" width="1.6" height="22"/><rect x="127.8" y="230" width="1.6" height="22"/><rect x="132.39999999999998" y="230" width="2.8" height="22"/><rect x="137" y="230" width="1.6" height="22"/><rect x="141.6" y="230" width="1.6" height="22"/><rect x="146.2" y="230" width="2.8" height="22"/><rect x="150.79999999999998" y="230" width="1.6" height="22"/><rect x="155.39999999999998" y="230" width="1.6" height="22"/><rect x="160" y="230" width="2.8" height="22"/><rect x="164.6" y="230" width="1.6" height="22"/><rect x="169.2" y="230" width="1.6" height="22"/><rect x="173.79999999999998" y="230" width="2.8" height="22"/></g>
+    </g>
+  </g>
+</svg><button class="btn btn--link" type="button">크게 보기</button></div>
+          </div>
+        </div>
+        <footer class="detail__foot">
+          <div class="detail__opinion">
+            <label class="sr-only" for="opinion">의견</label>
+            <textarea id="opinion" rows="1" placeholder="의견"></textarea>
+            <small>반려할 때는 반려 사유를 적어 주세요</small>
+          </div>
+          <button class="btn btn--danger" type="button">반려</button>
+          <button class="btn btn--primary is-pressed" type="button" aria-expanded="true">승인</button>
+        </footer>
+        <div class="popover" role="dialog" aria-labelledby="pop-t">
+          <div><h3 id="pop-t">42,000원 경비 정산을 승인할까요?</h3><p>승인하면 결재가 끝나고, 승인은 취소할 수 없습니다.</p></div>
+          <div class="popover__actions"><button class="btn btn--plain btn--sm" type="button">취소</button><button class="btn btn--primary btn--sm" type="button">승인</button></div>
+        </div>
+      </article>
+    </div>
+  </main>
+</div>
+</body>
+</html>

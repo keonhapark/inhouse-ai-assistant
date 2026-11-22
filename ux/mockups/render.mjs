@@ -7,17 +7,22 @@ import { DIRECTIONS } from './src/templates.mjs'
 
 const here = import.meta.dirname
 const font = pathToFileURL(resolve(here, '../../web/node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2')).href
-const dirs = process.argv[2]?.split(',') ?? Object.keys(DIRECTIONS)
+const dirs = process.argv[2]?.split(',') ?? [...Object.keys(DIRECTIONS), 'refined']
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
 // 바깥 서체 CDN을 막고 로컬 서체로 그립니다(네트워크와 관계없이 같은 그림).
 await page.route(/cdn\.jsdelivr\.net/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }))
 for (const dir of dirs) {
+  // 다듬은 판은 밝음·어두움을 둘 다 찍습니다(chat-light.png, chat-dark.png …).
+  const schemes = dir === 'refined' ? ['light', 'dark'] : [null]
   for (const screen of ['chat', 'approvals']) {
-    await page.goto(pathToFileURL(resolve(here, dir, `${screen}.html`)).href)
-    await page.addStyleTag({ content: `@font-face{font-family:'Pretendard Variable';src:url(${font}) format('woff2');font-weight:45 920}` })
-    await page.evaluate(() => document.fonts.ready)
-    await page.screenshot({ path: resolve(here, dir, `${screen}.png`) })
+    for (const scheme of schemes) {
+      await page.emulateMedia({ colorScheme: scheme ?? 'light' })
+      await page.goto(pathToFileURL(resolve(here, dir, `${screen}.html`)).href)
+      await page.addStyleTag({ content: `@font-face{font-family:'Pretendard Variable';src:url(${font}) format('woff2');font-weight:45 920}` })
+      await page.evaluate(() => document.fonts.ready)
+      await page.screenshot({ path: resolve(here, dir, scheme ? `${screen}-${scheme}.png` : `${screen}.png`) })
+    }
   }
 }
 await browser.close()

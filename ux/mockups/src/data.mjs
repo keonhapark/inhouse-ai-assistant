@@ -1,6 +1,6 @@
 // 시안에 채우는 가상 데이터입니다. 회사·사람·가게는 모두 지어낸 것이고, 사업자번호는 예시 번호입니다.
 // 이야기 하나로 이어집니다: 직원 오지현이 팀 점심 영수증으로 경비 정산을 올리고(AI 비서),
-// 팀장 서도윤이 결재 화면에서 그 문서를 받아 승인합니다(결재).
+// 팀장 서도윤이 결재 화면에서 그 문서를 받아 승인합니다(결재). 오늘은 2026년 11월 20일(금)입니다.
 
 export const company = { name: '한결정밀', product: '사내 AI 비서' }
 
@@ -28,9 +28,9 @@ export const nav = [
 export const conversations = [
   { title: '팀 점심 식대 정산', agent: '재무', status: '확인 기다림', tone: 'attention', when: '12:41', active: true },
   { title: '3층 소회의실 예약', agent: '전사 비서', status: '예약함', tone: 'approved', when: '어제' },
-  { title: '11/24 반차 결재 회수', agent: '인사', status: '회수함', tone: 'neutral', when: '11월 20일' },
-  { title: '창원 출장 숙박비 한도', agent: '재무', status: null, when: '11월 18일' },
-  { title: '올해 남은 연차', agent: '인사', status: null, when: '11월 15일' },
+  { title: '11/24 반차 결재 회수', agent: '인사', status: '회수함', tone: 'neutral', when: '11월 18일' },
+  { title: '창원 출장 숙박비 한도', agent: '재무', status: null, when: '11월 17일' },
+  { title: '올해 남은 연차', agent: '인사', status: null, when: '11월 13일' },
 ]
 
 export const chat = {
@@ -44,7 +44,7 @@ export const expense = {
   action: '경비 정산 올리기',
   fields: [
     ['가맹점', '가온식당 성수점'],
-    ['사용일', '2026. 11. 21. (금)'],
+    ['사용일', '2026년 11월 19일 (목)'],
     ['금액', '42,000원'],
     ['용도', '식대 · 팀 점심 4명'],
     ['사업자번호', '123-45-67890'],
@@ -52,7 +52,7 @@ export const expense = {
   amount: '42,000원',
   policy: { ok: true, text: '식대 한도 안', detail: '1인 10,500원 / 한도 15,000원' },
   line: [
-    { name: '오지현', role: '요청', state: 'done', at: '어제 12:44' },
+    { name: '오지현', role: '기안', state: 'done', at: '오늘 12:44' },
     { name: '서도윤', role: '팀장 결재 대기', state: 'current' },
   ],
   expiresIn: '9분 남음',
@@ -62,7 +62,7 @@ export const receipt = {
   store: '가온식당 성수점',
   bizNo: '123-45-67890',
   address: '서울 성동구 성수이로 00',
-  at: '2026-11-21 12:38',
+  at: '2026-11-19 12:38',
   items: [
     ['점심 정식', 4, '40,000'],
     ['공깃밥 추가', 2, '2,000'],
@@ -80,8 +80,8 @@ export const approvalTabs = [
 
 export const approvals = [
   { form: '경비 정산', icon: 'receipt', title: '팀 점심 식대', requester: '오지현', amount: '42,000원', received: '오늘 12:44', wait: '18분', selected: true, tag: '사진에서 읽음' },
-  { form: '휴가 신청', icon: 'calendar-clock', title: '연차 11. 27.~11. 28. (2일)', requester: '김태윤', amount: '–', received: '어제 17:02', wait: '1일' },
-  { form: '구매 요청', icon: 'package', title: '오일 실 35×52×8 200개', requester: '박세영', amount: '380,000원', received: '11월 20일', wait: '2일', tag: '2단계' },
+  { form: '휴가 신청', icon: 'calendar-clock', title: '연차 11. 26.~11. 27. (2일)', requester: '김태윤', amount: '–', received: '어제 17:02', wait: '1일' },
+  { form: '구매 요청', icon: 'package', title: '오일 실 35×52×8 200개', requester: '박세영', amount: '380,000원', received: '11월 18일', wait: '2일', tag: '2단계' },
 ]
 
 export const approvalDoc = {
@@ -89,12 +89,12 @@ export const approvalDoc = {
   form: '경비 정산',
   docNo: 'EXP-0107',
   requester: { name: '오지현', team: '생산관리팀' },
-  submitted: '2026년 11월 21일 12:44',
+  submitted: '2026년 11월 20일 12:44',
   fields: expense.fields,
   policy: expense.policy,
   source: 'AI 비서가 사진에서 읽고, 요청자가 확인한 뒤 올렸습니다.',
   line: [
-    { name: '오지현', role: '요청', state: 'done', at: '어제 12:44' },
+    { name: '오지현', role: '기안', state: 'done', at: '오늘 12:44' },
     { name: '서도윤', role: '내 차례', state: 'current' },
   ],
   confirm: '승인하면 이 결재가 끝나고 되돌릴 수 없습니다.',
@@ -102,7 +102,7 @@ export const approvalDoc = {
 
 // 운영 도구형 시안에서 표 밀도를 보여 주려고 같은 화면 아래에 두는 "오늘 처리한 결재"입니다.
 export const doneToday = [
-  { form: '휴가 신청', icon: 'calendar-clock', title: '오후 반차 11. 21.', requester: '김태윤', amount: '–', at: '09:12', result: ['approved', '승인'] },
+  { form: '휴가 신청', icon: 'calendar-clock', title: '오후 반차 11. 23.', requester: '김태윤', amount: '–', at: '09:12', result: ['approved', '승인'] },
   { form: '경비 정산', icon: 'receipt', title: '창원 출장 교통비', requester: '박세영', amount: '86,400원', at: '08:57', result: ['approved', '승인'] },
   { form: '구매 요청', icon: 'package', title: '측정용 버니어 캘리퍼스 2개', requester: '이준서', amount: '214,000원', at: '08:40', result: ['rejected', '반려'] },
   { form: '경비 정산', icon: 'receipt', title: '협력사 미팅 택시비', requester: '오지현', amount: '18,000원', at: '08:31', result: ['approved', '승인'] },
