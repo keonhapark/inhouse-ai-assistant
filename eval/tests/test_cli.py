@@ -14,6 +14,15 @@ def test_example_config_is_valid():
     assert cfg["erp"]["reset"] is True
 
 
+def test_model_overrides_match_contract():
+    """하네스가 받는 모델 교체 값은 계약 enum과 같습니다(external=external-exaone, #436)."""
+    from harness.cli import MODEL_OVERRIDES
+    spec = yaml.safe_load((ROOT / "contracts/openapi/gateway.yaml").read_text(encoding="utf-8"))
+    params = spec["paths"]["/conversations"]["post"]["parameters"]
+    header = next(p for p in params if p["name"] == "X-Eval-Model-Override")
+    assert set(MODEL_OVERRIDES) == set(header["schema"]["enum"])
+
+
 @pytest.mark.parametrize("cfg, msg", [
     ({"erp": {"baseUrl": "x"}, "gateway": {"baseUrl": "g", "conditions": ["none"]}}, "계약에 없는 조건"),
     ({"erp": {"baseUrl": "x"}, "gateway": {"baseUrl": "g", "conditions": []}}, "비어 있습니다"),
