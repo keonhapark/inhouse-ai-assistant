@@ -1,9 +1,8 @@
-import { Bot, Building2, ChartColumn, ClipboardCheck, FileCheck2, Globe, ScrollText, Sparkles, type LucideIcon } from 'lucide-react'
+import { ArrowLeftRight, Bot, Building2, ChartColumn, ClipboardCheck, FileCheck2, Globe, ScrollText, Sparkles, type LucideIcon } from 'lucide-react'
 import type { Schemas } from '../api/client'
 
 /**
  * 왼쪽 탐색 막대의 메뉴(ux/research/ia.md 2절). 업무·회사·운영 묶음이고, 운영은 감사 조회 역할만 봅니다.
- * 대결 설정 메뉴는 결재에서 떼어 내는 묶음(#557)에서 더합니다.
  */
 export type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean }
 export type NavGroup = { id: string; label: string; items: NavItem[]; visible?: (me: Schemas['Employee']) => boolean }
@@ -15,6 +14,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/', label: 'AI 비서', icon: Sparkles, end: true },
       { to: '/approvals', label: '결재', icon: FileCheck2 },
+      { to: '/delegations', label: '대결 설정', icon: ArrowLeftRight },
     ],
   },
   {

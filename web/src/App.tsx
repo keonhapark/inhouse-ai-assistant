@@ -4,6 +4,7 @@ import { useAuth } from './auth/useAuth'
 import { DesignPage } from './pages/DesignPage'
 import { AppShell } from './pages/AppShell'
 import { ChatPage } from './chat/ChatPage'
+import { DelegationsPage } from './inbox/DelegationsPage'
 import { InboxPage } from './inbox/InboxPage'
 import { LoginPage } from './pages/LoginPage'
 import { AdminPage } from './admin/AdminPage'
@@ -40,6 +41,7 @@ export function App() {
       >
         <Route path="/" element={<ChatPage />} />
         <Route path="/approvals" element={<InboxPage />} />
+        <Route path="/delegations" element={<DelegationsPage />} />
         <Route path="/org" element={<OrgPage />} />
         <Route path="/agents" element={<AgentRegistryPage />} />
         <Route path="/ops/eval" element={<RequireAuditor><EvalReportPage /></RequireAuditor>} />

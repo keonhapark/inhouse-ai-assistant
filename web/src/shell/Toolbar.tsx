@@ -31,7 +31,7 @@ export function Toolbar({ title, titleId, sub, children }: Props) {
 
 type Notification = Schemas['Notification']
 
-/** 알림 메뉴. 안 읽은 알림이 있으면 종에 빨간 점을 붙입니다. 결재 문서 알림을 고르면 결재 화면으로 갑니다(대결 알림은 대결 설정 화면이 생기면 그리로) */
+/** 알림 메뉴. 안 읽은 알림이 있으면 종에 빨간 점을 붙입니다. 결재 문서 알림은 결재 화면, 대결 알림은 대결 설정 화면으로 갑니다 */
 export function NotificationBell() {
   const navigate = useNavigate()
   const [items, setItems] = useState<Notification[] | null>(null)
@@ -62,7 +62,7 @@ export function NotificationBell() {
             <p className="notifications__empty">새 알림이 없습니다.</p>
           ) : (
             items.map((n) => (
-              <Menu.Item key={n.id} className="menu__item notifications__item" onSelect={() => n.documentId && navigate('/approvals')}>
+              <Menu.Item key={n.id} className="menu__item notifications__item" onSelect={() => (n.documentId ? navigate('/approvals') : n.delegationId ? navigate('/delegations') : undefined)}>
                 <span>{n.message}</span>
                 <span className="notifications__when">{formatWhen(n.createdAt)}</span>
               </Menu.Item>

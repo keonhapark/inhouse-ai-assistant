@@ -38,7 +38,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
       if (data) {
         setItems(data.items)
         setListError(null)
-      } else setListError(problemTitle(p, '위임 목록을 불러오지 못했습니다.'))
+      } else setListError(problemTitle(p, '대결 목록을 불러오지 못했습니다.'))
     } catch {
       setListError(NETWORK)
     }
@@ -50,7 +50,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
       ({ data, error: p }) => {
         if (!alive) return
         if (data) setItems(data.items)
-        else setListError(problemTitle(p, '위임 목록을 불러오지 못했습니다.'))
+        else setListError(problemTitle(p, '대결 목록을 불러오지 못했습니다.'))
       },
       () => alive && setListError(NETWORK),
     )
@@ -89,7 +89,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
         body: sent.body,
       })
       if (!data) {
-        setError(problemTitle(p, dryRun ? '미리보기를 만들지 못했습니다.' : '위임을 등록하지 못했습니다.'))
+        setError(problemTitle(p, dryRun ? '확인할 내용을 만들지 못했습니다.' : '대결을 지정하지 못했습니다.'))
         return
       }
       if ('dryRun' in data) {
@@ -119,7 +119,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
       if (data) {
         setNotice(data.summary)
         await refresh()
-      } else setError(problemTitle(p, '위임을 해지하지 못했습니다.'))
+      } else setError(problemTitle(p, '대결을 해제하지 못했습니다.'))
     } catch {
       setError(NETWORK)
     }
@@ -133,16 +133,15 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
   const ready = draft.delegateId && draft.startsAt && draft.endsAt && draft.reason.trim() && draft.formTypes.length > 0
 
   return (
-    <aside className="delegation" aria-labelledby="delegation-title">
-      <h2 id="delegation-title">대결 설정</h2>
-      <p className="muted">자리를 비우는 동안 다른 사람이 내 결재를 대신 처리하게 맡깁니다.</p>
+    <section className="delegation" aria-label="대결 설정">
+      <p className="muted">자리를 비우는 동안 다른 사람이 내 결재를 대신 처리하게 지정합니다.</p>
 
       {listError && (
         <p role="alert" className="alert">
           {listError}
         </p>
       )}
-      {items && items.length === 0 && <p className="muted">등록한 위임이 없습니다.</p>}
+      {items && items.length === 0 && <p className="muted">지정한 대결이 없습니다.</p>}
       {items && items.length > 0 && (
         <ul className="delegation__list">
           {items.map((d) => {
@@ -165,7 +164,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
                     : d.scope.formTypes.map((id) => forms.find((f) => f.id === id)?.name ?? id).join(', ')}
                   {d.scope.maxAmount != null && ` · ${formatAmount(d.scope.maxAmount)} 이하`} · {d.reason}
                 </span>
-                {canRevoke && <RevokeButton onRevoke={() => revoke(d)} label={`${d.delegateName}에게 맡긴 위임 해지`} />}
+                {canRevoke && <RevokeButton onRevoke={() => revoke(d)} label={`${d.delegateName} 대결 해제`} />}
               </li>
             )
           })}
@@ -173,7 +172,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
       )}
 
       <form className="delegation__form" onSubmit={onPreview}>
-        <h3>새 위임</h3>
+        <h2>새 대결 지정</h2>
         {/* 요청이 오가는 동안 입력을 막아 미리보기와 다른 값이 섞이지 않게 합니다. */}
         <fieldset className="delegation__fields" disabled={busy}>
         <DelegatePicker value={draft.delegateId} excludeId={meId} onChange={(delegateId) => edit({ delegateId })} />
@@ -197,15 +196,15 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
         </fieldset>
         {!preview && (
           <Button type="submit" disabled={busy || !ready}>
-            미리보기
+            내용 확인
           </Button>
         )}
       </form>
 
       {preview && (
         <Card
-          aria-label="위임 미리보기"
-          header={<strong>미리보기</strong>}
+          aria-label="대결 지정 확인"
+          header={<strong>대결 지정 확인</strong>}
           footer={
             <>
               <Button
@@ -218,7 +217,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
                 취소
               </Button>
               <Button variant="primary" disabled={busy} onClick={() => void submit(false)}>
-                등록
+                대결 지정
               </Button>
             </>
           }
@@ -237,7 +236,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
           {notice}
         </p>
       )}
-    </aside>
+    </section>
   )
 }
 
@@ -253,7 +252,7 @@ function RevokeButton({ onRevoke, label }: { onRevoke(): Promise<void>; label: s
         setBusy(false)
       }}
     >
-      해지
+      대결 해제
     </Button>
   )
 }

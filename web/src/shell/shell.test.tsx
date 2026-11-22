@@ -34,6 +34,8 @@ describe('왼쪽 탐색 막대', () => {
     // 건수는 숫자로 보이고, 화면 낭독기에는 "결재, 결재할 문서 n건"으로 읽힙니다
     expect(await within(n).findByRole('link', { name: /^결재, 결재할 문서 \d+건$/ })).toBeInTheDocument()
     expect(within(n).queryByRole('group', { name: '운영' })).toBeNull()
+    // 대결 설정은 결재에서 떼어 업무 묶음에 둡니다
+    expect(within(within(n).getByRole('group', { name: '업무' })).getByRole('link', { name: '대결 설정' })).toHaveAttribute('href', '/delegations')
   })
 
   it('감사 조회 역할은 운영 묶음의 메뉴 넷을 봅니다', async () => {
