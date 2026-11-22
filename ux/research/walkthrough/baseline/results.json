@@ -1,0 +1,931 @@
+{
+  "meta": {
+    "label": "baseline",
+    "at": "2026-11-22T12:36:19.978Z",
+    "mode": "web 모의 데이터(msw)",
+    "web": "4988d0e",
+    "personas": {
+      "employee": {
+        "name": "직원",
+        "account": "E1001",
+        "viewport": {
+          "width": 1280,
+          "height": 800
+        }
+      },
+      "approver": {
+        "name": "결재자",
+        "account": "E2001",
+        "viewport": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "admin": {
+        "name": "관리자",
+        "account": "E2008",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        }
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "E1",
+      "persona": "직원",
+      "title": "영수증 사진으로 경비 정산 올리기",
+      "outcome": "부분 성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 2,
+        "fields": 1,
+        "chars": 23,
+        "keys": 1,
+        "files": 1
+      },
+      "actions": 4,
+      "steps": [
+        {
+          "kind": "upload",
+          "label": "사진 첨부",
+          "ok": true,
+          "ms": 73
+        },
+        {
+          "kind": "fill",
+          "label": "메시지 입력: 이 영수증 팀 점심 식대로 경비 정산해 줘",
+          "ok": true,
+          "ms": 13
+        },
+        {
+          "kind": "key",
+          "label": "보내기(Enter)",
+          "ok": true,
+          "ms": 10
+        },
+        {
+          "kind": "see",
+          "label": "실행 미리보기 카드",
+          "ok": true,
+          "ms": 1788
+        },
+        {
+          "kind": "click",
+          "label": "실행",
+          "ok": true,
+          "ms": 34
+        },
+        {
+          "kind": "see",
+          "label": "결과 안내",
+          "ok": true,
+          "ms": 283
+        }
+      ],
+      "ms": 2498,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "경비 정산을 실행했다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "금액이 원 단위 쉼표 형식(42,000원)으로 보인다",
+          "pass": false,
+          "evidence": "재무 경비 정산 되돌릴 수 있음 이미지에서 읽은 값(확인 필요) 경비 정산 결재를 올립니다(결재선: 팀장). 첨부한 사진에서 읽은 값이 들어 있을 수 있습니다. 금액·날짜 같은 값이 사진과 맞는지 확인한 뒤 실행해 주세요. approval_document 새로 만듦 merchant 가온식당 성수점 spent_on 2026-11-20 amount 42000 category 식대 만료 21:46 취소 실행"
+        },
+        {
+          "kind": "확인",
+          "name": "값 이름이 한국어(가맹점·사용일·금액)로 보인다",
+          "pass": false,
+          "evidence": "재무 경비 정산 되돌릴 수 있음 이미지에서 읽은 값(확인 필요) 경비 정산 결재를 올립니다(결재선: 팀장). 첨부한 사진에서 읽은 값이 들어 있을 수 있습니다. 금액·날짜 같은 값이 사진과 맞는지 확인한 뒤 실행해 주세요. approval_document 새로 만듦 merchant 가온식당 성수점 spent_on 2026-11-20 amount 42000 category 식대 만료 21:46 취소 실행"
+        },
+        {
+          "kind": "확인",
+          "name": "누가 결재하는지(결재선)가 보인다",
+          "pass": true,
+          "evidence": "재무 경비 정산 되돌릴 수 있음 이미지에서 읽은 값(확인 필요) 경비 정산 결재를 올립니다(결재선: 팀장). 첨부한 사진에서 읽은 값이 들어 있을 수 있습니다. 금액·날짜 같은 값이 사진과 맞는지 확인한 뒤 실행해 주세요. approval_document 새로 만듦 merchant 가온식당 성수점 spent_on 2026-11-20 amount 42000 category 식대 만료 21:46 취소 실행"
+        },
+        {
+          "kind": "확인",
+          "name": "사진에서 읽은 값이라 확인이 필요하다는 표시가 보인다",
+          "pass": true,
+          "evidence": "재무 경비 정산 되돌릴 수 있음 이미지에서 읽은 값(확인 필요) 경비 정산 결재를 올립니다(결재선: 팀장). 첨부한 사진에서 읽은 값이 들어 있을 수 있습니다. 금액·날짜 같은 값이 사진과 맞는지 확인한 뒤 실행해 주세요. approval_document 새로 만듦 merchant 가온식당 성수점 spent_on 2026-11-20 amount 42000 category 식대 만료 21:46 취소 실행"
+        }
+      ],
+      "shots": [
+        "E1-01-preview.jpg",
+        "E1-02-done.jpg"
+      ]
+    },
+    {
+      "id": "E2",
+      "persona": "직원",
+      "title": "회의실을 예약했다가 되돌리기",
+      "outcome": "성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 1,
+        "fields": 1,
+        "chars": 19,
+        "keys": 1,
+        "files": 0
+      },
+      "actions": 3,
+      "steps": [
+        {
+          "kind": "fill",
+          "label": "메시지 입력: 내일 오후 2시에 회의실 예약해 줘",
+          "ok": true,
+          "ms": 50
+        },
+        {
+          "kind": "key",
+          "label": "보내기(Enter)",
+          "ok": true,
+          "ms": 14
+        },
+        {
+          "kind": "see",
+          "label": "실행한 일 카드",
+          "ok": true,
+          "ms": 782
+        },
+        {
+          "kind": "click",
+          "label": "되돌리기",
+          "ok": true,
+          "ms": 33
+        },
+        {
+          "kind": "see",
+          "label": "되돌림 표시",
+          "ok": true,
+          "ms": 25
+        }
+      ],
+      "ms": 1170,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "예약을 되돌렸다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "예약한 회의실·시각이 결과에 보인다",
+          "pass": true,
+          "evidence": "실행됨 3층 소회의실을 내일 14:00–15:00에 예약했습니다. 되돌리기"
+        },
+        {
+          "kind": "확인",
+          "name": "되돌린 뒤 되돌렸다는 표시가 보인다",
+          "pass": true
+        }
+      ],
+      "shots": [
+        "E2-01-undone.jpg"
+      ]
+    },
+    {
+      "id": "E3",
+      "persona": "직원",
+      "title": "연차 규정을 묻고 근거 조문 확인하기",
+      "outcome": "성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 1,
+        "fields": 1,
+        "chars": 27,
+        "keys": 1,
+        "files": 0
+      },
+      "actions": 3,
+      "steps": [
+        {
+          "kind": "fill",
+          "label": "메시지 입력: 연차는 몇 년차부터 늘어나? 규정 근거도 알려 줘",
+          "ok": true,
+          "ms": 41
+        },
+        {
+          "kind": "key",
+          "label": "보내기(Enter)",
+          "ok": true,
+          "ms": 15
+        },
+        {
+          "kind": "see",
+          "label": "근거 접힘 줄",
+          "ok": true,
+          "ms": 1787
+        },
+        {
+          "kind": "click",
+          "label": "근거 펼치기",
+          "ok": true,
+          "ms": 24
+        },
+        {
+          "kind": "see",
+          "label": "조문 번호",
+          "ok": true,
+          "ms": 7
+        }
+      ],
+      "ms": 2130,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "답과 근거 조문을 읽었다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "근거가 펼치지 않아도 있다는 것이 보인다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "확인되지 않은 인용이 구별되어 보인다",
+          "pass": true,
+          "evidence": "나: 연차는 몇 년차부터 늘어나? 규정 근거도 알려 줘 도구 실행 policy_search 답: 입사 1년이 지나면 연차 15일이 생기고, 3년차부터 2년마다 1일씩 늘어납니다. 로컬에서 처리 근거 2건 취업규칙 제20조(연차휴가) 1년간 80퍼센트 이상 출근한 직원에게 15일의 유급휴가를 준다. 취업규칙 제20조 제4항 인용 확인 안 됨 3년 이상 근속한 직원에게는 가산휴가를 준다."
+        }
+      ],
+      "shots": [
+        "E3-01-citations.jpg"
+      ]
+    },
+    {
+      "id": "E4",
+      "persona": "직원",
+      "title": "내가 올린 휴가 결재가 어디까지 갔는지 보기",
+      "outcome": "성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 3,
+        "fields": 0,
+        "chars": 0,
+        "keys": 0,
+        "files": 0
+      },
+      "actions": 3,
+      "steps": [
+        {
+          "kind": "click",
+          "label": "승인함으로 이동",
+          "ok": true,
+          "ms": 82
+        },
+        {
+          "kind": "click",
+          "label": "올린 것 탭",
+          "ok": true,
+          "ms": 84
+        },
+        {
+          "kind": "click",
+          "label": "문서 열기",
+          "ok": true,
+          "ms": 68
+        },
+        {
+          "kind": "see",
+          "label": "결재 문서 상세",
+          "ok": true,
+          "ms": 4
+        }
+      ],
+      "ms": 486,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "올린 결재 문서를 열었다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "지금 누구 차례인지 보인다",
+          "pass": true,
+          "evidence": "연차 휴가 신청(11/27~11/28) 진행 닫기 양식 휴가 신청 요청자 한지우 인사팀 금액 – 상신 11. 22. 19:36 종류 연차 시작일 2026-11-27 종료일 2026-11-28 사유 개인 사정 결재선 1 서도윤 결재 차례"
+        },
+        {
+          "kind": "확인",
+          "name": "휴가 기간·종류가 한국어 이름으로 보인다",
+          "pass": true,
+          "evidence": "연차 휴가 신청(11/27~11/28) 진행 닫기 양식 휴가 신청 요청자 한지우 인사팀 금액 – 상신 11. 22. 19:36 종류 연차 시작일 2026-11-27 종료일 2026-11-28 사유 개인 사정 결재선 1 서도윤 결재 차례"
+        }
+      ],
+      "shots": [
+        "E4-01-doc.jpg"
+      ]
+    },
+    {
+      "id": "E5",
+      "persona": "직원",
+      "title": "잘못 올린 반차 결재를 회수하기",
+      "outcome": "부분 성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 1,
+        "fields": 1,
+        "chars": 22,
+        "keys": 1,
+        "files": 0
+      },
+      "actions": 3,
+      "steps": [
+        {
+          "kind": "fill",
+          "label": "메시지 입력: 11월 24일 오후 반차 결재 회수해 줘",
+          "ok": true,
+          "ms": 38
+        },
+        {
+          "kind": "key",
+          "label": "보내기(Enter)",
+          "ok": true,
+          "ms": 12
+        },
+        {
+          "kind": "see",
+          "label": "실행 미리보기 카드",
+          "ok": true,
+          "ms": 2288
+        },
+        {
+          "kind": "click",
+          "label": "실행",
+          "ok": true,
+          "ms": 41
+        },
+        {
+          "kind": "see",
+          "label": "결과 안내",
+          "ok": true,
+          "ms": 282
+        }
+      ],
+      "ms": 2954,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "회수를 실행했다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "되돌릴 수 없다는 경고가 실행 전에 보인다",
+          "pass": true,
+          "evidence": "인사 결재 회수 되돌릴 수 없음 휴가 결재 APR-0042(11/24 오후 반차)를 회수합니다. approval 바꿈 status pending → withdrawn 실행하면 되돌릴 수 없습니다. 만료 21:46 취소 실행"
+        },
+        {
+          "kind": "확인",
+          "name": "무엇이 어떻게 바뀌는지 한국어로 보인다",
+          "pass": false,
+          "evidence": "인사 결재 회수 되돌릴 수 없음 휴가 결재 APR-0042(11/24 오후 반차)를 회수합니다. approval 바꿈 status pending → withdrawn 실행하면 되돌릴 수 없습니다. 만료 21:46 취소 실행"
+        }
+      ],
+      "shots": [
+        "E5-01-preview.jpg",
+        "E5-02-done.jpg"
+      ]
+    },
+    {
+      "id": "A1",
+      "persona": "결재자",
+      "title": "내 차례인 휴가 결재 승인하기",
+      "outcome": "성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 4,
+        "fields": 0,
+        "chars": 0,
+        "keys": 0,
+        "files": 0
+      },
+      "actions": 4,
+      "steps": [
+        {
+          "kind": "click",
+          "label": "승인함으로 이동",
+          "ok": true,
+          "ms": 66
+        },
+        {
+          "kind": "click",
+          "label": "문서 열기",
+          "ok": true,
+          "ms": 86
+        },
+        {
+          "kind": "see",
+          "label": "결재 문서 상세",
+          "ok": true,
+          "ms": 3
+        },
+        {
+          "kind": "click",
+          "label": "승인",
+          "ok": true,
+          "ms": 45
+        },
+        {
+          "kind": "see",
+          "label": "처리 안내",
+          "ok": true,
+          "ms": 26
+        },
+        {
+          "kind": "click",
+          "label": "처리함 탭",
+          "ok": true,
+          "ms": 41
+        }
+      ],
+      "ms": 583,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "결재를 승인했다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "승인 전에 기간·종류·사유가 보인다",
+          "pass": true,
+          "evidence": "연차 휴가 신청(11/27~11/28) 진행 닫기 양식 휴가 신청 요청자 한지우 인사팀 금액 – 상신 11. 22. 19:36 종류 연차 시작일 2026-11-27 종료일 2026-11-28 사유 개인 사정 결재선 1 서도윤 결재 차례 의견(선택, 200자) 반려 승인"
+        },
+        {
+          "kind": "확인",
+          "name": "승인한 문서가 처리함에 있다",
+          "pass": true
+        }
+      ],
+      "shots": [
+        "A1-01-doc.jpg",
+        "A1-02-done.jpg"
+      ]
+    },
+    {
+      "id": "A2",
+      "persona": "결재자",
+      "title": "대결로 들어온 경비 정산 승인하기",
+      "outcome": "성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 4,
+        "fields": 0,
+        "chars": 0,
+        "keys": 0,
+        "files": 0
+      },
+      "actions": 4,
+      "steps": [
+        {
+          "kind": "click",
+          "label": "승인함으로 이동",
+          "ok": true,
+          "ms": 63
+        },
+        {
+          "kind": "click",
+          "label": "대결 탭",
+          "ok": true,
+          "ms": 84
+        },
+        {
+          "kind": "click",
+          "label": "문서 열기",
+          "ok": true,
+          "ms": 70
+        },
+        {
+          "kind": "see",
+          "label": "결재 문서 상세",
+          "ok": true,
+          "ms": 5
+        },
+        {
+          "kind": "click",
+          "label": "승인",
+          "ok": true,
+          "ms": 31
+        },
+        {
+          "kind": "see",
+          "label": "처리 안내",
+          "ok": true,
+          "ms": 25
+        }
+      ],
+      "ms": 591,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "대결 문서를 승인했다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "원 결재자(누구 대신인지)가 보인다",
+          "pass": true,
+          "evidence": "11월 출장 경비 정산 진행 대결: 윤서진 닫기 양식 경비 정산 요청자 박하늘 인사팀 금액 320,000원 상신 11. 21. 21:36 출장지 창원 공장 기간 11/12~11/13 결재선 1 윤서진 결재 차례 2 임채원 대기 윤서진님 대신 결재합니다. 위임은 11. 24. 21:36까지입니다. 의견(선택, 200자) 반려 승인"
+        },
+        {
+          "kind": "확인",
+          "name": "금액이 원 단위 쉼표 형식으로 보인다",
+          "pass": true,
+          "evidence": "11월 출장 경비 정산 진행 대결: 윤서진 닫기 양식 경비 정산 요청자 박하늘 인사팀 금액 320,000원 상신 11. 21. 21:36 출장지 창원 공장 기간 11/12~11/13 결재선 1 윤서진 결재 차례 2 임채원 대기 윤서진님 대신 결재합니다. 위임은 11. 24. 21:36까지입니다. 의견(선택, 200자) 반려 승인"
+        },
+        {
+          "kind": "확인",
+          "name": "이 결재 다음 단계(누가 이어 받는지)가 보인다",
+          "pass": true,
+          "evidence": "11월 출장 경비 정산 진행 대결: 윤서진 닫기 양식 경비 정산 요청자 박하늘 인사팀 금액 320,000원 상신 11. 21. 21:36 출장지 창원 공장 기간 11/12~11/13 결재선 1 윤서진 결재 차례 2 임채원 대기 윤서진님 대신 결재합니다. 위임은 11. 24. 21:36까지입니다. 의견(선택, 200자) 반려 승인"
+        }
+      ],
+      "shots": [
+        "A2-01-doc.jpg",
+        "A2-02-done.jpg"
+      ]
+    },
+    {
+      "id": "A3",
+      "persona": "결재자",
+      "title": "출장 동안 휴가 결재만 팀원에게 맡기기",
+      "outcome": "부분 성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 6,
+        "fields": 4,
+        "chars": 37,
+        "keys": 0,
+        "files": 0
+      },
+      "actions": 10,
+      "steps": [
+        {
+          "kind": "click",
+          "label": "승인함으로 이동",
+          "ok": true,
+          "ms": 79
+        },
+        {
+          "kind": "fill",
+          "label": "대리인 이름 찾기",
+          "ok": true,
+          "ms": 58
+        },
+        {
+          "kind": "click",
+          "label": "대리인 고르기",
+          "ok": true,
+          "ms": 329
+        },
+        {
+          "kind": "fill",
+          "label": "시작 시각",
+          "ok": true,
+          "ms": 15
+        },
+        {
+          "kind": "fill",
+          "label": "끝 시각",
+          "ok": true,
+          "ms": 16
+        },
+        {
+          "kind": "click",
+          "label": "모든 양식 끄기",
+          "ok": true,
+          "ms": 54
+        },
+        {
+          "kind": "click",
+          "label": "휴가 신청 고르기",
+          "ok": true,
+          "ms": 62
+        },
+        {
+          "kind": "fill",
+          "label": "사유",
+          "ok": true,
+          "ms": 15
+        },
+        {
+          "kind": "click",
+          "label": "미리보기",
+          "ok": true,
+          "ms": 35
+        },
+        {
+          "kind": "see",
+          "label": "위임 미리보기",
+          "ok": true,
+          "ms": 31
+        },
+        {
+          "kind": "click",
+          "label": "등록",
+          "ok": true,
+          "ms": 41
+        },
+        {
+          "kind": "see",
+          "label": "위임 목록",
+          "ok": true,
+          "ms": 30
+        }
+      ],
+      "ms": 1106,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "위임을 등록했다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "등록 전 미리보기에 대리인·기간·범위가 한국어로 보인다",
+          "pass": false,
+          "evidence": "미리보기 한지우에게 결재를 위임합니다. delegation 새로 만듦 대리인 한지우 시작 2026. 11. 23. 09:00 끝 2026. 11. 25. 18:00 양식 leave 금액한도 없음 취소 등록"
+        },
+        {
+          "kind": "확인",
+          "name": "등록한 위임이 목록에 보인다",
+          "pass": true
+        }
+      ],
+      "shots": [
+        "A3-01-preview.jpg",
+        "A3-02-done.jpg"
+      ]
+    },
+    {
+      "id": "M1",
+      "persona": "관리자",
+      "title": "외부 모델로 나간 요청에서 개인정보가 가려졌는지 보기",
+      "outcome": "부분 성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 3,
+        "fields": 0,
+        "chars": 0,
+        "keys": 0,
+        "files": 0
+      },
+      "actions": 3,
+      "steps": [
+        {
+          "kind": "click",
+          "label": "관리로 이동",
+          "ok": true,
+          "ms": 64
+        },
+        {
+          "kind": "click",
+          "label": "외부 전송 기록 탭",
+          "ok": true,
+          "ms": 86
+        },
+        {
+          "kind": "click",
+          "label": "전화번호 가림 기록 펼치기",
+          "ok": true,
+          "ms": 67
+        }
+      ],
+      "ms": 520,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "외부 전송 기록 한 건의 본문을 열었다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "가린 자리가 본문에서 구별되어 보인다",
+          "pass": true,
+          "evidence": "외부 모델로 실제 보낸 요청입니다. 가림 전 원문은 저장하지 않으며, 표시한 자리는 보내기 전에 가린 곳입니다. 에이전트 전체 전사 비서 인사 재무 구매자재 11. 22. 21:24 전사 비서 claude-haiku-5-5 가림 1곳: 전화번호 470토큰 · $0.0001 system 당신은 사내 업무를 돕는 비서입니다. 도구 결과만 근거로 답합니다. user 내일 오후 2시에 4명 들어갈 회의실 잡아 줘. 확정되면 [전화번호]로 문자 부탁해. 11. 22. 20:49 구매자재 claude-haiku-5-5 가림 2곳: 이메일, 사업자등록번호 809토큰 · $0.0001 11. 22. 20:01 전사 비서 claude-haiku-5-5 가림 없음 401토큰 · $0.0001 11. 22. 18:36 전사 비"
+        },
+        {
+          "kind": "확인",
+          "name": "어느 직원·어느 대화의 요청인지 보인다",
+          "pass": false,
+          "evidence": "11. 22. 21:24 전사 비서 claude-haiku-5-5 가림 1곳: 전화번호 470토큰 · $0.0001 "
+        }
+      ],
+      "shots": [
+        "M1-01-egress.jpg"
+      ]
+    },
+    {
+      "id": "M2",
+      "persona": "관리자",
+      "title": "지난 7일 에이전트별 외부 비용과 차단 수 보기",
+      "outcome": "부분 성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 2,
+        "fields": 0,
+        "chars": 0,
+        "keys": 0,
+        "files": 0
+      },
+      "actions": 2,
+      "steps": [
+        {
+          "kind": "click",
+          "label": "관리로 이동",
+          "ok": true,
+          "ms": 67
+        },
+        {
+          "kind": "click",
+          "label": "최근 7일",
+          "ok": true,
+          "ms": 98
+        },
+        {
+          "kind": "see",
+          "label": "기간이 바뀜",
+          "ok": true,
+          "ms": 4
+        },
+        {
+          "kind": "see",
+          "label": "에이전트별 표",
+          "ok": true,
+          "ms": 29
+        }
+      ],
+      "ms": 467,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "지난 7일 에이전트별 표를 봤다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "비용 단위가 분명하다(통화 표시)",
+          "pass": true,
+          "evidence": "$0.294 $0.00 $0.00 $0.133"
+        },
+        {
+          "kind": "확인",
+          "name": "지금 보는 기간이 표 근처에 보인다",
+          "pass": false,
+          "evidence": "에이전트별 에이전트 실행 차단 외부 모델 비율 외부 비용 전사 비서 448 21 80% (외부 497 · 로컬 126) $0.294 인사 287 28 0% (외부 0 · 로컬 672) $0.00 재무 119 7 0% (외부 0 · 로컬 273) $0.00 구매자재 84 7 81% (외부 175 · 로컬 42) $0.133"
+        }
+      ],
+      "shots": [
+        "M2-01-metrics.jpg"
+      ]
+    },
+    {
+      "id": "M3",
+      "persona": "관리자",
+      "title": "감사 로그에서 차단된 도구 실행 찾기",
+      "outcome": "부분 성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 5,
+        "fields": 0,
+        "chars": 0,
+        "keys": 0,
+        "files": 0
+      },
+      "actions": 4,
+      "steps": [
+        {
+          "kind": "click",
+          "label": "관리로 이동",
+          "ok": true,
+          "ms": 65
+        },
+        {
+          "kind": "click",
+          "label": "감사 로그 탭",
+          "ok": true,
+          "ms": 86
+        },
+        {
+          "kind": "select",
+          "label": "종류: 도구 차단",
+          "ok": true,
+          "ms": 14
+        },
+        {
+          "kind": "click",
+          "label": "적용",
+          "ok": true,
+          "ms": 50
+        }
+      ],
+      "ms": 512,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "도구 차단 이벤트를 걸러 봤다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "직원이 이름으로 보인다",
+          "pass": false,
+          "evidence": "emp-2002 · 위임 토큰 | emp-2001 · 위임 토큰 | emp-1001 · 위임 토큰 | emp-2002 · 위임 토큰"
+        },
+        {
+          "kind": "확인",
+          "name": "에이전트·작업이 사람이 읽는 이름으로 보인다",
+          "pass": false,
+          "evidence": "hr | hr | hr | hr | delegation_register되돌릴 수 있음문서에서 온 지시로는 대결 등록을 부를 수 없습니다(신뢰 등급). | delegation_register되돌릴 수 있음문서에서 온 지시로는 대결 등록을 부를 수 없습니다(신뢰 등급). | delegation_register되돌릴 수 있음문서에서 온 지시로는 대결 등록을 부를 수 없습니다(신뢰 등급). | delegation_register되돌릴 수 있음문서에서 온 지시로는 대결 등록을 부를 수 없습니다(신뢰 등급)."
+        }
+      ],
+      "shots": [
+        "M3-01-audit.jpg"
+      ]
+    },
+    {
+      "id": "M4",
+      "persona": "관리자",
+      "title": "평가 리포트에서 기대와 다른 시나리오 하나 열어 보기",
+      "outcome": "부분 성공",
+      "blocked": null,
+      "error": null,
+      "counts": {
+        "clicks": 4,
+        "fields": 0,
+        "chars": 0,
+        "keys": 0,
+        "files": 0
+      },
+      "actions": 3,
+      "steps": [
+        {
+          "kind": "click",
+          "label": "평가로 이동",
+          "ok": true,
+          "ms": 82
+        },
+        {
+          "kind": "select",
+          "label": "보기: 기대와 다름",
+          "ok": true,
+          "ms": 123
+        },
+        {
+          "kind": "see",
+          "label": "이 프로젝트 열이 기대와 다른 행 찾기",
+          "ok": true,
+          "ms": 34
+        },
+        {
+          "kind": "click",
+          "label": "시나리오 펼치기",
+          "ok": true,
+          "ms": 49
+        }
+      ],
+      "ms": 597,
+      "criteria": [
+        {
+          "kind": "완료",
+          "name": "기대와 다른 시나리오의 회차 상세를 열었다",
+          "pass": true
+        },
+        {
+          "kind": "확인",
+          "name": "시나리오가 사람이 읽는 제목으로 보인다",
+          "pass": false,
+          "evidence": "normal-room-reserve-clarify"
+        },
+        {
+          "kind": "확인",
+          "name": "왜 기대와 달랐는지 한 줄 이유가 보인다",
+          "pass": true,
+          "evidence": "장치 없음 1회차 경로 external · 넘긴 에이전트 assistant(기대 assistant) · 25.2s 부족 필수 도구 room_reserve를 실행하지 않음 부족 dbAssertions[0] $.items[?(@.status=='confirmed')] count_equals 1: 찾은 것 0개 쓰기 차단 1회차 경로 external · 넘긴 에이전트 assistant(기대 assistant) · 34.1s 부족 필수 도구 room_reserve를 실행하지 않음 부족 dbAssertions[0] $.items[?(@.status=='confirmed')] count_equals 1: 찾은 것 0개 이 프로젝트 1회차 경로 external · 넘긴 에이전트 assistant(기대 assistant)"
+        }
+      ],
+      "shots": [
+        "M4-01-scenario.jpg"
+      ]
+    }
+  ]
+}

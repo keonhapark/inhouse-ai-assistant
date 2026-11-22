@@ -1,0 +1,15 @@
+{
+  "name": "ux",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "walk": "node walkthrough/run.mjs",
+    "a11y": "node a11y/run.mjs",
+    "test": "node --test walkthrough/*.test.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "playwright": "1.65.1"
+  }
+}
