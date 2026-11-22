@@ -231,7 +231,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
         run: |
-          git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/changed.txt
+          git -c core.quotepath=off diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/changed.txt
           python3 scripts/ci/check_paths.py "${HEAD_REF}" /tmp/changed.txt
 
   secrets:
