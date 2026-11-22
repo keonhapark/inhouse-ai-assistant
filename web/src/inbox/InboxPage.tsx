@@ -11,7 +11,7 @@ import { toInboxItem, type InboxItem } from './types'
 import './inbox.css'
 
 const FORM_ICON: Record<string, LucideIcon> = { leave: CalendarDays, expense: Receipt, purchase: Package }
-const TONE_DOT = { accent: 'blue', success: 'green', danger: 'red', neutral: 'gray', warning: 'orange', local: 'blue' } as const
+const TONE_DOT = { accent: 'progress', success: 'green', danger: 'red', neutral: 'gray', warning: 'orange', local: 'blue' } as const
 const EMPTY: Record<Box, string> = {
   inbox: '결재할 문서가 없습니다.',
   delegated: '대신 결재할 문서가 없습니다.',
@@ -33,6 +33,8 @@ export function InboxPage() {
   const [open, setOpen] = useState<InboxItem | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [counts, setCounts] = useState<Partial<Record<Box, number>>>({})
+  // 건수 요청 순번. 늦게 온 앞 응답이 새 건수를 덮지 않게 칸마다 마지막 요청만 반영합니다
+  const countSeq = useRef({ inbox: 0, delegated: 0 })
   // 양식은 문서 필드 이름·순서를 보이는 데 씁니다.
   const [forms, setForms] = useState<Schemas['ApprovalForm'][]>([])
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -44,12 +46,13 @@ export function InboxPage() {
   /** 칸의 목록을 다시 불러옵니다. 그사이 칸을 바꿨으면 반영하지 않고 null */
   const load = useCallback(async (b: Box): Promise<InboxItem[] | null> => {
     const id = ++request.current
+    const cs = b === 'inbox' || b === 'delegated' ? ++countSeq.current[b] : 0
     try {
       const { data, error } = await api.GET('/inbox', { params: { query: { box: b } } })
       if (id !== request.current) return null
       const items = data ? data.items.map(toInboxItem) : null
       setList(items ? { status: 'ok', items } : { status: 'error', message: problemTitle(error, '결재함을 불러오지 못했습니다.') })
-      if (items && (b === 'inbox' || b === 'delegated')) setCounts((c) => ({ ...c, [b]: items.length }))
+      if (items && (b === 'inbox' || b === 'delegated') && cs === countSeq.current[b]) setCounts((c) => ({ ...c, [b]: items.length }))
       return items
     } catch {
       if (id === request.current) setList({ status: 'error', message: '서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.' })
@@ -60,9 +63,10 @@ export function InboxPage() {
   /** 세그먼트의 건수(결재 대기·대결 대기). 못 세면 숫자를 보이지 않습니다 */
   const countBoxes = useCallback(async () => {
     for (const b of ['inbox', 'delegated'] as const) {
+      const cs = ++countSeq.current[b]
       try {
         const { data } = await api.GET('/inbox', { params: { query: { box: b } } })
-        if (data) setCounts((c) => ({ ...c, [b]: data.items.length }))
+        if (data && cs === countSeq.current[b]) setCounts((c) => ({ ...c, [b]: data.items.length }))
       } catch {
         /* 건수만 빠집니다 */
       }
@@ -73,8 +77,9 @@ export function InboxPage() {
     let alive = true
     const id = ++request.current
     for (const b of ['inbox', 'delegated'] as const) {
+      const cs = ++countSeq.current[b]
       api.GET('/inbox', { params: { query: { box: b } } }).then(
-        ({ data }) => alive && data && setCounts((c) => ({ ...c, [b]: data.items.length })),
+        ({ data }) => alive && data && cs === countSeq.current[b] && setCounts((c) => ({ ...c, [b]: data.items.length })),
         () => {
           /* 건수만 빠집니다 */
         },
@@ -139,12 +144,16 @@ export function InboxPage() {
 
   /** 결재한 뒤에는 목록에서 다음 문서를 엽니다(명세 3.7). 남은 문서가 없으면 결재함 영역으로 초점을 옮깁니다 */
   async function onDecided(message: string) {
+    const decided = open?.id
     notifyInboxChanged()
     setOpen(null)
     setNotice(message)
     const items = await load(boxRef.current)
     void countBoxes()
-    if (items?.length) setOpen(items[0])
+    // 그사이 칸을 바꿨으면(null) 그 칸의 초점을 건드리지 않습니다
+    if (items === null) return
+    // 다시 불러오는 사이 다른 문서를 열었으면 그대로 둡니다
+    if (items.length) setOpen((cur) => (cur && cur.id !== decided ? cur : items[0]))
     else panelRef.current?.focus()
   }
 
@@ -188,7 +197,7 @@ export function InboxPage() {
         </div>
       </Toolbar>
 
-      <div className="inbox__body" data-open={open ? '' : undefined}>
+      <div className="inbox__body">
         <div role="tabpanel" id="inbox-panel" aria-labelledby={`tab-${box}`} className="inbox__list" tabIndex={-1} ref={panelRef}>
           {notice && (
             <p role="status" className="inbox__notice">

@@ -12,7 +12,7 @@ export const DOC_STATUS: Record<Schemas['ApprovalStatus'], Label> = {
 
 export const STEP_STATUS: Record<Schemas['ApprovalStep']['status'], Label> = {
   waiting: { label: '대기', tone: 'neutral' },
-  pending: { label: '결재 차례', tone: 'accent' },
+  pending: { label: '결재 대기', tone: 'accent' },
   approved: { label: '승인', tone: 'success' },
   rejected: { label: '반려', tone: 'danger' },
   skipped: { label: '생략', tone: 'neutral' },

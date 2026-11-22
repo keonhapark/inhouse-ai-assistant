@@ -27,7 +27,7 @@ function stepName(s: Step, who: 'approver' | 'actedBy'): string {
   return who === 'approver' ? (s.approverName ?? s.approverId) : (s.actedByName ?? s.actedBy ?? '처리자 미상')
 }
 
-const TONE_DOT = { accent: 'blue', success: 'green', danger: 'red', neutral: 'gray', warning: 'orange', local: 'blue' } as const
+const TONE_DOT = { accent: 'progress', success: 'green', danger: 'red', neutral: 'gray', warning: 'orange', local: 'blue' } as const
 const STEP_ICON = { approved: Check, rejected: X, pending: Clock, waiting: Minus, skipped: Minus } as const
 const initials = (name: string) => (name.length > 2 ? name.slice(-2) : name)
 
@@ -44,6 +44,17 @@ export function DocDetail({ doc, form, canDecide, onDecided, onReload, onClose }
   // 내용이 다른데 키가 같으면 erp가 idempotency-key-reused로 거절합니다.
   const lastKey = useRef<{ sig: string; value: string } | null>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const approveRef = useRef<HTMLButtonElement>(null)
+  const rejectRef = useRef<HTMLButtonElement>(null)
+  // 팝오버에서 승인을 눌러 닫힐 때는 Radix가 (비활성이 된) 승인 버튼으로 초점을 돌려보내지 않게 합니다
+  const deciding = useRef(false)
+  // 실패하면 누른 버튼으로 초점을 돌려줍니다. 진행 중에는 비활성이라 초점이 빠지므로 다시 켜진 뒤에 옮깁니다
+  const refocus = useRef<'approve' | 'reject' | null>(null)
+  useEffect(() => {
+    if (busy || !refocus.current) return
+    ;(refocus.current === 'approve' ? approveRef : rejectRef).current?.focus()
+    refocus.current = null
+  }, [busy])
 
   // 문서를 열면 제목으로 초점을 옮겨 스크린 리더가 바로 읽게 합니다.
   useEffect(() => {
@@ -51,6 +62,7 @@ export function DocDetail({ doc, form, canDecide, onDecided, onReload, onClose }
   }, [])
 
   async function decide(kind: 'approve' | 'reject') {
+    deciding.current = kind === 'approve'
     setConfirming(false)
     const body = { version: doc.version, ...(comment.trim() ? { comment: comment.trim() } : {}) }
     const sig = JSON.stringify([kind, body])
@@ -68,11 +80,13 @@ export function DocDetail({ doc, form, canDecide, onDecided, onReload, onClose }
         onDecided(data.summary)
         return
       }
+      refocus.current = kind
       const message = problemTitle(problem, kind === 'approve' ? '승인하지 못했습니다.' : '반려하지 못했습니다.')
       setError(message)
       // 버전이 바뀌었으면 새 내용을 불러와 다시 판단하게 합니다.
       if (response.status === 409 && !(await onReload())) setError(`${message} 새 내용을 불러오지 못했습니다.`)
     } catch {
+      refocus.current = kind
       setError('서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.')
     } finally {
       setBusy(false)
@@ -183,17 +197,31 @@ export function DocDetail({ doc, form, canDecide, onDecided, onReload, onClose }
             />
             <small id={`opinion-help-${doc.id}`}>반려할 때는 반려 사유를 적어 주세요</small>
           </div>
-          <Button variant="danger" disabled={busy || noReason} onClick={() => void decide('reject')}>
+          <Button ref={rejectRef} variant="danger" disabled={busy || noReason} onClick={() => void decide('reject')}>
             반려
           </Button>
-          <Popover.Root open={confirming} onOpenChange={setConfirming}>
+          <Popover.Root
+            modal
+            open={confirming}
+            onOpenChange={(o) => {
+              if (o) deciding.current = false
+              setConfirming(o)
+            }}
+          >
             <Popover.Trigger asChild>
-              <Button variant="primary" disabled={busy} className={confirming ? 'is-pressed' : undefined}>
+              <Button ref={approveRef} variant="primary" disabled={busy} className={confirming ? 'is-pressed' : undefined}>
                 승인
               </Button>
             </Popover.Trigger>
             <Popover.Portal>
-              <Popover.Content className="popover" side="top" align="end" sideOffset={8} aria-labelledby={`approve-title-${doc.id}`}>
+              <Popover.Content
+                className="popover"
+                side="top"
+                align="end"
+                sideOffset={8}
+                aria-labelledby={`approve-title-${doc.id}`}
+                onCloseAutoFocus={(e) => deciding.current && e.preventDefault()}
+              >
                 <h3 id={`approve-title-${doc.id}`}>
                   {doc.amount != null ? `${formatWon(doc.amount)} ` : ''}
                   {`${doc.formName}${josa(doc.formName, '을', '를')} 승인할까요?`}

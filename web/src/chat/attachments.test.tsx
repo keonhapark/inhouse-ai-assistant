@@ -59,7 +59,7 @@ describe('채팅 사진 첨부', () => {
     expect(within(card).queryByText('금액')).toBeNull()
     expect(within(card).getByRole('img', { name: '첨부한 사진: receipt.png' })).toBeInTheDocument()
     expect(within(card).getByText('2026. 11. 20.(금)')).toBeInTheDocument()
-    expect((await within(card).findByText('서도윤 팀장(인사팀)')).parentElement).toHaveTextContent('서도윤 팀장(인사팀) 결재 차례')
+    expect((await within(card).findByText('서도윤 팀장(인사팀)')).parentElement).toHaveTextContent('서도윤 팀장(인사팀) 결재 대기')
     expect(within(card).queryByText('requesterId', { selector: '.rows dt' })).toBeNull()
     expect(within(card).getByText('자세히').closest('details')).toHaveTextContent('requesterId')
     expect(screen.getByRole('list', { name: '첨부한 사진 1장' })).toBeInTheDocument()

@@ -529,6 +529,10 @@
   --dot: var(--neutral);
 }
 
+.status--progress {
+  --dot: var(--progress);
+}
+
 /* 외부 AI 사용: 회색 점 + 지구 아이콘(2.2절), 종료 같은 회색 상태와 구별합니다 */
 .status svg {
   width: 12px;

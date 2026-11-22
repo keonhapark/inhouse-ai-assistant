@@ -52,7 +52,7 @@ describe('팀장 승인함', () => {
     expect(within(doc).getByText('2026. 11. 27.(금)')).toBeInTheDocument()
     const line = within(doc).getByRole('list', { name: '결재선' })
     expect(within(line).getByText('서도윤')).toBeInTheDocument()
-    expect(within(line).getByText('결재 차례')).toBeInTheDocument()
+    expect(within(line).getByText('결재 대기')).toBeInTheDocument()
 
     await user.type(within(doc).getByLabelText(/의견/), '잘 다녀오세요')
     await user.click(within(doc).getByRole('button', { name: '승인' }))
@@ -93,6 +93,8 @@ describe('팀장 승인함', () => {
     await approve(user, doc)
     expect(await within(doc).findByRole('alert')).toHaveTextContent('다른 사람이 먼저 바꿨습니다.')
     expect(screen.getByRole('region', { name: '결재 문서: 연차 휴가 신청(11/27~11/28)' })).toBeInTheDocument()
+    // 실패하면 초점이 사라지지 않고 승인 버튼으로 돌아옵니다
+    await vi.waitFor(() => expect(within(doc).getByRole('button', { name: '승인' })).toHaveFocus())
   })
 
   it('기안함의 문서는 결재 버튼이 없습니다', async () => {

@@ -44,6 +44,8 @@
 /* 세그먼트 컨트롤 */
 .seg {
   display: inline-flex;
+  flex-shrink: 1;
+  min-width: 0;
   margin: 0 auto;
   padding: 2px;
   border-radius: var(--r-seg);
@@ -414,7 +416,8 @@
   box-shadow: inset 0 0 0 999px var(--pressed);
 }
 
-@media (max-width: 960px) {
+/* 탐색 막대(240) + 상세(520)를 빼고 목록이 400px 남지 않으면 한 열로 바꿉니다 */
+@media (max-width: 1180px) {
   .inbox {
     height: auto;
     min-height: 100dvh;
