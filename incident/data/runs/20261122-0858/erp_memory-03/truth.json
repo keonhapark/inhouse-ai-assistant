@@ -1,0 +1,39 @@
+{
+  "incidentId": "erp_memory-03",
+  "runId": "20261122-0858",
+  "fault": "erp_memory",
+  "title": "erp 메모리 부족",
+  "rootService": "erp",
+  "kind": "resource_exhaustion",
+  "window": {
+    "start": "2026-11-22T09:03:51.705907+09:00",
+    "end": "2026-11-22T09:06:28.324740+09:00"
+  },
+  "injectedAt": "2026-11-22T09:04:36.708675+09:00",
+  "recoverStartedAt": "2026-11-22T09:05:39.156894+09:00",
+  "recoveredAt": "2026-11-22T09:05:49.865921+09:00",
+  "ticket": {
+    "id": "tkt_4590fb174dd7",
+    "requesterId": "E0010",
+    "title": "ERP가 갑자기 끊깁니다",
+    "description": "쓰던 중에 연결이 끊겼다가 잠시 뒤 다시 로그인하라고 나옵니다.",
+    "createdAt": "2026-11-22T09:06:28.429044833+09:00"
+  },
+  "files": {
+    "logs/postgres.log": 2,
+    "logs/erp.log": 348,
+    "logs/rag.log": 32,
+    "logs/agent.log": 49,
+    "logs/litellm.log": 93,
+    "logs/gateway.log": 50,
+    "audit/gateway_egress.jsonl": 1,
+    "audit/gateway_audit.jsonl": 13,
+    "audit/rag.jsonl": 1,
+    "audit/agent.jsonl": 5,
+    "audit/erp.jsonl": 2,
+    "logs/docker-events.log": 14
+  },
+  "trafficErrors": 556,
+  "trafficTotal": 1151,
+  "injection": "erp 컨테이너를 메모리 상한 320m(스왑 없음)로 다시 만듦. 기동한 뒤 평소 요청으로 상한을 넘김"
+}

@@ -70,6 +70,27 @@ def test_bad_config_overrides_key_only_for_injection() -> None:
     assert env_recover.get("LITELLM_MASTER_KEY") != "sk-wrong-key-deployed"
 
 
+def test_erp_memory_recreates_erp_with_limit_and_recover_drops_it(monkeypatch) -> None:
+    seen: list[str] = []
+
+    class ReadOverride(FakeDocker):
+        def __call__(self, args, *, env=None, input=None, check=True, timeout=None):
+            files = [args[i + 1] for i, a in enumerate(args) if a == "-f"]
+            seen.extend(open(f, encoding="utf-8").read() for f in files[1:])  # 호출하는 동안 덮어쓰기 파일이 있어야 함
+            return super().__call__(args, env=env, input=input, check=check, timeout=timeout)
+
+    monkeypatch.setattr(F, "wait_erp", lambda stack: None)
+    docker = ReadOverride()
+    stack = Stack(1, runner=docker)
+    assert F.by_id("erp_memory").inject(stack, 1) == F.ERP_MEMORY_INJECTION
+    F.by_id("erp_memory").recover(stack)
+    (inject, _), (recover, _) = docker.calls
+    assert inject[-4:] == ["-d", "--no-deps", "--force-recreate", "erp"] and inject.count("-f") == 2
+    assert seen == [f"services:\n  erp:\n    mem_limit: {F.ERP_MEMORY_LIMIT}\n    memswap_limit: {F.ERP_MEMORY_LIMIT}\n"]
+    assert recover[-4:] == ["-d", "--no-deps", "--force-recreate", "erp"] and recover.count("-f") == 1
+    assert all(a != "update" for args, _ in docker.calls for a in args)
+
+
 def test_unknown_fault() -> None:
     with pytest.raises(KeyError):
         F.by_id("nope")

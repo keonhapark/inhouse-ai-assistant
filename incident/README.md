@@ -20,10 +20,12 @@
 |---|---|---|---|
 | `db_down` | PostgreSQL 컨테이너 중단 | postgres / dependency_down | 다시 시작, erp 정상 확인 |
 | `db_lock` | 업무 표(결재·예약·연차·티켓)를 배타 잠금으로 60초 잡음 | postgres / lock_contention | 잠금 세션 종료 |
-| `erp_memory` | 실행 중인 erp 컨테이너 메모리 상한을 160MB로 낮춤 | erp / resource_exhaustion | 상한 4GB, 멈췄으면 다시 시작 |
+| `erp_memory` | erp 컨테이너를 메모리 상한 320MB(스왑 없음)로 다시 만듦. 평소 요청을 받으며 기동하다 상한을 넘겨 커널이 죽임 | erp / resource_exhaustion | 상한 없이 다시 만듦 |
 | `llm_timeout` | LiteLLM 컨테이너 일시 정지(연결은 받고 답하지 않음) | litellm / dependency_timeout | 정지 해제 |
 | `rag_corrupt` | rag 임베딩 캐시를 깨진 JSON으로 덮고 다시 시작 | rag / data_corruption | 빈 캐시로 바꾸고 다시 시작(다시 임베딩) |
 | `gateway_bad_config` | 틀린 LiteLLM 키로 gateway 다시 배포 | gateway / bad_config | 맞는 키로 다시 배포 |
+
+`erp_memory`는 처음에 실행 중인 erp의 상한을 `docker update --memory 160m --memory-swap 160m`으로 내렸습니다(개발용 묶음 `20261121-0058`, 맥 도커). 데스크탑 WSL 도커는 cgroup v1이라 메모리+스왑 상한을 지금 쓰는 양보다 낮게 못 내려(`memory.memsw.limit_in_bytes: device or resource busy`) 생성 시점에 상한을 거는 방식으로 바꿨습니다. 160~288MB는 요청 없이도 기동 중에 죽고, 352MB는 평소 요청 속에서 3회 중 1회만 죽어 320MB로 정했습니다(3회 모두 8~9초 만에 죽음, JVM `MaxRAMPercentage=75`). 주입 방식은 `truth.json`의 `injection`에 남깁니다.
 
 디스크 가득은 넣지 않았습니다. 도커 VM 디스크를 다른 세션의 스택과 같이 써서 그 스택까지 멈출 수 있습니다.
 
@@ -153,42 +155,45 @@ uv run python -m bench.rca --runs data/runs/20261121-0058 data/runs/20261121-010
 - 칸 크기를 바꿔도 비슷합니다(잡음 뺌, `--rcaeval-bin`): 10초 N-Sigma·BARO 0.143 / 0.143, 5초 N-Sigma 0.143 / 0.143·BARO 0.000 / 0.143, 1초 N-Sigma 0.000 / 0.000·BARO 0.000 / 0.143.
 - 본 측정(#284)은 아래 절입니다.
 
-### 본 측정: 장애 5종 × 3회(#284)
+### 본 측정: 장애 6종 × 3회(#284)
 
-`bench/results/final-15-colab-0837.json`, 2026-11-22 08:37~08:41. 묶음은 `data/runs/20261122-0752`(07:52~08:36 수집, 정답만 커밋).
+`bench/results/final-18-colab-0906.json`, 2026-11-22 09:06~09:12. 묶음은 `data/runs/20261122-0752`(5종 × 3회, 07:52~08:36)와 `data/runs/20261122-0858`(erp_memory 3회, 08:58~09:06), 정답만 커밋.
 
-- 측정 기기: 코랩 T4, Cloudflare 터널 경유(Ollama 0.40.17, qwen3.5:9b Q4_K_M digest 56671c2ab938, bge-m3, 문맥 8192). 세션 스택 iaa-s1의 LiteLLM `OLLAMA_BASE_URL`만 코랩으로 바꿔 수집과 측정을 같은 기기로 했습니다. 분석기는 그 데스크탑(WSL)에서 돌았습니다.
-- 기준선은 개발용 7건으로 손본 뒤 고정했고(#467 잡음 빼기까지), 이 15건은 그 뒤 새로 모은 것입니다. 과거 티켓은 같은 15건에서 한 건씩 빼고 나머지입니다. 각 1회.
-- `erp_memory`는 빠졌습니다. 데스크탑 WSL 도커는 cgroup v1이라 실행 중인 컨테이너의 메모리+스왑 상한을 지금 쓰는 양보다 낮게 못 내려(`memory.memsw.limit_in_bytes: device or resource busy`) 주입이 실패했습니다. 생성 시점에 상한을 거는 방식으로 따로 모읍니다.
+- 측정 기기: 코랩 T4, Cloudflare 터널 경유(Ollama 0.40.17, qwen3.5:9b Q4_K_M digest 56671c2ab938, bge-m3, 문맥 8192). 세션 스택 iaa-s1의 LiteLLM `OLLAMA_BASE_URL`만 코랩으로 바꿔 수집과 측정을 같은 기기로 했습니다. 분석기는 데스크탑(WSL)에서 돌았습니다.
+- 기준선은 개발용 7건으로 손본 뒤 고정했고(#467 잡음 빼기까지), 이 18건은 그 뒤 새로 모은 것입니다. 과거 티켓은 같은 18건에서 한 건씩 빼고 나머지입니다. 각 1회.
+- erp_memory는 상한 320MB로 다시 만든 방식입니다(위 "장애"). 3회 모두 다시 만든 지 8~9초 만에 커널이 죽였습니다(`oom`, `die exitCode=137`). 352MB로 먼저 모은 3회는 1회만 죽어 버렸습니다.
+- 5종만 먼저 잰 `final-15-colab-0837.json`(PR #507)은 이 18건 측정으로 대신합니다. 같은 15건이라도 LLM 답이 회차마다 조금 다릅니다.
 
 | 방법 | 상위 1 | 상위 3 | 지연 중앙값 |
 |---|---|---|---|
-| 로그(템플릿 변화 + 로그 끊김) | 0.800 | 1.000 | 18ms |
-| 로그 + 유사 티켓 | 0.733 | 1.000 | 18ms |
-| N-Sigma(RCAEval 계열, 15초 칸) | 0.400 | 0.400 | 20ms |
-| BARO(RCAEval 계열, 15초 칸) | 0.400 | 0.400 | 21ms |
-| LLM(진단 텍스트) | 0.867 | 1.000 | 10.7초 |
-| LLM(티켓만) | 0.400 | 0.867 | 7.0초 |
+| 로그(템플릿 변화 + 로그 끊김) | 0.833 | 1.000 | 15ms |
+| 로그 + 유사 티켓 | 0.778 | 1.000 | 16ms |
+| N-Sigma(RCAEval 계열, 15초 칸) | 0.444 | 0.444 | 18ms |
+| BARO(RCAEval 계열, 15초 칸) | 0.444 | 0.444 | 17ms |
+| LLM(진단 텍스트) | 0.833 | 0.944 | 10.6초 |
+| LLM(티켓만) | 0.444 | 0.889 | 7.1초 |
 
 장애별 맞힌 수(상위 1 / 상위 3, 각 3회):
 
 | 장애 | 로그 | 로그 + 티켓 | N-Sigma | BARO | LLM | LLM(티켓만) |
 |---|---|---|---|---|---|---|
-| db_down | 0 / 3 | 0 / 3 | 0 / 0 | 0 / 0 | 3 / 3 | 1 / 3 |
+| db_down | 0 / 3 | 0 / 3 | 0 / 0 | 0 / 0 | 3 / 3 | 0 / 3 |
 | db_lock | 3 / 3 | 3 / 3 | 3 / 3 | 3 / 3 | 3 / 3 | 0 / 3 |
-| gateway_bad_config | 3 / 3 | 2 / 3 | 3 / 3 | 3 / 3 | 2 / 3 | 0 / 2 |
+| erp_memory | 3 / 3 | 3 / 3 | 2 / 2 | 2 / 2 | 2 / 2 | 3 / 3 |
 | llm_timeout | 3 / 3 | 3 / 3 | 0 / 0 | 0 / 0 | 2 / 3 | 2 / 2 |
 | rag_corrupt | 3 / 3 | 3 / 3 | 0 / 0 | 0 / 0 | 3 / 3 | 3 / 3 |
+| gateway_bad_config | 3 / 3 | 2 / 3 | 3 / 3 | 3 / 3 | 2 / 3 | 0 / 2 |
 
 ```bash
-uv run python -m bench.rca --runs data/runs/20261122-0752 --llm http://localhost:8110 --out bench/results/<이름>.json
+uv run python -m bench.rca --runs data/runs/20261122-0752 data/runs/20261122-0858 --llm http://localhost:8110 \
+  --out bench/results/<이름>.json
 ```
 
-- 로그 기준선은 db_down에서 늘 erp(증상: 연결 오류)를 1위, postgres(멈춰 로그가 끊김)를 2위로 둡니다. LLM은 같은 진단 텍스트에서 "앱 오류의 원인이 DB"를 읽어 3번 다 postgres를 골랐습니다.
-- LLM이 틀린 두 건: gateway_bad_config-01은 오류가 찍힌 litellm을 1위(gateway 2위), llm_timeout-02는 rag·gateway 다음 3위로 litellm을 골랐습니다.
-- RCAEval 계열은 늘어난 로그만 보므로, 멈추거나(db_down, llm_timeout) 다시 시작하며 로그가 달라진 장애(rag_corrupt)에서 원인을 상위 3에 못 올립니다. 잠금 대기(db_lock)와 잘못된 키(gateway_bad_config)처럼 원인 서비스에 새 오류 줄이 늘어나는 장애만 맞힙니다.
-- LLM 지연은 코랩 T4와 터널 왕복을 포함합니다(15건 8.1~13.5초). 데스크탑 4070 SUPER 개발용 측정(10.5초)과 기기가 달라 바로 비교하지 않습니다.
-- 15건이라 한 건이 0.067입니다.
+- 로그 기준선과 LLM의 상위 1은 같지만(0.833) 틀리는 장애가 다릅니다. 로그 기준선은 db_down 3건 모두 erp(증상: 연결 오류)를 1위, postgres(멈춰 로그가 끊김)를 2위로 둡니다. LLM은 같은 진단 텍스트에서 "앱 오류의 원인이 DB"를 읽어 3건 모두 postgres를 골랐습니다.
+- LLM이 틀린 세 건: gateway_bad_config-01은 오류가 찍힌 litellm을 1위(gateway 2위), llm_timeout-02는 litellm을 3위, erp_memory-02는 postgres·gateway·litellm을 골라 상위 3에도 erp가 없었습니다.
+- RCAEval 계열은 늘어난 로그만 보므로, 멈추거나(db_down, llm_timeout) 다시 시작하며 로그가 달라진 장애(rag_corrupt)에서는 원인을 상위 3에 못 올립니다. 원인 서비스에 새 줄이 늘어나는 db_lock·gateway_bad_config와 erp_memory 2건만 맞힙니다.
+- LLM 지연은 코랩 T4와 터널 왕복을 포함합니다(18건 8.3~13.7초). 데스크탑 4070 SUPER 개발용 측정(10.5초)과 기기가 달라 바로 비교하지 않습니다.
+- 18건이라 한 건이 0.056입니다.
 
 ## 외부 비교 데이터(RCAEval)
 
