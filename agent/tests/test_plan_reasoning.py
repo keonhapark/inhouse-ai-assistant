@@ -1,4 +1,5 @@
-"""#423: 로컬로 가는 계획 호출은 생각 단계를 끄고, 시간 초과·출구 장애는 다시 보내 달라고 안내합니다."""
+"""#423·#535: 로컬로 가는 계획 호출의 생각 단계 설정(기본은 보내지 않음=모델 기본 켬, 결정 0008)과,
+시간 초과·출구 장애 때 다시 보내 달라는 안내."""
 
 from __future__ import annotations
 
@@ -35,27 +36,29 @@ async def _run(r: RunHarness, agent: str, route_method: str | None = None) -> di
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(("agent", "route"), [("hr", None), ("assistant", None), ("assistant", "fallback")])
+async def test_plan_reasoning_is_left_to_model_by_default(r: RunHarness, agent: str, route: str | None) -> None:
+    # 결정 0008(#535): 기본은 reasoning_effort를 보내지 않습니다(로컬 qwen3.5:9b는 생각 켬)
+    r.llm.script = [say("네.")]
+    await _run(r, agent, route)
+    assert r.llm.requests[0]["extra"] is None
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize(("agent", "route", "extra"), [
     ("hr", None, {"reasoning_effort": "none"}),          # local_only
     ("assistant", None, None),                           # external_allowed: 보내지 않음
     ("assistant", "fallback", {"reasoning_effort": "none"}),  # fallback 대화는 로컬(#308)
 ])
-async def test_local_plan_call_turns_thinking_off(r: RunHarness, agent: str, route: str | None, extra) -> None:
-    r.llm.script = [say("네.")]
-    await _run(r, agent, route)
-    assert r.llm.requests[0]["extra"] == extra
-
-
-@pytest.mark.anyio
-async def test_plan_reasoning_can_be_left_to_model(r: RunHarness) -> None:
+async def test_local_plan_call_can_turn_thinking_off(r: RunHarness, agent: str, route: str | None, extra) -> None:
     import dataclasses
 
     from agent_runtime.run.graph import build_graph
 
-    r.runner.graph = build_graph(dataclasses.replace(_deps(r), plan_reasoning_effort=None))
+    r.runner.graph = build_graph(dataclasses.replace(_deps(r), plan_reasoning_effort="none"))
     r.llm.script = [say("네.")]
-    await _run(r, "hr")
-    assert r.llm.requests[0]["extra"] is None
+    await _run(r, agent, route)
+    assert r.llm.requests[0]["extra"] == extra
 
 
 def _deps(r: RunHarness):

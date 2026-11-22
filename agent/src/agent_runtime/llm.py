@@ -56,13 +56,16 @@ class LLMSettings:
     def from_env(cls, env: dict[str, str] | None = None) -> LLMSettings:
         env = dict(os.environ if env is None else env)
         backend = env.get("AGENT_LLM_BACKEND", "gateway")
-        timeout = float(env.get("AGENT_LLM_TIMEOUT_S", "60"))
+        # 생각을 켠 로컬 계획 호출이 여러 턴 대화에서 60초를 넘길 수 있어 120초로 둡니다(결정 0008, #535).
+        timeout = float(env.get("AGENT_LLM_TIMEOUT_S", "120"))
         if backend == "ollama":
             # Ollama는 모델 이름 그대로 받습니다.
             model = env.get("AGENT_LLM_MODEL") or env.get("LOCAL_MODEL") or "qwen3.5:9b"
             base = env.get("AGENT_OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/") + "/v1"
-            # 로컬 개발에서 생각 단계를 끄면 라우팅 한 번이 몇 초 안에 끝납니다.
-            return cls(base_url=base, model=model, timeout_s=timeout, extra_body={"reasoning_effort": "none"})
+            # 생각 단계는 업무 경로의 계획 호출과 같은 설정(AGENT_PLAN_REASONING_EFFORT)을 따릅니다. 빈 값이면 보내지 않습니다.
+            effort = env.get("AGENT_PLAN_REASONING_EFFORT", "")
+            return cls(base_url=base, model=model, timeout_s=timeout,
+                       extra_body={"reasoning_effort": effort} if effort else {})
         if backend != "gateway":
             raise ValueError(f"AGENT_LLM_BACKEND는 gateway 또는 ollama입니다: {backend}")
         default_gw = f"http://localhost:{env.get('PORT_GATEWAY', '8010')}/v1"

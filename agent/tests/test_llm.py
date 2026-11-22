@@ -22,7 +22,16 @@ def test_ollama_dev_backend() -> None:
     s = LLMSettings.from_env({"AGENT_LLM_BACKEND": "ollama", "LOCAL_MODEL": "m"})
     assert s.base_url == "http://localhost:11434/v1"
     assert s.model == "m"
-    assert s.extra_body == {"reasoning_effort": "none"}
+    assert s.extra_body == {}  # 결정 0008: 생각 단계는 모델 기본(켬)
+    off = LLMSettings.from_env({"AGENT_LLM_BACKEND": "ollama", "AGENT_PLAN_REASONING_EFFORT": "none"})
+    assert off.extra_body == {"reasoning_effort": "none"}
+
+
+def test_timeout_default_is_120s() -> None:
+    # 생각을 켠 로컬 계획 호출(결정 0008, #535)
+    assert LLMSettings.from_env({}).timeout_s == 120
+    assert LLMSettings.from_env({"AGENT_LLM_BACKEND": "ollama"}).timeout_s == 120
+    assert LLMSettings.from_env({"AGENT_LLM_TIMEOUT_S": "30"}).timeout_s == 30
 
 
 def test_unknown_backend() -> None:

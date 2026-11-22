@@ -9,7 +9,8 @@
 - AGENT_MCP_URL: 업무 실행이 부르는 MCP 서버(기본 http://localhost:$MCP_PORT/mcp, MCP_PORT 기본 8001)
 - DELEGATION_TOKEN_PUBLIC_KEY 또는 DELEGATION_JWKS_URL(필수): /run·/resume에서 토큰의 에이전트·요청자·대화를 대조.
   AGENT_ALLOW_UNVERIFIED_TOKENS=1이면 대조하지 않습니다(개발용)
-- AGENT_PLAN_REASONING_EFFORT: 로컬로 가는 계획 호출의 reasoning_effort(기본 none=생각 끔, 빈 값이면 보내지 않음, #423)
+- AGENT_PLAN_REASONING_EFFORT: 로컬로 가는 계획 호출의 reasoning_effort(기본 빈 값=보내지 않음=모델 기본 생각 켬, none이면 생각 끔.
+  #423·#535, 결정 0008). AGENT_LLM_BACKEND=ollama 개발 경로의 모든 호출도 이 값을 따릅니다
 - AGENT_EVAL_MODE=1: 평가 경로 /eval/tool-call을 켭니다(아니면 404). AGENT_EVAL_FEWSHOT: few-shot 예시 파일
   (기본 eval_dev/tool_calls.jsonl, 작업 폴더 기준)
 """
@@ -152,7 +153,7 @@ def services_from_env() -> Services:
     mcp_url = os.environ.get("AGENT_MCP_URL", f"http://localhost:{os.environ.get('MCP_PORT', '8001')}/mcp")
     deps = Deps(llm=chat, caller=McpToolCaller(mcp_url), audit=log, wide=WideScope.from_pack(Path(pack_dir)),
                 trusted_docs=trusted_docs(Path(pack_dir)),
-                plan_reasoning_effort=os.environ.get("AGENT_PLAN_REASONING_EFFORT", "none") or None)
+                plan_reasoning_effort=os.environ.get("AGENT_PLAN_REASONING_EFFORT", "") or None)
     # 토큰 확인 키가 없으면 시작하지 않습니다. 끄는 것은 개발용 플래그로만 합니다.
     verifier: TokenVerifier | None = None
     if os.environ.get("AGENT_ALLOW_UNVERIFIED_TOKENS") != "1":
