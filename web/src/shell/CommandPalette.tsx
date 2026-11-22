@@ -19,7 +19,7 @@ type Props = { me: Schemas['Employee']; open: boolean; onOpenChange(open: boolea
  */
 export function CommandPalette({ me, open, onOpenChange }: Props) {
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const [theme, setTheme] = useTheme()
 
   // Ctrl K(맥은 ⌘ K)로 열고 닫습니다
@@ -57,7 +57,7 @@ export function CommandPalette({ me, open, onOpenChange }: Props) {
                   <FileCheck2 aria-hidden />
                   결재 대기 열기
                 </Command.Item>
-                <Command.Item onSelect={run(() => navigate('/org', { state: { find: true } satisfies OrgNavState }))}>
+                <Command.Item onSelect={run(() => navigate({ pathname: '/org', search: pathname === '/org' ? search : '' }, { state: { find: true } satisfies OrgNavState }))}>
                   <UserSearch aria-hidden />
                   사람 찾기
                 </Command.Item>

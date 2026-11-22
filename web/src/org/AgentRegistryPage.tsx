@@ -100,20 +100,12 @@ function AgentSection({ agent: a, isFallback }: { agent: Entry; isFallback: bool
           <dd>{callableByText(a.callableBy)}</dd>
         </div>
         <div className="row">
-          <dt className="row__label">처리</dt>
+          <dt className="row__label">AI 처리</dt>
           <dd>
-            {local ? '사내 처리만' : '외부 AI 사용 가능'}
+            {local ? '사내 처리' : '외부 AI 사용'}
             {a.modelPolicy.reason && <span className="agent__reason">{a.modelPolicy.reason}</span>}
           </dd>
         </div>
-        {a.docScopes && a.docScopes.length > 0 && (
-          <div className="row">
-            <dt className="row__label">참고 문서</dt>
-            <dd>
-              <code className="agent__code">{a.docScopes.join(', ')}</code>
-            </dd>
-          </div>
-        )}
         {a.routingKeywords && a.routingKeywords.length > 0 && (
           <div className="row">
             <dt className="row__label">맡는 말</dt>
@@ -123,8 +115,9 @@ function AgentSection({ agent: a, isFallback }: { agent: Entry; isFallback: bool
       </dl>
 
       <section className="group" aria-labelledby={`agent-${a.id}-tools`}>
-        <GroupHead id={`agent-${a.id}-tools`} title="할 수 있는 일" n={`${a.tools.length}가지`} />
-        <ul className="group__list">
+        <GroupHead id={`agent-${a.id}-tools`} title="할 수 있는 일" n={a.tools.length ? `${a.tools.length}가지` : undefined} />
+        {a.tools.length === 0 && <p className="group__empty">할 수 있는 일이 없습니다.</p>}
+        <ul className="group__list" hidden={a.tools.length === 0}>
           {a.tools.map((t) => {
             const how = actionOf(a, t.risk)
             const overrides = how.denied ? [] : (a.riskPolicy.overrides ?? []).filter((o) => o.tool === t.name)
@@ -136,8 +129,8 @@ function AgentSection({ agent: a, isFallback }: { agent: Entry; isFallback: bool
                     <span className="group__sub">
                       {RISK_LABEL[t.risk]} · <code className="agent__code">{t.name}</code>
                     </span>
-                    {overrides.map((o) => (
-                      <span key={`${o.when}-${o.arg ?? ''}`} className="group__sub">
+                    {overrides.map((o, i) => (
+                      <span key={i} className="group__sub">
                         {overrideWhen(o)} {RISK_ACTION[o.action]}
                       </span>
                     ))}

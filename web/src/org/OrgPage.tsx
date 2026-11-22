@@ -1,6 +1,6 @@
 import { Bot, ChevronRight, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, problemTitle, type Schemas } from '../api/client'
 import { GroupHead } from '../components/Group'
 import { agentLabel } from '../display/names'
@@ -37,8 +37,10 @@ export function OrgPage() {
   const [found, setFound] = useState<{ term: string; load: Load<Person[]> } | null>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const mainRef = useRef<HTMLDivElement>(null)
   const focusTitle = useRef<'always' | 'narrow' | null>(null)
   const location = useLocation()
+  const navigate = useNavigate()
 
   const all = useMemo(() => (units.status === 'ok' ? units.data : []), [units])
   const tree = useMemo(() => buildTree(all), [all])
@@ -47,7 +49,11 @@ export function OrgPage() {
   const unitId = unit?.id
   const people: Load<Person[]> = members && members.unitId === unitId ? members.load : { status: 'loading' }
   const term = query.trim()
-  const results: Load<Person[]> | null = term ? (found && found.term === term ? found.load : { status: 'loading' }) : null
+  // 낱말이 바뀌어 새 결과를 기다리는 동안에는 앞 결과(성공한 것)를 그대로 두고 aria-busy로만 알립니다. 칠 때마다 목록이 깜빡이지 않게 합니다.
+  const fresh = !!found && found.term === term
+  const shown = term && found && (fresh || found.load.status === 'ok') ? found : null
+  const results: Load<Person[]> | null = term ? (shown ? shown.load : { status: 'loading' }) : null
+  const peopleReady = people.status === 'ok'
 
   useEffect(() => {
     let alive = true
@@ -100,21 +106,32 @@ export function OrgPage() {
   }, [term])
 
   // 명령 팔레트의 "사람 찾기"로 들어오면 찾기 칸에 초점을 둡니다(이미 조직도에 있어도 매번).
+  // 초점을 둔 뒤에는 기록의 상태를 지워, 새로고침이나 뒤로 가기로 돌아왔을 때 다시 잡지 않게 합니다.
   useEffect(() => {
-    if ((location.state as OrgNavState | null)?.find) searchRef.current?.focus()
-  }, [location.key, location.state])
+    if (!(location.state as OrgNavState | null)?.find) return
+    searchRef.current?.focus()
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null })
+  }, [location.key, location.state, location.pathname, location.search, navigate])
 
   // 상세 안의 버튼이나 찾은 사람으로 고르면 제목으로 포커스를 옮깁니다. 좁은 화면에서는 왼쪽 열 아래 상세가 보이게 합니다.
   useEffect(() => {
     const how = focusTitle.current
     focusTitle.current = null
     if (!how || !titleRef.current) return
+    // 넓은 화면에서는 상세 열이 그대로 남아 스크롤도 남으므로, 새 부서의 머리로 되돌립니다
+    if (mainRef.current) mainRef.current.scrollTop = 0
     const narrow = globalThis.matchMedia?.(NARROW).matches ?? false
     if (how === 'always' || narrow) {
       titleRef.current.focus({ preventScroll: !narrow })
       if (narrow) titleRef.current.scrollIntoView?.({ block: 'start' })
     }
   }, [unitId, person])
+
+  // 찾기로 고른 사람의 행은 구성원을 다 받은 뒤 보이는 곳으로 옮깁니다(초점은 제목에 둔 채)
+  useEffect(() => {
+    if (!peopleReady || !person) return
+    mainRef.current?.querySelector('.org__detail [aria-current="true"]')?.scrollIntoView?.({ block: 'nearest' })
+  }, [peopleReady, person, unitId])
 
   function select(id: string, from: 'tree' | 'detail') {
     if (id === unitId && !person) return
@@ -157,7 +174,7 @@ export function OrgPage() {
             />
           </div>
           {results ? (
-            <Found results={results} term={term} selected={person} onPick={pick} />
+            <Found results={results} term={shown?.term ?? term} busy={!fresh} selected={person} onPick={pick} />
           ) : (
             <nav className="org__tree" aria-label="부서">
               {units.status === 'loading' && <p className="org__muted">불러오는 중입니다.</p>}
@@ -175,7 +192,7 @@ export function OrgPage() {
             </nav>
           )}
         </div>
-        <div className="org__main">
+        <div className="org__main" ref={mainRef}>
           {unit && (
             <UnitDetail
               unit={unit}
@@ -195,9 +212,14 @@ export function OrgPage() {
 }
 
 /** 사람 찾기 결과. 고르면 그 사람의 부서를 열고 행을 표시합니다 */
-function Found({ results, term, selected, onPick }: { results: Load<Person[]>; term: string; selected: string | null; onPick: (p: Person) => void }) {
+function Found({ results, term, busy, selected, onPick }: { results: Load<Person[]>; term: string; busy: boolean; selected: string | null; onPick: (p: Person) => void }) {
+  const none = `이름에 “${term}”${josa(term, '이', '가')} 들어간 사람이 없습니다.`
   return (
-    <section className="group" aria-labelledby="org-found">
+    <section className="group" aria-labelledby="org-found" aria-busy={busy}>
+      {/* 늘 있는 알림 영역에 글만 바꿔 넣어야 화면 낭독기가 건수를 읽습니다 */}
+      <p role="status" className="visually-hidden">
+        {results.status === 'ok' ? (results.data.length ? `${results.data.length}명을 찾았습니다.` : none) : ''}
+      </p>
       <GroupHead id="org-found" level={2} title="찾은 사람" n={results.status === 'ok' ? `${results.data.length}명` : undefined} />
       {results.status === 'loading' && <p className="group__empty">찾는 중입니다.</p>}
       {results.status === 'error' && (
@@ -207,9 +229,7 @@ function Found({ results, term, selected, onPick }: { results: Load<Person[]>; t
       )}
       {results.status === 'ok' &&
         (results.data.length === 0 ? (
-          <p role="status" className="group__empty">
-            이름에 “{term}”{josa(term, '이', '가')} 들어간 사람이 없습니다.
-          </p>
+          <p className="group__empty">{none}</p>
         ) : (
           <>
             <ul className="group__list">
@@ -319,6 +339,7 @@ function UnitDetail({ unit, titleRef, path, subUnits, people, person, agents, on
                           <span className="group__title">
                             {p.name}
                             {p.id === unit.headId && <span className="tag org__head-tag">부서장</span>}
+                            {p.id === person && <span className="visually-hidden">, 찾은 사람</span>}
                           </span>
                         </span>
                         <span className="group__end">{gradeName(p.grade)}</span>
