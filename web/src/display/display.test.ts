@@ -175,7 +175,7 @@ describe('실행 미리보기', () => {
     expect(r.rows.find((x) => x.key === 'status')?.before).toBe('확정')
     expect(r.rows.find((x) => x.key === 'startsAt')?.before).toMatch(/^2026\. 11\. 25\. \d{2}:00$/)
     const g = previewView(
-      { op: 'create', resource: 'delegation', after: { delegateId: 'E0036', startsAt: '2026-11-23T00:00:00+09:00', scope: { formTypes: ['leave'], maxAmount: null } } },
+      { op: 'create', resource: 'delegation', after: { delegateId: 'E0036', startsAt: '2026-11-23T12:00:00+09:00', scope: { formTypes: ['leave'], maxAmount: null } } },
       { forms: [leave], people },
     )
     expect(g.rows.map((x) => [x.label, x.after])).toEqual([
