@@ -88,3 +88,12 @@ def test_bundle_without_markers_masks_criteria_only(tmp_path, monkeypatch):
     assert "dbAssertions[0] 판정 기준 미달(기준 문장 가림)" in text and "count_equals" not in text
     note = json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))["meta"]["notes"][-1]
     assert note.startswith("회차 기록(.json·.rows.jsonl)은 판정 기준 ")
+
+
+def test_required_tool_names_are_collapsed_to_count():
+    shortfalls = ["필수 도구 leave_request를 실행하지 않음", "필수 도구 policy_search를 실행하지 않음",
+                  "'규정에서 찾지 못함'로 답하지 않음"]
+    got = mm.mask_value({"shortfalls": shortfalls}, [])
+    assert got == {"shortfalls": ["필수 도구 미실행(2개)", "'규정에서 찾지 못함'로 답하지 않음"]}
+    assert mm.leftovers(json.dumps(shortfalls, ensure_ascii=False), []) == 2
+    assert mm.leftovers(json.dumps(got, ensure_ascii=False), []) == 0
