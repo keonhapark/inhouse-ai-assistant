@@ -66,7 +66,7 @@
 - `.env`는 `.worktreeinclude`로 worktree에 복사됩니다. 값은 커밋하지 않습니다.
 - 위임 토큰 개발 키: `bash scripts/dev-keys.sh`(커밋하지 않음)
 - 로컬 모델 Ollama(`qwen3.5:9b`)는 한 대를 모든 세션이 같이 씁니다(11434). 측정 기록은 `docs/measurements/`입니다.
-- GPU 사용권: 실제 로컬 모델을 부르는 측정·확인(녹화·스텁 시험 제외)은 사용권을 가진 동안에만 합니다. GPU는 `desktop`(이 PC의 Ollama)과 `colab`(코랩 T4 터널, 작업 공간 `.env`의 `COLAB_OLLAMA_BASE_URL`) 두 대입니다.
+- GPU 사용권: 실제 로컬 모델을 부르는 측정·확인(녹화·스텁 시험 제외)은 사용권을 가진 동안에만 합니다. GPU는 `desktop`(이 PC의 Ollama), `colab`(코랩 T4 터널, 작업 공간 `.env`의 `COLAB_OLLAMA_BASE_URL`), `kaggle`(Kaggle T4 x2 터널, `KAGGLE_OLLAMA_BASE_URL`) 세 대입니다.
   - 시작 전 `bash scripts/gpu-lease.sh take <gpu> <모듈> <분> "<이슈·목적>"`. 사용 중이면 1을 돌려주니 기다리거나 다른 GPU를 봅니다. 시간이 모자라면 `extend`, 끝나면 반드시 `release`.
   - 만료된 사용권은 빈 것으로 봅니다. 길게 도는 측정은 감독 스크립트가 30분마다 `extend`합니다.
   - 공식 평가 셋(확인 셋·도구 호출 확인 묶음·정상 셋 v2·모델 교체 회귀)은 `desktop`에서만 돌립니다. 한 보고서 안에서 기기를 섞지 않고, 보고서에 측정 기기를 적습니다.

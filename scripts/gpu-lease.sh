@@ -4,11 +4,11 @@
 #   bash scripts/gpu-lease.sh take <gpu> <모듈> <분> <목적>   # 성공 0, 사용 중이면 1
 #   bash scripts/gpu-lease.sh extend <gpu> <모듈> <분>
 #   bash scripts/gpu-lease.sh release <gpu> <모듈>
-# gpu: desktop(이 PC의 Ollama), colab(코랩 T4 터널). 파일 위치는 GPU_LEASE_DIR(기본 ~/.local/share/inhouse-ai/gpu).
+# gpu: desktop(이 PC의 Ollama), colab(코랩 T4 터널), kaggle(Kaggle T4 x2 터널). 파일 위치는 GPU_LEASE_DIR(기본 ~/.local/share/inhouse-ai/gpu).
 set -euo pipefail
 DIR=${GPU_LEASE_DIR:-$HOME/.local/share/inhouse-ai/gpu}
 mkdir -p "$DIR"
-GPUS=(desktop colab)
+GPUS=(desktop colab kaggle)
 now() { date +%s; }
 
 valid_gpu() {
