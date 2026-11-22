@@ -4,7 +4,10 @@ import { Badge, LocalBadge, RiskBadge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { newIdempotencyKey, type UndoResult } from './api'
-import { changeRows, formatTime, opLabel } from './format'
+import { previewView } from '../display/preview'
+import { toolName } from '../display/names'
+import { useLookups } from '../display/useLookups'
+import { formatTime } from './format'
 import { Markdown } from './markdown'
 import type { Citation, ThreadItem } from './thread'
 
@@ -80,11 +83,11 @@ export function PreviewCard({ agentName, approval, fromImage, decision, closed, 
   return (
     <Card
       className="preview"
-      aria-label={`실행 미리보기: ${approval.toolLabel ?? approval.tool}`}
+      aria-label={`실행 미리보기: ${approval.toolLabel ?? toolName(approval.tool)}`}
       header={
         <>
           {agentName && <strong>{agentName}</strong>}
-          <span>{approval.toolLabel ?? <code>{approval.tool}</code>}</span>
+          <span>{approval.toolLabel ?? toolName(approval.tool)}</span>
           <RiskBadge risk={approval.risk} />
           {fromImage && <Badge tone="warning">이미지에서 읽은 값(확인 필요)</Badge>}
         </>
@@ -123,29 +126,69 @@ export function PreviewCard({ agentName, approval, fromImage, decision, closed, 
   )
 }
 
-/** 미리보기(WritePreview)의 바뀌는 값과 경고. 채팅 미리보기 카드와 대결 등록이 같이 씁니다. */
+function ChangeValue({ before, after }: { before?: string; after?: string }) {
+  return (
+    <dd>
+      {before !== undefined && <span className={after !== undefined ? 'changes__before' : ''}>{before}</span>}
+      {before !== undefined && after !== undefined && ' → '}
+      {after !== undefined && <span>{after}</span>}
+    </dd>
+  )
+}
+
+/**
+ * 미리보기(WritePreview)의 바뀌는 값과 경고. 채팅 미리보기 카드와 대결 등록이 같이 씁니다.
+ * 양식 필드 이름·한국어 값·결재선만 보이고, API가 준 원래 값은 "자세히" 안에 둡니다(#556).
+ */
 export function PreviewChanges({ preview }: { preview: Schemas['WritePreview'] }) {
+  const lookups = useLookups()
   return (
     <>
-      {preview.changes.map((c, i) => (
-        <div key={i} className="changes">
-          <span className="muted">
-            {c.resource} {opLabel(c.op)}
-          </span>
-          <dl>
-            {changeRows(c).map((r) => (
-              <div key={r.field} className="changes__row">
-                <dt className="mono">{r.field}</dt>
-                <dd>
-                  {r.before !== undefined && <span className={r.after !== undefined ? 'changes__before' : ''}>{r.before}</span>}
-                  {r.before !== undefined && r.after !== undefined && ' → '}
-                  {r.after !== undefined && <span>{r.after}</span>}
-                </dd>
+      {preview.changes.map((c, i) => {
+        const v = previewView(c, lookups)
+        return (
+          <div key={i} className="changes">
+            <span className="muted">
+              {v.title} {v.op}
+            </span>
+            {v.rows.length > 0 && (
+              <dl>
+                {v.rows.map((r) => (
+                  <div key={r.key} className="changes__row">
+                    <dt>{r.label}</dt>
+                    <ChangeValue before={r.before} after={r.after} />
+                  </div>
+                ))}
+              </dl>
+            )}
+            {v.line.length > 0 && (
+              <div className="changes__line">
+                <span className="muted">결재선</span>
+                <ol>
+                  {v.line.map((s) => (
+                    <li key={s.order}>
+                      {s.who} · {s.status}
+                    </li>
+                  ))}
+                </ol>
               </div>
-            ))}
-          </dl>
-        </div>
-      ))}
+            )}
+            {v.raw.length > 0 && (
+              <details className="changes__raw">
+                <summary>자세히</summary>
+                <dl>
+                  {v.raw.map((r) => (
+                    <div key={r.field} className="changes__row">
+                      <dt className="mono">{r.field}</dt>
+                      <ChangeValue before={r.before} after={r.after} />
+                    </div>
+                  ))}
+                </dl>
+              </details>
+            )}
+          </div>
+        )
+      })}
       {preview.warnings?.map((w) => (
         <p key={w} className="warning-line">
           {w}
@@ -198,7 +241,7 @@ export function ToolCall({ item }: { item: Extract<ThreadItem, { kind: 'tool' }>
   return (
     <details className="tool">
       <summary>
-        도구 실행 <code>{call.tool}</code>
+        도구 실행{call.tool && <>: {toolName(call.tool)} <code className="muted">{call.tool}</code></>}
       </summary>
       <div className="row">
         {call.risk && <RiskBadge risk={call.risk} />}

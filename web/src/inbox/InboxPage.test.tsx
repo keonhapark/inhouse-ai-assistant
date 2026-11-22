@@ -37,6 +37,7 @@ describe('팀장 승인함', () => {
     // 양식 스키마의 title·x-labels로 필드를 보여 줍니다.
     expect(within(doc).getByText('종류')).toBeInTheDocument()
     expect(within(doc).getByText('연차')).toBeInTheDocument()
+    expect(within(doc).getByText('2026. 11. 27.(금)')).toBeInTheDocument()
     const line = within(doc).getByRole('list')
     expect(within(line).getByText('서도윤')).toBeInTheDocument()
     expect(within(line).getByText('결재 차례')).toBeInTheDocument()

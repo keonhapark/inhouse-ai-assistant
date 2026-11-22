@@ -279,6 +279,22 @@ select {
   text-decoration: line-through;
 }
 
+.changes__line ol {
+  margin: var(--sp-4) 0 0;
+  padding-left: var(--sp-24);
+}
+
+.changes__raw summary {
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+  cursor: pointer;
+}
+
+.changes__raw dl {
+  margin-top: var(--sp-4);
+  font-size: var(--fs-12);
+}
+
 .warning-line {
   margin: var(--sp-8) 0 0;
   padding-left: var(--sp-8);

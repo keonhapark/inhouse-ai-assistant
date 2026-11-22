@@ -18,6 +18,18 @@ const LEAVE_SCHEMA = {
   },
 }
 
+// 제조 팩 forms.yaml의 경비 정산 필드(채팅 미리보기 카드와 승인함이 필드 이름·순서를 여기서 읽습니다)
+export const EXPENSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    amount: { type: 'integer', title: '금액' },
+    spent_on: { type: 'string', format: 'date', title: '사용일' },
+    merchant: { type: 'string', title: '가맹점' },
+    business_no: { type: 'string', title: '사업자번호' },
+    purpose: { type: 'string', title: '목적' },
+  },
+}
+
 const FORMS: Record<string, string> = { leave: '휴가 신청', expense: '경비 정산', purchase: '구매 요청' }
 const DAY = 86_400_000
 
@@ -256,7 +268,7 @@ export const inboxHandlers = [
     const items: Schemas['ApprovalForm'][] = Object.entries(FORMS).map(([id, name]) => ({
       id,
       name,
-      fieldsSchema: id === 'leave' ? LEAVE_SCHEMA : {},
+      fieldsSchema: id === 'leave' ? LEAVE_SCHEMA : id === 'expense' ? EXPENSE_SCHEMA : {},
       amountField: id === 'leave' ? null : 'amount',
     }))
     return HttpResponse.json({ items })

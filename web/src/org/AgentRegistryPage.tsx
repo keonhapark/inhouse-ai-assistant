@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom'
 import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge, RiskBadge, type Risk } from '../components/Badge'
 import { Card } from '../components/Card'
-import { callableByText, overrideWhen, RISK_ACTION } from './labels'
+import { toolName } from '../display/names'
+import { callableByText, josa, overrideWhen, RISK_ACTION } from './labels'
 import '../inbox/inbox.css'
 import './org.css'
 
@@ -124,7 +125,8 @@ function AgentCard({ agent: a, isFallback }: { agent: Entry; isFallback: boolean
       </table>
       {a.riskPolicy.overrides?.map((o) => (
         <p key={`${o.tool}-${o.when}-${o.arg ?? ''}`} className="muted">
-          예외: <code>{o.tool}</code>은 {overrideWhen(o)} {RISK_ACTION[o.action]}
+          예외: {toolName(o.tool)}
+          {josa(toolName(o.tool), '은', '는')} {overrideWhen(o)} {RISK_ACTION[o.action]} <code className="muted">{o.tool}</code>
         </p>
       ))}
 
@@ -132,7 +134,7 @@ function AgentCard({ agent: a, isFallback }: { agent: Entry; isFallback: boolean
       <ul className="registry__tools">
         {a.tools.map((t) => (
           <li key={t.name}>
-            <code>{t.name}</code>
+            <span>{toolName(t.name)}</span> <code className="muted">{t.name}</code>
             <RiskBadge risk={t.risk} />
           </li>
         ))}

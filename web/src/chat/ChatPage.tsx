@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState, 
 import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
+import { conversationMeta } from '../display/conversation'
 import { decideApproval, postMessage, undoAction, type StreamResult } from './api'
 import { ACCEPT, formatBytes, MAX_IMAGES, pickImages, release, toDataUrl, type PickedImage } from './attachments'
 import { ActionCard, AssistantMessage, PreviewCard, ToolCall } from './parts'
@@ -286,10 +287,7 @@ export function ChatPage() {
                   onClick={() => void open(c)}
                 >
                   <span className="chat__item-title">{c.title ?? '새 대화'}</span>
-                  <span className="muted">
-                    {c.agentName ?? '에이전트 미정'}
-                    {c.status === 'awaiting_approval' && ' · 승인 대기'}
-                  </span>
+                  <span className="muted">{conversationMeta(c)}</span>
                 </button>
               </li>
             ))}
