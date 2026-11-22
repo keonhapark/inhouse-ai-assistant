@@ -21,6 +21,8 @@ npm run build    # tsc -b와 vite build
 npm run gen:api  # 계약이 바뀌면 src/api/schema.d.ts를 다시 만듭니다(openapi-typescript)
 ```
 
+사람이 웹 화면으로 직접 써 보는 실사용 시험은 [절차](docs/manual-test.md)와 [기록 양식](docs/manual-test-record.md)을 따릅니다. 결과는 `eval/reports/manual/`에 둡니다.
+
 ## 구조
 
 | 경로 | 내용 |
