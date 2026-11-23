@@ -202,10 +202,10 @@ public class WriteExecutor {
         try {
             return body.get();
         } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
-            throw new ApiException(409, "version-conflict", "그사이 다른 요청이 같은 리소스를 바꿨습니다");
+            throw new ApiException(409, "version-conflict", "새로 고친 뒤 다시 확인하세요.");
         } catch (DataIntegrityViolationException e) {
             // 업무 테이블의 제약 위반. 각 명령이 먼저 검사하지만, 동시 요청이 검사를 함께 지나면 여기로 옵니다.
-            throw new ApiException(409, "invalid-state", "같은 상태를 바꾸는 요청이 겹쳤습니다");
+            throw new ApiException(409, "invalid-state", "같은 일이 동시에 들어왔습니다. 새로 고친 뒤 다시 확인하세요.");
         }
     }
 

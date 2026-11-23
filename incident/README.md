@@ -90,7 +90,7 @@ uv run python -m bench.rca --runs data/runs/<runId> ... [--llm http://localhost:
 
 - 신고 시각을 주입 45초 뒤로 두고, 분석 구간은 그 직전 45초, 기준 구간은 묶음 시작부터 분석 구간 앞까지입니다. 정답은 신고 시각을 정하는 데만 씁니다.
 - 과거 티켓은 같은 묶음 모음의 다른 장애 티켓과 정답 원인입니다(한 건씩 빼고 나머지).
-- `--llm`은 세션 스택의 gateway입니다(`litellm`·`gateway`만 띄워도 됨). 위임 토큰 없는 로컬 별칭 호출입니다.
+- `--llm`은 세션 스택의 gateway입니다(`litellm`·`gateway`만 띄워도 됨). 위임 토큰 없는 로컬 별칭 호출입니다. 생각 단계·시간 제한은 `/analyze`와 같이 모델 프로필에서 읽고, 쓴 값과 출처(`profile`, `fallback`, `+env`)를 결과 파일 `llmSettings`에 남깁니다.
 
 ### `/analyze`(호스트 로컬 도구)
 
@@ -103,6 +103,7 @@ cd incident && INCIDENT_SESSION=1 uv run uvicorn --factory incident.app:from_env
 - 호스트 로그를 읽는 도구라 기본은 루프백(127.0.0.1)에만 엽니다. agent 컨테이너가 부르게 하려면 도커 브리지 주소에 엽니다. 분석은 한 번에 하나만 돌고, 서비스마다 로그는 5MB까지만 읽습니다.
 - 위임 토큰(`X-Delegation-Token`, aud `incident`, scope `incident:read`)을 확인하고, 같은 토큰으로 erp `GET /tickets?box=all`이 되는 사람(티켓 담당)만 분석합니다.
 - `ticketId`를 주면 erp에서 티켓을 읽어 본문을 증상으로 쓰고, 분석 기준 시각은 `at`이나 티켓 작성 시각입니다.
+- LLM 호출의 생각 단계와 시간 제한은 gateway 모델 프로필(`GET /v1/model-profiles`, 결정 0009)에서 `local` 별칭의 `thinking.incident`·`timeoutSeconds`로 읽습니다(`on` → `reasoning_effort: low`, `off` → `none`, `default` → 보내지 않음). `INCIDENT_LLM_THINKING`(on·off·default)·`INCIDENT_LLM_TIMEOUT_SECONDS`는 값이 있을 때만 덮습니다. 프로필을 못 읽으면(프로필 경로가 없는 gateway 등) 프로필 전 동작(생각 끔, 90초)으로 부르고 다음 분석에서 다시 읽습니다. 읽은 프로필은 gateway를 다시 띄울 때까지 그대로 씁니다.
 - LLM이 실패하거나 후보를 못 내면 기준선 순위로 답합니다(`method: baseline`). 근거 줄·이유에서 토큰·이메일처럼 보이는 값은 가립니다.
 - `INCIDENT_HISTORY_DIR`에 원인이 밝혀진 묶음(truth.json) 폴더를 주면 비슷한 과거 티켓을 씁니다.
 - LiteLLM 401 잡음은 기본으로 뺍니다. 외부 모델 키를 넣은 스택에서는 `INCIDENT_KEYLESS_NOISE=0`으로 끕니다(키가 빠진 것이 실제 장애일 수 있음).

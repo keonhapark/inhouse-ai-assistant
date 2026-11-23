@@ -45,7 +45,7 @@ public class ApprovalLineResolver {
             }
             return line;
         }
-        throw new ApiException(422, "form-validation-failed", "맞는 결재선 규칙이 없습니다");
+        throw new ApiException(422, "form-validation-failed", "이 양식에 맞는 결재선이 없어 상신할 수 없습니다. 관리자에게 문의하세요.");
     }
 
     private String approver(String step, Employee requester, Map<String, OrgUnit> byId) {

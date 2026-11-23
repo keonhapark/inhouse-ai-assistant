@@ -7,9 +7,13 @@ RCACopilot처럼 "모아 주는 코드"가 핵심이라, 원문 로그를 통째
 from __future__ import annotations
 
 import json
+import logging
+import os
 import re
+import threading
 import time
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, replace
 from typing import Any
 
 import httpx
@@ -94,13 +98,102 @@ def parse(content: str) -> list[Candidate]:
     return out[:3]
 
 
-def analyze(gateway_url: str, text: str, model: str = "local", timeout: float = 90.0,
-            transport: httpx.BaseTransport | None = None) -> LlmResult:
-    """gateway 출구(/v1/chat/completions, local 별칭)로 부릅니다. 생각 과정은 끕니다(rag와 같음)."""
-    body = {"model": model, "temperature": 0, "reasoning_effort": "none", "max_tokens": MAX_TOKENS,
-            "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}]}
-    started = time.monotonic()
+# ---------- 모델 프로필(결정 0009, gateway GET /v1/model-profiles) ----------
+
+log = logging.getLogger("incident.llm")
+
+# 프로필 thinking 값 → reasoning_effort(default면 보내지 않음, 모델 기본값)
+EFFORT: dict[str, str | None] = {"on": "low", "off": "none", "default": None}
+
+
+@dataclass(frozen=True)
+class CallSettings:
+    """장애 분석 호출 한 번의 설정. source: profile(gateway 프로필) | fallback(프로필을 못 읽음) | +env(환경 변수로 덮음)."""
+    thinking: str
+    timeout_s: float
+    source: str
+    model: str | None = None
+
+    @property
+    def reasoning_effort(self) -> str | None:
+        return EFFORT[self.thinking]
+
+
+# 프로필을 못 읽을 때(프로필 경로가 없는 gateway 등): 프로필 전의 동작(생각 끔, 90초) 그대로
+FALLBACK = CallSettings("off", 90.0, "fallback")
+
+
+def read_profile(gateway_url: str, alias: str = "local", transport: httpx.BaseTransport | None = None,
+                 timeout: float = 5.0) -> CallSettings:
+    """별칭의 profile.thinking.incident와 timeoutSeconds를 읽습니다. 연결·형식이 틀리면 예외입니다."""
     with httpx.Client(timeout=timeout, transport=transport) as c:
+        r = c.get(gateway_url.rstrip("/") + "/v1/model-profiles")
+    r.raise_for_status()
+    entry = next(a for a in r.json()["aliases"] if a["alias"] == alias)  # 없으면 StopIteration
+    thinking = entry["profile"]["thinking"]["incident"]
+    seconds = entry["profile"]["timeoutSeconds"]
+    if thinking not in EFFORT or not isinstance(seconds, int) or isinstance(seconds, bool) or seconds < 1:
+        raise ValueError(f"프로필 값이 계약과 다릅니다: thinking={thinking!r} timeoutSeconds={seconds!r}")
+    return CallSettings(thinking, float(seconds), "profile", entry.get("model"))
+
+
+def with_env(s: CallSettings, env: Mapping[str, str]) -> CallSettings:
+    """INCIDENT_LLM_THINKING(on·off·default), INCIDENT_LLM_TIMEOUT_SECONDS(1 이상 정수)는 값이 있을 때만 덮습니다."""
+    thinking = env.get("INCIDENT_LLM_THINKING", "").strip().lower()
+    seconds = env.get("INCIDENT_LLM_TIMEOUT_SECONDS", "").strip()
+    out = s
+    if thinking:
+        if thinking not in EFFORT:
+            raise ValueError("INCIDENT_LLM_THINKING은 on, off, default 중 하나입니다")
+        out = replace(out, thinking=thinking)
+    if seconds:
+        if not seconds.isdigit() or int(seconds) < 1:
+            raise ValueError("INCIDENT_LLM_TIMEOUT_SECONDS는 1 이상 정수입니다")
+        out = replace(out, timeout_s=float(seconds))
+    return out if out == s else replace(out, source=s.source + "+env")
+
+
+def resolve(gateway_url: str, alias: str = "local", env: Mapping[str, str] | None = None,
+            transport: httpx.BaseTransport | None = None) -> CallSettings:
+    """프로필 → 환경 변수 덮어쓰기. 프로필을 못 읽으면 FALLBACK에서 시작합니다."""
+    try:
+        base = read_profile(gateway_url, alias, transport)
+    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError, StopIteration) as e:
+        log.warning("모델 프로필을 읽지 못해 기본값(생각 끔, 90초)을 씁니다: %s", type(e).__name__)
+        base = FALLBACK
+    return with_env(base, os.environ if env is None else env)
+
+
+class ProfileCache:
+    """프로필을 읽어 둡니다. 읽기에 성공한 값만 두고, 못 읽었으면 다음 호출에서 다시 읽습니다(gateway가 늦게 떠도 됨).
+    프로필은 gateway를 다시 띄워야 바뀌므로(계약) 성공한 값은 다시 읽지 않습니다."""
+
+    def __init__(self, gateway_url: str, alias: str = "local", env: Mapping[str, str] | None = None,
+                 transport: httpx.BaseTransport | None = None):
+        self.gateway_url, self.alias, self.env, self.transport = gateway_url, alias, env, transport
+        self._value: CallSettings | None = None
+        self._lock = threading.Lock()
+
+    def get(self) -> CallSettings:
+        with self._lock:
+            if self._value is not None:
+                return self._value
+            s = resolve(self.gateway_url, self.alias, self.env, self.transport)
+            if s.source.startswith("profile"):
+                self._value = s
+                log.info("장애 분석 모델 프로필: %s, 생각 %s, %.0f초(%s)", s.model, s.thinking, s.timeout_s, s.source)
+            return s
+
+
+def analyze(gateway_url: str, text: str, model: str = "local", settings: CallSettings = FALLBACK,
+            transport: httpx.BaseTransport | None = None) -> LlmResult:
+    """gateway 출구(/v1/chat/completions, local 별칭)로 부릅니다. 생각 단계·시간 제한은 settings(모델 프로필)를 따릅니다."""
+    body: dict[str, Any] = {"model": model, "temperature": 0, "max_tokens": MAX_TOKENS,
+                            "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}]}
+    if settings.reasoning_effort is not None:
+        body["reasoning_effort"] = settings.reasoning_effort
+    started = time.monotonic()
+    with httpx.Client(timeout=settings.timeout_s, transport=transport) as c:
         r = c.post(gateway_url.rstrip("/") + "/v1/chat/completions", json=body)
     ms = round((time.monotonic() - started) * 1000)
     r.raise_for_status()

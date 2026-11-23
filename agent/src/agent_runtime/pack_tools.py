@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 
@@ -25,6 +26,7 @@ def form_tools(forms_doc: dict[str, Any] | None) -> tuple[dict[str, Any], ...]:
             continue
         out.append({
             "name": t["name"],
+            "displayName": t.get("displayName") or f"{f['name']} 상신",  # 도구 표시 이름(#575)
             "description": t["description"],
             "inputSchema": strip_x(f["fields"]),
             "risk": t.get("risk", "reversible_write"),
@@ -34,3 +36,19 @@ def form_tools(forms_doc: dict[str, Any] | None) -> tuple[dict[str, Any], ...]:
             "stage": t.get("stage", f["stage"]),
         })
     return tuple(out)
+
+
+def tool_labels(tools_file: Path, pack_dir: Path, pack_form_tools: tuple[dict[str, Any], ...] = ()) -> dict[str, str]:
+    """도구 이름 → 직원 화면 표시 이름(#575). 순서: pack.yaml tool_display_names > 양식 tool.displayName >
+    tools.json displayName(contracts/mcp/README.md '도구 표시 이름')."""
+    import json
+
+    import yaml
+
+    labels = {t["name"]: t["displayName"] for t in json.loads(tools_file.read_text("utf-8"))["tools"]
+              if t.get("displayName")}
+    labels.update({t["name"]: t["displayName"] for t in pack_form_tools if t.get("displayName")})
+    pack = yaml.safe_load((pack_dir / "pack.yaml").read_text("utf-8")) or {}
+    labels.update(pack.get("tool_display_names") or {})
+    return labels
+

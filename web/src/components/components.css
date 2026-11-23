@@ -182,3 +182,294 @@
   text-align: right;
   overflow-wrap: anywhere;
 }
+
+/* 묶음 목록(ux/design-system.md 3.4): --surface 묶음 안에 0.5px 구분선(왼쪽 16px 들여씀). 머리는 footnote 600 --text-2, 오른쪽 건수 */
+.group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0 var(--space-1);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+}
+
+.group__h {
+  margin: 0;
+  font: inherit;
+}
+
+.group__n {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-regular);
+}
+
+.group__list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  list-style: none;
+}
+
+.group__list > li {
+  position: relative;
+}
+
+.group__list > li + li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: var(--space-4);
+  height: 0.5px;
+  background: var(--sep);
+}
+
+.group__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--row-h);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-body);
+  text-align: left;
+  text-decoration: none;
+}
+
+button.group__row,
+a.group__row {
+  cursor: pointer;
+}
+
+button.group__row:hover,
+a.group__row:hover,
+.group__row[aria-current='true'] {
+  background: var(--sel);
+}
+
+.group__row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: calc(-1 * var(--focus-offset));
+}
+
+.group__main {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.group__title {
+  font-weight: var(--fw-semibold);
+}
+
+.group__sub {
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}
+
+.group__end {
+  flex: none;
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+}
+
+.group__row > svg {
+  flex: none;
+  width: var(--icon);
+  height: var(--icon);
+  color: var(--text-2);
+}
+
+.group__empty {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+}
+
+/* 태그(3.3): 한 가지 주의만. --fill-2 면, --text-2 글자 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px var(--space-2);
+  border-radius: var(--r-tag);
+  background: var(--fill-2);
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+/* 세그먼트 컨트롤(3.1): 결재 칸(tablist)과 운영 기간(aria-pressed 버튼) */
+.seg {
+  display: inline-flex;
+  flex-shrink: 1;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 2px;
+  border-radius: var(--r-seg);
+  background: var(--seg-track);
+}
+
+.seg__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-medium);
+  flex: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.seg__item[aria-selected='true'],
+.seg__item[aria-pressed='true'] {
+  background: var(--seg-thumb);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 10%), 0 0 0 0.5px rgb(0 0 0 / 4%);
+  font-weight: var(--fw-semibold);
+}
+
+.seg__n {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.seg__item[aria-selected='true'] .seg__n,
+.seg__item[aria-pressed='true'] .seg__n {
+  color: var(--text);
+}
+
+.seg__item:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* 표(3.4): 머리 행 caption --text-2, 행 높이 44px, 숫자 열 오른쪽·tnum, 선택 행 --sel */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.table-scroll:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.table {
+  width: 100%;
+  /* collapse면 브라우저가 표의 둥근 모서리를 그리지 않아 separate로 둡니다 */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-body);
+}
+
+:not(.table-scroll) > .table {
+  overflow: hidden;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.table th,
+.table td {
+  height: var(--row-h);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 0.5px solid var(--sep);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child > td,
+.table tbody tr:last-child > th {
+  border-bottom: 0;
+}
+
+.table thead th {
+  height: auto;
+  padding-block: var(--space-2);
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+}
+
+.table th[scope='row'] {
+  font-weight: var(--fw-semibold);
+}
+
+.table caption {
+  padding: var(--space-2) var(--space-4);
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+  text-align: left;
+}
+
+.table tr[aria-current='true'] > * {
+  background: var(--sel);
+}
+
+.table .num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.table td .badge {
+  margin-left: var(--space-2);
+}
+
+/* 글 안의 링크 버튼(펼치기 등). 면 없음, --accent 글자 */
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.link:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* 끝났다는 알림(대결 지정 뒤 등) */
+.notice-ok {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--fill-2);
+  box-shadow: inset 3px 0 0 var(--success);
+  font-size: var(--fs-footnote);
+}

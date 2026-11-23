@@ -21,7 +21,13 @@ function renderAdmin(token = 'mock.emp-2008') {
   return userEvent.setup()
 }
 
-describe('관리자 콘솔', () => {
+/** 왼쪽 탐색 막대의 운영 묶음에서 화면을 고릅니다 */
+async function openMenu(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const nav = await screen.findByRole('navigation', { name: '주 메뉴' })
+  await user.click(within(nav).getByRole('link', { name }))
+}
+
+describe('운영 화면', () => {
   it('운영 지표: 합계, 에이전트별 표, 차단 이유, 라우팅, 비용 상한', async () => {
     renderAdmin()
     expect(await screen.findByText('에이전트 실행')).toBeInTheDocument()
@@ -63,8 +69,8 @@ describe('관리자 콘솔', () => {
 
   it('외부 전송 기록: 가린 자리를 표시하고 에이전트로 거릅니다', async () => {
     const user = renderAdmin()
-    await user.click(await screen.findByRole('tab', { name: '외부 전송 기록' }))
-    const first = (await within(screen.getByRole('tabpanel')).findAllByRole('listitem'))[0]
+    await openMenu(user, '외부 전송 기록')
+    const first = (await within(screen.getByRole('main')).findAllByRole('listitem'))[0]
     expect(first).toHaveTextContent('가림 1곳: 전화번호')
     await user.click(within(first).getByText('전사 비서'))
     const mark = within(first).getByTitle('가림: 전화번호')
@@ -81,9 +87,14 @@ describe('관리자 콘솔', () => {
 
   it('감사 로그: 20건씩 보고, 더 보기와 종류 필터', async () => {
     const user = renderAdmin()
-    await user.click(await screen.findByRole('tab', { name: '감사 로그' }))
+    await openMenu(user, '감사 로그')
     const table = await screen.findByRole('table')
     expect(within(table).getAllByRole('row')).toHaveLength(21)
+    // 직원·에이전트·작업은 이름 뒤에 ID를 작게 붙입니다
+    const second = within(table).getAllByRole('row')[2]
+    await waitFor(() => expect(second).toHaveTextContent('서도윤 emp-2001'))
+    expect(second).toHaveTextContent('재무 finance')
+    expect(second).toHaveTextContent('결재 회수 approval_withdraw')
     await user.click(screen.getByRole('button', { name: '더 보기' }))
     await vi.waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row').length).toBeGreaterThan(21))
 
@@ -99,7 +110,7 @@ describe('관리자 콘솔', () => {
 
   it('같은 조건으로 돌아오면 예전에 더 보기로 붙인 쪽을 다시 붙이지 않습니다', async () => {
     const user = renderAdmin()
-    await user.click(await screen.findByRole('tab', { name: '감사 로그' }))
+    await openMenu(user, '감사 로그')
     const rows = async () => within(await screen.findByRole('table')).getAllByRole('row').length
     expect(await rows()).toBe(21)
     await user.click(screen.getByRole('button', { name: '더 보기' }))
@@ -121,7 +132,7 @@ describe('관리자 콘솔', () => {
       ),
     )
     const user = renderAdmin()
-    await user.click(await screen.findByRole('tab', { name: '감사 로그' }))
+    await openMenu(user, '감사 로그')
     await screen.findByRole('table')
     await user.click(screen.getByRole('button', { name: '더 보기' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('감사 저장소가 응답하지 않습니다.')
@@ -156,17 +167,30 @@ describe('관리자 콘솔', () => {
     expect(row).not.toHaveTextContent('상한 넘음')
   })
 
-  it('탭은 화살표·Home·End로 옮깁니다', async () => {
+  it('직원 사전·에이전트 목록을 못 받으면 감사 로그는 ID만 보입니다', async () => {
+    server.use(
+      http.get('*/api/employees', () => HttpResponse.error()),
+      http.get('*/api/agent-registry', () => HttpResponse.error()),
+    )
     const user = renderAdmin()
-    const metrics = await screen.findByRole('tab', { name: '운영 지표' })
-    metrics.focus()
-    await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: '외부 전송 기록' })).toHaveFocus()
-    expect(screen.getByRole('tab', { name: '외부 전송 기록' })).toHaveAttribute('aria-selected', 'true')
-    await user.keyboard('{End}')
-    expect(screen.getByRole('tab', { name: '감사 로그' })).toHaveAttribute('tabindex', '0')
-    await user.keyboard('{Home}{ArrowLeft}')
-    expect(screen.getByRole('tab', { name: '감사 로그' })).toHaveFocus()
+    await openMenu(user, '감사 로그')
+    const second = within(await screen.findByRole('table')).getAllByRole('row')[2]
+    expect(second).toHaveTextContent('emp-2001')
+    expect(second).not.toHaveTextContent('서도윤')
+    expect(second).not.toHaveTextContent('재무')
+    // 작업 표시 이름은 화면 안의 사전(names.ts)이라 그대로 보입니다
+    expect(second).toHaveTextContent('결재 회수 approval_withdraw')
+  })
+
+  it('제목은 고른 메뉴 이름이고, 메뉴로 옮겨도 고른 기간을 그대로 둡니다', async () => {
+    const user = renderAdmin()
+    expect(await screen.findByRole('heading', { level: 1, name: '운영 지표' })).toBeInTheDocument()
+    await user.click(within(screen.getByRole('group', { name: '기간' })).getByRole('button', { name: '최근 7일' }))
+    await openMenu(user, '감사 로그')
+    expect(await screen.findByRole('heading', { level: 1, name: '감사 로그' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '최근 7일' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('최근 7일을 보고 있습니다.')).toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).toBeNull()
   })
 
   it('auditor가 아니면 메뉴가 없고, 주소로 열어도 AI 비서로 보냅니다', async () => {

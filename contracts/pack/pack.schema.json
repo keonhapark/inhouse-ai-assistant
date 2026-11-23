@@ -51,6 +51,12 @@
         "model_policy_override": {
           "enum": ["local_only"],
           "description": "선택. local_only면 팩 전체에서 외부 LLM을 쓰지 않습니다(망분리 흉내, #114·#384). gateway가 출구에서 강제하며, 에이전트 model_policy·평가 조건(no_guard·baseline_tools 포함)·평가 별칭 바꿔 끼우기와 관계없이 외부로 보내지 않습니다. 없으면 에이전트별 model_policy대로입니다"
+        },
+        "tool_display_names": {
+          "type": "object",
+          "description": "선택. 공용 도구(contracts/mcp/tools.json)의 표시 이름(displayName)을 이 팩에서 바꿉니다(#575). 키는 도구 이름, 값은 직원 화면에 보이는 이름. 팩 양식 도구는 forms.yaml tool.displayName으로 정합니다",
+          "propertyNames": {"pattern": "^[a-z][a-z0-9_]{2,63}$"},
+          "additionalProperties": {"type": "string", "minLength": 1, "maxLength": 30}
         }
       }
     },
@@ -310,6 +316,7 @@
                 "properties": {
                   "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$", "description": "도구 이름. 공용 tools.json·다른 양식 도구와 겹치면 안 됨"},
                   "description": {"type": "string"},
+                  "displayName": {"type": "string", "minLength": 1, "maxLength": 30, "description": "선택. 직원 화면에 보이는 도구 이름(#575). 없으면 '<양식 name> 상신'"},
                   "risk": {"enum": ["reversible_write", "irreversible"], "default": "reversible_write"},
                   "trust_required": {"enum": ["any", "user_direct"], "default": "user_direct"},
                   "stage": {"type": "integer", "minimum": 1, "description": "없으면 양식 stage"}

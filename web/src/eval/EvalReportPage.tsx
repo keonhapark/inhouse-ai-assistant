@@ -6,7 +6,7 @@ import { formatDateTime } from '../inbox/labels'
 import { conditionName, setName } from './labels'
 import { ScenarioTable } from './ScenarioTable'
 import { SetSection } from './SetSection'
-import '../inbox/inbox.css'
+import { Toolbar } from '../shell/Toolbar'
 import '../admin/admin.css'
 import './eval.css'
 
@@ -22,14 +22,15 @@ export function EvalReportPage() {
   const reportId = items.find((i) => i.reportId === params.get('report'))?.reportId ?? items[0]?.reportId
 
   return (
-    <main className="admin eval">
-      <h1>평가 리포트</h1>
+    <main className="admin eval" aria-labelledby="eval-title">
+      <Toolbar title="평가 리포트" titleId="eval-title" />
+      <div className="admin__body">
       {list.status === 'loading' && <p className="muted">불러오는 중입니다.</p>}
       {list.status === 'error' && <p role="alert">{list.message}</p>}
       {list.status === 'ok' && items.length === 0 && <p className="muted">아직 커밋된 평가 보고서가 없습니다.</p>}
       {items.length > 0 && (
         <label className="admin__field">
-          <span className="muted">보고서</span>
+          <span>보고서</span>
           <select value={reportId} onChange={(e) => setParams({ report: e.target.value })}>
             {items.map((i) => (
               <option key={i.reportId} value={i.reportId}>
@@ -41,6 +42,7 @@ export function EvalReportPage() {
         </label>
       )}
       {reportId && <ReportView key={reportId} reportId={reportId} />}
+      </div>
     </main>
   )
 }

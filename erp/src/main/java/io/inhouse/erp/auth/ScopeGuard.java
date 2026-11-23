@@ -27,7 +27,7 @@ public class ScopeGuard implements HandlerInterceptor {
         }
         RequiredScope rs = hm.getMethodAnnotation(RequiredScope.class);
         if (p.viaServiceLogin() && rs != null && rs.humanOnly()) {
-            throw new ApiException(403, "service-login-not-allowed", "서비스 로그인(슬랙) 토큰으로 부를 수 없는 기능입니다")
+            throw new ApiException(403, "service-login-not-allowed", "웹 화면에서 하세요.")
                     .auditedOnReads();
         }
         if (!p.viaDelegationToken()) {

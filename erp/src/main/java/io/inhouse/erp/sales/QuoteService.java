@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Ids;
+import io.inhouse.erp.common.Ko;
 import io.inhouse.erp.org.OrgService;
 import io.inhouse.erp.pack.Pack;
 import io.inhouse.erp.write.Change;
@@ -99,7 +100,7 @@ public class QuoteService {
             throw ApiException.validation("status", "unknown");
         }
         if ("all".equals(box) && !org.isSalesRep(employeeId)) {
-            throw ApiException.forbidden("영업 역할만 전체를 봅니다");
+            throw ApiException.forbidden("전체 목록은 영업 담당만 볼 수 있습니다.");
         }
         return quotes.search("mine".equals(box) ? employeeId : null, status,
                 Limit.of(Math.max(1, Math.min(limit, 100)))).stream().map(this::view).toList();
@@ -114,7 +115,7 @@ public class QuoteService {
     /** 견적 작성은 영업 역할만. 본문 검사(422)보다 먼저 봅니다. */
     public void requireSalesRep(String employeeId) {
         if (!org.isSalesRep(employeeId)) {
-            throw ApiException.forbidden("영업 역할만 견적을 씁니다");
+            throw ApiException.forbidden("견적은 영업 담당만 쓸 수 있습니다.");
         }
     }
 
@@ -135,12 +136,12 @@ public class QuoteService {
             }
             total = lines.stream().mapToLong(Line::amount).reduce(0L, Math::addExact);
         } catch (ArithmeticException e) {
-            throw ApiException.validation("lines", "금액이 너무 큽니다");
+            throw ApiException.invalid("lines", "견적 금액이 너무 큽니다. 수량이나 품목을 줄이세요.");
         }
         LocalDate today = LocalDate.now(clock.withZone(zone));
         LocalDate valid = req.validUntil() == null ? today.plusDays(DEFAULT_VALID_DAYS) : req.validUntil();
         if (valid.isBefore(today)) {
-            throw ApiException.validation("validUntil", "오늘이나 그 뒤 날짜");
+            throw ApiException.invalid("validUntil", "유효 기한은 오늘 이후 날짜로 고르세요.");
         }
         Quote q = quotes.saveAndFlush(new Quote(Ids.next("quo"), p.employeeId(), customer.id(), customer.name(),
                 mapper.valueToTree(lines), total, valid, req.note(), OffsetDateTime.now(clock)));
@@ -153,25 +154,26 @@ public class QuoteService {
     public WriteOutcome undoCreate(String id) {
         Quote q = quotes.lockById(id).orElseThrow();
         if (!"draft".equals(q.getStatus())) {
-            throw new ApiException(409, "undo-conflict", "그사이 발행되었습니다");
+            throw new ApiException(409, "undo-conflict", "그사이 견적이 발행돼 실행 취소할 수 없습니다.");
         }
-        return change(q, "cancelled", null, "견적 초안을 되돌렸습니다(취소)");
+        return change(q, "cancelled", null, "견적 초안을 취소했습니다");
     }
 
     public WriteOutcome issue(ErpPrincipal p, String id, int version) {
         requireFeature();
         Quote q = visible(p.employeeId(), quotes.lockById(id).orElse(null));
         if (!org.isSalesRep(p.employeeId())) {
-            throw ApiException.forbidden("영업 역할만 발행합니다");
+            throw ApiException.forbidden("견적 발행은 영업 담당만 할 수 있습니다.");
         }
         if (version != q.getVersion()) {
-            throw new ApiException(409, "version-conflict", "그사이 견적이 바뀌었습니다");
+            throw new ApiException(409, "version-conflict", "그사이 견적이 바뀌었습니다. 새로 고친 뒤 다시 시도하세요.");
         }
         if (!"draft".equals(q.getStatus())) {
-            throw new ApiException(409, "invalid-state", q.getStatus() + " 견적은 발행할 수 없습니다");
+            throw new ApiException(409, "invalid-state", "issued".equals(q.getStatus()) ? "이미 발행한 견적입니다."
+                    : Ko.quoteStatus(q.getStatus()) + "된 견적은 발행할 수 없습니다.");
         }
         if (q.getValidUntil().isBefore(LocalDate.now(clock.withZone(zone)))) {
-            throw new ApiException(409, "invalid-state", "유효 기한이 지났습니다");
+            throw new ApiException(409, "invalid-state", "유효 기한이 지나 발행할 수 없습니다. 유효 기한을 고쳐 새 견적을 쓰세요.");
         }
         return change(q, "issued", p.employeeId(), q.getCustomerName() + " 견적을 발행합니다");
     }

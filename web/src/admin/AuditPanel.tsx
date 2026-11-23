@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { api, type Schemas } from '../api/client'
 import { Badge, RiskBadge, type BadgeTone } from '../components/Badge'
 import { Button } from '../components/Button'
+import { toolName } from '../display/names'
+import { useLookups } from '../display/useLookups'
 import { formatDateTime } from '../inbox/labels'
 import type { Range } from './AdminPage'
 import { useLoad, usePaged } from './load'
@@ -44,6 +46,9 @@ export function AuditPanel({ range }: { range: Range }) {
   const [draft, setDraft] = useState<Filters>(EMPTY)
   const [applied, setApplied] = useState<Filters>(EMPTY)
   const agents = useLoad('registry', () => api.GET('/agent-registry'), '에이전트 목록을 불러오지 못했습니다.')
+  // 직원·에이전트는 이름으로 보이고 ID는 작게 붙입니다(ia.md 3절). 사전을 못 받으면 ID만 보입니다
+  const { people } = useLookups()
+  const agentName = (id: string) => (agents.status === 'ok' ? agents.data.items.find((a) => a.id === id)?.name : undefined)
   const { first, items, next, loadMore, loadingMore, moreError } = usePaged<Audit>(
     `${range.since}|${range.until}|${applied.kind}|${applied.agentId}|${applied.actorId}`,
     (cursor) =>
@@ -138,12 +143,12 @@ export function AuditPanel({ range }: { range: Range }) {
                   {KIND[e.kind] ?? e.kind} <span className="muted">{e.source}</span>
                 </td>
                 <td>
-                  {e.actor.employeeId ?? <span className="muted">시스템</span>}
+                  {e.actor.employeeId ? <Named name={people?.get(e.actor.employeeId)?.name} id={e.actor.employeeId} /> : <span className="muted">시스템</span>}
                   {e.actor.viaDelegationToken && <span className="muted"> · 위임 토큰</span>}
                 </td>
-                <td>{e.actor.agentId ?? '–'}</td>
+                <td>{e.actor.agentId ? <Named name={agentName(e.actor.agentId)} id={e.actor.agentId} /> : '–'}</td>
                 <td>
-                  {e.operation ? <code>{e.operation}</code> : '–'}
+                  {e.operation ? <Named name={toolName(e.operation) === e.operation ? undefined : toolName(e.operation)} id={e.operation} /> : '–'}
                   {e.riskLevel && <RiskBadge risk={e.riskLevel} />}
                   {e.detail && <div className="muted audit__detail">{e.detail}</div>}
                 </td>
@@ -163,5 +168,15 @@ export function AuditPanel({ range }: { range: Range }) {
         </Button>
       )}
     </div>
+  )
+}
+
+/** 이름이 있으면 이름 + 작은 ID, 없으면 ID만 */
+function Named({ name, id }: { name?: string; id: string }) {
+  if (!name) return <code>{id}</code>
+  return (
+    <>
+      {name} <code className="audit__id">{id}</code>
+    </>
   )
 }

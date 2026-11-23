@@ -54,7 +54,7 @@ public class OrgService {
     }
 
     public Employee employee(String id) {
-        return employees.findById(id).orElseThrow(() -> ApiException.notFound("직원 " + id + "가 없습니다"));
+        return employees.findById(id).orElseThrow(() -> ApiException.notFound("없는 직원입니다(사번 " + id + ")."));
     }
 
     public boolean hasRole(String employeeId, String role) {

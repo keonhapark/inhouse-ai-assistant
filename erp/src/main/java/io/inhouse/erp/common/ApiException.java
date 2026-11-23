@@ -38,8 +38,14 @@ public class ApiException extends RuntimeException {
         return new ApiException(403, "forbidden", detail);
     }
 
+    /** 개발자용 입력 검사(화면에서 일으킬 수 없는 값). detail에 칸 이름이 붙습니다. */
     public static ApiException validation(String field, String message) {
         return new ApiException(422, "validation", field + ": " + message, List.of(new FieldError(field, message)));
+    }
+
+    /** 직원이 입력으로 일으키는 검사. detail은 칸 코드 없이 문장만 두고, 칸은 errors[].field에만 둡니다. */
+    public static ApiException invalid(String field, String sentence) {
+        return new ApiException(422, "validation", sentence, List.of(new FieldError(field, sentence)));
     }
 
     /** 읽기 경로에서 나도 감사 이벤트로 남길 거절(위임 토큰의 scope·사람 전용 거절)로 표시합니다. */
