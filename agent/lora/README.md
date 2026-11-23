@@ -38,26 +38,41 @@ uv run python lora/compare_runs.py ~/lora/base-nothink.jsonl ~/lora/lora-nothink
 ```
 
 - 기본 모델: Hugging Face `Qwen/Qwen3.5-9B`(Apache-2.0, `Qwen3_5ForConditionalGeneration`). 리비전을 고정하지 않으면 받은 sha를 `run.json`에 남깁니다
-- 학습(`train_qlora.py`): 4비트 NF4·이중 양자화(양자화하지 않은 층을 fp32로 올리는 `prepare_model_for_kbit_training`은 쓰지 않음), bf16 계산(T4처럼 bf16이 없으면 fp16), 언어 모델 attention·MLP 선형층에만 LoRA(r 16, alpha 32, dropout 0.05), 정답(assistant) 토큰만 손실, 2 epoch, 학습률 2e-4(cosine), 배치 1 × 누적 8, gradient checkpointing, paged AdamW 8bit, 시드 7
+- 학습(`train_qlora.py`): 4비트 NF4·이중 양자화(양자화하지 않은 층을 fp32로 올리는 `prepare_model_for_kbit_training`은 쓰지 않음), bf16 계산(T4처럼 bf16이 없으면 fp16), 언어 모델 attention·MLP 선형층에만 LoRA(r 16, alpha 32, dropout 0.05), 정답(assistant) 토큰만 손실(그 자리의 logits만 만듦, 아래 속도 절), 2 epoch, 학습률 2e-4(cosine), 배치 1 × 누적 8, gradient checkpointing, paged AdamW 8bit, 시드 7
 - chat template은 생각 끔 형식입니다. 데이터에 생각 내용이 없어 생각 켬 형식으로 만들면 빈 생각을 가르치게 되고 토큰 경계도 어긋납니다. 업무 경로는 생각 켬이 기본(결정 0008)이라 평가는 생각 끔·켬 둘 다 합니다
 - `--dry-run`은 토큰화에 더해 학습 설정도 봅니다: 인자 이름이 설치된 transformers의 `TrainingArguments` 필드에 있는지, torch가 있으면 `TrainingArguments` 생성과 `Trainer` 인자까지(#551 v2는 transformers 5에서 없어진 `warmup_ratio`로 학습 시작 때 멈췄습니다. 지금은 `warmup_steps=0.03`(비율))
 - 토큰 길이(기본 데이터, Qwen3.5 토크나이저): p50 1,296, 최대 1,834. 정답 토큰 합 학습 62,780·검증 7,533. 확인은 `--dry-run`으로 했습니다(transformers 5.22.2, GPU 없음)
 - 내보내기(`export_ollama.py`): PEFT 어댑터를 llama.cpp `convert_lora_to_gguf.py`로 GGUF 어댑터로 바꾸고, Ollama API(`/api/blobs`, `/api/create`의 `adapters`)로 `qwen3.5:9b` 위에 얹은 모델을 만듭니다. 학습은 bf16 원본, 실행은 Q4_K_M 기본 모델이라 수치가 조금 다릅니다
 - 비교(`compare_runs.py`): `eval_dev/first_call_run.py` 두 실행의 개발 묶음 항목만 견줍니다(기대 도구, 되묻기 정답에서 도구 없이 답함, 지연, 좋아진·나빠진 항목). 확인 묶음 평가는 eval이 합니다
-- 의존성 판(`install_qlora.sh`): torch 2.14.1, transformers 5.22.2, peft 0.21.2, bitsandbytes 0.50.2, accelerate 1.15.0, gguf 0.19.0. 실제 판과 llama.cpp 커밋은 가상환경의 `install.json`에 남습니다
+- 의존성 판(`install_qlora.sh`): torch 2.14.1, transformers 5.22.2, peft 0.21.2, bitsandbytes 0.50.2, accelerate 1.15.0, flash-linear-attention 0.6.0, gguf 0.19.0. 실제 판과 llama.cpp 커밋은 가상환경의 `install.json`에 남습니다
 
 ### Kaggle에서 학습하기(#551)
 
 Kaggle 노트북(T4 x2)에 Ollama와 터널을 띄운 셀이 돌고 있을 때, 셀 하나로 학습부터 Ollama 등록까지 끝까지 가게 합니다. 셀 코드는 저장소 밖에 두고(노트북에 붙여 넣음), 순서는 아래와 같습니다.
 
-1. 디스크·GPU·Ollama 확인. 기본 모델(약 19GB)은 `/kaggle/working`(20GB) 밖(`HF_HOME=/tmp/hf`)에 받습니다. T4 한 장(15GB)에는 4비트 모델과 양자화하지 않은 임베딩·lm_head가 함께 들어가지 않아(#551 OOM) 두 GPU에 나눠 올립니다(`device_map=auto`). 학습하는 동안 Kaggle Ollama는 부르지 않습니다
+1. 디스크·GPU·Ollama 확인. 기본 모델(약 19GB)은 `/kaggle/working`(20GB) 밖(`HF_HOME=/tmp/hf`)에 받습니다. 모델은 GPU마다 한 벌씩 올리고 두 장을 데이터 병렬로 씁니다(아래 속도 절). 학습하는 동안 Kaggle Ollama는 부르지 않습니다
 2. 공개 저장소를 받아 커밋을 고정
 3. `QLORA_SYSTEM=1 bash lora/install_qlora.sh`: 새 가상환경 없이 Kaggle 파이썬에 학습 패키지와 llama.cpp `gguf-py`를 넣습니다(Kaggle torch 그대로)
 4. `uv run python lora/make_toolcall_data.py --out …`(agent는 파이썬 3.12가 필요해 uv로). 기본 시드, 개발 묶음만 대조합니다. 확인 묶음 겹침 검사는 eval이 따로 합니다(#544)
-5. `train_qlora.py --dry-run` 뒤 학습. 학습은 백그라운드로 돌리고 `--progress-minutes 3` 진행 줄(단계·손실·경과·남은 시간)을 셀 출력에 옮겨 적습니다. T4는 bf16이 없어 fp16으로 계산합니다
+5. `train_qlora.py --dry-run` 뒤 학습(`torchrun --nproc_per_node 2 lora/train_qlora.py … --grad-accum 4`). 학습은 백그라운드로 돌리고 `--progress-minutes 3` 진행 줄(단계·손실·경과·남은 시간·단계당 초·GPU 최대 메모리)을 셀 출력에 옮겨 적습니다. T4는 bf16이 없어 fp16으로 계산합니다
 6. `export_ollama.py --ollama http://localhost:11434`로 `qwen3.5-9b-toolcall-lora`를 만들고 `run.json`·`ollama.json` 요약을 출력합니다
 
 평가(개발 묶음, 생각 끔·켬, 기본 대비)는 GPU 사용권 `kaggle`을 받아 터널 주소로 `eval_dev/first_call_run.py`와 `lora/compare_runs.py`를 돌립니다.
+
+### 학습 속도(#618)
+
+#551 Kaggle 학습(v4)은 한 최적화 단계(예시 8개)에 약 5분이 걸려 12시간 한도에서 143/311단계(0.9 epoch)에서 멈췄습니다. 그때 설정과 원인 추정, 지금 바꾼 것은 아래와 같습니다. 바꾼 뒤 속도는 아직 재지 않았습니다.
+
+| 원인(추정) | 그때 | 지금 |
+|---|---|---|
+| Gated DeltaNet 층(32층 중 24층)이 파이썬 반복문 대체 구현으로 돎 | flash-linear-attention 없음. transformers가 `chunk_gated_delta_rule`을 참조 PyTorch 구현으로 대체("much slower" 경고) | `install_qlora.sh`가 flash-linear-attention을 넣고, 학습 시작 줄과 `run.json`(`gatedDeltaBackend`)에 쓰인 구현을 남김 |
+| 두 GPU가 층을 나눠 차례로 돎 | `device_map=auto`(GPU 하나가 도는 동안 다른 하나는 쉼) | `--placement one`(기본): 프로세스마다 GPU 한 장에 모델 한 벌. `torchrun --nproc_per_node 2`로 두 장이 동시에 다른 예시를 돎. 예전 방식은 `--placement split` |
+| 손실 계산에 전체 길이 logits | 어휘 248,320 × 길이(p50 1,296) logits와 fp32 사본·기울기(예시당 수 GB) | 정답 토큰을 맞히는 자리(예시당 약 50자리)의 logits만 만듦. 값은 기본 손실과 같음(작은 무작위 Qwen3.5로 시험) |
+
+- 한 장에 들어가는지: v2(#584 전)에서 두 장에 나눠 올린 모델은 합 7.35GB(3.48 + 3.87)였습니다. #551 첫 실행의 OOM은 `prepare_model_for_kbit_training`이 양자화하지 않은 층을 fp32로 올린 것이 원인이었고(#561), 지금은 그 올림을 하지 않습니다. logits까지 줄였으니 T4 한 장(15GB)에 들어갈 것으로 보지만 아직 재지 않았습니다. 진행 줄의 `GPU 최대`와 `run.json`의 `peakMemoryGB`로 확인합니다
+- flash-linear-attention이 T4(sm75)에서 도는지는 공식 자료에서 확인하지 못했습니다. 첫 단계에서 Triton 오류가 나면 패키지를 빼고(`pip uninstall -y flash-linear-attention fla-core`) 대체 구현으로 돌립니다. 이때 학습 시작 줄에 `Gated DeltaNet 구현 torch`가 찍힙니다
+- causal-conv1d는 넣지 않았습니다. 대체 구현이 `F.conv1d` 한 번이라 반복문이 없습니다
+- 단계 시간은 진행 줄의 `단계당 N초`와 `run.json`의 `secondsPerStep`(이번 실행에서 돈 단계 기준, 이어 돌리면 이어 간 단계부터)으로 비교합니다
 
 ### 세션이 끊겨도 남기기(#587)
 
