@@ -115,18 +115,22 @@ class ImageSpec:
 
 
 class ImageReader:
-    def __init__(self, llm: ChatClient, model: str = "local") -> None:
+    def __init__(self, llm: ChatClient, model: str = "local", profile: Any = None) -> None:
         self.llm = llm
         self.model = model  # 이미지가 든 요청은 gateway가 별칭과 관계없이 로컬 비전으로 보냅니다
+        # 모델 프로필(#601, profiles.py)의 imageRead. 없으면 생각 끔(none)
+        self.profile = profile
 
     async def read(self, data_url: str, token: str, spec: ImageSpec) -> dict[str, Any] | None:
         """읽지 못하면(gateway·모델 오류, JSON 아님) None입니다."""
         messages = [{"role": "system", "content": spec.prompt()},
                     {"role": "user", "content": [{"type": "text", "text": f"이 {spec.purpose} 이미지를 읽어 주세요."},
                                                  {"type": "image_url", "image_url": {"url": data_url}}]}]
-        extra = {"response_format": {"type": "json_schema",
-                                     "json_schema": {"name": "image_fields", "schema": spec.schema(), "strict": True}},
-                 "reasoning_effort": "none"}
+        extra: dict[str, Any] = {"response_format": {"type": "json_schema", "json_schema": {
+            "name": "image_fields", "schema": spec.schema(), "strict": True}}}
+        effort = self.profile.get().image_effort if self.profile else "none"
+        if effort:
+            extra["reasoning_effort"] = effort
         try:
             reply = await asyncio.to_thread(self.llm.chat_detail, messages, None, {"X-Delegation-Token": token},
                                             self.model, extra)

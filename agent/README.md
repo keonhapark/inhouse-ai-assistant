@@ -62,7 +62,7 @@ Streamable HTTP로 `/mcp`에 있습니다(compose 포트 8001). 도구 이름·�
 
 ## 계획 호출의 생각 단계와 실패 안내
 
-로컬로 가는 계획 호출(에이전트 정책 `local_only`, 또는 fallback·이미지를 읽어 로컬로 강제한 대화)의 생각 단계는 `AGENT_PLAN_REASONING_EFFORT`로 정합니다. 기본은 보내지 않아 모델 기본값(로컬 qwen3.5:9b는 생각 켬)을 씁니다(결정 0008, #535). `none`을 주면 생각을 끕니다. #424에서 여러 턴 대화의 시간 초과를 막으려고 껐지만, 끄면 도구를 부르지 않고 말로만 답하는 경우가 많아(#423 개발 묶음 기대 도구 끔 28/46, 켬 44/46, `eval_dev/README.md`) 되돌렸습니다. 대신 LLM 호출 시간 제한 `AGENT_LLM_TIMEOUT_S` 기본을 120초로 늘렸습니다. 외부 정책 호출에는 보내지 않습니다(외부 공급자의 변환이 다름). 계획 호출이 시간 초과·502·503·504로 실패하면 "모델 응답이 늦어 처리하지 못했습니다. 잠시 뒤 다시 보내 주세요."로 `failed` 상태를 돌려줍니다.
+로컬로 가는 계획 호출(에이전트 정책 `local_only`, 또는 fallback·이미지를 읽어 로컬로 강제한 대화)의 생각 단계, 이미지 읽기의 생각 단계, LLM 호출 시간 제한은 gateway 모델 프로필(`GET /v1/model-profiles`, 결정 0009·#601)에서 읽습니다: 별칭 `local`의 `thinking.plan`·`timeoutSeconds`, `local-vision`의 `thinking.imageRead`(on → `reasoning_effort: low`, off → `none`, default → 보내지 않음). 처음 필요할 때 읽고, 못 읽으면 아래 기본값을 쓰고 다음 호출에서 다시 읽습니다. `AGENT_PLAN_REASONING_EFFORT`·`AGENT_LLM_TIMEOUT_S`는 값이 있을 때만 프로필을 덮습니다. Qwen3.5 프로필은 아래 기본값과 같습니다. 기본은 보내지 않아 모델 기본값(로컬 qwen3.5:9b는 생각 켬)을 씁니다(결정 0008, #535). `none`을 주면 생각을 끕니다. #424에서 여러 턴 대화의 시간 초과를 막으려고 껐지만, 끄면 도구를 부르지 않고 말로만 답하는 경우가 많아(#423 개발 묶음 기대 도구 끔 28/46, 켬 44/46, `eval_dev/README.md`) 되돌렸습니다. 대신 LLM 호출 시간 제한 `AGENT_LLM_TIMEOUT_S` 기본을 120초로 늘렸습니다. 외부 정책 호출에는 보내지 않습니다(외부 공급자의 변환이 다름). 계획 호출이 시간 초과·502·503·504로 실패하면 "모델 응답이 늦어 처리하지 못했습니다. 잠시 뒤 다시 보내 주세요."로 `failed` 상태를 돌려줍니다.
 
 새 턴을 시작할 때 이전 기록은 최근 사용자 턴 6개만 남기고(사용자 발화에서 시작해 도구 호출·응답 짝은 그대로), 이전 턴의 도구 출력이 1,500자를 넘으면 줄입니다(#423, `PRIOR_TURNS_KEEP`·`PRIOR_TOOL_MAX_CHARS`). 신뢰 표시(`conversation_tainted`)·로컬 강제(`force_local`)는 그래프 상태라 기록을 줄여도 남습니다.
 
@@ -116,8 +116,8 @@ PACK_DIR=../packs/manufacturing DELEGATION_TOKEN_PUBLIC_KEY=../infra/dev-keys/de
 | `AGENT_LLM_BACKEND` | `gateway` | `gateway` 또는 `ollama`(gateway가 없을 때 쓰는 개발용) |
 | `GATEWAY_LLM_URL` | `http://localhost:$PORT_GATEWAY/v1` | gateway의 OpenAI 호환 엔드포인트 |
 | `AGENT_OLLAMA_BASE_URL` | `http://localhost:11434` | 개발용 Ollama 주소 |
-| `AGENT_LLM_TIMEOUT_S` | `120` | LLM 호출 시간 제한(초). 생각을 켠 로컬 계획 호출 기준(결정 0008) |
-| `AGENT_PLAN_REASONING_EFFORT` | (빈 값) | 로컬로 가는 계획 호출의 `reasoning_effort`. 빈 값이면 보내지 않음(모델 기본, 생각 켬), `none`이면 생각 끔. `ollama` 개발 경로의 모든 호출도 따름 |
+| `AGENT_LLM_TIMEOUT_S` | (프로필, 없으면 `120`) | LLM 호출 시간 제한(초). 값이 있으면 모델 프로필 `timeoutSeconds`를 덮음 |
+| `AGENT_PLAN_REASONING_EFFORT` | (프로필, 없으면 보내지 않음) | 로컬로 가는 계획 호출의 `reasoning_effort`. 값이 있으면 모델 프로필 `thinking.plan`을 덮음(`none`이면 생각 끔). `ollama` 개발 경로(프로필 없음)의 모든 호출도 따름 |
 | `AGENT_LLM_MODEL` | gateway: `local`, ollama: `LOCAL_MODEL` 또는 `qwen3.5:9b` | 라우터·슬롯 기준선의 모델. 업무 실행은 gateway 경로에서 에이전트 `model_policy`대로 별칭을 고릅니다(`external_allowed` → `external`, `local_only` → `local`). 평가 조건 `no_guard`·`baseline_tools`는 모두 `external`입니다(`contracts/eval/conditions.md`). 기밀 판정에 따른 로컬 전환은 gateway가 합니다 |
 | `AGENT_MCP_URL` | `http://localhost:$MCP_PORT/mcp` | 업무 실행이 부르는 MCP 서버 |
 | `CONTRACTS_DIR` | `../contracts` | `mcp/tools.json`과 `openapi/`를 읽는 곳 |
