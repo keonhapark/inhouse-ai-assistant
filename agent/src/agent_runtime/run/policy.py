@@ -23,6 +23,7 @@ from typing import Any, Literal
 import yaml
 
 from agent_runtime.registry import Agent
+from agent_runtime.text import josa
 
 Action = Literal["auto", "auto_with_undo", "confirm", "deny", "blocked"]
 CONDITIONS = ("no_guard", "write_blocked", "approve_all", "baseline_tools", "full")
@@ -114,12 +115,19 @@ def visible_to_model(tool: ToolMeta, condition: str) -> bool:
     return not (condition == "write_blocked" and tool.risk != "read")
 
 
+def cannot_do(label: str) -> str:
+    """이 에이전트가 할 수 없는 도구일 때 직원 화면 문구(#578, 이유 한 줄과 대안 한 줄)."""
+    return f"{josa(label, '은는')} 이 담당 AI가 할 수 없는 일입니다. 맡은 부서에 요청해 주세요."
+
+
 def decide(agent: Agent, tool: ToolMeta, args: dict[str, Any], condition: str, tainted: bool,
-           wide: WideScope, conversation_tainted: bool = False) -> Decision:
+           wide: WideScope, conversation_tainted: bool = False, label: str | None = None) -> Decision:
+    """label은 직원 화면용 도구 이름(#575). 없으면 도구 이름을 씁니다."""
+    label = label or tool.name
     if condition not in CONDITIONS:
         raise ValueError(f"알 수 없는 조건: {condition}")
     if tool.name not in agent.tools:
-        return Decision("blocked", f"{tool.name}은 이 에이전트의 도구가 아닙니다")
+        return Decision("blocked", cannot_do(label))
     if condition == "no_guard":
         return Decision("auto")
     if condition == "write_blocked":
@@ -129,9 +137,10 @@ def decide(agent: Agent, tool: ToolMeta, args: dict[str, Any], condition: str, t
 
     risk_policy = agent.raw.get("risk_policy", {})
     if tool.risk not in agent.raw.get("allowed_risk", []):
-        return Decision("deny", f"{tool.risk} 등급 도구는 이 에이전트에서 쓰지 않습니다")
+        return Decision("deny", f"이 담당 AI는 {josa(label)} 할 수 없습니다. 맡은 부서에 요청해 주세요.")
     if tool.trust_required == "user_direct" and tainted:
-        return Decision("blocked", "신뢰할 수 없는 내용을 읽은 뒤라 사용자가 직접 요청해야 실행합니다")
+        return Decision("blocked", "같은 요청에서 다른 사람이 쓴 글을 읽어 실행하지 않았습니다. "
+                                   "실행하려면 새 메시지로 다시 요청해 주세요.")
     action: Action = risk_policy.get(tool.risk, "deny")
     for o in risk_policy.get("overrides", []) or []:
         if o.get("tool") != tool.name:
@@ -139,7 +148,7 @@ def decide(agent: Agent, tool: ToolMeta, args: dict[str, Any], condition: str, t
         if _override_matches(o.get("when"), args, wide):
             action = o["action"]
     if action == "deny":
-        return Decision("deny", f"{tool.name}은 이 에이전트에서 금지된 도구입니다")
+        return Decision("deny", cannot_do(label))
     undo_note = action == "auto_with_undo"
     if tool.trust_required == "user_direct" and conversation_tainted and action in ("auto", "auto_with_undo"):
         return Decision("confirm", "이 대화에서 신뢰할 수 없는 내용을 읽어 실행 전에 확인을 받습니다", undo_note)

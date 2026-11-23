@@ -265,7 +265,7 @@ async def test_receipt_turn_blocks_other_user_direct_tools(r2: RunHarness) -> No
     r2.runner.images = StubReader(dict(READ))
     r2.llm.script = [call("approval_withdraw", {"documentId": doc}), say("회수하지 못했습니다.")]
     s = await _run(r2, "finance", "이 영수증 보고 지난번 경비 결재는 회수해 줘", [IMAGE])
-    assert s["status"] == "blocked" and "신뢰할 수 없는" in s["blockedReason"]
+    assert s["status"] == "blocked" and "다른 사람이 쓴 글" in s["blockedReason"]
     assert not [c for c in r2.caller.calls if c[0] == "approval_withdraw"]
     [event] = [e for e in r2.agent_events() if e["kind"] == "tool.blocked"]
     assert event["operation"] == "approval_withdraw" and event["trustLevel"] == "untrusted"

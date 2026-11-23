@@ -10,16 +10,21 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import Literal
 
 from agent_runtime.llm import ChatClient, LLMError
 from agent_runtime.registry import Agent, Registry, Requester
+from agent_runtime.text import josa
 
 Method = Literal["llm", "keyword", "fallback", "explicit"]
 
 NONE_CHOICE = "none"
+
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -42,6 +47,9 @@ class RouteDecision:
         }
 
 
+NOT_CHOSEN = "맞는 담당 AI를 자동으로 고르지 못했습니다."  # 직원 화면 문구(#578). 구분은 audit_reason에 남습니다
+
+
 class Router:
     def __init__(self, registry: Registry, chat: ChatClient | None, min_confidence: float = 0.5) -> None:
         self.registry = registry
@@ -62,37 +70,38 @@ class Router:
         scores = {a.id: sum(1 for k in a.keywords if k.casefold() in text) for a in self.registry.agents}
         best = max(scores.values())
         if best == 0:
-            return self._fallback("키워드가 맞는 에이전트가 없습니다", "keyword:no_match")
+            return self._fallback("요청에 맞는 담당 AI를 찾지 못했습니다.", "keyword:no_match")
         top = [aid for aid, s in scores.items() if s == best]
         if len(top) > 1:
-            return self._fallback(f"키워드 점수가 같은 에이전트가 여럿입니다: {', '.join(top)}", "keyword:tie")
+            return self._fallback("요청에 맞는 담당 AI가 여럿이라 하나로 정하지 못했습니다.", "keyword:tie")
         return self._decide(self.registry.get(top[0]), requester, "keyword", None,
-                            f"키워드 {best}개가 맞았습니다", f"keyword:hits={best}")
+                            f"요청이 {self.registry.get(top[0]).name}의 담당 업무와 맞습니다.", f"keyword:hits={best}")
 
     # ---- LLM 라우터 ----
 
     def route_llm(self, message: str, requester: Requester) -> RouteDecision:
         if self.chat is None:
-            return self._fallback("LLM 라우터가 설정되지 않았습니다", "llm:not_configured")
+            return self._fallback(NOT_CHOSEN, "llm:not_configured")
         try:
             content = self.chat.complete(build_messages(self.registry, message))
         except LLMError as e:
-            return self._fallback(f"LLM 호출에 실패했습니다({e})", "llm:error")
+            log.warning("입구 라우터 LLM 호출 실패: %s", e)
+            return self._fallback(NOT_CHOSEN, "llm:error")
         parsed = parse_choice(content)
         if parsed is None:
-            return self._fallback("LLM 응답을 해석하지 못했습니다", "llm:unparsable")
+            return self._fallback(NOT_CHOSEN, "llm:unparsable")
         agent_id, confidence, model_reason = parsed
         if agent_id == NONE_CHOICE or not self.registry.has(agent_id):
-            return self._fallback("LLM이 맞는 에이전트를 고르지 못했습니다", "llm:no_choice", confidence)
+            return self._fallback(NOT_CHOSEN, "llm:no_choice", confidence)
         agent = self.registry.get(agent_id)
         # 확신도를 주지 않은 답은 기준 확인 없이 받아들입니다(고른 에이전트는 여전히 callable 검사를 거침).
         if confidence is not None and confidence < self.min_confidence:
             suggested = None if agent.id == self.registry.fallback_agent_id else agent.id
             return self._fallback(
-                f"LLM 확신도 {confidence:.2f}가 기준 {self.min_confidence:.2f}보다 낮습니다",
+                "어느 담당 AI의 일인지 분명하지 않습니다.",
                 f"llm:low_confidence={confidence:.2f}", confidence, suggested,
             )
-        reason = f"LLM이 골랐습니다: {model_reason}" if model_reason else "LLM이 골랐습니다"
+        reason = model_reason or ""  # 모델이 쓴 고른 이유만 보입니다(방식 이름은 audit_reason에)
         return self._decide(agent, requester, "llm", confidence, reason, "llm:chosen")
 
     # ---- 공통 ----
@@ -103,7 +112,7 @@ class Router:
             # fallback 에이전트는 받을 곳이 없어지지 않도록 callable 검사 없이 받습니다.
             suggested = None if agent.id == self.registry.fallback_agent_id else agent.id
             return self._fallback(
-                f"요청자가 부를 수 없는 에이전트({agent.id})라 안내만 합니다",
+                f"{josa(agent.name, '은는')} 쓸 권한이 없어 안내만 합니다.",
                 f"{audit_reason};not_callable", confidence, suggested,
             )
         return RouteDecision(agent.id, method, reason, confidence, None, audit_reason)

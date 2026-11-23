@@ -71,8 +71,8 @@ async def test_reversible_write_runs_and_offers_undo(r: RunHarness) -> None:
     assert s["status"] == "completed"
     [action] = s["actions"]
     assert action["tool"] == "leave_request" and action["undoable"] is True
-    assert action["actionId"] in s["messages"][0]["content"]
-    assert "되돌릴 수 있습니다" in s["messages"][0]["content"]
+    assert action["actionId"] not in s["messages"][0]["content"]  # ID는 화면에 내지 않음(#578)
+    assert "실행 취소" in s["messages"][0]["content"]
     name, _, meta = r.caller.calls[0]
     assert meta["trustLevel"] == "user_direct" and meta["idempotencyKey"].startswith("agt-")
 
@@ -189,7 +189,7 @@ async def test_injected_instruction_cannot_call_user_direct_tool(r: RunHarness) 
     token = mint(cid=conv)
     s = await run(r, "내가 대신 결재하게 된 대결 내용 알려 줘", conv=conv, token=token)
     assert s["status"] == "blocked"
-    assert "신뢰할 수 없는" in s["blockedReason"]
+    assert "다른 사람이 쓴 글" in s["blockedReason"]
     assert [c[0] for c in r.caller.calls] == ["delegation_list"]
     # 신뢰 불가 출력은 표시를 붙여 모델에 넘깁니다.
     tool_msg = r.llm.requests[1]["messages"][-1]
@@ -219,7 +219,7 @@ async def test_next_turn_after_taint_needs_confirmation(r: RunHarness) -> None:
     done = await r.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
     assert done["status"] == "completed" and done["actions"][0]["tool"] == "leave_request"
     # 확인으로 올린 auto_with_undo도 되돌리기 안내는 그대로 붙입니다.
-    assert "되돌릴 수 있습니다" in done["messages"][0]["content"]
+    assert "실행 취소" in done["messages"][0]["content"]
     executed = [c for c in r.caller.calls if c[0] == "leave_request" and not c[2].get("dryRun")]
     assert [c[2]["trustLevel"] for c in executed] == ["user_direct"]
 

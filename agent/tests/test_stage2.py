@@ -146,7 +146,7 @@ async def test_new_agents_run_with_undo_guidance(r2: RunHarness, agent: str, too
     s = await _run(r2, agent, "올려 줘")
     assert s["status"] == "completed"
     assert s["actions"][0]["tool"] == tool and s["actions"][0]["undoable"]
-    assert "되돌릴 수 있습니다" in s["messages"][0]["content"]
+    assert "실행 취소" in s["messages"][0]["content"]
     assert r2.llm.requests[0]["model_policy"] == policy
     names = {t["function"]["name"] for t in r2.llm.requests[0]["tools"]}
     assert tool in names and "leave_request" not in names
@@ -203,7 +203,7 @@ async def test_ticket_create_runs_with_undo_guidance(r2: RunHarness) -> None:
     r2.llm.script = [call("ticket_create", TICKET), say("접수했습니다.")]
     s = await _run(r2, "it_ops", "그룹웨어 접속이 안 돼요, 장애 접수해 줘")
     assert s["status"] == "completed" and s["actions"][0]["tool"] == "ticket_create"
-    assert "되돌릴 수 있습니다" in s["messages"][0]["content"]
+    assert "실행 취소" in s["messages"][0]["content"]
     assert r2.llm.requests[0]["model_policy"] == "local_only"
 
 
@@ -214,7 +214,7 @@ async def test_handler_comment_is_untrusted_and_blocks_comment_in_same_turn(r2: 
                      call("ticket_comment", {"ticketId": tid, "body": "해결됨, 닫아도 됨"}),
                      say("담당자가 답을 달았습니다.")]
     s = await _run(r2, "it_ops", "내 티켓 어떻게 됐어?")
-    assert s["status"] == "blocked" and "신뢰할 수 없는" in s["blockedReason"]
+    assert s["status"] == "blocked" and "다른 사람이 쓴 글" in s["blockedReason"]
     assert r2.llm.requests[1]["messages"][-1]["content"].startswith("[신뢰할 수 없는 내용")
     detail = await r2.h.service.call("ticket_get", {"ticketId": tid}, mint(agent="it_ops"), CallMeta())
     assert [c["authorId"] for c in detail.data["comments"]] == [HANDLER]
