@@ -873,6 +873,7 @@ components:
           properties:
             actionId: {type: string}
             tool: {type: string}
+            toolLabel: {type: string, description: "직원 화면에 보이는 도구 이름(#575·#607). agent ExecutedAction.toolLabel을 그대로 넘깁니다. 없으면 화면은 tool 코드 이름을 내지 않고 summary만 보여 줍니다"}
             summary: {type: string}
             undoable: {type: boolean}
         citations:

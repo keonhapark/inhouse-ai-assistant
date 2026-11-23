@@ -26,7 +26,8 @@ class Settings:
     token_ttl_seconds: int = 600
     litellm_base_url: str = "http://localhost:4000"
     litellm_config: Path = MODULE_ROOT / "litellm/config.yaml"
-    llm_timeout_seconds: float = 120.0  # LLM_TIMEOUT_SECONDS: 출구→LiteLLM 시간 제한(#536, 결정 0008: 로컬이 생각해도 끊기지 않게)
+    # LLM_TIMEOUT_SECONDS: 출구→LiteLLM 시간 제한(#536). 값이 있을 때만 별칭 프로필의 timeoutSeconds(기본 120)를 덮어씁니다(#595)
+    llm_timeout_seconds: float | None = None
     audit_dir: Path = MODULE_ROOT / "var"
     alert_webhook_url: str | None = None
     audit_event_files: tuple[str, ...] = ()
@@ -42,8 +43,8 @@ class Settings:
     slack_login_per_user_per_minute: int = 10    # SLACK_LOGIN_PER_USER_PER_MINUTE: 슬랙 사용자 ID별 분당 상한(#331)
     slack_login_per_minute: int = 60             # SLACK_LOGIN_PER_MINUTE: /auth/slack 전체 분당 상한(틀린 비밀값 포함)
     eval_reports_dir: Path = REPO_ROOT / "eval/reports"  # GATEWAY_EVAL_REPORTS_DIR: 평가 보고서 폴더(읽기 전용, #332)
-    # GATEWAY_LOCAL_REASONING_EFFORT: 외부 별칭 요청을 로컬로 돌릴 때 채울 reasoning_effort(#427). 기본은 빈 값(채우지 않음,
-    # 결정 0008·#536: 생각 단계를 끄지 않고 시간 제한을 늘림). none이면 생각 단계를 끕니다
+    # GATEWAY_LOCAL_REASONING_EFFORT: 외부 별칭 요청을 로컬로 돌릴 때 채울 reasoning_effort(#427). 빈 값이면 별칭 프로필의
+    # thinking.reroute를 따릅니다(#595, Qwen3.5-9B는 default=채우지 않음, 결정 0008). none이면 생각 단계를 끕니다
     local_reasoning_effort: str | None = None
     # 의미 캐시(#465). GATEWAY_SEMANTIC_CACHE=1일 때만 켜고, 평가 모드(GATEWAY_EVAL_MODE=1)에서는 늘 끕니다.
     semantic_cache: bool = False
@@ -60,7 +61,7 @@ class Settings:
             delegation_private_key=_path(key, REPO_ROOT) if key else None,
             litellm_base_url=os.environ.get("LITELLM_BASE_URL", "http://localhost:4000").rstrip("/"),
             litellm_config=_path(os.environ.get("LITELLM_CONFIG"), MODULE_ROOT / "litellm/config.yaml"),
-            llm_timeout_seconds=float(os.environ.get("LLM_TIMEOUT_SECONDS", "120")),
+            llm_timeout_seconds=float(os.environ["LLM_TIMEOUT_SECONDS"]) if os.environ.get("LLM_TIMEOUT_SECONDS") else None,
             audit_dir=_path(os.environ.get("GATEWAY_AUDIT_DIR"), MODULE_ROOT / "var"),
             alert_webhook_url=os.environ.get("ALERT_WEBHOOK_URL") or None,
             agent_base_url=os.environ.get("AGENT_BASE_URL", "http://localhost:8020").rstrip("/"),

@@ -225,8 +225,14 @@ def compute_metrics(events: list[dict[str, Any]], egress_rows: list[dict[str, An
 
 
 def build_router(erp: ErpClient, audit: AuditLog, registry: Registry, files: tuple[str, ...] = (),
-                 budget: BudgetLedger | None = None) -> APIRouter:
+                 budget: BudgetLedger | None = None, model_profiles: list[dict[str, Any]] | None = None) -> APIRouter:
     api = APIRouter()
+
+    @api.get("/ops/models")
+    async def ops_models(request: Request) -> JSONResponse:
+        """별칭별 실제 모델과 모델 프로필(#595). 모듈용 /v1/model-profiles와 같은 본문입니다."""
+        await require_auditor(erp, request)
+        return JSONResponse({"aliases": model_profiles or []})
 
     @api.get("/ops/metrics")
     async def ops_metrics(request: Request, since: datetime | None = None,
