@@ -67,6 +67,7 @@ const serve = (report: Report) =>
 describe('평가 리포트', () => {
   it('1단계 정상 셋 보고서: 실행 조건, 보호 지표와 구간, 판정, 라우터를 보여 줍니다', async () => {
     renderAt()
+    expect(await screen.findByRole('heading', { level: 1, name: '평가 리포트' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: '실행 조건' })).toBeInTheDocument()
     expect(screen.getByText('240/240')).toBeInTheDocument()
     expect(screen.getByText(`실행 메모 ${stage1.meta.notes.length}개`)).toBeInTheDocument()

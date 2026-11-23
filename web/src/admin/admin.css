@@ -1,116 +1,136 @@
+/* 운영 화면(ux/design-system.md 3.1·3.4·3.5): 툴바(기간 세그먼트) + 날짜 범위 + 패널. 평가 리포트도 .admin 틀을 씁니다 */
 .admin {
-  display: grid;
-  align-content: start;
-  gap: var(--sp-16);
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: var(--sp-24) var(--sp-16);
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
 }
 
-.admin h1 {
-  margin: 0;
+.admin__body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1080px);
+  justify-content: center;
+  align-content: start;
+  gap: var(--space-4);
+  min-height: 0;
+  padding: var(--space-6);
+  overflow-y: auto;
 }
 
 .admin h2 {
-  margin: var(--sp-8) 0;
-  font-size: var(--fs-16);
+  margin: var(--space-2) 0;
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-title);
 }
 
-.admin__filters,
 .admin__row,
 .admin__custom {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  gap: var(--sp-8);
+  gap: var(--space-3);
 }
 
-.admin__custom {
-  margin-left: var(--sp-8);
-}
-
-.admin__custom label,
 .admin__field {
   display: grid;
   justify-self: start;
   width: fit-content;
-  gap: var(--sp-4);
-  font-size: var(--fs-12);
+  gap: var(--space-1);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
 }
 
 .admin input,
 .admin select {
-  height: 32px;
-  padding: 0 var(--sp-8);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--surface);
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--fill-2);
   color: var(--text);
   font: inherit;
-  font-size: var(--fs-14);
+  font-size: var(--fs-body);
+}
+
+.admin input:focus-visible,
+.admin select:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.admin input[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.admin__period {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}
+
+.admin__error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--fs-footnote);
 }
 
 .admin__panel {
   display: grid;
-  gap: var(--sp-16);
+  gap: var(--space-4);
 }
 
 .admin__panel > div > p.muted {
-  margin: 0 0 var(--sp-8);
+  margin: 0 0 var(--space-2);
 }
 
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--sp-12);
-  margin: 0 0 var(--sp-16);
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
 }
 
 .tile {
-  padding: var(--sp-12) var(--sp-16);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-md);
   background: var(--surface);
+  box-shadow: var(--shadow-1);
 }
 
 .tile dt {
-  color: var(--text-muted);
-  font-size: var(--fs-12);
+  color: var(--text-2);
+  font-size: var(--fs-caption);
 }
 
 .tile dd {
-  margin: var(--sp-4) 0 0;
-  font-size: var(--fs-24);
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-title2);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .tile__sub {
-  font-size: var(--fs-12);
+  font-size: var(--fs-caption);
   font-weight: 400;
 }
 
 .metrics {
   display: grid;
-  gap: var(--sp-16);
+  gap: var(--space-4);
 }
 
 .metrics__pair {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
-  gap: var(--sp-16);
-}
-
-.table th[scope='row'] {
-  color: var(--text);
-  font-size: var(--fs-14);
-  font-weight: 600;
+  gap: var(--space-4);
 }
 
 .bar-cell {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-8);
+  gap: var(--space-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -133,24 +153,24 @@
 
 .egress__list {
   display: grid;
-  gap: var(--sp-8);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .egress__item {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  border-radius: var(--r-md);
   background: var(--surface);
+  box-shadow: var(--shadow-1);
 }
 
 .egress__item summary {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--sp-8);
-  padding: var(--sp-12) var(--sp-16);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   cursor: pointer;
 }
 
@@ -164,14 +184,14 @@
 
 .egress__messages {
   display: grid;
-  gap: var(--sp-8);
+  gap: var(--space-2);
   margin: 0;
-  padding: 0 var(--sp-16) var(--sp-16);
+  padding: 0 var(--space-4) var(--space-4);
   list-style: none;
 }
 
 .egress__messages p {
-  margin: var(--sp-4) 0 0;
+  margin: var(--space-1) 0 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -182,7 +202,7 @@
 
 .egress__item summary::before {
   content: '▸';
-  color: var(--text-muted);
+  color: var(--text-2);
 }
 
 .egress__item details[open] > summary::before {
@@ -195,7 +215,7 @@
 
 .egress__role {
   font-family: ui-monospace, monospace;
-  font-size: var(--fs-12);
+  font-size: var(--fs-caption);
 }
 
 .redacted {
@@ -209,13 +229,8 @@
 
 .audit {
   display: grid;
-  gap: var(--sp-12);
+  gap: var(--space-3);
   justify-items: start;
-}
-
-.table-scroll {
-  width: 100%;
-  overflow-x: auto;
 }
 
 .audit__table {
@@ -227,19 +242,8 @@
   min-width: 640px;
 }
 
-.admin__period {
-  margin: 0;
-  font-size: var(--fs-12);
-}
-
-.audit__table caption {
-  padding: var(--sp-8) var(--sp-12);
-  text-align: left;
-  font-size: var(--fs-12);
-}
-
 .audit__table td .badge {
-  margin-left: var(--sp-4);
+  margin-left: var(--space-1);
 }
 
 .audit__when {
@@ -247,17 +251,22 @@
   font-variant-numeric: tabular-nums;
 }
 
+.audit__id {
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}
+
 .audit__detail {
-  font-size: var(--fs-12);
+  font-size: var(--fs-caption);
 }
 
 @media (max-width: 720px) {
-  .admin__custom {
-    margin-left: 0;
+  .admin__body {
+    padding: var(--space-4);
   }
 
   .metrics .table th,
   .metrics .table td {
-    padding: var(--sp-8);
+    padding: var(--space-2);
   }
 }

@@ -1,4 +1,4 @@
-/** 관리자 콘솔의 기간. 미리 정한 길이 또는 날짜 범위(끝 날짜 포함)입니다. */
+/** 운영 화면의 기간. 미리 정한 길이 또는 날짜 범위(끝 날짜 포함)입니다. */
 export type Preset = '24h' | '7d' | '30d'
 export type Period = { kind: 'preset'; preset: Preset } | { kind: 'custom'; from: string; to: string }
 
