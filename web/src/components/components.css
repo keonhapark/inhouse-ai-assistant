@@ -342,6 +342,8 @@ a.group__row:hover,
   font: inherit;
   font-size: var(--fs-footnote);
   font-weight: var(--fw-medium);
+  flex: none;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -383,7 +385,9 @@ a.group__row:hover,
 
 .table {
   width: 100%;
-  border-collapse: collapse;
+  /* collapse면 브라우저가 표의 둥근 모서리를 그리지 않아 separate로 둡니다 */
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: var(--fs-body);
 }
 
@@ -403,8 +407,8 @@ a.group__row:hover,
   vertical-align: middle;
 }
 
-.table tr:last-child > td,
-.table tr:last-child > th {
+.table tbody tr:last-child > td,
+.table tbody tr:last-child > th {
   border-bottom: 0;
 }
 

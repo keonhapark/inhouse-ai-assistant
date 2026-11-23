@@ -395,7 +395,7 @@
     display: none;
   }
 
-  .seg {
+  .inbox .seg {
     overflow-x: auto;
   }
 }

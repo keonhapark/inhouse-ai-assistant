@@ -9,17 +9,13 @@
 .admin__body {
   display: grid;
   flex: 1;
+  grid-template-columns: minmax(0, 1080px);
+  justify-content: center;
   align-content: start;
   gap: var(--space-4);
   min-height: 0;
   padding: var(--space-6);
   overflow-y: auto;
-}
-
-.admin__body > * {
-  width: 100%;
-  max-width: 1080px;
-  margin-inline: auto;
 }
 
 .admin h2 {
@@ -69,8 +65,7 @@
 }
 
 .admin__period {
-  align-self: center;
-  margin: 0 0 0 auto;
+  margin: 0;
   color: var(--text-2);
   font-size: var(--fs-caption);
 }
@@ -268,11 +263,6 @@
 @media (max-width: 720px) {
   .admin__body {
     padding: var(--space-4);
-  }
-
-  .admin__period {
-    flex-basis: 100%;
-    margin-left: 0;
   }
 
   .metrics .table th,

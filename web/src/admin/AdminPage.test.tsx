@@ -92,7 +92,7 @@ describe('운영 화면', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(21)
     // 직원·에이전트·작업은 이름 뒤에 ID를 작게 붙입니다
     const second = within(table).getAllByRole('row')[2]
-    await vi.waitFor(() => expect(second).toHaveTextContent('서도윤 emp-2001'))
+    await waitFor(() => expect(second).toHaveTextContent('서도윤 emp-2001'))
     expect(second).toHaveTextContent('재무 finance')
     expect(second).toHaveTextContent('결재 회수 approval_withdraw')
     await user.click(screen.getByRole('button', { name: '더 보기' }))
@@ -165,6 +165,21 @@ describe('운영 화면', () => {
     const row = await screen.findByRole('row', { name: /인사/ })
     expect(row).toHaveTextContent('상한 0 · 외부 안 씀')
     expect(row).not.toHaveTextContent('상한 넘음')
+  })
+
+  it('직원 사전·에이전트 목록을 못 받으면 감사 로그는 ID만 보입니다', async () => {
+    server.use(
+      http.get('*/api/employees', () => HttpResponse.error()),
+      http.get('*/api/agent-registry', () => HttpResponse.error()),
+    )
+    const user = renderAdmin()
+    await openMenu(user, '감사 로그')
+    const second = within(await screen.findByRole('table')).getAllByRole('row')[2]
+    expect(second).toHaveTextContent('emp-2001')
+    expect(second).not.toHaveTextContent('서도윤')
+    expect(second).not.toHaveTextContent('재무')
+    // 작업 표시 이름은 화면 안의 사전(names.ts)이라 그대로 보입니다
+    expect(second).toHaveTextContent('결재 회수 approval_withdraw')
   })
 
   it('제목은 고른 메뉴 이름이고, 메뉴로 옮겨도 고른 기간을 그대로 둡니다', async () => {

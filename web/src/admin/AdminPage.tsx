@@ -22,7 +22,8 @@ const isTab = (v: string | undefined): v is Tab => TABS.some((t) => t.id === v)
 
 /**
  * 운영 화면(/ops/metrics, /ops/egress, /ops/audit). 화면 사이는 왼쪽 탐색 막대의 운영 묶음으로 옮깁니다(ia.md 2절).
- * 세 화면이 같은 경로(/ops/:tab)의 한 요소라 메뉴로 옮겨도 고른 기간이 그대로 남습니다.
+ * 세 화면이 같은 경로(/ops/:tab)의 한 요소라 셋 사이를 메뉴로 옮겨도 고른 기간이 그대로 남습니다.
+ * 평가 리포트(/ops/eval)는 기간을 쓰지 않는 다른 요소라, 거기를 들렀다 돌아오면 처음 기간(24시간)으로 돌아갑니다.
  */
 export function AdminPage() {
   const params = useParams()
@@ -72,7 +73,7 @@ export function AdminPage() {
         </div>
       </Toolbar>
       <div className="admin__body">
-        <form className="admin__custom" aria-label="날짜로 보기" onSubmit={applyCustom}>
+        <form className="admin__custom" aria-label="날짜 범위" onSubmit={applyCustom}>
           <label className="admin__field">
             <span>시작</span>
             <input type="date" value={from} max={today} aria-invalid={!!rangeError} aria-describedby={rangeError ? 'admin-range-error' : undefined} onChange={(e) => setFrom(e.target.value)} />
@@ -84,10 +85,10 @@ export function AdminPage() {
           <Button type="submit" variant={period.kind === 'custom' ? 'primary' : 'secondary'}>
             날짜로 보기
           </Button>
-          <p className="admin__period" aria-live="polite">
-            {period.kind === 'custom' ? formatDateRange(period.from, period.to) : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}을 보고 있습니다.
-          </p>
         </form>
+        <p className="admin__period" aria-live="polite">
+          {period.kind === 'custom' ? formatDateRange(period.from, period.to) : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}을 보고 있습니다.
+        </p>
         {rangeError && (
           <p role="alert" id="admin-range-error" className="admin__error">
             {rangeError}
