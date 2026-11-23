@@ -40,9 +40,11 @@ def external_ok(app):
 
 
 def test_config_has_local_vision_alias():
-    info = load_model_info(ROOT / "gateway/litellm/config.yaml")
-    assert info["local-vision"]["location"] == "local" and info["local-vision"]["vision"] is True
-    assert [a for a, i in info.items() if i.get("vision")] == ["local-vision"]
+    from gateway.profiles import load_model_profiles
+
+    profiles = load_model_profiles(ROOT / "gateway/litellm/config.yaml")
+    assert [p["alias"] for p in profiles if p["profile"]["vision"]] == ["local-vision"]
+    assert next(p for p in profiles if p["alias"] == "local-vision")["location"] == "local"
 
 
 @pytest.mark.parametrize("requested", ["external", "local", "local-gguf"])
