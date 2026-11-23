@@ -22,6 +22,7 @@ from rag.editions import edition_body
 from rag.embed import EmbedError, embedder_from_env
 from rag.evaldocs import apply_eval_files
 from rag.pack import load_pack
+from rag.profile import FALLBACK, ProfileCache, with_env
 from rag.purge import PurgeList, purge_document
 from rag.search import EditionPolicy, Embedder, Hit, SearchIndex
 
@@ -183,8 +184,9 @@ def from_env() -> FastAPI:
     purge_list = PurgeList(Path(os.environ.get("RAG_PURGE_FILE") or cache / "purged.txt"))
     index = build_index(embedder_from_env(cache), stage, edition_policy(dict(os.environ)), purge_list.ids())
     llm_url = os.environ.get("GATEWAY_LLM_URL")
-    chat = GatewayChat(llm_url, os.environ.get("RAG_LLM_MODEL", "local"),
-                       reasoning_effort=os.environ.get("RAG_LLM_REASONING", "none") or None) if llm_url else None
+    alias = os.environ.get("RAG_LLM_MODEL", "local")
+    with_env(FALLBACK, os.environ)  # 덮어쓰기 값이 틀리면 첫 질문이 아니라 시작할 때 알립니다
+    chat = GatewayChat(llm_url, alias, settings=ProfileCache(llm_url, alias).get) if llm_url else None
     answerer = Answerer(index, chat) if chat else None
     audit = AuditLog(Path(os.environ.get("RAG_AUDIT_LOG", MODULE_ROOT / ".data" / "audit.jsonl")))
     admin = os.environ.get("RAG_ADMIN_TOKEN", "").strip() or None
