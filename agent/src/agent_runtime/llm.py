@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import os
 import time
 from dataclasses import dataclass, field
@@ -76,8 +78,11 @@ class LLMSettings:
 
 
 class ChatClient:
-    def __init__(self, settings: LLMSettings, transport: httpx.BaseTransport | None = None) -> None:
+    def __init__(self, settings: LLMSettings, transport: httpx.BaseTransport | None = None,
+                 timeout_source: Callable[[], float] | None = None) -> None:
         self.settings = settings
+        # 호출마다 시간 제한을 정할 때(모델 프로필 timeoutSeconds, #601). 없으면 settings.timeout_s
+        self.timeout_source = timeout_source
         self._http = httpx.Client(base_url=settings.base_url, timeout=settings.timeout_s, transport=transport)
 
     def complete(self, messages: list[dict[str, str]], headers: dict[str, str] | None = None) -> str:
@@ -100,7 +105,8 @@ class ChatClient:
         body.update(extra or {})
         started = time.perf_counter()
         try:
-            resp = self._http.post("/chat/completions", json=body, headers=headers or {})
+            kw = {"timeout": self.timeout_source()} if self.timeout_source else {}
+            resp = self._http.post("/chat/completions", json=body, headers=headers or {}, **kw)
         except httpx.HTTPError as e:
             raise LLMError(f"LLM 호출 실패: {type(e).__name__}") from e
         latency_ms = int((time.perf_counter() - started) * 1000)

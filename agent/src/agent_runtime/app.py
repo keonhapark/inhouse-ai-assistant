@@ -9,8 +9,8 @@
 - AGENT_MCP_URL: 업무 실행이 부르는 MCP 서버(기본 http://localhost:$MCP_PORT/mcp, MCP_PORT 기본 8001)
 - DELEGATION_TOKEN_PUBLIC_KEY 또는 DELEGATION_JWKS_URL(필수): /run·/resume에서 토큰의 에이전트·요청자·대화를 대조.
   AGENT_ALLOW_UNVERIFIED_TOKENS=1이면 대조하지 않습니다(개발용)
-- AGENT_PLAN_REASONING_EFFORT: 로컬로 가는 계획 호출의 reasoning_effort(기본 빈 값=보내지 않음=모델 기본 생각 켬, none이면 생각 끔.
-  #423·#535, 결정 0008). AGENT_LLM_BACKEND=ollama 개발 경로의 모든 호출도 이 값을 따릅니다
+- AGENT_PLAN_REASONING_EFFORT, AGENT_LLM_TIMEOUT_S: 값이 있을 때만 모델 프로필(gateway /v1/model-profiles, 결정 0009·#601)을
+  덮습니다. 프로필은 계획 호출 생각 단계(local thinking.plan)·이미지 읽기(local-vision imageRead)·시간 제한(timeoutSeconds)
 - AGENT_EVAL_MODE=1: 평가 경로 /eval/tool-call을 켭니다(아니면 404). AGENT_EVAL_FEWSHOT: few-shot 예시 파일
   (기본 eval_dev/tool_calls.jsonl, 작업 폴더 기준)
 """
@@ -36,6 +36,7 @@ from agent_runtime.llm import ChatClient, LLMSettings
 from agent_runtime.registry import Registry, Requester
 from agent_runtime.mcp_server.tokens import TokenVerifier
 from agent_runtime.pack_tools import tool_labels
+from agent_runtime.profiles import ProfileCache, StaticProfile
 from agent_runtime.router import Router
 from agent_runtime.run.graph import Deps, build_graph
 from agent_runtime.run.policy import WideScope
@@ -148,20 +149,24 @@ def services_from_env() -> Services:
         raise RuntimeError("PACK_DIR 환경 변수가 필요합니다(예: ../packs/manufacturing)")
     stage = os.environ.get("AGENT_PACK_STAGE")
     registry = Registry.load(Path(pack_dir), int(stage) if stage else None)
-    chat = ChatClient(LLMSettings.from_env())
+    settings = LLMSettings.from_env()
+    # 모델 프로필(#601, 결정 0009): gateway 경로면 /v1/model-profiles에서, 아니면(ollama 개발 백엔드) 환경 변수만
+    profile = (ProfileCache(settings.base_url) if os.environ.get("AGENT_LLM_BACKEND", "gateway") == "gateway"
+               else StaticProfile())
+    chat = ChatClient(settings, timeout_source=lambda: profile.get().timeout_s)
     min_conf = float(os.environ.get("AGENT_ROUTER_MIN_CONFIDENCE", "0.5"))
     log = audit.AuditLog(Path(os.environ.get("AGENT_AUDIT_LOG", "var/audit.jsonl")))
     mcp_url = os.environ.get("AGENT_MCP_URL", f"http://localhost:{os.environ.get('MCP_PORT', '8001')}/mcp")
     deps = Deps(llm=chat, caller=McpToolCaller(mcp_url), audit=log, wide=WideScope.from_pack(Path(pack_dir)),
                 trusted_docs=trusted_docs(Path(pack_dir)),
-                plan_reasoning_effort=os.environ.get("AGENT_PLAN_REASONING_EFFORT", "") or None,
+                profile=profile,
                 tool_labels=tool_labels(Path(os.environ.get("CONTRACTS_DIR", "../contracts")) / "mcp" / "tools.json",
                                         Path(pack_dir), registry.form_tools))
     # 토큰 확인 키가 없으면 시작하지 않습니다. 끄는 것은 개발용 플래그로만 합니다.
     verifier: TokenVerifier | None = None
     if os.environ.get("AGENT_ALLOW_UNVERIFIED_TOKENS") != "1":
         verifier = TokenVerifier.from_env()
-    runner = Runner(registry, build_graph(deps), deps.caller, verifier, ImageReader(chat))
+    runner = Runner(registry, build_graph(deps), deps.caller, verifier, ImageReader(chat, profile=profile))
     contracts = Path(os.environ.get("CONTRACTS_DIR", "../contracts"))
     fillers: dict[str, SlotFiller] = {"rule": RuleSlotFiller(),
                                       "llm": LlmSlotFiller(chat, load_slot_tools(contracts / "mcp" / "tools.json"))}
