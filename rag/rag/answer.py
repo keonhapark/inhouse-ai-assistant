@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Protocol
@@ -23,6 +24,7 @@ import httpx
 
 from rag.chunk import Chunk
 from rag.editions import EditionBook, edition_body, section_key
+from rag.profile import CallSettings
 from rag.search import Hit, SearchIndex
 
 NOT_FOUND = "규정에서 찾지 못했습니다."
@@ -63,13 +65,15 @@ class ChatReply:
 class GatewayChat:
     """gateway LLM 출구. 모델은 LiteLLM 별칭(local·external)만 씁니다.
 
-    `reasoning_effort`(기본 none)로 생각 과정을 끕니다. qwen3.5:9b에 같은 질문을 Ollama로 직접 보냈을 때
+    `reasoning_effort`(기본 none)로 생각 과정을 끕니다. `settings`(호출마다 부르는 함수, rag.profile.ProfileCache.get)가 있으면
+    생각 단계와 시간 제한을 그 값으로 씁니다(gateway 모델 프로필, #602). 없으면 아래 인자를 씁니다. qwen3.5:9b에 같은 질문을 Ollama로 직접 보냈을 때
     켜면 86초, 끄면 3.6초였습니다(각 1회, 2026-11-20, 끈 쪽은 프롬프트 캐시 적중). gateway LiteLLM 시간 제한은 60초입니다.
     """
 
     def __init__(
         self, base_url: str, model: str = "local", timeout: float = 120.0,
         transport: httpx.BaseTransport | None = None, reasoning_effort: str | None = "none",
+        settings: Callable[[], CallSettings] | None = None,
     ):
         self.model = model
         self.reasoning_effort = reasoning_effort
@@ -77,15 +81,20 @@ class GatewayChat:
         self._url = base_url.rstrip("/") + "/chat/completions"
         self._timeout = timeout
         self._transport = transport
+        self._settings = settings
 
     def complete(self, messages: list[dict[str, str]], delegation_token: str) -> ChatReply:
         """gateway가 기밀 용어로 로컬로 돌리거나 외부 장애로 폴백하면 요청한 별칭과 실제가 다릅니다.
         응답 헤더 `X-Egress-Model`·`X-Egress-Location`(gateway 계약)이 있으면 그것을, 없으면 요청한 별칭을 씁니다."""
+        effort, timeout = self.reasoning_effort, self._timeout
+        if self._settings is not None:
+            current = self._settings()
+            effort, timeout = current.reasoning_effort, current.timeout_s
         body: dict[str, Any] = {"model": self.model, "messages": messages, "temperature": 0}
-        if self.reasoning_effort:
-            body["reasoning_effort"] = self.reasoning_effort
+        if effort:
+            body["reasoning_effort"] = effort
         try:
-            with httpx.Client(timeout=self._timeout, transport=self._transport) as client:
+            with httpx.Client(timeout=timeout, transport=self._transport) as client:
                 r = client.post(self._url, json=body, headers={"X-Delegation-Token": delegation_token})
         except httpx.HTTPError as e:
             raise LLMError(f"gateway 연결 실패({type(e).__name__})", unreachable=True) from e

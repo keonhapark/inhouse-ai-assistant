@@ -71,7 +71,7 @@
 ## 답(`POST /answer`)
 
 1. `/search`와 같은 범위(토큰 `doc_scopes`)에서 하이브리드 상위 5개를 근거 후보로 고릅니다. 질문에 말이 없거나 후보가 없으면 LLM을 부르지 않습니다.
-2. gateway의 OpenAI 호환 `/v1/chat/completions`를 위임 토큰과 함께 부릅니다. gateway가 에이전트 모델 정책을 적용합니다. 모델은 LiteLLM 별칭(`RAG_LLM_MODEL`, 기본 `local`)이고, `reasoning_effort: none`으로 생각 과정을 끕니다.
+2. gateway의 OpenAI 호환 `/v1/chat/completions`를 위임 토큰과 함께 부릅니다. gateway가 에이전트 모델 정책을 적용합니다. 모델은 LiteLLM 별칭(`RAG_LLM_MODEL`, 기본 `local`)입니다. 생각 단계와 시간 제한은 gateway 모델 프로필(`GET /v1/model-profiles`, 결정 0009)에서 그 별칭의 `thinking.ragAnswer`·`timeoutSeconds`로 읽습니다(`on` → `reasoning_effort: low`, `off` → `none`, `default` → 보내지 않음). Qwen3.5-9B 프로필은 `off`·120초라 프로필 전 동작(`none`, 120초)과 같습니다. 프로필을 못 읽으면(프로필 경로가 없는 gateway, 연결 실패) 그 동작으로 부르고 다음 호출에서 다시 읽습니다. 읽은 프로필은 gateway를 다시 띄울 때까지 그대로 씁니다(`rag/profile.py`).
 3. 모델은 `{"found", "answer", "citations": [{"ref", "quote"}]}`를 냅니다. 인용(quote)이 그 근거 본문에 있는지 대조합니다. 띄어쓰기·가운뎃점 모양·따옴표·호환 한자 차이는 무시하고, 공백을 뺀 10자 미만은 통과시키지 않습니다("다음 각 호" 같은 흔한 구절 하나로 통과하지 못하게).
 4. 다음 중 하나면 답을 버리고 `found: false`와 "규정에서 찾지 못했습니다."를 돌려줍니다.
    - 대조를 통과한 인용이 없음, 또는 통과한 인용이 모두 신뢰 불가 근거에서 나옴
@@ -283,7 +283,8 @@ RAG_EMBEDDER=hash DELEGATION_TOKEN_PUBLIC_KEY=infra/dev-keys/delegation-es256.pu
 | `RAG_CACHE_DIR` | 임베딩 캐시 폴더(기본 `rag/.cache`) |
 | `RAG_STAGE` | 이 단계까지의 문서만 씁니다 |
 | `GATEWAY_LLM_URL` | 답 생성용 gateway 주소(예: http://gateway:8000/v1). 없으면 `/answer`는 503 |
-| `RAG_LLM_MODEL`, `RAG_LLM_REASONING` | 답 생성 모델 별칭(기본 `local`), reasoning_effort(기본 `none`, 빈 값이면 보내지 않음) |
+| `RAG_LLM_MODEL` | 답 생성 모델 별칭(기본 `local`). 이 별칭의 프로필을 읽습니다 |
+| `RAG_LLM_REASONING`, `RAG_LLM_TIMEOUT_SECONDS` | 프로필을 덮어쓰는 값(있을 때만). 생각 단계는 `on`·`off`·`default` 또는 reasoning_effort 값(`none`·`minimal`·`low`·`medium`·`high`), 시간 제한은 1 이상 정수. 빈 값은 덮지 않습니다(예전에는 빈 값이 "보내지 않음"이었고 지금은 `default`입니다). 틀린 값이면 시작할 때 실패합니다 |
 | `RAG_AUDIT_LOG` | 감사 이벤트 파일 |
 | `RAG_EDITIONS` | `as_of`(기본, 기준일 판만) 또는 `all`(판을 가리지 않음, 기준선) |
 | `RAG_ADMIN_TOKEN` | 파기 경로의 운영자 키. 없으면 파기 경로가 없음(404) |
