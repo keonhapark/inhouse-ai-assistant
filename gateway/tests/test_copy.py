@@ -52,3 +52,24 @@ def test_too_many_attachments_uses_photo(chat, h):
     r = chat.post(f"/api/conversations/{cid}/messages", headers=h,
                   json={"content": "정산해 줘", "attachments": [{"kind": "image", "dataUrl": _url(_png())}] * 4})
     assert r.status_code == 422 and _shown(r) == "사진은 한 번에 3장까지 첨부할 수 있습니다."
+
+
+# ---------- 도구 표시 이름(#607, 계약 #613) ----------
+@pytest.mark.parametrize("label", ["회의실 예약", None])
+def test_tool_label_flows_to_confirm_card_and_done_work(chat, h, agent, label):
+    from .test_chat import events
+
+    if label:
+        agent.preview_extra = {"toolLabel": label}
+        agent.action_extra = {"toolLabel": label}
+    cid = _new(chat, h)
+    ev = events(chat.post(f"/api/conversations/{cid}/messages", headers=h, json={"content": "회의실 예약해 줘"}))
+    card = next(e for e in ev if e["type"] == "approval_required")["approval"]
+    done = events(chat.post(f"/api/execution-approvals/{card['approvalId']}", headers=h, json={"decision": "approve"}))
+    action = next(e for e in done if e["type"] == "action")["action"]
+    if label:
+        assert card["toolLabel"] == label and action["toolLabel"] == label
+    else:
+        assert "toolLabel" not in card and "toolLabel" not in action    # agent가 주지 않으면 넣지 않음
+    hist = chat.get(f"/api/conversations/{cid}", headers=h).json()["events"]
+    assert any(e["type"] == "action" and e["action"].get("toolLabel") == label for e in hist) or not label
