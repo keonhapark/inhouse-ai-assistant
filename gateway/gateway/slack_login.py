@@ -66,7 +66,7 @@ def check_service_login(token: str, method: str, path: str) -> None:
         return
     if any(method == m and p.fullmatch(path.rstrip("/") or "/") for m, p in SLACK_ALLOWED):
         return
-    raise ProblemError(403, "service-login-not-allowed", "슬랙 로그인 토큰으로는 부를 수 없는 기능입니다")
+    raise ProblemError(403, "service-login-not-allowed", "슬랙에서는 사용할 수 없는 기능입니다.", "웹 화면에서 하세요.")
 
 
 class RateLimiter:
@@ -157,23 +157,23 @@ def build_router(erp: ErpClient, audit: AuditLog, *, bridge_secret: str | None, 
         employee_id = load_users(users_file).get(body["slackUserId"])
         if employee_id is None:
             record("denied", problem="forbidden", why="매핑에 없는 슬랙 사용자")
-            raise ProblemError(403, "forbidden", "이 슬랙 사용자와 연결된 직원이 없습니다")
+            raise ProblemError(403, "forbidden", "이 슬랙 계정과 연결된 직원 정보가 없습니다.", "관리자에게 계정 연결을 요청하세요.")
 
         if not service_secret:
             # 빈 비밀값으로 erp를 부르지 않습니다(erp가 빈 값을 "설정됨"으로 볼 위험). gateway 설정 문제입니다.
             record("error", employee_id, "upstream-error", "ERP_SERVICE_LOGIN_SECRET 없음")
             log.error("ERP_SERVICE_LOGIN_SECRET이 없어 슬랙 로그인을 할 수 없습니다")
-            raise ProblemError(502, "upstream-error", "erp 서비스 로그인에 실패했습니다", "서비스 비밀값이 설정되지 않음")
+            raise ProblemError(502, "upstream-error", "업무 시스템에 로그인하지 못했습니다.", "잠시 뒤 다시 시도하세요.")
         r = await erp.request("POST", "/auth/service-login", json={"employeeId": employee_id},
                               headers={"X-Service-Login-Secret": service_secret})
         if r.status_code == 422:  # 매핑된 직원이 erp에 없음
             record("denied", problem="forbidden", why="매핑된 직원이 erp에 없음")
-            raise ProblemError(403, "forbidden", "이 슬랙 사용자와 연결된 직원이 없습니다")
+            raise ProblemError(403, "forbidden", "이 슬랙 계정과 연결된 직원 정보가 없습니다.", "관리자에게 계정 연결을 요청하세요.")
         if r.status_code != 200:
             # 서비스 비밀값 불일치(401)·erp 서비스 로그인 꺼짐(404) 등은 gateway 설정 문제입니다. 브리지 인증 실패와 가립니다.
             record("error", employee_id, "upstream-error", f"erp 서비스 로그인 {r.status_code}")
             log.error("erp 서비스 로그인이 %d로 실패했습니다(ERP_SERVICE_LOGIN_SECRET 확인)", r.status_code)
-            raise ProblemError(502, "upstream-error", "erp 서비스 로그인에 실패했습니다", f"erp {r.status_code}")
+            raise ProblemError(502, "upstream-error", "업무 시스템에 로그인하지 못했습니다.", "잠시 뒤 다시 시도하세요.")
         record("ok", employee_id)
         return JSONResponse(r.json())
 

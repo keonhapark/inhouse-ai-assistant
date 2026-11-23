@@ -52,7 +52,11 @@ class RoomApiTest extends ApiTestBase {
         assertThat(res.path("resource").path("status").asText()).isEqualTo("confirmed");
         assertThat(res.path("undoable").asBoolean()).isTrue();
         // 겹치는 시간(일부만 겹쳐도)
-        assertThat(problem(reserve(b, "room-a", s.plusMinutes(30), s.plusMinutes(90)))).isEqualTo("room-conflict");
+        assertThat(res.path("summary").asText()).startsWith("회의실 A를 ").endsWith("에 예약합니다");
+        MockHttpServletResponse clash = reserve(b, "room-a", s.plusMinutes(30), s.plusMinutes(90));
+        assertThat(problem(clash)).isEqualTo("room-conflict");
+        assertThat(json(clash).path("title").asText()).isEqualTo("이미 예약된 시간입니다");
+        assertThat(json(clash).path("detail").asText()).isEqualTo("회의실 A는 그 시간에 이미 예약돼 있습니다. 다른 시간을 고르세요.");
         // 붙어 있는 시간은 됨
         assertThat(reserve(b, "room-a", s.plusHours(1), s.plusHours(2)).getStatus()).isEqualTo(201);
         // 빈 회의실

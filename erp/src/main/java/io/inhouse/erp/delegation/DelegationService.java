@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Ids;
+import io.inhouse.erp.common.Ko;
 import io.inhouse.erp.notification.Notifications;
 import io.inhouse.erp.org.EmployeeRepository;
 import io.inhouse.erp.org.OrgService;
@@ -15,7 +16,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
@@ -40,8 +41,6 @@ public class DelegationService {
     /** 등록 요청(계약 DelegationCreate). */
     public record CreateRequest(String delegatorId, String delegateId, OffsetDateTime startsAt, OffsetDateTime endsAt,
                                 List<String> formTypes, Long maxAmount, String reason) {}
-
-    private static final DateTimeFormatter DAY_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final DelegationRepository repo;
     private final EmployeeRepository employees;
@@ -73,7 +72,7 @@ public class DelegationService {
     public WriteOutcome create(ErpPrincipal p, CreateRequest req) {
         String delegator = req.delegatorId() == null ? p.employeeId() : req.delegatorId();
         if (!delegator.equals(p.employeeId()) && !canRegisterForOthers(p.employeeId())) {
-            throw new ApiException(403, "delegation-registrar-forbidden", "위임자 본인이나 등록 권한이 있는 역할만 등록합니다");
+            throw new ApiException(403, "delegation-registrar-forbidden", "본인 결재의 대결만 지정할 수 있습니다. 다른 사람의 대결은 인사 담당에게 요청하세요.");
         }
         if (!employees.existsById(delegator)) {
             throw ApiException.validation("delegatorId", "unknown");
@@ -82,18 +81,18 @@ public class DelegationService {
             throw ApiException.validation("delegateId", "unknown");
         }
         if (req.delegateId().equals(delegator)) {
-            throw new ApiException(422, "delegation-self", "본인에게 위임할 수 없습니다");
+            throw new ApiException(422, "delegation-self", "다른 사람을 고르세요.");
         }
         OffsetDateTime now = OffsetDateTime.now(clock);
         if (!req.startsAt().isBefore(req.endsAt())) {
-            throw ApiException.validation("endsAt", "시작이 끝보다 앞이어야 합니다");
+            throw ApiException.invalid("endsAt", "끝나는 시각은 시작 시각보다 늦어야 합니다.");
         }
         if (!req.endsAt().isAfter(now)) {
-            throw ApiException.validation("endsAt", "끝이 이미 지났습니다");
+            throw ApiException.invalid("endsAt", "끝나는 시각이 이미 지났습니다. 지금 이후로 고르세요.");
         }
         int maxDays = pack.delegationPolicy().maxPeriodDays();
         if (Duration.between(req.startsAt(), req.endsAt()).compareTo(Duration.ofDays(maxDays)) > 0) {
-            throw new ApiException(422, "delegation-period-too-long", "최대 " + maxDays + "일입니다");
+            throw new ApiException(422, "delegation-period-too-long", "대결 기간은 최대 " + maxDays + "일입니다. 기간을 줄이세요.");
         }
         List<String> types = req.formTypes();
         if (types == null || types.isEmpty()
@@ -103,17 +102,17 @@ public class DelegationService {
         Delegation d = repo.saveAndFlush(new Delegation(Ids.next("dlg"), delegator, req.delegateId(), req.startsAt(),
                 req.endsAt(), types, req.maxAmount(), req.reason(), p.employeeId(), now));
         String delegatorName = name(delegator);
-        String period = local(d.getStartsAt()) + " ~ " + local(d.getEndsAt());
+        String period = Ko.span(local(d.getStartsAt()), local(d.getEndsAt()));
         notifications.send(req.delegateId(), Notifications.DELEGATION_REGISTERED,
-                delegatorName + "님의 결재 대결을 맡았습니다(" + period + ")", null, d.getId());
+                delegatorName + "님의 대결자가 됐습니다(" + period + ")", null, d.getId());
         if (!delegator.equals(p.employeeId())) {
             // 다른 사람이 대신 등록했으면 위임자도 바로 알 수 있게 합니다(결재 뒤 후열로 처음 알지 않게).
             notifications.send(delegator, Notifications.DELEGATION_REGISTERED, name(p.employeeId()) + "님이 "
-                    + name(req.delegateId()) + "님을 내 결재 대결로 등록했습니다(" + period + ")", null, d.getId());
+                    + name(req.delegateId()) + "님을 내 대결자로 지정했습니다(" + period + ")", null, d.getId());
         }
         DelegationView view = view(d);
-        return WriteOutcome.of(delegatorName + "님의 결재를 " + name(req.delegateId()) + "님이 대신합니다(" + period
-                        + ", 양식 " + String.join(", ", types) + ")",
+        return WriteOutcome.of(name(req.delegateId()) + "님을 " + delegatorName + "님의 대결자로 지정합니다(" + period
+                        + ", 양식: " + formNames(types) + ")",
                 new Change("create", "delegation", d.getId(), null, json(view)), true, view, d.getId())
                 .withDelegation(null, d.getId());
     }
@@ -122,15 +121,15 @@ public class DelegationService {
     public WriteOutcome undoCreate(String delegationId, String by, BooleanSupplier used) {
         Delegation d = repo.lockById(delegationId).orElseThrow();
         if (used.getAsBoolean()) {
-            throw new ApiException(409, "undo-conflict", "이 위임으로 이미 결재한 문서가 있습니다");
+            throw new ApiException(409, "undo-conflict", "이 대결로 이미 결재한 문서가 있어 실행 취소할 수 없습니다. 대결 해제를 쓰세요.");
         }
         if (d.getRevokedAt() != null) {
-            throw new ApiException(409, "undo-conflict", "이미 해지된 위임입니다");
+            throw new ApiException(409, "undo-conflict", "이미 해제된 대결입니다.");
         }
         JsonNode before = json(view(d));
         d.revoke(by, OffsetDateTime.now(clock));
         DelegationView after = view(repo.saveAndFlush(d));
-        return WriteOutcome.of("대결 위임 등록을 되돌렸습니다", new Change("update", "delegation", d.getId(), before,
+        return WriteOutcome.of("대결 지정을 취소했습니다", new Change("update", "delegation", d.getId(), before,
                 json(after)), false, after, d.getId()).withDelegation(null, d.getId());
     }
 
@@ -139,19 +138,19 @@ public class DelegationService {
     /** 위임자 본인이나 대신 등록할 수 있는 역할(팩 registrable_by, 예: 인사 담당)만 해지합니다. 이미 해지됐거나 끝났으면 409입니다. */
     public WriteOutcome revoke(ErpPrincipal p, String delegationId) {
         Delegation d = repo.lockById(delegationId).filter(x -> canSee(p.employeeId(), x))
-                .orElseThrow(() -> ApiException.notFound("위임이 없습니다"));
+                .orElseThrow(() -> ApiException.notFound("대결 지정이 없습니다."));
         if (!p.employeeId().equals(d.getDelegatorId()) && !canRegisterForOthers(p.employeeId())) {
-            throw ApiException.forbidden("위임자 본인이나 인사 담당만 해지합니다");
+            throw ApiException.forbidden("본인이나 인사 담당만 대결을 해제할 수 있습니다.");
         }
         OffsetDateTime now = OffsetDateTime.now(clock);
         String status = d.status(now);
         if (status.equals("revoked") || status.equals("expired")) {
-            throw new ApiException(409, "invalid-state", "이미 " + status + "입니다");
+            throw new ApiException(409, "invalid-state", status.equals("revoked") ? "이미 해제된 대결입니다." : "이미 끝난 대결입니다.");
         }
         JsonNode before = json(view(d));
         d.revoke(p.employeeId(), now);
         DelegationView after = view(repo.saveAndFlush(d));
-        return WriteOutcome.of("대결 위임을 해지합니다", new Change("update", "delegation", d.getId(), before,
+        return WriteOutcome.of("대결을 해제합니다", new Change("update", "delegation", d.getId(), before,
                 json(after)), false, after, d.getId()).withDelegation(null, d.getId());
     }
 
@@ -164,7 +163,7 @@ public class DelegationService {
             case "delegate" -> repo.findByDelegateIdOrderByCreatedAtDesc(employeeId);
             case "all" -> {
                 if (!canRegisterForOthers(employeeId)) {
-                    throw ApiException.forbidden("인사 담당만 전체를 봅니다");
+                    throw ApiException.forbidden("전체 목록은 인사 담당만 볼 수 있습니다.");
                 }
                 yield repo.findAllByOrderByCreatedAtDesc();
             }
@@ -180,7 +179,7 @@ public class DelegationService {
     @Transactional(readOnly = true)
     public Delegation visible(String employeeId, String delegationId) {
         return repo.findById(delegationId).filter(d -> canSee(employeeId, d))
-                .orElseThrow(() -> ApiException.notFound("위임이 없습니다"));
+                .orElseThrow(() -> ApiException.notFound("대결 지정이 없습니다."));
     }
 
     public DelegationView view(Delegation d) {
@@ -207,8 +206,17 @@ public class DelegationService {
         return org.employee(employeeId).getName();
     }
 
-    private String local(OffsetDateTime t) {
-        return t.atZoneSameInstant(pack.timezone()).format(DAY_TIME);
+    /** 양식 표시 이름(팩). 모든 양식(*)은 "모든 양식"입니다. */
+    private String formNames(List<String> types) {
+        if (types.contains(Delegation.ALL_FORMS)) {
+            return "모든 양식";
+        }
+        return String.join(", ", types.stream().map(t -> pack.forms().stream().filter(f -> f.id().equals(t))
+                .map(Pack.FormDef::name).findFirst().orElse(t)).toList());
+    }
+
+    private ZonedDateTime local(OffsetDateTime t) {
+        return t.atZoneSameInstant(pack.timezone());
     }
 
     private static OffsetDateTime at(OffsetDateTime t, ZoneId zone) {

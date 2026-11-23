@@ -207,7 +207,7 @@ class DelegationApiTest extends ApiTestBase {
         assertThat(dl.path("delegatorId").asText()).isEqualTo(leader);
         assertThat(dl.path("registeredBy").asText()).isEqualTo(hr);
         assertThat(json(get("/notifications", leader)).path("items").findValuesAsText("message"))
-                .anyMatch(msg -> msg.contains("내 결재 대결로 등록"));
+                .anyMatch(msg -> msg.contains("내 대결자로 지정"));
         assertThat(json(get("/delegations", leader, "role", "delegator")).path("items").findValuesAsText("id"))
                 .contains(dl.path("id").asText());
         assertThat(json(get("/delegations", m.get(0), "role", "delegate", "activeAt",

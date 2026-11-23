@@ -111,7 +111,7 @@ async def require_auditor(erp: ErpClient, request: Request) -> None:
     token = bearer(request)
     me = await erp.get_json("/me", token)
     if AUDITOR_ROLE not in me.get("roles", []):
-        raise ProblemError(403, "forbidden", "감사 조회 역할만 봅니다")
+        raise ProblemError(403, "forbidden", "감사 기록은 감사 조회 역할이 있어야 볼 수 있습니다.")
 
 
 # 감사 이벤트의 차단 이유 → ChatEvent blocked.code
@@ -237,7 +237,7 @@ def build_router(erp: ErpClient, audit: AuditLog, registry: Registry, files: tup
         until = until or datetime.now(timezone.utc).astimezone()
         since = since or until - timedelta(hours=24)
         if since > until:
-            raise ProblemError(400, "validation", "since가 until보다 늦습니다")
+            raise ProblemError(400, "validation", "시작 시각이 끝 시각보다 늦습니다.", "기간을 다시 고르세요.")
         events = audit.events.read_all() + read_files(files)
         return JSONResponse(compute_metrics(events, audit.egress.read_all(), registry, budget, since, until))
 

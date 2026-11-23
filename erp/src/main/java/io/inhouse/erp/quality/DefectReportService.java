@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Ids;
+import io.inhouse.erp.common.Ko;
 import io.inhouse.erp.org.OrgService;
 import io.inhouse.erp.pack.Pack;
 import io.inhouse.erp.write.Change;
@@ -67,7 +68,7 @@ public class DefectReportService {
             throw ApiException.validation("status", "unknown");
         }
         if ("all".equals(box) && !org.isQualityReviewer(employeeId)) {
-            throw ApiException.forbidden("품질 확인 역할만 전체를 봅니다");
+            throw ApiException.forbidden("전체 목록은 품질 담당만 볼 수 있습니다.");
         }
         return reports.search("mine".equals(box) ? employeeId : null, status,
                 Limit.of(Math.max(1, Math.min(limit, 100)))).stream().map(this::view).toList();
@@ -94,22 +95,23 @@ public class DefectReportService {
     public WriteOutcome undoCreate(String id) {
         DefectReport d = reports.lockById(id).orElseThrow();
         if (!"draft".equals(d.getStatus())) {
-            throw new ApiException(409, "undo-conflict", "그사이 확정되었습니다");
+            throw new ApiException(409, "undo-conflict", "그사이 보고서가 확정돼 실행 취소할 수 없습니다.");
         }
-        return change(d, "cancelled", null, "불량 보고서 초안을 되돌렸습니다(취소)", false);
+        return change(d, "cancelled", null, "불량 보고서 초안을 취소했습니다", false);
     }
 
     public WriteOutcome confirm(ErpPrincipal p, String id, int version) {
         requireFeature();
         DefectReport d = visible(p.employeeId(), reports.lockById(id).orElse(null));
         if (!org.isQualityReviewer(p.employeeId())) {
-            throw ApiException.forbidden("품질 확인 역할만 확정합니다");
+            throw ApiException.forbidden("불량 보고서 확정은 품질 담당만 할 수 있습니다.");
         }
         if (version != d.getVersion()) {
-            throw new ApiException(409, "version-conflict", "그사이 보고서가 바뀌었습니다");
+            throw new ApiException(409, "version-conflict", "그사이 보고서가 바뀌었습니다. 새로 고친 뒤 다시 시도하세요.");
         }
         if (!"draft".equals(d.getStatus())) {
-            throw new ApiException(409, "invalid-state", d.getStatus() + " 보고서는 확정할 수 없습니다");
+            throw new ApiException(409, "invalid-state", "confirmed".equals(d.getStatus()) ? "이미 확정한 보고서입니다."
+                    : Ko.reportStatus(d.getStatus()) + "된 보고서는 확정할 수 없습니다.");
         }
         return change(d, "confirmed", p.employeeId(), d.getItemName() + " 불량 보고서를 확정합니다", false);
     }

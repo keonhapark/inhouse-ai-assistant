@@ -6,6 +6,7 @@ import io.inhouse.erp.approval.ApprovalViews.DocumentView;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Ids;
+import io.inhouse.erp.common.Ko;
 import io.inhouse.erp.leave.LeaveService;
 import io.inhouse.erp.notification.Notifications;
 import io.inhouse.erp.org.Employee;
@@ -84,7 +85,7 @@ public class ApprovalService {
         ApprovalDocument d = docs.saveAndFlush(new ApprovalDocument(Ids.next("doc"), form.id(), docTitle,
                 requester.getId(), fields.deepCopy(), amount, days, line, now));
         if (!line.isEmpty()) {
-            notifications.send(line.get(0), Notifications.APPROVAL_TURN, "결재 차례: " + docTitle, d.getId(), null);
+            notifications.send(line.get(0), Notifications.APPROVAL_TURN, "결재 대기: " + docTitle, d.getId(), null);
         }
         DocumentView view = ApprovalViews.of(d);
         return WriteOutcome.of(form.name() + " 결재를 올립니다(결재선 " + line.size() + "단계)",
@@ -95,12 +96,12 @@ public class ApprovalService {
     public WriteOutcome undoCreate(String documentId) {
         ApprovalDocument d = docs.findById(documentId).orElseThrow();
         if (!ApprovalDocument.IN_PROGRESS.equals(d.getStatus()) || !d.nobodyActed()) {
-            throw new ApiException(409, "undo-conflict", "이미 결재가 진행됐거나 끝난 문서입니다");
+            throw new ApiException(409, "undo-conflict", "이미 결재가 시작돼 실행 취소할 수 없습니다. 기안함에서 문서 상태를 확인하세요.");
         }
         JsonNode before = json(ApprovalViews.of(d));
         close(d, ApprovalDocument.WITHDRAWN);
         DocumentView after = flushAndView(d);
-        return WriteOutcome.of("결재 요청을 되돌렸습니다(회수)",
+        return WriteOutcome.of("상신을 취소하고 문서를 회수했습니다",
                 new Change("update", "approval_document", d.getId(), before, json(after)), false, after, d.getId());
     }
 
@@ -113,17 +114,17 @@ public class ApprovalService {
     public WriteOutcome decide(ErpPrincipal p, String documentId, int version, String comment, boolean approve) {
         ApprovalDocument d = docs.findById(documentId).orElseThrow(() -> ApiException.notFound("결재 문서가 없습니다"));
         if (!ApprovalDocument.IN_PROGRESS.equals(d.getStatus())) {
-            throw new ApiException(409, "invalid-state", "문서 상태가 " + d.getStatus() + "입니다");
+            throw new ApiException(409, "invalid-state", "이미 결재가 끝난 문서입니다(" + Ko.approvalStatus(d.getStatus()) + ").");
         }
         String actor = p.employeeId();
         if (actor.equals(d.getRequesterId())) {
-            throw new ApiException(403, "self-approval-forbidden", "본인이 올린 문서는 결재할 수 없습니다");
+            throw new ApiException(403, "self-approval-forbidden");
         }
         ApprovalStep step = d.current();
         String approver = step.getApproverId();
         String delegationId = actor.equals(approver) ? null : delegates.authorize(d, approver, actor);
         if (version != d.getVersion()) {
-            throw new ApiException(409, "version-conflict", "현재 version은 " + d.getVersion() + "입니다");
+            throw new ApiException(409, "version-conflict", "새로 고친 뒤 다시 확인하세요.");
         }
         JsonNode before = json(ApprovalViews.of(d));
         OffsetDateTime now = OffsetDateTime.now(clock);
@@ -131,8 +132,8 @@ public class ApprovalService {
                 comment);
         String actorName = org.employee(actor).getName();
         if (delegationId != null) {
-            notifications.send(approver, Notifications.DELEGATED_DECISION, "대결 처리(후열): " + actorName + "님이 '"
-                    + d.getTitle() + "'을 " + (approve ? "승인" : "반려") + "했습니다", d.getId(), delegationId);
+            notifications.send(approver, Notifications.DELEGATED_DECISION, "후열(대결 내역 확인): " + actorName
+                    + "님이 대결로 '" + d.getTitle() + "' 문서를 " + (approve ? "승인" : "반려") + "했습니다", d.getId(), delegationId);
         }
         if (!approve) {
             close(d, ApprovalDocument.REJECTED);
@@ -144,12 +145,12 @@ public class ApprovalService {
                     d.getId(), null);
         } else {
             d.advance(now);
-            notifications.send(d.current().getApproverId(), Notifications.APPROVAL_TURN, "결재 차례: " + d.getTitle(),
+            notifications.send(d.current().getApproverId(), Notifications.APPROVAL_TURN, "결재 대기: " + d.getTitle(),
                     d.getId(), null);
         }
         DocumentView after = flushAndView(d);
-        String who = delegationId == null ? "" : "(대결: " + org.employee(approver).getName() + " 대신)";
-        WriteOutcome out = WriteOutcome.of("'" + d.getTitle() + "'을 " + (approve ? "승인" : "반려") + "합니다" + who,
+        String who = delegationId == null ? "" : "(" + org.employee(approver).getName() + "님 대결)";
+        WriteOutcome out = WriteOutcome.of("'" + d.getTitle() + "' 문서를 " + (approve ? "승인" : "반려") + "합니다" + who,
                 new Change("update", "approval_document", d.getId(), before, json(after)), false, after, d.getId());
         return delegationId == null ? out : out.withDelegation(approver, delegationId);
     }
@@ -160,7 +161,7 @@ public class ApprovalService {
     public WriteOutcome withdraw(ErpPrincipal p, String documentId) {
         ApprovalDocument d = visible(p.employeeId(), documentId);
         if (!d.getRequesterId().equals(p.employeeId())) {
-            throw ApiException.forbidden("요청자 본인만 회수합니다");
+            throw ApiException.forbidden("기안자만 회수할 수 있습니다.");
         }
         JsonNode before = json(ApprovalViews.of(d));
         boolean futureApprovedLeave = ApprovalDocument.APPROVED.equals(d.getStatus()) && d.getLeaveDays().signum() > 0
@@ -169,10 +170,10 @@ public class ApprovalService {
         if (ApprovalDocument.IN_PROGRESS.equals(d.getStatus()) || futureApprovedLeave) {
             close(d, ApprovalDocument.WITHDRAWN);
         } else {
-            throw new ApiException(409, "invalid-state", "문서 상태가 " + d.getStatus() + "라 회수할 수 없습니다");
+            throw new ApiException(409, "invalid-state", Ko.approvalStatus(d.getStatus()) + "된 문서라 회수할 수 없습니다.");
         }
         DocumentView after = flushAndView(d);
-        return WriteOutcome.of("'" + d.getTitle() + "'을 회수합니다",
+        return WriteOutcome.of("'" + d.getTitle() + "' 문서를 회수합니다",
                 new Change("update", "approval_document", d.getId(), before, json(after)), false, after, d.getId());
     }
 

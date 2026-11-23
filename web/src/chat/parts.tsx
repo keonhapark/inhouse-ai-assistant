@@ -196,7 +196,7 @@ function SheetBody({ preview, photo, danger }: { preview: Schemas['WritePreview'
                   </span>
                 )}
                 {rows.length > 0 && (
-                  <dl className="group rows">
+                  <dl className="rows">
                     {rows.map((r) => (
                       <div key={r.key} className="row">
                         <dt className="row__label">{r.label}</dt>

@@ -8,6 +8,8 @@
 - INCIDENT_SESSION: 로그를 읽을 세션 스택 번호(iaa-s<번호>, 기본 1). 호스트의 docker CLI로 읽습니다
 - INCIDENT_ERP_URL(기본 세션 erp), INCIDENT_GATEWAY_URL(기본 세션 gateway): 권한·티켓 확인과 LLM 출구
 - DELEGATION_TOKEN_PUBLIC_KEY 또는 DELEGATION_JWKS_URL(기본 세션 gateway JWKS): 위임 토큰 확인
+- INCIDENT_LLM_THINKING(on·off·default), INCIDENT_LLM_TIMEOUT_SECONDS: 값이 있을 때만 gateway 모델 프로필(local 별칭의
+  thinking.incident·timeoutSeconds)을 덮습니다
 - INCIDENT_HISTORY_DIR: 원인이 밝혀진 과거 장애 묶음(truth.json) 폴더. 비슷한 과거 티켓에 씁니다(없으면 안 씀)
 """
 
@@ -31,6 +33,7 @@ from fastapi import Body, FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from incident.baseline import PastTicket, rank
+from incident.llm import ProfileCache
 from incident.llm import analyze as llm_analyze
 from incident.llm import Candidate, diagnostics
 from incident.logs import Line, mark_keyless_noise, read_service
@@ -120,8 +123,10 @@ def history(path: Path | None) -> list[PastTicket]:
 
 def create_app(source: LogSource, verifier: TokenVerifier, erp_url: str, gateway_url: str,
                past: list[PastTicket] | None = None, erp_transport: httpx.BaseTransport | None = None,
-               llm_transport: httpx.BaseTransport | None = None) -> FastAPI:
+               llm_transport: httpx.BaseTransport | None = None, profiles: ProfileCache | None = None) -> FastAPI:
     app = FastAPI(title="incident", version="0.1.0")
+    # 장애 분석 호출의 생각 단계·시간 제한(gateway 모델 프로필, 결정 0009). 못 읽으면 기본값으로 부르고 다음에 다시 읽습니다.
+    profiles = profiles or ProfileCache(gateway_url, transport=llm_transport)
     # 분석은 docker 로그와 로컬 모델을 오래 쓰므로 한 번에 하나만 돌립니다(동기 핸들러라 /health는 막지 않음).
     busy = threading.Lock()
 
@@ -183,7 +188,7 @@ def create_app(source: LogSource, verifier: TokenVerifier, erp_url: str, gateway
                                   "window": {"start": (at - length).isoformat(), "end": at.isoformat()},
                                   "baseline": [{"service": s, "score": v} for s, v in base.ranking]}
         try:
-            out = llm_analyze(gateway_url, diagnostics(base, text), transport=llm_transport)
+            out = llm_analyze(gateway_url, diagnostics(base, text), settings=profiles.get(), transport=llm_transport)
             if not out.candidates:
                 raise ValueError("후보 없음")
             result["method"] = "llm"

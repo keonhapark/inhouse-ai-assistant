@@ -198,7 +198,7 @@ def policy_denial(caller: Caller, location: str) -> str | None:
     if caller.agent is None:
         return "위임 토큰이 없는 호출은 로컬 모델만 쓸 수 있습니다"
     if caller.agent.model_policy.get("mode") != "external_allowed":
-        return f"에이전트 {caller.agent.id}는 외부 모델을 쓸 수 없습니다(local_only)"
+        return f"{caller.agent.name} 에이전트는 외부 모델을 쓰지 않도록 설정돼 있습니다"
     return None
 
 
@@ -541,7 +541,8 @@ class Egress:
         if verdict.action == "block" or self.local_alias is None:
             detail = f"{found}: 차단"
             self._audit(caller, model, "denied", "urn:problem:confidential", detail)
-            raise ProblemError(403, "confidential", "사내 기밀이 들어 있어 보낼 수 없습니다", verdict.reason)
+            raise ProblemError(403, "confidential", "사내 기밀 정보가 있어 외부 AI로 보내지 않았습니다.",
+                               f"{verdict.reason}. 기밀 내용을 빼고 다시 보내 주세요.")
         self._audit(caller, model, "ok", detail=f"{found}: 로컬 모델로 돌림", kind="llm.redacted")
         local = self._local_for(caller)
         model.update(name=local, location="local")

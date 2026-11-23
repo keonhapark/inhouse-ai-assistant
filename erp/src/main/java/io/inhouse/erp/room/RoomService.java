@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.common.ApiException;
 import io.inhouse.erp.common.Ids;
+import io.inhouse.erp.common.Ko;
 import io.inhouse.erp.pack.Pack;
 import io.inhouse.erp.write.Change;
 import io.inhouse.erp.write.WriteOutcome;
@@ -14,7 +15,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -38,8 +38,6 @@ public class RoomService {
 
     static final Duration MAX_LENGTH = Duration.ofHours(4);
     static final String HIDDEN_TITLE = "예약됨";
-    private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-    private static final DateTimeFormatter HOUR = DateTimeFormatter.ofPattern("HH:mm");
 
     private final RoomRepository rooms;
     private final RoomReservationRepository reservations;
@@ -73,7 +71,7 @@ public class RoomService {
             throw conflict(room);
         }
         ReservationView view = view(r, true);
-        return WriteOutcome.of(room.getName() + "을 " + span(r) + "에 예약합니다",
+        return WriteOutcome.of(Ko.eul(room.getName()) + " " + span(r) + "에 예약합니다",
                 new Change("create", "room_reservation", r.getId(), null, json(view)), true, view, r.getId());
     }
 
@@ -82,15 +80,15 @@ public class RoomService {
         RoomReservation r = reservations.lockById(reservationId)
                 .orElseThrow(() -> ApiException.notFound("예약이 없습니다"));
         if (!r.getReservedBy().equals(p.employeeId())) {
-            throw ApiException.forbidden("예약자 본인만 취소합니다");
+            throw ApiException.forbidden("예약한 사람만 취소할 수 있습니다.");
         }
         if (!r.isConfirmed()) {
-            throw new ApiException(409, "invalid-state", "이미 취소된 예약입니다");
+            throw new ApiException(409, "invalid-state", "이미 취소한 예약입니다.");
         }
         JsonNode before = json(view(r, true));
         r.setStatus(RoomReservation.CANCELLED);
         ReservationView after = view(reservations.saveAndFlush(r), true);
-        return WriteOutcome.of(roomName(r) + " 예약(" + WHEN.format(local(r.getStartsAt())) + ")을 취소합니다",
+        return WriteOutcome.of(roomName(r) + " 예약(" + Ko.when(local(r.getStartsAt())) + ")을 취소합니다",
                 new Change("update", "room_reservation", r.getId(), before, json(after)), true, after, r.getId());
     }
 
@@ -98,15 +96,15 @@ public class RoomService {
     public WriteOutcome undoReserve(String reservationId) {
         RoomReservation r = reservations.lockById(reservationId).orElseThrow();
         if (!r.isConfirmed()) {
-            throw new ApiException(409, "undo-conflict", "이미 취소된 예약입니다");
+            throw new ApiException(409, "undo-conflict", "이미 취소한 예약입니다.");
         }
         if (!r.getStartsAt().isAfter(OffsetDateTime.now(clock))) {
-            throw new ApiException(409, "undo-conflict", "예약 시작 시각이 지났습니다");
+            throw new ApiException(409, "undo-conflict", "이미 시작한 예약이라 실행 취소할 수 없습니다.");
         }
         JsonNode before = json(view(r, true));
         r.setStatus(RoomReservation.CANCELLED);
         ReservationView after = view(reservations.saveAndFlush(r), true);
-        return WriteOutcome.of("회의실 예약을 되돌렸습니다(취소)",
+        return WriteOutcome.of("회의실 예약을 취소했습니다",
                 new Change("update", "room_reservation", r.getId(), before, json(after)), false, after, r.getId());
     }
 
@@ -114,24 +112,24 @@ public class RoomService {
     public WriteOutcome undoCancel(String reservationId) {
         RoomReservation r = reservations.lockById(reservationId).orElseThrow();
         if (r.isConfirmed()) {
-            throw new ApiException(409, "undo-conflict", "예약이 취소 상태가 아닙니다");
+            throw new ApiException(409, "undo-conflict", "이미 다시 잡힌 예약입니다.");
         }
         if (!r.getStartsAt().isAfter(OffsetDateTime.now(clock))) {
-            throw new ApiException(409, "undo-conflict", "예약 시작 시각이 지났습니다");
+            throw new ApiException(409, "undo-conflict", "이미 시작 시각이 지난 예약이라 되살릴 수 없습니다.");
         }
         rooms.lockById(r.getRoomId());
         if (reservations.overlaps(r.getRoomId(), r.getStartsAt(), r.getEndsAt(), r.getId())) {
-            throw new ApiException(409, "undo-conflict", "그 시간에 다른 예약이 들어왔습니다");
+            throw new ApiException(409, "undo-conflict", "그사이 같은 시간에 다른 예약이 잡혀 되살릴 수 없습니다. 다른 시간으로 새로 예약하세요.");
         }
         JsonNode before = json(view(r, true));
         r.setStatus(RoomReservation.CONFIRMED);
         try {
             reservations.saveAndFlush(r);
         } catch (DataIntegrityViolationException e) {
-            throw new ApiException(409, "undo-conflict", "그 시간에 다른 예약이 들어왔습니다");
+            throw new ApiException(409, "undo-conflict", "그사이 같은 시간에 다른 예약이 잡혀 되살릴 수 없습니다. 다른 시간으로 새로 예약하세요.");
         }
         ReservationView after = view(r, true);
-        return WriteOutcome.of("예약 취소를 되돌렸습니다",
+        return WriteOutcome.of("취소한 예약을 되살렸습니다",
                 new Change("update", "room_reservation", r.getId(), before, json(after)), false, after, r.getId());
     }
 
@@ -140,16 +138,16 @@ public class RoomService {
         ZonedDateTime ek = local(e);
         String bad = null;
         if (!s.isBefore(e)) {
-            bad = "시작이 끝보다 앞이어야 합니다";
+            bad = "끝나는 시각은 시작 시각보다 늦어야 합니다.";
         } else if (sk.getMinute() % 30 != 0 || ek.getMinute() % 30 != 0 || sk.getSecond() != 0
                 || ek.getSecond() != 0 || sk.getNano() != 0 || ek.getNano() != 0) {
-            bad = "30분 단위로 예약합니다";
+            bad = "30분 단위로만 예약할 수 있습니다.";
         } else if (!sk.toLocalDate().equals(ek.toLocalDate())) {
-            bad = "같은 날 안에서 예약합니다";
+            bad = "하루 안에서만 예약할 수 있습니다.";
         } else if (Duration.between(s, e).compareTo(MAX_LENGTH) > 0) {
-            bad = "최대 4시간입니다";
+            bad = "한 번에 4시간까지 예약할 수 있습니다.";
         } else if (!s.isAfter(OffsetDateTime.now(clock))) {
-            bad = "지난 시각은 예약할 수 없습니다";
+            bad = "지난 시각은 예약할 수 없습니다. 지금 이후 시각을 고르세요.";
         }
         if (bad != null) {
             throw new ApiException(422, "validation", bad, List.of(new ApiException.FieldError("startsAt", bad)));
@@ -167,7 +165,7 @@ public class RoomService {
     @Transactional(readOnly = true)
     public List<Room> available(OffsetDateTime s, OffsetDateTime e, Integer minCapacity) {
         if (!s.isBefore(e)) {
-            throw ApiException.validation("endsAt", "시작이 끝보다 앞이어야 합니다");
+            throw ApiException.invalid("endsAt", "끝나는 시각은 시작 시각보다 늦어야 합니다.");
         }
         Set<String> busy = new HashSet<>(reservations.busyRooms(s, e));
         return rooms(minCapacity).stream().filter(r -> !busy.contains(r.getId())).toList();
@@ -189,11 +187,11 @@ public class RoomService {
     }
 
     private ApiException conflict(Room room) {
-        return new ApiException(409, "room-conflict", room.getName() + "에 겹치는 예약이 있습니다");
+        return new ApiException(409, "room-conflict", Ko.eun(room.getName()) + " 그 시간에 이미 예약돼 있습니다. 다른 시간을 고르세요.");
     }
 
     private String span(RoomReservation r) {
-        return WHEN.format(local(r.getStartsAt())) + "~" + HOUR.format(local(r.getEndsAt()));
+        return Ko.span(local(r.getStartsAt()), local(r.getEndsAt()));
     }
 
     private String roomName(RoomReservation r) {

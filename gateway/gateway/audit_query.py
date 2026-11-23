@@ -103,7 +103,7 @@ def build_router(erp: ErpClient, audit: AuditLog, files: tuple[str, ...]) -> API
             raise ProblemError(422, "validation", "since·until에는 시간대 오프셋이 필요합니다")
         me = await erp.get_json("/me", token)
         if AUDITOR_ROLE not in me.get("roles", []):
-            raise ProblemError(403, "forbidden", "감사 조회 역할만 봅니다")
+            raise ProblemError(403, "forbidden", "감사 기록은 감사 조회 역할이 있어야 볼 수 있습니다.")
 
         params: dict[str, Any] = {"limit": 500}
         if actorId:

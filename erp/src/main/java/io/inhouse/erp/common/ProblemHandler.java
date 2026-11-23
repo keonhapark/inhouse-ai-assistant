@@ -67,7 +67,7 @@ public class ProblemHandler {
     public ResponseEntity<Object> unknown(Exception e) {
         log.error("처리하지 못한 오류", e);
         return ResponseEntity.status(500).contentType(Problems.PROBLEM_JSON)
-                .body(Problems.body(500, "internal", "서버 오류", List.of()));
+                .body(Problems.body(500, "internal", "잠시 뒤 다시 시도해 주세요.", List.of()));
     }
 
     private ResponseEntity<Object> respond(HttpServletRequest req, ApiException e) {
