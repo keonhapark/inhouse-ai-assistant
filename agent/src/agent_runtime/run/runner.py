@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -12,6 +13,13 @@ from agent_runtime.registry import Agent, Registry, Requester
 from agent_runtime.run.graph import TURN_RESET, UNTRUSTED_NOTE, RunContext, prepare_history
 from agent_runtime.run.image_reading import ImageReader, ImageSpec, attachment_note
 from agent_runtime.run.tools import ToolCaller
+
+log = logging.getLogger(__name__)
+
+# 직원 화면 문구(#578, ux/copy-guide.md 2.3·2.6). 예외 이름·토큰 같은 말은 로그·blockedReason에만 둡니다
+NO_TOOLS = "업무 시스템에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요."
+RUN_ERROR = "처리 중 문제가 생겨 멈췄습니다. 잠시 뒤 다시 시도해 주세요."
+BLOCKED_MESSAGE = "로그인 정보를 확인하지 못해 처리할 수 없습니다. 새 대화에서 다시 시도해 주세요."
 
 
 class Conflict(Exception):
@@ -40,7 +48,8 @@ class Runner:
         try:
             ctx = await self._context(token, agent, requester, token_id)
         except Exception as e:  # noqa: BLE001 - MCP 서버에 닿지 못하면 실패 상태로 돌려줍니다
-            return _failed(conversation_id, agent_id, f"도구 목록을 가져오지 못했습니다({type(e).__name__})")
+            log.warning("도구 목록을 가져오지 못했습니다: %s", type(e).__name__)
+            return _failed(conversation_id, agent_id, NO_TOOLS)
         prior = prepare_history((snapshot.values or {}).get("messages", []))
         state = {**TURN_RESET, "conversationId": conversation_id, "agentId": agent_id,
                  "requesterId": requester.employee_id, "condition": condition}
@@ -66,7 +75,8 @@ class Runner:
         try:
             await self.graph.ainvoke(state, config, context=ctx)
         except Exception as e:  # noqa: BLE001 - 그래프 오류는 failed 상태로 돌려줍니다
-            return _failed(conversation_id, agent_id, f"실행 중 오류({type(e).__name__})")
+            log.warning("실행 중 오류: %s", type(e).__name__)
+            return _failed(conversation_id, agent_id, RUN_ERROR)
         return self._view(conversation_id, agent_id, await self.graph.aget_state(config))
 
     async def resume(self, token: str, conversation_id: str, approval_id: str, decision: str,
@@ -86,11 +96,13 @@ class Runner:
         try:
             ctx = await self._context(token, agent, None, token_id)
         except Exception as e:  # noqa: BLE001
-            return _failed(conversation_id, agent_id, f"도구 목록을 가져오지 못했습니다({type(e).__name__})")
+            log.warning("도구 목록을 가져오지 못했습니다: %s", type(e).__name__)
+            return _failed(conversation_id, agent_id, NO_TOOLS)
         try:
             await self.graph.ainvoke(Command(resume={"decision": decision}), config, context=ctx)
         except Exception as e:  # noqa: BLE001
-            return _failed(conversation_id, agent_id, f"실행 중 오류({type(e).__name__})")
+            log.warning("실행 중 오류: %s", type(e).__name__)
+            return _failed(conversation_id, agent_id, RUN_ERROR)
         return self._view(conversation_id, agent_id, await self.graph.aget_state(config))
 
     async def _read_attachments(self, data_urls: list[str], token: str, agent: Agent, requester: Requester,
@@ -163,10 +175,10 @@ def _waiting(snapshot: Any) -> bool:
 
 def _blocked(conversation_id: str, agent_id: str, reason: str) -> dict[str, Any]:
     return {"conversationId": conversation_id, "agentId": agent_id, "status": "blocked",
-            "messages": [{"role": "assistant", "content": f"요청을 처리할 수 없습니다: {reason}"}],
+            "messages": [{"role": "assistant", "content": BLOCKED_MESSAGE}],
             "pendingApproval": None, "actions": [], "citations": [], "blockedReason": reason}
 
 
 def _failed(conversation_id: str, agent_id: str, reason: str) -> dict[str, Any]:
     return {**_blocked(conversation_id, agent_id, reason), "status": "failed", "blockedReason": None,
-            "messages": [{"role": "assistant", "content": f"지금은 처리하지 못했습니다: {reason}"}]}
+            "messages": [{"role": "assistant", "content": reason}]}

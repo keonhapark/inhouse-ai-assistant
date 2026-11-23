@@ -24,7 +24,8 @@ from langgraph.types import Command, interrupt
 from agent_runtime.audit import AuditLog, tool_blocked
 from agent_runtime.llm import ChatClient, LLMError
 from agent_runtime.registry import Agent
-from agent_runtime.run.policy import WideScope, decide, model_policy_for, visible_to_model
+from agent_runtime.text import josa
+from agent_runtime.run.policy import WideScope, cannot_do, decide, model_policy_for, visible_to_model
 from agent_runtime.run.tools import ToolCaller, ToolOutcome, ToolSpec, openai_tool
 from agent_runtime.run.args import normalize_args, optional_args
 from agent_runtime.run.trust import output_trusted
@@ -144,11 +145,17 @@ def write_optional(specs: list[ToolSpec]) -> dict[str, list[str]]:
             if t.meta.risk != "read" and optional_args(t.input_schema)}
 
 
+def _sentence(text: str) -> str:
+    """요약 끝에 마침표가 없으면 붙입니다(뒤에 안내 문장을 잇기 위해)."""
+    text = (text or "").strip()
+    return text if not text or text.endswith((".", "!", "?")) else text + "."
+
+
 def llm_failure_message(e: LLMError) -> str:
     """계획 호출이 실패했을 때 사용자에게 보일 문장(#423). 시간 초과·출구 장애는 다시 보내면 될 수 있어 그렇게 안내합니다."""
     if e.status in (502, 503, 504) or "Timeout" in str(e):
-        return "모델 응답이 늦어 처리하지 못했습니다. 잠시 뒤 다시 보내 주세요."
-    return f"모델을 부르지 못했습니다({e})."
+        return "AI 응답이 늦어 처리하지 못했습니다. 잠시 뒤 다시 보내 주세요."
+    return "AI 응답을 받지 못했습니다. 문제가 계속되면 관리자에게 알려 주세요."  # 원문은 감사·로그에만
 
 
 def idempotency_key(conversation_id: str, tool_call_id: str) -> str:
@@ -179,7 +186,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         ctx = runtime.context
         steps = state.get("steps", 0) + 1
         if steps > MAX_PLAN_STEPS:
-            return Command(update={"final": "처리 단계가 너무 많아 멈췄습니다.", "status": "failed"}, goto="finish")
+            return Command(update={"final": "처리 단계가 너무 많아 멈췄습니다. 요청을 나눠 다시 보내 주세요.", "status": "failed"}, goto="finish")
         condition = state["condition"]
         visible = [t for t in ctx.tools if visible_to_model(t.meta, condition)]
         messages = [{"role": "system", "content": system_prompt(ctx.agent, condition, now(), bool(visible),
@@ -218,10 +225,10 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         if spec is not None:
             args = normalize_args(args, spec.input_schema)
         if spec is None or not visible_to_model(spec.meta, state["condition"]):
-            d_action, reason, undo_note = "blocked", f"{name}은 이 대화에서 쓸 수 없는 도구입니다", False
+            d_action, reason, undo_note = "blocked", cannot_do(deps.tool_labels.get(name, name)), False
         else:
             d = decide(ctx.agent, spec.meta, args, state["condition"], _tainted_for(state, name), deps.wide,
-                       state.get("conversation_tainted", False))
+                       state.get("conversation_tainted", False), label=deps.tool_labels.get(name))
             d_action, reason, undo_note = d.action, d.reason, d.undo_note
         if d_action in ("blocked", "deny"):
             deps.audit.write(tool_blocked(state["requesterId"], ctx.agent.id, state["conversationId"], name, args,
@@ -261,7 +268,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
         msgs += [tool_message(c, {"error": "skipped", "detail": "앞선 실행을 거절해 부르지 않았습니다"})
                  for c in state.get("queue", [])[1:]]
         return Command(update={"messages": [*state["messages"], *msgs], "queue": [], "current": None, "pending": None,
-                               "final": f"요청하신 작업({pending['tool']})을 실행하지 않았습니다."},
+                               "final": f"{josa(deps.tool_labels.get(pending['tool'], pending['tool']), '은는')} 실행하지 않았습니다."},
                        goto="finish")
 
     async def execute(state: RunGraphState, runtime: Runtime[RunContext]) -> Command:
@@ -289,7 +296,7 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
                 update["actions"] = [*state.get("actions", []), action]
                 if cur.get("undo_note") and action["undoable"]:
                     update["undo_notes"] = [*state.get("undo_notes", []),
-                                            f"되돌릴 수 있습니다: {action['summary']} (행동 {action['actionId']})"]
+                                            f"{_sentence(action['summary'])} 필요 없으면 실행 취소를 누르세요."]
             if spec.service == "rag":
                 update["citations"] = [*state.get("citations", []), *out.payload.get("citations", [])]
         update["messages"] = [*state["messages"], tool_message(call, out.payload, trusted)]
