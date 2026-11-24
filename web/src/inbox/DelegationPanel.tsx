@@ -9,7 +9,7 @@ import { formatDateTime, formatWon } from '../display/format'
 import { useAuth } from '../auth/useAuth'
 import { DelegatePicker } from './DelegatePicker'
 import { FormScope } from './FormScope'
-import { checkDraft, initialDraft, toRequest, type Draft } from './draft'
+import { checkDraft, initialDraft, ownDocWarning, scopeWarnings, toRequest, type Draft } from './draft'
 import { DELEGATION_STATUS, TONE_DOT } from './labels'
 import '../chat/chat.css'
 
@@ -33,6 +33,8 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
   // 확인 카드를 만든 요청 본문과 멱등 키를 묶어 둡니다. 지정은 이 본문을 그대로 보내
   // 확인한 내용과 다른 대결이 지정되지 않게 하고, 다시 눌러도 같은 키로 한 번만 지정되게 합니다.
   const [previewed, setPreviewed] = useState<{ body: DelegationCreate; key: string } | null>(null)
+  // 대결자가 올린 문서가 내 결재 차례에 있을 때의 경고. 확인 시트를 만들 때 결재 대기 목록에서 셉니다
+  const [ownDocs, setOwnDocs] = useState<string | null>(null)
 
   async function refresh() {
     try {
@@ -66,6 +68,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
     // 내용이 바뀌면 이전 확인 카드는 맞지 않으므로 지웁니다.
     setPreview(null)
     setPreviewed(null)
+    setOwnDocs(null)
   }
 
   async function submit(dryRun: boolean) {
@@ -86,10 +89,14 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
     setError(null)
     setNotice(null)
     try {
-      const { data, error: p } = await api.POST('/delegations', {
-        params: { query: { dryRun }, header: dryRun ? {} : { 'Idempotency-Key': sent.key } },
-        body: sent.body,
-      })
+      // 확인 시트는 대결자 본인 문서 경고와 함께 한 번에 보여 줍니다(경고가 나중에 끼어들지 않게)
+      const [{ data, error: p }, own] = await Promise.all([
+        api.POST('/delegations', {
+          params: { query: { dryRun }, header: dryRun ? {} : { 'Idempotency-Key': sent.key } },
+          body: sent.body,
+        }),
+        dryRun ? countOwnDocs(sent.body.delegateId) : Promise.resolve(null),
+      ])
       if (!data) {
         setError(problemTitle(p, dryRun ? '확인할 내용을 만들지 못했습니다.' : '대결을 지정하지 못했습니다.'))
         return
@@ -97,6 +104,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
       if ('dryRun' in data) {
         setPreview(data as Schemas['WritePreview'])
         setPreviewed(sent)
+        setOwnDocs(own)
       } else {
         setNotice(data.summary)
         setPreview(null)
@@ -144,39 +152,25 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
         </p>
       )}
       {items && (
-        <section className="group" aria-labelledby="delegation-list-title">
-          <GroupHead id="delegation-list-title" level={2} title="지정한 대결" n={items.length > 0 ? `${items.length}건` : undefined} />
-          {items.length === 0 && <p className="group__empty">지정한 대결이 없습니다.</p>}
-          <ul className="group__list" hidden={items.length === 0}>
-            {items.map((d) => {
-              const st = DELEGATION_STATUS[d.status]
-              const canRevoke = d.delegatorId === meId && (d.status === 'active' || d.status === 'scheduled')
-              const formNames = d.scope.formTypes.includes('*')
-                ? '모든 양식'
-                : d.scope.formTypes.map((id) => forms.find((f) => f.id === id)?.name ?? id).join(', ')
-              return (
-                <li key={d.id}>
-                  <div className="group__row">
-                    <span className="group__main">
-                      <span className="group__title">
-                        {d.delegatorName} → {d.delegateName}
-                      </span>
-                      <span className="group__sub">
-                        {formatDateTime(d.startsAt)} ~ {formatDateTime(d.endsAt)}
-                      </span>
-                      <span className="group__sub">
-                        {formNames}
-                        {d.scope.maxAmount != null && ` · ${formatWon(d.scope.maxAmount)} 이하`} · {d.reason}
-                      </span>
-                    </span>
-                    <span className={`status status--${TONE_DOT[st.tone]}`}>{st.label}</span>
-                    {canRevoke && <RevokeButton onRevoke={() => revoke(d)} label={`${d.delegateName} 대결 해제`} />}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
+        <DelegationGroup
+          id="delegation-given"
+          title="맡긴 대결"
+          empty="맡긴 대결이 없습니다."
+          items={items.filter((d) => d.delegatorId === meId)}
+          rowTitle={(d) => `${d.delegateName} 님에게 맡김`}
+          forms={forms}
+          onRevoke={revoke}
+          canRevoke={(d) => d.status === 'active' || d.status === 'scheduled'}
+        />
+      )}
+      {items && items.some((d) => d.delegateId === meId) && (
+        <DelegationGroup
+          id="delegation-taken"
+          title="맡은 대결"
+          items={items.filter((d) => d.delegateId === meId)}
+          rowTitle={(d) => `${d.delegatorName} 님 대신 결재`}
+          forms={forms}
+        />
       )}
 
       <form className="delegation__form" onSubmit={onPreview}>
@@ -214,7 +208,10 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
               대결 지정 확인
             </h2>
           </header>
-          <PreviewSheetBody preview={preview} danger={false} />
+          <PreviewSheetBody
+            preview={{ ...preview, warnings: [...(preview.warnings ?? []), ...(previewed ? scopeWarnings(previewed.body) : []), ...(ownDocs ? [ownDocs] : [])] }}
+            danger={false}
+          />
           <footer className="sheet__foot">
             <span className="sheet__when" />
             <Button
@@ -222,6 +219,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
               onClick={() => {
                 setPreview(null)
                 setPreviewed(null)
+                setOwnDocs(null)
               }}
             >
               취소
@@ -244,6 +242,63 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
       )}
     </section>
   )
+}
+
+/** 대결 묶음 하나(맡긴 대결 / 맡은 대결). 화살표 대신 "○○ 님에게 맡김", "○○ 님 대신 결재"로 방향을 적습니다(ux #564 H-D3) */
+function DelegationGroup(props: {
+  id: string
+  title: string
+  empty?: string
+  items: DelegationView[]
+  rowTitle(d: DelegationView): string
+  forms: Schemas['ApprovalForm'][]
+  onRevoke?(d: DelegationView): Promise<void>
+  canRevoke?(d: DelegationView): boolean
+}) {
+  const { id, title, empty, items, rowTitle, forms, onRevoke, canRevoke } = props
+  return (
+    <section className="group" aria-labelledby={id}>
+      <GroupHead id={id} level={2} title={title} n={items.length > 0 ? `${items.length}건` : undefined} />
+      {items.length === 0 && empty && <p className="group__empty">{empty}</p>}
+      <ul className="group__list" hidden={items.length === 0}>
+        {items.map((d) => {
+          const st = DELEGATION_STATUS[d.status]
+          const formNames = d.scope.formTypes.includes('*')
+            ? '모든 양식'
+            : d.scope.formTypes.map((f) => forms.find((x) => x.id === f)?.name ?? f).join(', ')
+          return (
+            <li key={d.id}>
+              <div className="group__row">
+                <span className="group__main">
+                  <span className="group__title">{rowTitle(d)}</span>
+                  <span className="group__sub">
+                    {formatDateTime(d.startsAt)} ~ {formatDateTime(d.endsAt)}
+                  </span>
+                  <span className="group__sub">
+                    {formNames} · {d.scope.maxAmount != null ? `${formatWon(d.scope.maxAmount)} 이하` : '금액 한도 없음'} · {d.reason}
+                  </span>
+                </span>
+                <span className={`status status--${TONE_DOT[st.tone]}`}>{st.label}</span>
+                {/* 같은 사람에게 여러 번 맡겼을 때 구별되게 이름에 시작 시각을 붙입니다 */}
+                {onRevoke && canRevoke?.(d) && <RevokeButton onRevoke={() => onRevoke(d)} label={`${d.delegateName} 님에게 맡긴 대결 해제(${formatDateTime(d.startsAt)}부터)`} />}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+/** 대결자가 올린 문서가 지금 내 결재 차례(결재 대기)에 몇 건인지. 목록을 못 받으면 경고 없이 둡니다(지정 자체는 막지 않음) */
+async function countOwnDocs(delegateId: string): Promise<string | null> {
+  try {
+    const { data } = await api.GET('/inbox', { params: { query: { box: 'inbox' } } })
+    const mine = data?.items.filter((d) => d.requesterId === delegateId && d.status === 'in_progress') ?? []
+    return mine.length ? ownDocWarning(mine[0].requesterName, mine.length) : null
+  } catch {
+    return null
+  }
 }
 
 function RevokeButton({ onRevoke, label }: { onRevoke(): Promise<void>; label: string }) {

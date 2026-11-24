@@ -24,68 +24,130 @@ function renderDelegations() {
 const problemJson = (status: number, code: string, title: string) =>
   HttpResponse.json({ type: `urn:problem:${code}`, title, status }, { status, headers: { 'Content-Type': 'application/problem+json' } })
 
+/** 대결자를 찾아 고르고, 고른 양식(기본)으로 휴가 신청을 고른 뒤 사유를 적습니다 */
+async function fill(user: ReturnType<typeof userEvent.setup>, panel: HTMLElement, who: string, reason: string, pickLeave = true) {
+  await user.type(within(panel).getByLabelText('이름 검색'), who.slice(0, 2))
+  await user.click(await within(panel).findByRole('radio', { name: new RegExp(who) }))
+  if (pickLeave) await user.click(await within(panel).findByRole('checkbox', { name: '휴가 신청' }))
+  await user.type(within(panel).getByLabelText('사유'), reason)
+}
+
 describe('대결 설정', () => {
-  it('받은 대결은 보이지만 해제할 수 없습니다', async () => {
+  it('맡은 대결은 "○○ 님 대신 결재"로 따로 보이고 해제할 수 없습니다', async () => {
     renderDelegations()
     const panel = await screen.findByRole('main', { name: '대결 설정' })
-    expect(await within(panel).findByText('윤서진 → 서도윤')).toBeInTheDocument()
-    const list = within(panel).getByRole('region', { name: '지정한 대결' })
-    expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0)
-    expect(list).toHaveTextContent(`${within(list).getAllByRole('listitem').length}건`)
-    expect(list.querySelectorAll('.status').length).toBe(within(list).getAllByRole('listitem').length)
-    expect(within(list).getAllByText(/^(대결 중|예정|종료|해제)$/).length).toBeGreaterThan(0)
+    const taken = await within(panel).findByRole('region', { name: '맡은 대결' })
+    expect(within(taken).getByText('윤서진 님 대신 결재')).toBeInTheDocument()
+    expect(within(taken).getAllByRole('listitem').length).toBeGreaterThan(0)
+    expect(taken).toHaveTextContent(`${within(taken).getAllByRole('listitem').length}건`)
+    expect(taken.querySelectorAll('.status').length).toBe(within(taken).getAllByRole('listitem').length)
+    expect(within(taken).getAllByText(/^(대결 중|예정|종료|해제)$/).length).toBeGreaterThan(0)
+    expect(within(panel).getByRole('region', { name: '맡긴 대결' })).toHaveTextContent('맡긴 대결이 없습니다.')
     expect(within(panel).queryByRole('button', { name: /해제$/ })).toBeNull()
   })
 
-  it('대결자를 찾아 내용을 확인한 뒤 지정하고, 해제합니다', async () => {
+  it('양식 범위는 "고른 양식만"이 기본이고, 양식을 고르기 전에는 내용 확인을 누를 수 없습니다', async () => {
     const user = renderDelegations()
     const panel = await screen.findByRole('main', { name: '대결 설정' })
-    await user.type(within(panel).getByLabelText('이름 검색'), '한지')
-    await user.click(await within(panel).findByRole('radio', { name: /한지우/ }))
-    await user.type(within(panel).getByLabelText('사유'), '교육 참석')
+    expect(within(panel).getByRole('radio', { name: '고른 양식만' })).toBeChecked()
+    expect(within(panel).getByRole('radio', { name: '모든 양식' })).not.toBeChecked()
+    await fill(user, panel, '한지우', '교육 참석', false)
+    expect(within(panel).getByText('대신 결재할 양식을 하나 이상 고르세요.')).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: '내용 확인' })).toBeDisabled()
+    await user.click(await within(panel).findByRole('checkbox', { name: '휴가 신청' }))
+    expect(within(panel).getByRole('button', { name: '내용 확인' })).toBeEnabled()
+  })
+
+  it('대결자를 찾아 내용을 확인한 뒤 지정하고, 해제합니다. 확인 시트는 표시 이름과 경고를 보여 줍니다', async () => {
+    const user = renderDelegations()
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
+    await fill(user, panel, '한지우', '교육 참석')
     await user.click(within(panel).getByRole('button', { name: '내용 확인' }))
 
     const preview = await within(panel).findByRole('region', { name: '대결 지정 확인' })
     expect(within(preview).getByText('한지우를 대결자로 지정합니다.')).toBeInTheDocument()
-    expect(within(preview).getByText('모든 양식')).toBeInTheDocument()
+    // 필드는 표시 이름(대결자·범위), 양식은 양식 이름으로 보입니다
+    expect(within(preview).getByText('대결자')).toBeInTheDocument()
+    // 직원·양식 사전을 받은 뒤 이름으로 바뀝니다
+    expect(await within(preview).findByText('휴가 신청, 금액 한도 없음')).toBeInTheDocument()
+    expect(within(preview).getByText('한지우 팀원(인사팀)')).toBeInTheDocument()
+    // 값 행에는 옛 말(대리인·금액한도)과 양식 ID가 없습니다(API 원래 값은 "자세히" 안에만 있음)
+    expect(preview.querySelector('.sheet__values')).not.toHaveTextContent(/대리인|금액한도|leave/)
+    // 금액 한도 없음 경고는 있고, 모든 양식 경고는 없습니다
+    expect(within(preview).getByText('금액 한도가 없어 금액과 상관없이 대신 결재하게 됩니다.')).toBeInTheDocument()
+    expect(preview).not.toHaveTextContent('모든 양식을 대신 결재하게 됩니다.')
+    // 한지우가 올린 문서가 내 결재 차례에 있으면 알립니다
+    expect(await within(preview).findByText(/^한지우 님이 올린 문서 \d+건이 지금 내 결재 차례입니다/)).toBeInTheDocument()
     await user.click(within(preview).getByRole('button', { name: '대결 지정' }))
 
     expect(await within(panel).findByRole('status')).toHaveTextContent('한지우를 대결자로 지정합니다.')
-    expect(await within(panel).findByText('서도윤 → 한지우')).toBeInTheDocument()
-    await user.click(within(panel).getByRole('button', { name: '한지우 대결 해제' }))
+    const given = within(panel).getByRole('region', { name: '맡긴 대결' })
+    expect(await within(given).findByText('한지우 님에게 맡김')).toBeInTheDocument()
+    await user.click(within(panel).getByRole('button', { name: /^한지우 님에게 맡긴 대결 해제\(2026\. / }))
     expect(await within(panel).findByRole('status')).toHaveTextContent('해제했습니다')
-    expect(within(panel).queryByRole('button', { name: '한지우 대결 해제' })).toBeNull()
+    expect(within(panel).queryByRole('button', { name: /^한지우 님에게 맡긴 대결 해제/ })).toBeNull()
   })
 
-  it('양식을 골라 범위를 좁힙니다', async () => {
+  it('모든 양식과 금액 한도를 고르면 모든 양식만 경고하고, 대결자 본인 문서가 없으면 그 경고는 없습니다', async () => {
     const user = renderDelegations()
     const panel = await screen.findByRole('main', { name: '대결 설정' })
-    await user.click(within(panel).getByRole('checkbox', { name: '모든 양식' }))
-    await user.click(await within(panel).findByRole('checkbox', { name: '휴가 신청' }))
-    await user.type(within(panel).getByLabelText('이름 검색'), '박하')
-    await user.click(await within(panel).findByRole('radio', { name: /박하늘/ }))
-    await user.type(within(panel).getByLabelText('사유'), '휴가')
+    await user.click(within(panel).getByRole('radio', { name: '모든 양식' }))
+    expect(within(panel).queryByRole('checkbox', { name: '휴가 신청' })).toBeNull()
+    await fill(user, panel, '권나래', '휴가', false)
+    await user.type(within(panel).getByLabelText('금액 한도(원)'), '500000')
     await user.click(within(panel).getByRole('button', { name: '내용 확인' }))
     const preview = await within(panel).findByRole('region', { name: '대결 지정 확인' })
-    expect(within(preview).getByText('leave')).toBeInTheDocument()
+    expect(await within(preview).findByText('모든 양식, 500,000원 이하')).toBeInTheDocument()
+    expect(within(preview).getByText('모든 양식을 대신 결재하게 됩니다. 필요한 양식만 고르는 편이 안전합니다.')).toBeInTheDocument()
+    expect(preview).not.toHaveTextContent('금액 한도가 없어')
+    expect(preview).not.toHaveTextContent('님이 올린 문서')
+  })
+
+  it('"모든 양식"에 갔다가 돌아오면 골라 둔 양식을 되살리고, 도움말은 양식 묶음의 설명으로 읽힙니다', async () => {
+    const user = renderDelegations()
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
+    const group = await within(panel).findByRole('group', { name: '대신 결재할 양식' })
+    expect(group).toHaveAccessibleDescription('대신 결재할 양식을 하나 이상 고르세요.')
+    await user.click(within(panel).getByRole('checkbox', { name: '휴가 신청' }))
+    await user.click(within(panel).getByRole('radio', { name: '모든 양식' }))
+    await user.click(within(panel).getByRole('radio', { name: '고른 양식만' }))
+    expect(within(panel).getByRole('checkbox', { name: '휴가 신청' })).toBeChecked()
+  })
+
+  it('양식 목록을 못 받으면 모든 양식만 고를 수 있습니다', async () => {
+    server.use(http.get('*/api/approval-forms', () => problemJson(500, 'internal', '서버 오류')))
+    const user = renderDelegations()
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
+    expect(await within(panel).findByText(/모든 양식만 고를 수 있습니다/)).toBeInTheDocument()
+    expect(within(panel).getByRole('radio', { name: '고른 양식만' })).toBeDisabled()
+    await user.click(within(panel).getByRole('radio', { name: '모든 양식' }))
+    await fill(user, panel, '권나래', '출장', false)
+    expect(within(panel).getByRole('button', { name: '내용 확인' })).toBeEnabled()
+  })
+
+  it('결재 대기 목록을 못 받아도 확인 시트는 열리고 대결자 본인 문서 경고만 빠집니다', async () => {
+    server.use(http.get('*/api/inbox', () => problemJson(500, 'internal', '서버 오류')))
+    const user = renderDelegations()
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
+    await fill(user, panel, '한지우', '교육 참석')
+    await user.click(within(panel).getByRole('button', { name: '내용 확인' }))
+    const preview = await within(panel).findByRole('region', { name: '대결 지정 확인' })
+    expect(preview).toHaveTextContent('금액 한도가 없어')
+    expect(preview).not.toHaveTextContent('님이 올린 문서')
   })
 
   it('서버가 거절하면 problem title을 그대로 보여 줍니다', async () => {
     server.use(http.post('*/api/delegations', () => problemJson(422, 'delegation-out-of-period', '위임 기간이 올바르지 않습니다.')))
     const user = renderDelegations()
     const panel = await screen.findByRole('main', { name: '대결 설정' })
-    await user.type(within(panel).getByLabelText('이름 검색'), '한지')
-    await user.click(await within(panel).findByRole('radio', { name: /한지우/ }))
-    await user.type(within(panel).getByLabelText('사유'), '출장')
+    await fill(user, panel, '한지우', '출장')
     await user.click(within(panel).getByRole('button', { name: '내용 확인' }))
     expect(await within(panel).findByRole('alert')).toHaveTextContent('위임 기간이 올바르지 않습니다.')
   })
   it('내용 확인 뒤 입력을 바꾸면 확인 카드와 대결 지정 버튼을 지웁니다', async () => {
     const user = renderDelegations()
     const panel = await screen.findByRole('main', { name: '대결 설정' })
-    await user.type(within(panel).getByLabelText('이름 검색'), '한지')
-    await user.click(await within(panel).findByRole('radio', { name: /한지우/ }))
-    await user.type(within(panel).getByLabelText('사유'), '출장')
+    await fill(user, panel, '한지우', '출장')
     await user.click(within(panel).getByRole('button', { name: '내용 확인' }))
     await within(panel).findByRole('region', { name: '대결 지정 확인' })
     await user.type(within(panel).getByLabelText('사유'), ' 연장')
