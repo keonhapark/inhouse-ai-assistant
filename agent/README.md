@@ -14,7 +14,7 @@
 
 ## 업무 실행(`/run`, `/resume`)
 
-LangGraph로 계획 → 판정 → 미리보기 → 승인 interrupt → 실행 → 되돌리기 안내를 잇습니다. thread_id는 `conversationId`이고 1단계 체크포인트는 프로세스 메모리(`InMemorySaver`)입니다.
+LangGraph로 계획 → 판정 → 미리보기 → 승인 interrupt → 실행 → 실행 취소 안내를 잇습니다. thread_id는 `conversationId`이고 1단계 체크포인트는 프로세스 메모리(`InMemorySaver`)입니다.
 
 - 모델은 gateway의 OpenAI 호환 엔드포인트로 부르고, 도구는 MCP 서버(`AGENT_MCP_URL`)로 부릅니다. 위임 토큰은 두 곳 모두 요청 헤더로만 넘기고, 모델 문맥과 그래프 상태에는 넣지 않습니다.
 - 도구 호출마다 판정합니다(`run/policy.py`).

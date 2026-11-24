@@ -1,4 +1,4 @@
-"""도구 호출마다 무엇을 할지 정합니다: 바로 실행, 실행 후 되돌리기 안내, 미리보기 승인, 금지, 신뢰 등급으로 막음.
+"""도구 호출마다 무엇을 할지 정합니다: 바로 실행, 실행 후 실행 취소 안내, 미리보기 승인, 금지, 신뢰 등급으로 막음.
 
 평가 조건(contracts/openapi/agent.yaml Condition)
 - full: 에이전트 risk_policy·allowed_risk·overrides(wide_scope, 인자 금액 {arg, gt})와 신뢰 등급을 모두 씁니다.
@@ -39,7 +39,7 @@ class ToolMeta:
 class Decision:
     action: Action
     reason: str = ""
-    undo_note: bool = False  # 실행 뒤 되돌리기 안내를 붙일지(auto_with_undo를 확인으로 올린 경우 포함)
+    undo_note: bool = False  # 실행 뒤 실행 취소 안내를 붙일지(auto_with_undo를 확인으로 올린 경우 포함)
 
 
 @dataclass(frozen=True)

@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from agent_runtime.registry import Registry, Requester
-from agent_runtime.run.graph import UNTRUSTED_NOTE
+from agent_runtime.run.graph import UNDO_HINT, UNTRUSTED_NOTE
 from agent_runtime.run.image_reading import ImageSpec
 from tests.conftest import PACK_DIR
 from tests.mcp_support import mint
@@ -82,7 +82,7 @@ async def test_defect_photo_draft_needs_approval_then_undoable(r3: RunHarness) -
 async def test_defect_draft_without_photo_runs_with_undo_guidance(r3: RunHarness) -> None:
     r3.llm.script = [call("defect_report_draft", DEFECT), say("초안을 썼습니다.")]
     s, _, _ = await _run(r3, "quality", STAFF, "HSG-A100 균열 3개 불량 보고서 초안 써 줘")
-    assert s["status"] == "completed" and "되돌릴 수 있습니다" in s["messages"][0]["content"]
+    assert s["status"] == "completed" and UNDO_HINT in s["messages"][0]["content"]
 
 
 @pytest.mark.anyio
