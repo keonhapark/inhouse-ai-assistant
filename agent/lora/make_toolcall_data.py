@@ -35,6 +35,7 @@ import yaml
 from agent_runtime.registry import Agent, Registry
 from agent_runtime.run.args import optional_args
 from agent_runtime.run.graph import system_prompt
+from overlap import CONTAIN_NEAR, JACCARD_NEAR, is_overlap, pack_names, read_eval, scores, skeleton
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -500,17 +501,22 @@ NEAR = 0.6  # 글자 3-gram 자카드 유사도가 이 값 이상이면 근접 �
 
 
 class Excluded:
-    """평가 묶음(toolcall-v1 형식 jsonl) 문장과 정확 일치·근접 중복인 생성 문장을 걸러냅니다."""
+    """평가 묶음 문장과 겹치는 생성 문장을 걸러냅니다. 평가 문장은 toolcall-v1 jsonl과 시나리오 YAML(또는 그 폴더)을
+    받습니다(`overlap.read_eval`).
 
-    def __init__(self, files: list[Path]) -> None:
-        self.texts: list[str] = []
-        for f in files:
-            for line in f.read_text("utf-8").splitlines():
-                if line.strip():
-                    self.texts.append(json.loads(line)["utterance"])
+    - exact: 공백·문장부호만 다른 같은 문장
+    - near: 글자 3-gram 자카드 NEAR 이상(#544)
+    - skeleton: ID·숫자·팩 이름을 바꾸고 말끝을 뗀 문장 틀이 겹침(#653, `overlap.py`의 자카드·포함 비율 기준).
+      "결재 doc-1077 회수해 줘" 대 "결재 doc-6617 회수해 줘"처럼 값만 바꾼 문장을 거릅니다
+    """
+
+    def __init__(self, files: list[Path], pack: Path | None = None) -> None:
+        self.texts = [text for f in files for _, text, _ in read_eval(f)]
         self.exact = {_norm(t) for t in self.texts}
         self.grams = [_grams(t) for t in self.texts]
-        self._dropped: dict[str, set[str]] = {"exact": set(), "near": set()}
+        self.names = pack_names(pack or DEFAULT_PACK)
+        self.skeletons = [skeleton(t, self.names) for t in self.texts]
+        self._dropped: dict[str, set[str]] = {"exact": set(), "near": set(), "skeleton": set()}
 
     @property
     def dropped(self) -> dict[str, int]:
@@ -524,6 +530,10 @@ class Excluded:
         g = _grams(text)
         if any(len(g & h) / len(g | h) >= NEAR for h in self.grams):
             self._dropped["near"].add(_norm(text))
+            return True
+        sk = skeleton(text, self.names)
+        if any(is_overlap(*scores(sk, e)) for e in self.skeletons):
+            self._dropped["skeleton"].add(_norm(text))
             return True
         return False
 
@@ -601,6 +611,15 @@ def generate(pack: Path, per_tool: int, seed: int, stage: int = 2,
     return out
 
 
+def digest(path: Path) -> str:
+    """파일 또는 폴더(안의 jsonl·yaml 파일을 이름순으로)의 sha256 앞 16자."""
+    h = hashlib.sha256()
+    files = sorted(p for p in path.rglob("*") if p.suffix in (".jsonl", ".yaml", ".yml")) if path.is_dir() else [path]
+    for f in files:
+        h.update(f.read_bytes())
+    return h.hexdigest()[:16]
+
+
 def split(rows: list[dict[str, Any]], valid_ratio: float, seed: int) -> tuple[list[dict], list[dict]]:
     def bucket(r: dict) -> float:
         h = hashlib.sha256(f"{seed}:{r['messages'][1]['content']}".encode()).digest()
@@ -618,10 +637,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--valid-ratio", type=float, default=0.1)
     ap.add_argument("--exclude", action="append", default=[],
-                    help="겹치지 않게 할 평가 묶음(toolcall-v1 jsonl). 개발 묶음은 항상 넣습니다. 여러 번 줄 수 있습니다")
+                    help="겹치지 않게 할 평가 묶음(toolcall-v1 jsonl, 시나리오 YAML 또는 그 폴더). 개발 묶음은 항상 넣습니다. "
+                         "여러 번 줄 수 있습니다")
     args = ap.parse_args(argv)
     ex_files = [DEV_SET, *(Path(x) for x in args.exclude)]
-    excluded = Excluded(ex_files)
+    excluded = Excluded(ex_files, Path(args.pack))
     rows = generate(Path(args.pack), args.per_tool, args.seed, excluded=excluded)
     train, valid = split(rows, args.valid_ratio, args.seed)
     out = Path(args.out)
@@ -638,10 +658,10 @@ def main(argv: list[str] | None = None) -> int:
     manifest = {"seed": args.seed, "perTool": args.per_tool, "pack": Path(args.pack).name, "train": len(train),
                 "valid": len(valid), "kinds": kinds, "answers": dict(sorted(tools_.items())),
                 "inputs": {TOOLS_JSON.name: hashlib.sha256(TOOLS_JSON.read_bytes()).hexdigest()[:16]},
-                "excluded": [{"name": f.name, "sha256": hashlib.sha256(f.read_bytes()).hexdigest()[:16],
-                              "utterances": sum(1 for x in f.read_text("utf-8").splitlines() if x.strip())}
+                "excluded": [{"name": f.name, "sha256": digest(f), "utterances": sum(1 for _ in read_eval(f))}
                              for f in ex_files],
-                "excludedDropped": excluded.dropped, "nearThreshold": NEAR}
+                "excludedDropped": excluded.dropped, "nearThreshold": NEAR,
+                "skeletonThresholds": {"jaccard": JACCARD_NEAR, "contain": CONTAIN_NEAR}}
     (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", "utf-8")
     print(json.dumps(manifest, ensure_ascii=False))
     return 0

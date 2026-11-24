@@ -100,10 +100,31 @@ def test_exclude_drops_exact_and_near_duplicates(tmp_path: Path) -> None:
     assert ex.hit("연차 며칠 남았어 ?")                 # 띄어쓰기·문장부호만 다름 → 정확 일치
     assert ex.hit("남은 휴가 일수 알려 주세요")          # 말끝만 다름 → 근접 중복
     assert not ex.hit("결재 doc-1234 회수해 줘")
-    assert ex.dropped == {"exact": 1, "near": 1}
+    assert ex.dropped == {"exact": 1, "near": 1, "skeleton": 0}
     rows = gen.generate(PACK_DIR, per_tool=12, seed=3, excluded=gen.Excluded([gen.DEV_SET, bundle]))
     texts = [r["messages"][1]["content"] for r in rows]
     assert not [t for t in texts if gen._norm(t) in {gen._norm("연차 며칠 남았어?"), gen._norm("남은 휴가 일수 알려 줘")}]
+
+
+def test_exclude_drops_value_only_variants(tmp_path: Path) -> None:
+    # #653 검수에서 남던 문장: 개발 묶음 문장을 ID·말끝만 바꾼 것. 문장 틀 기준으로 거릅니다
+    bundle = tmp_path / "bundle.jsonl"
+    bundle.write_text("".join(json.dumps({"id": f"t{i}", "utterance": u}, ensure_ascii=False) + "\n" for i, u in enumerate(
+        ["결재 doc-1077 회수해 줘", "rsv-0042 취소해 줘", "내가 다른 사람한테 맡긴 대결 목록 보여 줘"])), "utf-8")
+    ex = gen.Excluded([bundle])
+    assert ex.hit("결재 doc-6617 회수해 줘")
+    assert ex.hit("rsv-7131 취소해 주세요")
+    assert ex.hit("내가 다른 사람한테 넘긴 대결 목록 보여 주세요")
+    assert not ex.hit("내일 오후 3시부터 한 시간 회의실 잡아 줘")
+    assert ex.dropped["skeleton"] == 3
+
+
+def test_exclude_reads_scenario_yaml(tmp_path: Path) -> None:
+    (tmp_path / "s.yaml").write_text(
+        "scenarios:\n- id: N-1\n  turns:\n  - {role: user, content: 결재 doc-1077 회수해 줘}\n"
+        "  expect: {requiredTools: [approval_withdraw]}\n", "utf-8")
+    ex = gen.Excluded([tmp_path])  # 폴더째
+    assert ex.hit("결재 doc-2222 회수 부탁해요")
 
 
 def test_no_near_duplicate_of_dev_set(rows: list[dict]) -> None:
