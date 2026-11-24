@@ -181,9 +181,13 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
         <DateTimeField label="끝" value={draft.endsAt} disabled={busy} defaultTime="18:00" onChange={(endsAt) => edit({ endsAt })} />
         <FormScope value={draft.formTypes} forms={forms} error={formsError} onChange={(formTypes) => edit({ formTypes })} />
         <label>
-          금액 한도(원, 비우면 없음)
-          <input type="number" min={0} step={1} inputMode="numeric" value={draft.maxAmount} onChange={(e) => edit({ maxAmount: e.target.value })} />
+          금액 한도(원)
+          <input type="number" min={0} step={1} inputMode="numeric" aria-describedby="delegation-max-help" value={draft.maxAmount} onChange={(e) => edit({ maxAmount: e.target.value })} />
         </label>
+        {/* 도움말은 라벨 밖에 두어 입력칸 이름에 섞이지 않고 설명으로만 읽힙니다 */}
+        <small id="delegation-max-help" className="field-help">
+          비우면 한도 없음
+        </small>
         <label>
           사유
           <input maxLength={200} value={draft.reason} onChange={(e) => edit({ reason: e.target.value })} required />

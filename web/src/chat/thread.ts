@@ -160,7 +160,7 @@ function applyEvent(s: ThreadState, e: ChatEvent): ThreadState {
         ...st,
         items: [
           ...items,
-          { kind: 'blocked', key: `b-${e.seq}`, reason: e.blocked?.reason ?? '요청을 처리할 수 없습니다.', code: e.blocked?.code },
+          { kind: 'blocked', key: `b-${e.seq}`, reason: e.blocked?.reason ?? '이 요청은 처리할 수 없습니다. 담당 부서에 문의해 주세요.', code: e.blocked?.code },
         ],
       }
     case 'error':
@@ -171,7 +171,7 @@ function applyEvent(s: ThreadState, e: ChatEvent): ThreadState {
           {
             kind: 'error',
             key: `e-${e.seq}`,
-            message: e.error?.message ?? '답을 만들지 못했습니다.',
+            message: e.error?.message ?? '답을 만들지 못했습니다. 다시 시도해 주세요.',
             retryable: e.error?.retryable ?? false,
           },
         ],

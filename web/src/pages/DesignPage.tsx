@@ -50,7 +50,7 @@ export function DesignPage() {
       </section>
 
       <section aria-labelledby="cards">
-        <h2 id="cards">미리보기 카드</h2>
+        <h2 id="cards">실행 전 확인 카드</h2>
         <Card
           header={
             <>
@@ -61,7 +61,7 @@ export function DesignPage() {
           }
           footer={
             <>
-              <span className="muted mono">만료 14:32</span>
+              <span className="muted mono">14:32까지 확인</span>
               <Button>취소</Button>
               <Button variant="primary">실행</Button>
             </>

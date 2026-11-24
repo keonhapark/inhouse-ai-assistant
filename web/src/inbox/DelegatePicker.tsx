@@ -23,7 +23,7 @@ export function DelegatePicker({ value, excludeId, onChange }: { value: string; 
           setResults((data?.items ?? []).filter((e) => e.id !== excludeId))
           setError(data ? null : problemTitle(p, '직원을 찾지 못했습니다.'))
         },
-        () => alive && setError('서버에 연결하지 못했습니다.'),
+        () => alive && setError('서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.'),
       )
     }, 250)
     return () => {
@@ -36,7 +36,7 @@ export function DelegatePicker({ value, excludeId, onChange }: { value: string; 
 
   return (
     <fieldset className="picker">
-      <legend>대리인</legend>
+      <legend>대결자</legend>
       {value && picked?.id === value ? (
         <p>
           <strong>{picked.name}</strong> <span className="muted">{picked.unitName}</span>
@@ -45,7 +45,7 @@ export function DelegatePicker({ value, excludeId, onChange }: { value: string; 
         <p className="muted">아직 고르지 않았습니다.</p>
       )}
       <label>
-        이름으로 찾기
+        이름 검색
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} />
       </label>
       {error && (

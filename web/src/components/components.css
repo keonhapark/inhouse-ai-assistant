@@ -649,3 +649,9 @@ a.group__row:hover,
     outline: 2px solid CanvasText;
   }
 }
+
+/* 입력칸 아래 도움말(3.5) */
+.field-help {
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}

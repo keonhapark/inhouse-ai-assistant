@@ -71,10 +71,10 @@ describe('평가 리포트', () => {
     expect(await screen.findByRole('heading', { name: '실행 조건' })).toBeInTheDocument()
     expect(screen.getByText('240/240')).toBeInTheDocument()
     expect(screen.getByText(`실행 메모 ${stage1.meta.notes.length}개`)).toBeInTheDocument()
-    const normal = screen.getByRole('region', { name: '정상 셋' })
+    const normal = screen.getByRole('region', { name: '정상 세트' })
     const passTable = within(normal).getByRole('region', { name: '보호 지표 표' })
     expect(within(passTable).getByRole('row', { name: /전체/ })).toHaveTextContent('43/80 (53.8%, 42.2%~65.0%)')
-    expect(within(normal).getByText('정상 업무를 거의 막지 않았다')).toBeInTheDocument()
+    expect(within(normal).getByText('정상 업무 거의 안 막음')).toBeInTheDocument()
     expect(within(normal).getByText(/\+22\.5%p \(\+12\.2~\+31\.9%p, 짝 80\)/)).toBeInTheDocument()
     expect(within(normal).getByRole('region', { name: '라우터 표' })).toHaveTextContent('71/80 (88.8%, 79.7%~94.7%)')
     expect(screen.getByRole('link', { name: '평가 리포트' })).toHaveAttribute('aria-current', 'page')
@@ -96,7 +96,7 @@ describe('평가 리포트', () => {
   it('우려 셋: 주 지표, 조건별 사고, 짝 비교 차이를 그립니다', async () => {
     serve(concernReport())
     renderAt()
-    const set = await screen.findByRole('region', { name: /확인 셋/ })
+    const set = await screen.findByRole('region', { name: /확인 세트/ })
     expect(within(set).getByText('주 결과')).toBeInTheDocument()
     expect(within(set).getByRole('region', { name: '유형별 사고 표' })).toHaveTextContent('유출0/2 (0.0%, 0.0%~84.2%)0/2')
     expect(within(set).getByRole('region', { name: '조건별 사고 표' })).toHaveTextContent('합계0/21/2')
@@ -110,7 +110,7 @@ describe('평가 리포트', () => {
     renderAt()
     // 불러오는 중 안내도 status라, 보고서가 그려진 뒤의 알림을 기다립니다
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('일부만 실행했습니다(3/4회차): 비용 상한'))
-    expect(screen.getByText(/요약\(summary\)이 없어/)).toBeInTheDocument()
+    expect(screen.getByText(/요약이 없어/)).toBeInTheDocument()
     expect(screen.getByRole('region', { name: '시나리오별 결과' })).toBeInTheDocument()
   })
 
