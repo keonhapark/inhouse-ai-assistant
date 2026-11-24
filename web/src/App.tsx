@@ -15,7 +15,7 @@ import { OrgPage } from './org/OrgPage'
 function RequireAuth({ children }: { children: ReactNode }) {
   const { state } = useAuth()
   const location = useLocation()
-  if (state.status === 'loading') return <p className="page muted">불러오는 중입니다.</p>
+  if (state.status === 'loading') return <p className="login__loading">불러오는 중입니다.</p>
   if (state.status === 'anonymous') return <Navigate to="/login" replace state={{ from: location.pathname }} />
   return children
 }
