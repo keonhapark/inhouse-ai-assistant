@@ -42,7 +42,7 @@ uv run python lora/compare_runs.py ~/lora/base-nothink.jsonl ~/lora/lora-nothink
 - chat template은 생각 끔 형식입니다. 데이터에 생각 내용이 없어 생각 켬 형식으로 만들면 빈 생각을 가르치게 되고 토큰 경계도 어긋납니다. 업무 경로는 생각 켬이 기본(결정 0008)이라 평가는 생각 끔·켬 둘 다 합니다
 - `--dry-run`은 토큰화에 더해 학습 설정도 봅니다: 인자 이름이 설치된 transformers의 `TrainingArguments` 필드에 있는지, torch가 있으면 `TrainingArguments` 생성과 `Trainer` 인자까지(#551 v2는 transformers 5에서 없어진 `warmup_ratio`로 학습 시작 때 멈췄습니다. 지금은 `warmup_steps=0.03`(비율))
 - 토큰 길이(기본 데이터, Qwen3.5 토크나이저): p50 1,296, 최대 1,834. 정답 토큰 합 학습 62,780·검증 7,533. 확인은 `--dry-run`으로 했습니다(transformers 5.22.2, GPU 없음)
-- 내보내기(`export_ollama.py`): PEFT 어댑터를 llama.cpp `convert_lora_to_gguf.py`로 GGUF 어댑터로 바꾸고, Ollama API(`/api/blobs`, `/api/create`의 `adapters`)로 `qwen3.5:9b` 위에 얹은 모델을 만듭니다. 학습은 bf16 원본, 실행은 Q4_K_M 기본 모델이라 수치가 조금 다릅니다
+- 내보내기(`export_ollama.py`): PEFT 어댑터를 llama.cpp `convert_lora_to_gguf.py`로 GGUF 어댑터로 바꾸고, Ollama API(`/api/blobs`, `/api/create`의 `adapters`)로 `qwen3.5:9b` 위에 얹은 모델을 만듭니다. 학습은 bf16 원본, 실행은 Q4_K_M 기본 모델이라 수치가 조금 다릅니다. 변환기 출력은 `<run>/convert.log`에 다 남고, 실패하면 끝 60줄을 출력하고 종료 코드 2로 끝납니다
 - 비교(`compare_runs.py`): `eval_dev/first_call_run.py` 두 실행의 개발 묶음 항목만 견줍니다(기대 도구, 되묻기 정답에서 도구 없이 답함, 지연, 좋아진·나빠진 항목). 확인 묶음 평가는 eval이 합니다
 - 의존성 판(`install_qlora.sh`): torch 2.14.1, transformers 5.22.2, peft 0.21.2, bitsandbytes 0.50.2, accelerate 1.15.0, gguf 0.19.0. 실제 판과 llama.cpp 커밋은 가상환경의 `install.json`에 남습니다
 
@@ -58,6 +58,17 @@ Kaggle 노트북(T4 x2)에 Ollama와 터널을 띄운 셀이 돌고 있을 때, 
 6. `export_ollama.py --ollama http://localhost:11434`로 `qwen3.5-9b-toolcall-lora`를 만들고 `run.json`·`ollama.json` 요약을 출력합니다
 
 평가(개발 묶음, 생각 끔·켬, 기본 대비)는 GPU 사용권 `kaggle`을 받아 터널 주소로 `eval_dev/first_call_run.py`와 `lora/compare_runs.py`를 돌립니다.
+
+### GGUF 변환이 안 될 때: PEFT 어댑터 직접 평가(#551 v6)
+
+`serve_peft.py`는 기본 모델을 학습 때처럼 4비트(NF4)로 올리고 PEFT 어댑터를 얹은 작은 OpenAI 호환 서버입니다. 요청의 `model`이 `lora`면 어댑터를 켜고 `base`면 끕니다. 그래서 기본·LoRA를 같은 런타임에서 견줄 수 있고, 개발 묶음 실행기(`eval_dev/first_call_run.py`)를 그대로 붙입니다.
+
+- 생각: `reasoning_effort`가 `none`이면 끔, 다른 값이면 켬, 없으면 chat template 기본값(켬)입니다. 답의 생각 부분은 버립니다
+- 도구 호출: Qwen3.5 template 형식(`<tool_call><function=…><parameter=…>`)을 OpenAI `tool_calls`로 바꿉니다. 인자 값은 도구 스키마의 type을 따릅니다. string이면 글 그대로, boolean이면 true·false(대소문자 무시), 그 밖에는 JSON으로 읽습니다. template이 그린 도구 호출을 되읽는 시험은 받아 둔 Qwen3.5 토크나이저로 돌렸습니다
+- 생성은 greedy이고 상한은 생각 끔 512, 생각 켬 1536(`--max-new-tokens-think`)입니다. 한 번에 하나씩 생성합니다. GPU가 두 장이면 `CUDA_VISIBLE_DEVICES`로 서버를 하나씩 띄워 기본·LoRA를 나눠 돌립니다
+- 이 수치는 런타임이 transformers 4비트라 Ollama(GGUF Q4_K_M) 수치와 직접 비교하지 않습니다
+
+`bench_gated_delta.py`는 Gated DeltaNet 층 한 개(Qwen3.5-9B 크기, 길이 2048)의 순전파+역전파 시간을 transformers 참조 구현과 flash-linear-attention 커널로 따로 재고, 두 출력의 차이도 남깁니다(#618). 모델은 받지 않습니다.
 
 ### 세션이 끊겨도 남기기(#587)
 

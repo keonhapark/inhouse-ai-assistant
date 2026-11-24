@@ -7,6 +7,9 @@
     ~/.cache/iaa-qlora-venv/bin/python lora/export_ollama.py --run <train_qlora --out> \\
         --llama-cpp ~/.cache/iaa-llama.cpp --ollama http://172.17.0.1:11434 --name qwen3.5-9b-toolcall-lora
 
+변환기 출력(stdout·stderr)은 `<run>/convert.log`에 다 남기고, 실패하면 끝 부분을 출력한 뒤 종료 코드 2로 끝납니다
+(#551 v5는 노트북이 출력 끝 15줄만 보여 변환기 오류가 가려졌습니다).
+
 기본 `--from`은 `qwen3.5:9b`(GGUF Q4_K_M)입니다. 학습은 bf16 원본 가중치에 했고 어댑터는 양자화한 기본 모델에
 얹으므로 학습 때와 수치가 조금 다릅니다.
 """
@@ -16,6 +19,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -31,6 +35,23 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+class ConvertError(RuntimeError):
+    pass
+
+
+def run_logged(cmd: list[str], log: Path, tail: int = 60) -> None:
+    """명령을 돌려 stdout·stderr를 함께 log에 다 남깁니다. 실패하면 마지막 tail줄을 담은 ConvertError를 냅니다."""
+    with log.open("w", encoding="utf-8") as f:
+        f.write("$ " + " ".join(cmd) + "\n")
+        f.flush()
+        # 파이썬 자식의 stdout 버퍼 때문에 오류(stderr)가 기록 중간에 끼지 않게 버퍼를 끕니다
+        code = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, text=True,
+                              env={**os.environ, "PYTHONUNBUFFERED": "1"}).returncode
+    if code:
+        lines = log.read_text("utf-8", errors="replace").splitlines()
+        raise ConvertError(f"종료 코드 {code}, 기록 {log}(끝 {min(tail, len(lines))}줄):\n" + "\n".join(lines[-tail:]))
+
+
 def convert(run: Path, llama_cpp: Path, python: str) -> Path:
     from huggingface_hub import snapshot_download
 
@@ -38,8 +59,8 @@ def convert(run: Path, llama_cpp: Path, python: str) -> Path:
     base = snapshot_download(info["baseModel"], revision=info["revision"],
                              allow_patterns=["*.json", "*.jinja", "*.txt", "*.model"])
     out = run / "adapter.gguf"
-    subprocess.run([python, str(llama_cpp / "convert_lora_to_gguf.py"), "--base", base, "--outtype", "f16",
-                    "--outfile", str(out), str(run / "adapter")], check=True)
+    run_logged([python, str(llama_cpp / "convert_lora_to_gguf.py"), "--base", base, "--outtype", "f16",
+                "--outfile", str(out), str(run / "adapter")], run / "convert.log")
     return out
 
 
@@ -66,7 +87,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--python", default=sys.executable)
     args = ap.parse_args(argv)
     run = Path(args.run).expanduser().resolve()
-    gguf = convert(run, Path(args.llama_cpp).expanduser(), args.python)
+    try:
+        gguf = convert(run, Path(args.llama_cpp).expanduser(), args.python)
+    except ConvertError as e:
+        print(f"GGUF 변환 실패: {e}", file=sys.stderr, flush=True)
+        return 2
     result = create(gguf, args.ollama, args.name, args.base_tag)
     (run / "ollama.json").write_text(json.dumps(result, ensure_ascii=False, indent=1) + "\n", "utf-8")
     print(json.dumps(result, ensure_ascii=False))

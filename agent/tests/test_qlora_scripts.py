@@ -179,3 +179,122 @@ def test_sync_run_copies_new_and_changed_files(tmp_path: Path) -> None:
         assert (dst / "run.json").read_text() == '{"done": true}'
     finally:
         server.shutdown()
+
+
+# ---------- v6: 변환 기록과 PEFT 서버(#551) ----------
+
+def test_run_logged_keeps_whole_output_and_raises_with_tail(tmp_path: Path) -> None:
+    import export_ollama
+
+    log = tmp_path / "convert.log"
+    script = "import sys\nfor i in range(100): print('줄', i)\nprint('변환 오류', file=sys.stderr)\nsys.exit(3)"
+    with pytest.raises(export_ollama.ConvertError) as e:
+        export_ollama.run_logged([sys.executable, "-c", script], log, tail=5)
+    text = log.read_text("utf-8")
+    assert "줄 0" in text and "변환 오류" in text  # 앞부분과 stderr 모두 남음
+    assert "종료 코드 3" in str(e.value) and "변환 오류" in str(e.value) and "줄 0\n" not in str(e.value)
+    export_ollama.run_logged([sys.executable, "-c", "print('ok')"], log)  # 성공이면 예외 없음
+    assert "ok" in log.read_text("utf-8")
+
+
+def test_export_returns_2_when_conversion_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+                                                capsys: pytest.CaptureFixture[str]) -> None:
+    import export_ollama
+
+    def boom(*a: object) -> Path:
+        raise export_ollama.ConvertError("종료 코드 1, 기록 x(끝 1줄):\nKeyError: 'model.language_model'")
+
+    monkeypatch.setattr(export_ollama, "convert", boom)
+    assert export_ollama.main(["--run", str(tmp_path), "--llama-cpp", "x", "--ollama", "http://127.0.0.1:9"]) == 2
+    assert "GGUF 변환 실패" in capsys.readouterr().err
+
+
+TOOLS = [{"type": "function", "function": {"name": "leave_request", "parameters": {"type": "object", "properties": {
+    "startDate": {"type": "string"}, "days": {"type": "number"}, "half": {"type": "boolean"},
+    "note": {"type": "string"}}}}}]
+
+
+def test_parse_completion_tool_call_after_thinking() -> None:
+    import serve_peft
+
+    text = ("휴가 신청이니 leave_request를 부릅니다.\n</think>\n\n<tool_call>\n<function=leave_request>\n"
+            "<parameter=startDate>\n2026-12-01\n</parameter>\n<parameter=days>\n2\n</parameter>\n"
+            "<parameter=half>\nFalse\n</parameter>\n<parameter=note>\n123\n</parameter>\n</function>\n</tool_call><|im_end|>")
+    msg = serve_peft.parse_completion(text, TOOLS)
+    assert msg["content"] == ""
+    (call,) = msg["tool_calls"]
+    assert call["function"]["name"] == "leave_request"
+    # 스키마가 string이면 숫자처럼 보여도 글 그대로, number·boolean은 JSON으로 읽습니다
+    assert json.loads(call["function"]["arguments"]) == {"startDate": "2026-12-01", "days": 2, "half": False,
+                                                         "note": "123"}
+
+
+def test_parse_completion_plain_answer_and_unknown_tool() -> None:
+    import serve_peft
+
+    assert serve_peft.parse_completion("\n\n몇 일부터 쉬실지 알려 주세요.<|im_end|>", TOOLS) == \
+        {"role": "assistant", "content": "몇 일부터 쉬실지 알려 주세요."}
+    msg = serve_peft.parse_completion("<tool_call>\n<function=ticket_get>\n<parameter=id>\nT-1\n</parameter>\n"
+                                      "</function>\n</tool_call>", TOOLS)
+    assert json.loads(msg["tool_calls"][0]["function"]["arguments"]) == {"id": "T-1"}  # 스키마 없으면 JSON 시도 후 글
+
+
+def test_normalize_messages_and_thinking_kwargs() -> None:
+    import serve_peft
+
+    msgs = serve_peft.normalize_messages([
+        {"role": "assistant", "content": None,
+         "tool_calls": [{"id": "c", "type": "function", "function": {"name": "a", "arguments": '{"x": 1}'}}]}])
+    assert msgs[0]["content"] == "" and msgs[0]["tool_calls"][0]["function"]["arguments"] == {"x": 1}
+    assert serve_peft.thinking_kwargs({"reasoning_effort": "none"}) == {"enable_thinking": False}
+    assert serve_peft.thinking_kwargs({"reasoning_effort": "low"}) == {"enable_thinking": True}
+    assert serve_peft.thinking_kwargs({}) == {}
+
+
+def test_serve_peft_http_with_fake_engine() -> None:
+    import threading
+    from http.server import ThreadingHTTPServer
+
+    import httpx
+    import serve_peft
+
+    class Fake:
+        def chat(self, body: dict) -> dict:
+            if body.get("model") not in serve_peft.MODELS:
+                raise ValueError("model")
+            msg = serve_peft.parse_completion("<tool_call>\n<function=leave_request>\n<parameter=days>\n1\n"
+                                              "</parameter>\n</function>\n</tool_call>", body.get("tools"))
+            return serve_peft.completion(body["model"], msg, 10, 5, False)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), serve_peft.handler(Fake()))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/v1"
+    try:
+        with httpx.Client() as c:
+            assert [m["id"] for m in c.get(url + "/models").json()["data"]] == ["base", "lora"]
+            r = c.post(url + "/chat/completions", json={"model": "lora", "messages": [], "tools": TOOLS}).json()
+            assert r["choices"][0]["finish_reason"] == "tool_calls"
+            assert r["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"] == '{"days": 1}'
+            assert c.post(url + "/chat/completions", json={"model": "x", "messages": []}).status_code == 400
+    finally:
+        server.shutdown()
+
+
+def test_qwen35_template_round_trip() -> None:
+    # 학습 환경(transformers, 받아 둔 Qwen3.5 토크나이저)에서만 돕니다. template이 그린 도구 호출을 해석기가 되읽는지 봅니다
+    transformers = pytest.importorskip("transformers")
+    import serve_peft
+
+    try:
+        tok = transformers.AutoTokenizer.from_pretrained("Qwen/Qwen3.5-9B", local_files_only=True)
+    except OSError:
+        pytest.skip("Qwen3.5 토크나이저가 캐시에 없음")
+    call = {"type": "function", "function": {"name": "leave_request",
+                                             "arguments": {"startDate": "2026-12-01", "days": 2, "half": False}}}
+    msgs = [{"role": "user", "content": "휴가"}, {"role": "assistant", "content": "", "tool_calls": [call]}]
+    prompt = tok.apply_chat_template(msgs[:1], tools=TOOLS, add_generation_prompt=True, tokenize=False,
+                                     enable_thinking=False)
+    full = tok.apply_chat_template(msgs, tools=TOOLS, tokenize=False, enable_thinking=False)
+    assert '"name": "leave_request"' in prompt  # OpenAI 형식 tools를 그대로 그림
+    msg = serve_peft.parse_completion(full[len(prompt):], TOOLS)
+    assert json.loads(msg["tool_calls"][0]["function"]["arguments"]) == call["function"]["arguments"]
