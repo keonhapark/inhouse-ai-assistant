@@ -179,7 +179,7 @@ export function OrgPage() {
             <nav className="org__tree" aria-label="부서">
               {units.status === 'loading' && <p className="org__muted">불러오는 중입니다.</p>}
               {units.status === 'error' && (
-                <p role="alert" className="org__error">
+                <p role="alert" className="alert">
                   {units.message}
                 </p>
               )}
@@ -223,7 +223,7 @@ function Found({ results, term, busy, selected, onPick }: { results: Load<Person
       <GroupHead id="org-found" level={2} title="찾은 사람" n={results.status === 'ok' ? `${results.data.length}명` : undefined} />
       {results.status === 'loading' && <p className="group__empty">찾는 중입니다.</p>}
       {results.status === 'error' && (
-        <p role="alert" className="group__empty org__error">
+        <p role="alert" className="group__empty alert">
           {results.message}
         </p>
       )}
@@ -317,7 +317,7 @@ function UnitDetail({ unit, titleRef, path, subUnits, people, person, agents, on
         <GroupHead id="org-members" title="구성원" n={people.status === 'ok' && people.data.length > 0 ? `${people.data.length}명` : undefined} />
         {people.status === 'loading' && <p className="group__empty">불러오는 중입니다.</p>}
         {people.status === 'error' && (
-          <p role="alert" className="group__empty org__error">
+          <p role="alert" className="group__empty alert">
             {people.message}
           </p>
         )}

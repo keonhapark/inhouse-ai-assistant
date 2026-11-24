@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { api, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
-import { formatDateTime } from '../inbox/labels'
+import { formatDateTime } from '../display/format'
 import type { Range } from './AdminPage'
 import { formatUsd, useLoad, usePaged } from './load'
 import { entityName, segments } from './redact'
@@ -37,14 +37,14 @@ export function EgressPanel({ range }: { range: Range }) {
       </label>
       {agents.status === 'error' && <p className="muted">{agents.message}</p>}
       {first.status === 'loading' && <p className="muted">불러오는 중입니다.</p>}
-      {first.status === 'error' && <p role="alert">{first.message}</p>}
+      {first.status === 'error' && <p role="alert" className="alert">{first.message}</p>}
       {first.status === 'ok' && items.length === 0 && <p className="muted">이 기간에 외부로 보낸 요청이 없습니다.</p>}
       <ul className="egress__list">
         {items.map((r) => (
           <EgressItem key={r.recordId} record={r} />
         ))}
       </ul>
-      {moreError && <p role="alert">{moreError}</p>}
+      {moreError && <p role="alert" className="alert">{moreError}</p>}
       {next && (
         <Button onClick={() => void loadMore()} disabled={loadingMore}>
           {loadingMore ? '불러오는 중' : '더 보기'}

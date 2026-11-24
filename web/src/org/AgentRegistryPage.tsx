@@ -48,7 +48,7 @@ export function AgentRegistryPage() {
         <p className="registry__intro">부서마다 담당 AI가 있습니다. AI 비서에 적은 말에 맞는 담당 AI가 답하고, 아래의 일을 대신 합니다.</p>
         {state.status === 'loading' && <p className="org__muted">불러오는 중입니다.</p>}
         {state.status === 'error' && (
-          <p role="alert" className="org__error">
+          <p role="alert" className="alert">
             {state.message}
           </p>
         )}

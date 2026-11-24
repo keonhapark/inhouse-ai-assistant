@@ -27,7 +27,9 @@ export function DateField({ value, onChange, ...rest }: FieldProps & { value: st
   const labelId = useId()
   return (
     <div className={['datefield', rest.className].filter(Boolean).join(' ')} role="group" aria-labelledby={labelId}>
-      <span id={labelId}>{rest.label}</span>
+      <span id={labelId} className="datefield__label">
+        {rest.label}
+      </span>
       <Calendar labelId={labelId} value={value} onChange={onChange} {...rest} />
     </div>
   )
@@ -46,7 +48,9 @@ export function DateTimeField({ value, onChange, defaultTime = '09:00', ...rest 
   const set = (d: string, h: string, m: string) => onChange(d ? `${d}T${h}:${m}` : '')
   return (
     <div className={['datefield', rest.className].filter(Boolean).join(' ')} role="group" aria-labelledby={labelId}>
-      <span id={labelId}>{rest.label}</span>
+      <span id={labelId} className="datefield__label">
+        {rest.label}
+      </span>
       <span className="datefield__row">
         <Calendar labelId={labelId} value={date} onChange={(d) => set(d, hh, mm)} {...rest} />
         <select className="datefield__time" aria-label={`${rest.label} 시`} value={hh} disabled={rest.disabled || !date} onChange={(e) => set(date, e.target.value, mm)}>

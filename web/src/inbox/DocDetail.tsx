@@ -8,7 +8,7 @@ import { formatDateTime, formatWon } from '../display/format'
 import { formRows } from '../display/preview'
 import { josa } from '../org/labels'
 import { type InboxItem, type Step } from './types'
-import { DOC_STATUS, STEP_STATUS } from './labels'
+import { DOC_STATUS, STEP_STATUS, TONE_DOT } from './labels'
 
 type Props = {
   doc: InboxItem
@@ -27,7 +27,6 @@ function stepName(s: Step, who: 'approver' | 'actedBy'): string {
   return who === 'approver' ? (s.approverName ?? s.approverId) : (s.actedByName ?? s.actedBy ?? '처리자 미상')
 }
 
-const TONE_DOT = { accent: 'progress', success: 'green', danger: 'red', neutral: 'gray', warning: 'orange', local: 'blue' } as const
 const STEP_ICON = { approved: Check, rejected: X, pending: Clock, waiting: Minus, skipped: Minus } as const
 const initials = (name: string) => (name.length > 2 ? name.slice(-2) : name)
 
@@ -105,7 +104,6 @@ export function DocDetail({ doc, form, canDecide, onDecided, onReload, onClose }
       <div className="detail__scroll">
         <div className="detail__kicker">
           <span>{doc.formName}</span>
-          <span>{doc.id}</span>
           <span className={`status status--${TONE_DOT[status.tone]}`}>{status.label}</span>
           <button type="button" className="icon-btn detail__close" aria-label="닫기" onClick={onClose}>
             <X aria-hidden />

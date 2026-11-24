@@ -38,7 +38,7 @@ export function MetricsPanel({ range }: { range: Range }) {
     '운영 지표를 불러오지 못했습니다.',
   )
   if (state.status === 'loading') return <p className="muted">불러오는 중입니다.</p>
-  if (state.status === 'error') return <p role="alert">{state.message}</p>
+  if (state.status === 'error') return <p role="alert" className="alert">{state.message}</p>
   const m = state.data
   const t = m.totals
   const llm = t.llmRequests.local + t.llmRequests.external

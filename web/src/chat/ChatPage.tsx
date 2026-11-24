@@ -342,7 +342,8 @@ export function ChatPage() {
     <div className="chat">
       <nav className="convs" aria-label="대화 목록">
         <div className="convs__head">
-          <h2>대화</h2>
+          {/* 화면 제목(h1)은 오른쪽 툴바에 있어, 앞에 오는 목록 머리는 제목 요소로 두지 않습니다(탐색 이름은 nav의 aria-label) */}
+          <span className="convs__title">대화</span>
           <button type="button" className="icon-btn" aria-label="새 대화" onClick={newConversation}>
             <SquarePen aria-hidden />
           </button>

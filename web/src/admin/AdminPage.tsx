@@ -85,7 +85,7 @@ export function AdminPage() {
           보는 기간: {period.kind === 'custom' ? formatDateRange(period.from, period.to) : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}
         </p>
         {rangeError && (
-          <p role="alert" id="admin-range-error" className="admin__error">
+          <p role="alert" id="admin-range-error" className="alert">
             {rangeError}
           </p>
         )}

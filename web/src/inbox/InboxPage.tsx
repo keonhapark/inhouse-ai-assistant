@@ -6,12 +6,11 @@ import { formatWhen, formatWon } from '../display/format'
 import { notifyInboxChanged } from '../shell/pending'
 import { Toolbar } from '../shell/Toolbar'
 import { DocDetail } from './DocDetail'
-import { BOXES, DOC_STATUS, type Box } from './labels'
+import { BOXES, DOC_STATUS, TONE_DOT, type Box } from './labels'
 import { toInboxItem, type InboxItem } from './types'
 import './inbox.css'
 
 const FORM_ICON: Record<string, LucideIcon> = { leave: CalendarDays, expense: Receipt, purchase: Package }
-const TONE_DOT = { accent: 'progress', success: 'green', danger: 'red', neutral: 'gray', warning: 'orange', local: 'blue' } as const
 const EMPTY: Record<Box, string> = {
   inbox: '결재할 문서가 없습니다.',
   delegated: '대신 결재할 문서가 없습니다.',
