@@ -79,7 +79,7 @@ function scenario(c: Conv, content: string): Draft[] {
       rejected: '회수하지 않았습니다.',
       undoable: false,
     })
-    const text = '결재 중인 휴가 결재 APR-0042(11/24 오후 반차)를 찾았습니다. 회수하면 실행 취소할 수 없습니다.'
+    const text = '결재 중인 휴가 결재 APR-0042(11. 24. 오후 반차)를 찾았습니다. 회수하면 실행 취소할 수 없습니다.'
     return [
       ...route(c, 'hr', 'keyword', '결재 회수 요청'),
       { type: 'tool_call', toolCall: { tool: 'approval_list_mine', risk: 'read', status: 'ok' } },
@@ -96,7 +96,7 @@ function scenario(c: Conv, content: string): Draft[] {
           preview: {
             dryRun: true,
             operation: 'withdrawApproval',
-            summary: '휴가 결재 APR-0042(11/24 오후 반차)를 회수합니다.',
+            summary: '휴가 결재 APR-0042(11. 24. 오후 반차)를 회수합니다.',
             undoable: false,
             changes: [
               {
@@ -116,9 +116,9 @@ function scenario(c: Conv, content: string): Draft[] {
   // 회의실 예약은 되돌릴 수 있는 쓰기(reversible_write)라 바로 실행하고 되돌리기를 붙입니다(auto_with_undo).
   if (/회의실|예약/.test(content)) {
     const actionId = `act-${++idSeq}`
-    const summary = '3층 소회의실을 내일 14:00–15:00에 예약했습니다.'
+    const summary = '3층 소회의실을 내일 오후 2:00–3:00에 예약했습니다.'
     actions.set(actionId, { undone: false, summary, undoable: true })
-    const text = '내일 14:00–15:00에 3층 소회의실(6인)을 예약했습니다. 필요 없으면 실행 취소를 누르세요.'
+    const text = '내일 오후 2:00–3:00에 3층 소회의실(6인)을 예약했습니다. 필요 없으면 실행 취소를 누르세요.'
     return [
       ...route(c, 'assistant', 'keyword', '회의실 예약 요청'),
       { type: 'tool_call', toolCall: { tool: 'room_list_availability', risk: 'read', status: 'ok' } },

@@ -1,10 +1,10 @@
 import * as Popover from '@radix-ui/react-popover'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
-import { addDays, addMonths, koDate, pad, parseYmd, toYmd, WEEK } from '../display/dates'
+import { addDays, addMonths, koDate, koDateSpoken, koHour, pad, parseYmd, toYmd, WEEK } from '../display/dates'
 
 /**
- * 한국식 날짜 고르개(ux/design-system.md 3.5, heuristics H-D2).
+ * 한국식 날짜 고르개(ux/design-system.md 3.5, heuristics H-D2). 날짜는 "2026. 11. 24.(화)", 시는 "오후 2시"로 보입니다.
  * 브라우저 기본 date·datetime-local은 언어에 따라 미국식(11/22/2026, 10:00 PM)으로 보여 쓰지 않습니다.
  * 값은 기본 입력과 같은 꼴(YYYY-MM-DD, YYYY-MM-DDTHH:mm)이라 부르는 쪽은 그대로 씁니다.
  * 달력은 WAI-ARIA 날짜 고르개 대화상자 패턴입니다: 화살표 하루·한 주, PageUp·PageDown 한 달, Home·End 주의 처음·끝, Enter로 고름.
@@ -27,7 +27,9 @@ export function DateField({ value, onChange, ...rest }: FieldProps & { value: st
   const labelId = useId()
   return (
     <div className={['datefield', rest.className].filter(Boolean).join(' ')} role="group" aria-labelledby={labelId}>
-      <span id={labelId}>{rest.label}</span>
+      <span id={labelId} className="datefield__label">
+        {rest.label}
+      </span>
       <Calendar labelId={labelId} value={value} onChange={onChange} {...rest} />
     </div>
   )
@@ -36,7 +38,7 @@ export function DateField({ value, onChange, ...rest }: FieldProps & { value: st
 const HOURS = Array.from({ length: 24 }, (_, h) => pad(h))
 const MINUTES = Array.from({ length: 6 }, (_, i) => pad(i * 10))
 
-/** 날짜와 시각(24시간제, 10분 단위)을 고릅니다. value는 YYYY-MM-DDTHH:mm 또는 빈 문자열 */
+/** 날짜와 시각(오전·오후 시, 10분 단위)을 고릅니다. 값은 24시간제입니다. value는 YYYY-MM-DDTHH:mm 또는 빈 문자열 */
 export function DateTimeField({ value, onChange, defaultTime = '09:00', ...rest }: FieldProps & { value: string; onChange(v: string): void; defaultTime?: string }) {
   const labelId = useId()
   const [date = '', time = ''] = value.split('T')
@@ -46,13 +48,15 @@ export function DateTimeField({ value, onChange, defaultTime = '09:00', ...rest 
   const set = (d: string, h: string, m: string) => onChange(d ? `${d}T${h}:${m}` : '')
   return (
     <div className={['datefield', rest.className].filter(Boolean).join(' ')} role="group" aria-labelledby={labelId}>
-      <span id={labelId}>{rest.label}</span>
+      <span id={labelId} className="datefield__label">
+        {rest.label}
+      </span>
       <span className="datefield__row">
         <Calendar labelId={labelId} value={date} onChange={(d) => set(d, hh, mm)} {...rest} />
         <select className="datefield__time" aria-label={`${rest.label} 시`} value={hh} disabled={rest.disabled || !date} onChange={(e) => set(date, e.target.value, mm)}>
           {HOURS.map((h) => (
             <option key={h} value={h}>
-              {h}시
+              {koHour(Number(h))}
             </option>
           ))}
         </select>
@@ -147,7 +151,8 @@ function Calendar({ labelId, label, value, onChange, min, max, invalid, describe
         aria-describedby={describedBy}
         disabled={disabled}
       >
-        <span id={valueId} className={selected ? undefined : 'datefield__placeholder'}>
+        {/* 화면 낭독기는 "2026. 11. 23."의 점을 소리 내어 읽기도 해, 이름은 년월일로 따로 둡니다 */}
+        <span id={valueId} className={selected ? undefined : 'datefield__placeholder'} aria-label={selected ? koDateSpoken(value) : undefined}>
           {selected ? koDate(value) : '날짜 고르기'}
         </span>
         <CalendarDays aria-hidden />
@@ -201,7 +206,7 @@ function Calendar({ labelId, label, value, onChange, min, max, invalid, describe
                           tabIndex={ymd === toYmd(focus) ? 0 : -1}
                           className={off ? 'datepicker__day is-off' : 'datepicker__day'}
                           // 선택 상태는 gridcell의 aria-selected를 읽지 않는 화면 낭독기가 많아 이름에도 붙입니다
-                          aria-label={isSel ? `${koDate(ymd)}, 선택됨` : koDate(ymd)}
+                          aria-label={isSel ? `${koDateSpoken(ymd)}, 선택됨` : koDateSpoken(ymd)}
                           aria-current={ymd === today ? 'date' : undefined}
                           aria-disabled={outOfRange(ymd) || undefined}
                           onClick={() => pick(ymd)}

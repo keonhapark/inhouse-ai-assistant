@@ -69,7 +69,7 @@ const EGRESS: Egress[] = [
 const KINDS: [Audit['kind'], Audit['source'], Audit['result'], string | null, Audit['riskLevel'], agentId: string][] = [
   ['route.decided', 'agent', 'ok', null, null, 'assistant'],
   ['tool.called', 'mcp', 'ok', 'room_list_availability', 'read', 'assistant'],
-  ['erp.write', 'erp', 'ok', 'reserveRoom', 'reversible_write', 'assistant'],
+  ['erp.write', 'erp', 'ok', 'createRoomReservation', 'reversible_write', 'assistant'],
   ['llm.request', 'gateway', 'ok', null, null, 'procurement'],
   ['llm.redacted', 'gateway', 'ok', null, null, 'assistant'],
   ['tool.blocked', 'mcp', 'denied', 'delegation_register', 'reversible_write', 'hr'],

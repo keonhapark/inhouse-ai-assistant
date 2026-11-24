@@ -29,6 +29,11 @@ describe('대결 설정', () => {
     renderDelegations()
     const panel = await screen.findByRole('main', { name: '대결 설정' })
     expect(await within(panel).findByText('윤서진 → 서도윤')).toBeInTheDocument()
+    const list = within(panel).getByRole('region', { name: '지정한 대결' })
+    expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0)
+    expect(list).toHaveTextContent(`${within(list).getAllByRole('listitem').length}건`)
+    expect(list.querySelectorAll('.status').length).toBe(within(list).getAllByRole('listitem').length)
+    expect(within(list).getAllByText(/^(대결 중|예정|종료|해제)$/).length).toBeGreaterThan(0)
     expect(within(panel).queryByRole('button', { name: /해제$/ })).toBeNull()
   })
 

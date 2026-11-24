@@ -1,22 +1,13 @@
 import type { Schemas } from '../api/client'
+import { formatDateTime, ISO_DATETIME } from '../display/format'
 
 type Change = Schemas['Change']
 export type ChangeRow = { field: string; before?: string; after?: string }
 
-const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/
-const ymdhm = new Intl.DateTimeFormat('ko-KR', {
-  year: 'numeric',
-  month: 'numeric',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
-
 function text(v: unknown): string {
   if (v === null || v === undefined) return '없음'
   // 날짜·시각 문자열은 현지 시각으로 보여 줍니다.
-  if (typeof v === 'string' && ISO_DATETIME.test(v)) return ymdhm.format(new Date(v))
+  if (typeof v === 'string' && ISO_DATETIME.test(v)) return formatDateTime(v)
   return typeof v === 'object' ? JSON.stringify(v) : String(v)
 }
 
@@ -36,6 +27,3 @@ export function changeRows(c: Change): ChangeRow[] {
 
 const OP = { create: '추가', update: '변경', delete: '삭제' } as const
 export const opLabel = (op: Change['op']) => OP[op]
-
-const hm = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
-export const formatTime = (iso: string) => hm.format(new Date(iso))

@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router-dom'
 import { api, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { useLoad } from '../admin/load'
-import { formatDateTime } from '../inbox/labels'
+import { formatDateTime } from '../display/format'
 import { conditionName, setName } from './labels'
 import { ScenarioTable } from './ScenarioTable'
 import { SetSection } from './SetSection'
@@ -13,7 +13,7 @@ import './eval.css'
 // openapi-typescript가 JSON Schema의 $defs를 속성으로 옮겨 적어 뺍니다(응답 본문에는 없음).
 type Report = Omit<Schemas['report.schema'], '$defs'>
 
-/** 평가 리포트(auditor). eval 하네스가 쓴 보고서 JSON을 gateway로 받아 보여 줍니다. 통계는 보고서 summary의 값을 그대로 씁니다. */
+/** 평가 보고서(auditor). eval 하네스가 쓴 보고서 JSON을 gateway로 받아 보여 줍니다. 통계는 보고서 summary의 값을 그대로 씁니다. */
 export function EvalReportPage() {
   const [params, setParams] = useSearchParams()
   const list = useLoad('eval-reports', () => api.GET('/eval/reports'), '평가 보고서 목록을 불러오지 못했습니다.')
@@ -23,10 +23,10 @@ export function EvalReportPage() {
 
   return (
     <main className="admin eval" aria-labelledby="eval-title">
-      <Toolbar title="평가 리포트" titleId="eval-title" />
+      <Toolbar title="평가 보고서" titleId="eval-title" />
       <div className="admin__body">
       {list.status === 'loading' && <p className="muted">불러오는 중입니다.</p>}
-      {list.status === 'error' && <p role="alert">{list.message}</p>}
+      {list.status === 'error' && <p role="alert" className="alert">{list.message}</p>}
       {list.status === 'ok' && items.length === 0 && <p className="muted">아직 커밋된 평가 보고서가 없습니다.</p>}
       {items.length > 0 && (
         <label className="admin__field">
@@ -54,7 +54,7 @@ function ReportView({ reportId }: { reportId: string }) {
     '평가 보고서를 불러오지 못했습니다.',
   )
   if (state.status === 'loading') return <p className="muted">불러오는 중입니다.</p>
-  if (state.status === 'error') return <p role="alert">{state.message}</p>
+  if (state.status === 'error') return <p role="alert" className="alert">{state.message}</p>
   const { meta, rows, summary } = state.data
   const sets = [...new Set(rows.map((r) => r.set))]
 
@@ -63,7 +63,7 @@ function ReportView({ reportId }: { reportId: string }) {
       <section aria-labelledby="eval-meta" className="eval__meta">
         <h2 id="eval-meta">실행 조건</h2>
         {!meta.complete && (
-          <p role="status" className="alert">
+          <p role="status" className="notice-warn">
             일부만 실행했습니다({meta.done_runs}/{meta.planned_runs}회차){meta.stopped_reason ? `: ${meta.stopped_reason}` : ''}. 결과를 다른 보고서와 섞어 비교하지 않습니다.
           </p>
         )}
@@ -106,7 +106,7 @@ function ReportView({ reportId }: { reportId: string }) {
       {summary ? (
         summary.sets.map((s) => <SetSection key={s.set} s={s} conditions={meta.conditions} passK={summary.passK} />)
       ) : (
-        <p className="alert">이 보고서에는 요약이 없어 지표 표를 그리지 않습니다. 지표는 저장소의 같은 이름 .md 보고서에서 보세요.</p>
+        <p className="notice-warn">이 보고서에는 요약이 없어 지표 표를 그리지 않습니다. 지표는 저장소의 같은 이름 .md 보고서에서 보세요.</p>
       )}
 
       <ScenarioTable rows={rows} conditions={meta.conditions} />

@@ -41,7 +41,7 @@ describe('왼쪽 탐색 막대', () => {
   it('감사 조회 역할은 운영 묶음의 메뉴 넷을 봅니다', async () => {
     renderApp('/ops/audit', 'mock.emp-2008')
     const ops = within(await nav()).getByRole('group', { name: '운영' })
-    expect(within(ops).getAllByRole('link').map((a) => a.textContent)).toEqual(['운영 지표', '외부 전송 기록', '감사 로그', '평가 리포트'])
+    expect(within(ops).getAllByRole('link').map((a) => a.textContent)).toEqual(['운영 지표', '외부 전송 기록', '감사 로그', '평가 보고서'])
     expect(within(ops).getByRole('link', { name: '감사 로그' })).toHaveAttribute('aria-current', 'page')
   })
 
@@ -159,7 +159,7 @@ describe('예전 주소', () => {
   it.each([
     ['/inbox', /^결재(,|$)/, 'mock.emp-2001'],
     ['/admin', '운영 지표', 'mock.emp-2008'],
-    ['/eval', '평가 리포트', 'mock.emp-2008'],
+    ['/eval', '평가 보고서', 'mock.emp-2008'],
   ])('%s는 새 주소로 옮깁니다', async (path, name, token) => {
     renderApp(path, token)
     const n = await nav()

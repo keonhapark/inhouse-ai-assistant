@@ -1,5 +1,6 @@
 /**
  * 화면에 보이는 값의 한국어 형식(#556). 어느 화면 디자인이든 같이 씁니다(#558).
+ * 모든 화면이 날짜는 "2026. 11. 24.", 시각은 "오후 2:30"으로 씁니다(#557 리드 결정, 2026-11-24).
  * 날짜만 있는 값(YYYY-MM-DD)은 시간대를 타지 않게 UTC로 읽어 그대로 보여 줍니다.
  */
 
@@ -8,9 +9,8 @@ export const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[
 
 const date = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC' })
 const weekday = new Intl.DateTimeFormat('ko-KR', { weekday: 'short', timeZone: 'UTC' })
-const dateTime = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
-const hm = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
-const md = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' })
+const dateTime = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+const hm = new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: '2-digit', hour12: true })
 const ymd = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' })
 
 /** 5800 → "5,800원". 값이 없으면 "–" */
@@ -26,7 +26,7 @@ export function formatDate(v: string): string {
   return `${date.format(d)}(${weekday.format(d)})`
 }
 
-/** ISO 시각 → "2026. 11. 22. 11:20"(현지 시각) */
+/** ISO 시각 → "2026. 11. 22. 오전 11:20"(현지 시각) */
 export function formatDateTime(iso: string): string {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? iso : dateTime.format(d)
@@ -37,7 +37,13 @@ export const formatDateRange = (from: string, to: string) => `${formatDate(from)
 
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 
-/** 목록에서 언제인지: 오늘이면 "오늘 11:20", 어제면 "어제 11:20", 올해면 "11월 20일", 다른 해면 "2025. 11. 20." */
+/** ISO 시각 → "오후 2:30"(현지 시각). 시각 꼴이 아니면 그대로 */
+export function formatTime(iso: string): string {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? iso : hm.format(d)
+}
+
+/** 목록에서 언제인지: 오늘이면 "오늘 오전 11:20", 어제면 "어제 오전 11:20", 그 전이면 "2026. 11. 20." */
 export function formatWhen(iso: string, now = new Date()): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
@@ -45,5 +51,5 @@ export function formatWhen(iso: string, now = new Date()): string {
   const y = new Date(now)
   y.setDate(now.getDate() - 1)
   if (sameDay(d, y)) return `어제 ${hm.format(d)}`
-  return d.getFullYear() === now.getFullYear() ? md.format(d) : ymd.format(d)
+  return ymd.format(d)
 }

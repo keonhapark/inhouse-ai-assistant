@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addMonths, koDate, parseYmd, toYmd } from './dates'
+import { addMonths, koDate, koHour, parseYmd, toYmd } from './dates'
 
 describe('날짜 계산', () => {
   it('달을 옮겨도 그 달의 마지막 날을 넘지 않습니다', () => {
@@ -15,6 +15,10 @@ describe('날짜 계산', () => {
   })
 
   it('날짜·시각 값의 앞 날짜만 읽습니다', () => {
-    expect(koDate('2026-11-23T09:00')).toBe('2026년 11월 23일(월)')
+    expect(koDate('2026-11-23T09:00')).toBe('2026. 11. 23.(월)')
+  })
+
+  it('시는 오전·오후 12시간제로 보입니다(0시는 오전 12시, 12시는 오후 12시)', () => {
+    expect([0, 9, 12, 14, 23].map(koHour)).toEqual(['오전 12시', '오전 9시', '오후 12시', '오후 2시', '오후 11시'])
   })
 })

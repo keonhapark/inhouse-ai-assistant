@@ -1,6 +1,6 @@
 import { Badge, LocalBadge, RiskBadge } from '../components/Badge'
 import { Button } from '../components/Button'
-import { Card } from '../components/Card'
+import '../chat/chat.css'
 import './pages.css'
 
 const TOKENS = ['bg', 'surface', 'fill', 'fill-2', 'sep', 'sep-strong', 'text', 'text-2', 'accent', 'accent-fill', 'progress', 'success', 'warning', 'danger']
@@ -51,27 +51,17 @@ export function DesignPage() {
 
       <section aria-labelledby="cards">
         <h2 id="cards">실행 전 확인 카드</h2>
-        <Card
-          header={
-            <>
-              <strong>전사 비서</strong>
-              <code>room_reserve</code>
-              <RiskBadge risk="reversible_write" />
-            </>
-          }
-          footer={
-            <>
-              <span className="muted mono">14:32까지 확인</span>
-              <Button>취소</Button>
-              <Button variant="primary">실행</Button>
-            </>
-          }
-        >
-          <p>3층 소회의실을 예약합니다.</p>
-          <p className="muted">
-            시간: <s>없음</s> → 11월 21일 14:00–15:00
-          </p>
-        </Card>
+        <section className="sheet" aria-label="실행 전 확인: 회의실 예약">
+          <header className="sheet__head">
+            <h3 className="sheet__title">회의실 예약</h3>
+          </header>
+          <p className="sheet__summary">3층 소회의실을 예약합니다.</p>
+          <footer className="sheet__foot">
+            <span className="sheet__when">오후 2:32까지 확인</span>
+            <Button>취소</Button>
+            <Button variant="primary">회의실 예약</Button>
+          </footer>
+        </section>
       </section>
     </main>
   )

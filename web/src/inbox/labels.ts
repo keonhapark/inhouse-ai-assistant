@@ -3,6 +3,9 @@ import type { BadgeTone } from '../components/Badge'
 
 type Label = { label: string; tone: BadgeTone }
 
+/** 상태 이름의 색 → 상태 점 클래스(.status--*, ux/design-system.md 3.3) */
+export const TONE_DOT = { accent: 'progress', success: 'green', danger: 'red', neutral: 'gray', warning: 'orange', local: 'blue' } as const satisfies Record<BadgeTone, string>
+
 export const DOC_STATUS: Record<Schemas['ApprovalStatus'], Label> = {
   in_progress: { label: '진행 중', tone: 'accent' },
   approved: { label: '승인', tone: 'success' },
@@ -33,12 +36,3 @@ export const BOXES = [
 ] as const
 
 export type Box = (typeof BOXES)[number]['box']
-
-const dt = new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
-const dty = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
-/** 올해면 연도를 빼고, 다른 해면 연도까지 보여 줍니다. */
-export const formatDateTime = (iso: string, now = new Date()) => {
-  const d = new Date(iso)
-  return (d.getFullYear() === now.getFullYear() ? dt : dty).format(d)
-}
-export const formatAmount = (n: number | null | undefined) => (n == null ? '–' : `${n.toLocaleString('ko-KR')}원`)

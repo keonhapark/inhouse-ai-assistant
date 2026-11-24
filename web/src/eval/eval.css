@@ -1,6 +1,5 @@
 .eval h2 {
   margin: var(--space-4) 0 var(--space-2);
-  font-size: var(--fs-title3);
 }
 
 .eval h3 {

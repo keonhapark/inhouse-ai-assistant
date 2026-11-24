@@ -8,7 +8,7 @@ import type { StatusTone } from '../display/conversation'
 import { previewView } from '../display/preview'
 import { toolName } from '../display/names'
 import { useLookups } from '../display/useLookups'
-import { formatTime } from './format'
+import { formatTime } from '../display/format'
 import { Markdown } from './markdown'
 import type { Citation, ThreadItem } from './thread'
 
@@ -123,7 +123,7 @@ export function PreviewCard({ approval, fromImage, photo, decision, closed, busy
   if (result) {
     return (
       <section className="sheet sheet--closed" aria-label={`실행 전 확인: ${label}`}>
-        <h3 className="sheet__title">{label}</h3>
+        <h2 className="sheet__title">{label}</h2>
         <span className={`status status--${result.tone}`}>{result.label}</span>
         <span className="sheet__closed-summary">{preview.summary}</span>
       </section>
@@ -135,7 +135,7 @@ export function PreviewCard({ approval, fromImage, photo, decision, closed, busy
   return (
     <section className="sheet" aria-label={`실행 전 확인: ${label}`}>
       <header className="sheet__head">
-        <h3 className="sheet__title">{label}</h3>
+        <h2 className="sheet__title">{label}</h2>
         {fromImage && (
           <span className="tag">
             <ImageIcon aria-hidden />
@@ -143,7 +143,7 @@ export function PreviewCard({ approval, fromImage, photo, decision, closed, busy
           </span>
         )}
       </header>
-      <SheetBody preview={preview} photo={fromImage ? photo : undefined} danger={danger} />
+      <PreviewSheetBody preview={preview} photo={fromImage ? photo : undefined} danger={danger} />
       <footer className="sheet__foot">
         <span className="sheet__when">
           {fromImage
@@ -161,7 +161,8 @@ export function PreviewCard({ approval, fromImage, photo, decision, closed, busy
   )
 }
 
-function SheetBody({ preview, photo, danger }: { preview: Schemas['WritePreview']; photo?: { url: string; name: string }; danger: boolean }) {
+/** 실행 전 확인 시트의 본문(금액 → 요약 → 값 행 → 결재선 → 경고 → 자세히). 채팅 시트와 대결 지정 확인이 같이 씁니다 */
+export function PreviewSheetBody({ preview, photo, danger }: { preview: Schemas['WritePreview']; photo?: { url: string; name: string }; danger: boolean }) {
   const lookups = useLookups()
   const views = preview.changes.map((c) => previewView(c, lookups))
   // 금액은 값 행에서 빼 맨 위에 크게 둡니다(첫 변경의 금액 하나)
@@ -267,68 +268,6 @@ function ChangeValue({ before, after }: { before?: string; after?: string }) {
       {before !== undefined && after !== undefined && ' → '}
       {after !== undefined && <span>{after}</span>}
     </dd>
-  )
-}
-
-/**
- * 미리보기(WritePreview)의 바뀌는 값과 경고. 채팅 미리보기 카드와 대결 등록이 같이 씁니다.
- * 양식 필드 이름·한국어 값·결재선만 보이고, API가 준 원래 값은 "자세히" 안에 둡니다(#556).
- */
-export function PreviewChanges({ preview }: { preview: Schemas['WritePreview'] }) {
-  const lookups = useLookups()
-  return (
-    <>
-      {preview.changes.map((c, i) => {
-        const v = previewView(c, lookups)
-        return (
-          <div key={i} className="changes">
-            <span className="muted">
-              {v.title} {v.op}
-            </span>
-            {v.rows.length > 0 && (
-              <dl>
-                {v.rows.map((r) => (
-                  <div key={r.key} className="changes__row">
-                    <dt>{r.label}</dt>
-                    <ChangeValue before={r.before} after={r.after} />
-                  </div>
-                ))}
-              </dl>
-            )}
-            {v.line.length > 0 && (
-              <div className="changes__line">
-                <span className="muted">결재선</span>
-                <ol>
-                  {v.line.map((s) => (
-                    <li key={s.order}>
-                      {s.who} · {s.status}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-            {v.raw.length > 0 && (
-              <details className="changes__raw">
-                <summary>자세히</summary>
-                <dl>
-                  {v.raw.map((r) => (
-                    <div key={r.field} className="changes__row">
-                      <dt className="mono">{r.field}</dt>
-                      <ChangeValue before={r.before} after={r.after} />
-                    </div>
-                  ))}
-                </dl>
-              </details>
-            )}
-          </div>
-        )
-      })}
-      {preview.warnings?.map((w) => (
-        <p key={w} className="warning-line">
-          {w}
-        </p>
-      ))}
-    </>
   )
 }
 

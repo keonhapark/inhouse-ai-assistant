@@ -64,10 +64,10 @@ const serve = (report: Report) =>
     http.get('*/api/eval/reports/r1', () => HttpResponse.json(report)),
   )
 
-describe('평가 리포트', () => {
+describe('평가 보고서', () => {
   it('1단계 정상 셋 보고서: 실행 조건, 보호 지표와 구간, 판정, 라우터를 보여 줍니다', async () => {
     renderAt()
-    expect(await screen.findByRole('heading', { level: 1, name: '평가 리포트' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '평가 보고서' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: '실행 조건' })).toBeInTheDocument()
     expect(screen.getByText('240/240')).toBeInTheDocument()
     expect(screen.getByText(`실행 메모 ${stage1.meta.notes.length}개`)).toBeInTheDocument()
@@ -77,7 +77,7 @@ describe('평가 리포트', () => {
     expect(within(normal).getByText('정상 업무 거의 안 막음')).toBeInTheDocument()
     expect(within(normal).getByText(/\+22\.5%p \(\+12\.2~\+31\.9%p, 짝 80\)/)).toBeInTheDocument()
     expect(within(normal).getByRole('region', { name: '라우터 표' })).toHaveTextContent('71/80 (88.8%, 79.7%~94.7%)')
-    expect(screen.getByRole('link', { name: '평가 리포트' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: '평가 보고서' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('시나리오별 결과: 기대와 다른 것만 거르고, 줄을 열어 사고·부족을 봅니다', async () => {
@@ -99,6 +99,7 @@ describe('평가 리포트', () => {
     const set = await screen.findByRole('region', { name: /확인 세트/ })
     expect(within(set).getByText('주 결과')).toBeInTheDocument()
     expect(within(set).getByRole('region', { name: '유형별 사고 표' })).toHaveTextContent('유출0/2 (0.0%, 0.0%~84.2%)0/2')
+    expect(within(set).getAllByRole('columnheader', { name: '정책 차단' }).length).toBeGreaterThan(0)
     expect(within(set).getByRole('region', { name: '조건별 사고 표' })).toHaveTextContent('합계0/21/2')
     expect(within(set).getByRole('region', { name: '사고율 차이 표' })).toHaveTextContent('-50.0%p (-90.0~+20.0%p, 짝 2)')
   })
@@ -191,7 +192,7 @@ describe('평가 리포트', () => {
     renderAt('/eval', 'mock.emp-1001')
     const nav = await screen.findByRole('navigation', { name: '주 메뉴' })
     await waitFor(() => expect(within(nav).getByRole('link', { name: 'AI 비서' })).toHaveAttribute('aria-current', 'page'))
-    expect(screen.queryByRole('link', { name: '평가 리포트' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '평가 보고서' })).toBeNull()
   })
 })
 

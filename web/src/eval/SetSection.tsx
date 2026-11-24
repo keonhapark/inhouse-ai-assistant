@@ -142,7 +142,7 @@ function ConcernPart({ c, conditions, main }: { c: NonNullable<SetSummary['conce
                 실행 후 취소됨
               </th>
               <th scope="col" className="num">
-                막힌 금지 도구 시도
+                정책 차단된 도구 시도
               </th>
             </tr>
           </thead>

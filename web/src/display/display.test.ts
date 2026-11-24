@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Schemas } from '../api/client'
 import { conversationRow } from './conversation'
-import { formatDate, formatDateRange, formatDateTime, formatWhen, formatWon } from './format'
-import { agentLabel, roleName, toolName } from './names'
+import { formatDate, formatDateRange, formatDateTime, formatTime, formatWhen, formatWon } from './format'
+import { agentLabel, operationName, roleName, toolName } from './names'
 import { formRows, previewView } from './preview'
 
 const expense: Schemas['ApprovalForm'] = {
@@ -49,17 +49,29 @@ describe('형식', () => {
     expect(formatDateTime('2026-13-40T25:99Z')).toBe('2026-13-40T25:99Z')
   })
 
-  it('목록의 언제: 오늘·어제·올해·다른 해', () => {
+  it('시각은 "2026. 11. 22. 오후 2:30", 시각만은 "오후 2:30"(현지 시각)', () => {
+    expect(formatDateTime(new Date(2026, 10, 22, 14, 30).toISOString())).toBe('2026. 11. 22. 오후 2:30')
+    expect(formatTime(new Date(2026, 10, 22, 9, 5).toISOString())).toBe('오전 9:05')
+    expect(formatTime(new Date(2026, 10, 22, 12, 0).toISOString())).toBe('오후 12:00')
+    expect(formatTime(new Date(2026, 10, 22, 0, 0).toISOString())).toBe('오전 12:00')
+    expect(formatTime('없음')).toBe('없음')
+  })
+
+  it('목록의 언제: 오늘·어제·그 전', () => {
     const now = new Date(2026, 10, 22, 20, 0)
-    expect(formatWhen(new Date(2026, 10, 22, 11, 20).toISOString(), now)).toBe('오늘 11:20')
-    expect(formatWhen(new Date(2026, 10, 21, 9, 5).toISOString(), now)).toBe('어제 09:05')
-    expect(formatWhen(new Date(2026, 10, 3, 9, 5).toISOString(), now)).toBe('11월 3일')
+    expect(formatWhen(new Date(2026, 10, 22, 11, 20).toISOString(), now)).toBe('오늘 오전 11:20')
+    expect(formatWhen(new Date(2026, 10, 21, 9, 5).toISOString(), now)).toBe('어제 오전 9:05')
+    expect(formatWhen(new Date(2026, 10, 3, 9, 5).toISOString(), now)).toBe('2026. 11. 3.')
     expect(formatWhen(new Date(2025, 10, 3, 9, 5).toISOString(), now)).toBe('2025. 11. 3.')
   })
 
   it('도구·역할 이름, 모르면 그대로', () => {
     expect(toolName('expense_request')).toBe('경비 정산 상신')
     expect(toolName('new_tool')).toBe('new_tool')
+    // 감사 로그 작업: erp operationId, 아니면 도구 이름, 모르면 그대로
+    expect(operationName('createRoomReservation')).toBe('회의실 예약')
+    expect(operationName('approval_withdraw')).toBe('결재 회수')
+    expect(operationName('unknownOp')).toBe('unknownOp')
     expect(roleName('sales_staff')).toBe('영업 담당')
     expect(roleName('x')).toBe('x')
   })
@@ -77,9 +89,9 @@ describe('대화 목록', () => {
     expect(conversationRow({ ...base, status: 'awaiting_approval', updatedAt: new Date(2026, 10, 22, 11, 20).toISOString() }, now)).toEqual({
       agent: '재무 담당 AI',
       status: { label: '확인 필요', tone: 'orange' },
-      when: '오늘 11:20',
+      when: '오늘 오전 11:20',
     })
-    expect(conversationRow({ ...base, agentName: null, status: 'active' }, now)).toEqual({ agent: '담당 AI 정하는 중', status: null, when: '오늘 11:17' })
+    expect(conversationRow({ ...base, agentName: null, status: 'active' }, now)).toEqual({ agent: '담당 AI 정하는 중', status: null, when: '오늘 오전 11:17' })
   })
 })
 
@@ -182,7 +194,7 @@ describe('실행 미리보기', () => {
     const r = previewView({ op: 'delete', resource: 'room_reservation', before: { id: 'r1', roomId: 'room-c', startsAt: '2026-11-25T06:00:00Z', status: 'confirmed' } })
     expect(r.op).toBe('삭제')
     expect(r.rows.find((x) => x.key === 'status')?.before).toBe('확정')
-    expect(r.rows.find((x) => x.key === 'startsAt')?.before).toMatch(/^2026\. 11\. 25\. \d{2}:00$/)
+    expect(r.rows.find((x) => x.key === 'startsAt')?.before).toMatch(/^2026\. 11\. 25\. 오[전후] \d{1,2}:00$/)
     const g = previewView(
       { op: 'create', resource: 'delegation', after: { delegateId: 'E0036', startsAt: '2026-11-23T12:00:00+09:00', scope: { formTypes: ['leave'], maxAmount: null } } },
       { forms: [leave], people },

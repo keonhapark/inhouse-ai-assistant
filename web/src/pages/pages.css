@@ -44,10 +44,6 @@
   border-radius: var(--r-sm);
 }
 
-.card p {
-  margin: 0 0 var(--space-1);
-}
-
 /* 로그인(ux/research/ia.md 3절: 제품 이름, 소개 한 줄, 문의처). 가운데 시트 하나 */
 .login {
   display: grid;
@@ -92,7 +88,6 @@
 
 .login__intro,
 .login__help,
-.login__error,
 .page-loading {
   margin: 0;
   font-size: var(--fs-footnote);
@@ -113,10 +108,6 @@
 .page-loading {
   padding: var(--space-8);
   text-align: center;
-}
-
-.login__error {
-  color: var(--danger);
 }
 
 .login__field {
