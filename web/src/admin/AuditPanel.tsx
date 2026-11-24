@@ -2,9 +2,9 @@ import { useState, type FormEvent } from 'react'
 import { api, type Schemas } from '../api/client'
 import { Badge, RiskBadge, type BadgeTone } from '../components/Badge'
 import { Button } from '../components/Button'
-import { toolName } from '../display/names'
+import { operationName } from '../display/names'
 import { useLookups } from '../display/useLookups'
-import { formatDateTime } from '../inbox/labels'
+import { formatDateTime } from '../display/format'
 import type { Range } from './AdminPage'
 import { useLoad, usePaged } from './load'
 
@@ -18,19 +18,20 @@ const KIND: Record<Audit['kind'], string> = {
   'auth.delegation_token_issued': '대행 토큰 발급',
   'route.decided': '라우팅',
   'tool.called': '도구 실행',
-  'tool.blocked': '도구 차단',
+  'tool.blocked': '정책 차단',
   'execution_approval.requested': '실행 전 확인 요청',
   'execution_approval.decided': '실행 전 확인 결정',
   'llm.request': 'LLM 요청',
   'llm.redacted': 'LLM 가림',
   'rag.answered': '규정 답변',
-  'rag.access_denied': '문서 접근 거절',
+  'rag.access_denied': '문서 권한 없음',
   'rag.document_purged': '문서 파기',
 }
 
 const RESULT: Record<Audit['result'], { label: string; tone: BadgeTone }> = {
   ok: { label: '성공', tone: 'success' },
-  denied: { label: '거절', tone: 'danger' },
+  // denied는 정책에 걸린 도구 실행(tool.blocked)이면 정책 차단, 그 밖에는 권한 없음입니다(ux/copy-guide.md 용어집)
+  denied: { label: '권한 없음', tone: 'danger' },
   conflict: { label: '충돌', tone: 'warning' },
   error: { label: '오류', tone: 'danger' },
   pending: { label: '대기', tone: 'neutral' },
@@ -119,7 +120,7 @@ export function AuditPanel({ range }: { range: Range }) {
 
       {agents.status === 'error' && <p className="muted">{agents.message}</p>}
       {first.status === 'loading' && <p className="muted">불러오는 중입니다.</p>}
-      {first.status === 'error' && <p role="alert">{first.message}</p>}
+      {first.status === 'error' && <p role="alert" className="alert">{first.message}</p>}
       {first.status === 'ok' && items.length === 0 && <p className="muted">조건에 맞는 감사 이벤트가 없습니다.</p>}
       {items.length > 0 && (
         <div className="table-scroll" role="region" aria-label="감사 이벤트 표" tabIndex={0}>
@@ -148,12 +149,12 @@ export function AuditPanel({ range }: { range: Range }) {
                 </td>
                 <td>{e.actor.agentId ? <Named name={agentName(e.actor.agentId)} id={e.actor.agentId} /> : '–'}</td>
                 <td>
-                  {e.operation ? <Named name={toolName(e.operation) === e.operation ? undefined : toolName(e.operation)} id={e.operation} /> : '–'}
+                  {e.operation ? <Named name={operationName(e.operation) === e.operation ? undefined : operationName(e.operation)} id={e.operation} /> : '–'}
                   {e.riskLevel && <RiskBadge risk={e.riskLevel} />}
                   {e.detail && <div className="muted audit__detail">{e.detail}</div>}
                 </td>
                 <td>
-                  <Badge tone={(RESULT[e.result] ?? UNKNOWN).tone}>{(RESULT[e.result] ?? { label: e.result }).label}</Badge>
+                  <Badge tone={(RESULT[e.result] ?? UNKNOWN).tone}>{e.result === 'denied' && e.kind === 'tool.blocked' ? '정책 차단' : (RESULT[e.result] ?? { label: e.result }).label}</Badge>
                 </td>
               </tr>
             ))}
@@ -161,7 +162,7 @@ export function AuditPanel({ range }: { range: Range }) {
         </table>
         </div>
       )}
-      {moreError && <p role="alert">{moreError}</p>}
+      {moreError && <p role="alert" className="alert">{moreError}</p>}
       {next && (
         <Button onClick={() => void loadMore()} disabled={loadingMore}>
           {loadingMore ? '불러오는 중' : '더 보기'}

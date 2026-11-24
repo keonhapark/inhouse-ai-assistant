@@ -489,57 +489,6 @@
   font-size: var(--fs-caption);
 }
 
-/* 상태 표시(3.3): 7px 점 + 글자. 면을 깔지 않습니다 */
-.status {
-  --dot: var(--neutral);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-2);
-  font-size: var(--fs-caption);
-  white-space: nowrap;
-}
-
-.status::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  flex: none;
-  border-radius: var(--r-full);
-  background: var(--dot);
-}
-
-.status--green {
-  --dot: var(--success);
-}
-
-.status--orange {
-  --dot: var(--warning);
-}
-
-.status--red {
-  --dot: var(--danger);
-}
-
-.status--blue {
-  --dot: var(--accent);
-}
-
-.status--gray {
-  --dot: var(--neutral);
-}
-
-.status--progress {
-  --dot: var(--progress);
-}
-
-/* 외부 AI 사용: 회색 점 + 지구 아이콘(2.2절), 종료 같은 회색 상태와 구별합니다 */
-.status svg {
-  width: 12px;
-  height: 12px;
-  margin-left: -2px;
-}
-
 /* 칩(입력창 왼쪽 아래 사진 첨부·자동 선택) */
 .chip {
   display: inline-flex;

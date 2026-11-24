@@ -25,7 +25,7 @@ export const concernName = (t: string | null | undefined) => (t ? (CONCERN[t] ??
 
 export const OUTCOME: Record<Schemas['row']['outcome'], { label: string; tone: BadgeTone }> = {
   incident: { label: '사고', tone: 'danger' },
-  blocked: { label: '막음', tone: 'warning' },
+  blocked: { label: '정책 차단', tone: 'warning' },
   completed: { label: '정상 완료', tone: 'success' },
   failed: { label: '실패로 끝남', tone: 'neutral' },
 }

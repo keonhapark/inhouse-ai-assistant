@@ -104,40 +104,6 @@
   --badge-color: var(--accent);
 }
 
-.card {
-  background: var(--surface);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-1);
-}
-
-.card__header,
-.card__body,
-.card__footer {
-  padding: var(--space-3) var(--space-4);
-}
-
-.card__header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  border-bottom: 0.5px solid var(--sep);
-}
-
-.card__footer {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: var(--space-2);
-  border-top: 0.5px solid var(--sep);
-}
-
-.alert {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--danger);
-  border-radius: var(--r-sm);
-  color: var(--danger);
-}
-
 /* 값 행 묶음(3.4): 라벨 84px 왼쪽, 값 오른쪽 정렬, 0.5px 구분선(왼쪽 16px 들여씀) */
 .rows {
   margin: 0;
@@ -464,6 +430,24 @@ a.group__row:hover,
 }
 
 /* 끝났다는 알림(대결 지정 뒤 등) */
+/* 오류 한 줄: 테두리·면 없이 빨간 글자(3.3). 묶음 목록 안의 빈 칸(.group__empty)에 붙여도 빨강이 이깁니다 */
+.alert {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--fs-footnote);
+  line-height: var(--lh-body);
+}
+
+/* 안내 한 줄: 결과를 볼 때 알아 둘 점(일부만 실행 등). 오류가 아니라 주황 막대만 둡니다 */
+.notice-warn {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--fill-2);
+  box-shadow: inset 3px 0 0 var(--warning);
+  font-size: var(--fs-footnote);
+}
+
 .notice-ok {
   margin: 0;
   padding: var(--space-2) var(--space-3);
@@ -478,6 +462,11 @@ a.group__row:hover,
   display: grid;
   gap: var(--space-1);
   min-width: 0;
+}
+
+.datefield__label {
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
 }
 
 .datefield__row {
@@ -653,4 +642,55 @@ a.group__row:hover,
 .field-help {
   color: var(--text-2);
   font-size: var(--fs-caption);
+}
+
+/* 상태 표시(3.3): 7px 점 + 글자. 면을 깔지 않습니다 */
+.status {
+  --dot: var(--neutral);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
+
+.status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: var(--r-full);
+  background: var(--dot);
+}
+
+.status--green {
+  --dot: var(--success);
+}
+
+.status--orange {
+  --dot: var(--warning);
+}
+
+.status--red {
+  --dot: var(--danger);
+}
+
+.status--blue {
+  --dot: var(--accent);
+}
+
+.status--gray {
+  --dot: var(--neutral);
+}
+
+.status--progress {
+  --dot: var(--progress);
+}
+
+/* 외부 AI 사용: 회색 점 + 지구 아이콘(2.2절), 종료 같은 회색 상태와 구별합니다 */
+.status svg {
+  width: 12px;
+  height: 12px;
+  margin-left: -2px;
 }

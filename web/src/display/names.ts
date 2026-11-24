@@ -40,6 +40,27 @@ export const TOOL_LABELS: Record<string, string> = {
 }
 export const toolName = (name: string) => TOOL_LABELS[name] ?? name
 
+/** 감사 로그의 작업 이름. operation은 erp operationId 또는 MCP 도구 이름입니다(contracts/events/audit.schema.json). erp 쓰기 작업만 둡니다 */
+const OPERATION_LABELS: Record<string, string> = {
+  createApprovalDocument: '결재 상신',
+  approveApprovalDocument: '결재 승인',
+  rejectApprovalDocument: '결재 반려',
+  withdrawApprovalDocument: '결재 회수',
+  createDelegation: '대결 지정',
+  revokeDelegation: '대결 해제',
+  createRoomReservation: '회의실 예약',
+  cancelRoomReservation: '회의실 예약 취소',
+  createTicket: 'IT 티켓 등록',
+  addTicketComment: 'IT 티켓 댓글 등록',
+  changeTicketStatus: 'IT 티켓 상태 변경',
+  createDefectReport: '불량 보고서 작성',
+  confirmDefectReport: '불량 보고서 확정',
+  createQuote: '견적 작성',
+  issueQuote: '견적 발행',
+  undoAction: '실행 취소',
+}
+export const operationName = (op: string) => OPERATION_LABELS[op] ?? toolName(op)
+
 /** 역할 표시 이름. 세 팩 org.yaml roles. "○○ 담당"으로 통일하고 감사 조회만 그대로 둡니다(ux/copy-guide.md 1.5) */
 const ROLE_LABELS: Record<string, string> = {
   employee: '직원',
@@ -142,9 +163,9 @@ const ENUM_LABELS: Record<string, Record<string, string>> = {
     resolved: '해결',
     closed: '닫힘',
     scheduled: '예정',
-    active: '유효',
-    expired: '만료',
-    revoked: '해지',
+    active: '대결 중',
+    expired: '종료',
+    revoked: '해제',
   },
   severity: { minor: '경미', major: '중대', critical: '치명' },
   category: { incident: '장애', access_request: '계정·권한 요청', other: '그 밖의 요청' },

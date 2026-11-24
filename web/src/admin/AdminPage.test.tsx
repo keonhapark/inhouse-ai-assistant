@@ -105,7 +105,7 @@ describe('운영 화면', () => {
     await vi.waitFor(() => {
       const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1)
       expect(rows.length).toBeGreaterThan(0)
-      for (const r of rows) expect(r).toHaveTextContent('도구 차단')
+      for (const r of rows) expect(r).toHaveTextContent('정책 차단')
     })
     expect(screen.getAllByText(/신뢰 등급/).length).toBeGreaterThan(0)
   })

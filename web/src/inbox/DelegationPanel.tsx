@@ -1,16 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, problemTitle, type Schemas } from '../api/client'
-import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { DateTimeField } from '../components/DatePicker'
-import { Card } from '../components/Card'
+import { GroupHead } from '../components/Group'
 import { newIdempotencyKey } from '../chat/api'
-import { PreviewChanges } from '../chat/parts'
+import { PreviewSheetBody } from '../chat/parts'
+import { formatDateTime, formatWon } from '../display/format'
 import { useAuth } from '../auth/useAuth'
 import { DelegatePicker } from './DelegatePicker'
 import { FormScope } from './FormScope'
 import { checkDraft, initialDraft, toRequest, type Draft } from './draft'
-import { DELEGATION_STATUS, formatAmount, formatDateTime } from './labels'
+import { DELEGATION_STATUS, TONE_DOT } from './labels'
+import '../chat/chat.css'
 
 type DelegationView = Schemas['DelegationView']
 type DelegationCreate = Schemas['DelegationCreate']
@@ -142,34 +143,40 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
           {listError}
         </p>
       )}
-      {items && items.length === 0 && <p className="muted">지정한 대결이 없습니다.</p>}
-      {items && items.length > 0 && (
-        <ul className="delegation__list">
-          {items.map((d) => {
-            const st = DELEGATION_STATUS[d.status]
-            const canRevoke = d.delegatorId === meId && (d.status === 'active' || d.status === 'scheduled')
-            return (
-              <li key={d.id}>
-                <div className="delegation__head">
-                  <strong>
-                    {d.delegatorName} → {d.delegateName}
-                  </strong>
-                  <Badge tone={st.tone}>{st.label}</Badge>
-                </div>
-                <span className="muted mono">
-                  {formatDateTime(d.startsAt)} ~ {formatDateTime(d.endsAt)}
-                </span>
-                <span className="muted">
-                  {d.scope.formTypes.includes('*')
-                    ? '모든 양식'
-                    : d.scope.formTypes.map((id) => forms.find((f) => f.id === id)?.name ?? id).join(', ')}
-                  {d.scope.maxAmount != null && ` · ${formatAmount(d.scope.maxAmount)} 이하`} · {d.reason}
-                </span>
-                {canRevoke && <RevokeButton onRevoke={() => revoke(d)} label={`${d.delegateName} 대결 해제`} />}
-              </li>
-            )
-          })}
-        </ul>
+      {items && (
+        <section className="group" aria-labelledby="delegation-list-title">
+          <GroupHead id="delegation-list-title" level={2} title="지정한 대결" n={items.length > 0 ? `${items.length}건` : undefined} />
+          {items.length === 0 && <p className="group__empty">지정한 대결이 없습니다.</p>}
+          <ul className="group__list" hidden={items.length === 0}>
+            {items.map((d) => {
+              const st = DELEGATION_STATUS[d.status]
+              const canRevoke = d.delegatorId === meId && (d.status === 'active' || d.status === 'scheduled')
+              const formNames = d.scope.formTypes.includes('*')
+                ? '모든 양식'
+                : d.scope.formTypes.map((id) => forms.find((f) => f.id === id)?.name ?? id).join(', ')
+              return (
+                <li key={d.id}>
+                  <div className="group__row">
+                    <span className="group__main">
+                      <span className="group__title">
+                        {d.delegatorName} → {d.delegateName}
+                      </span>
+                      <span className="group__sub">
+                        {formatDateTime(d.startsAt)} ~ {formatDateTime(d.endsAt)}
+                      </span>
+                      <span className="group__sub">
+                        {formNames}
+                        {d.scope.maxAmount != null && ` · ${formatWon(d.scope.maxAmount)} 이하`} · {d.reason}
+                      </span>
+                    </span>
+                    <span className={`status status--${TONE_DOT[st.tone]}`}>{st.label}</span>
+                    {canRevoke && <RevokeButton onRevoke={() => revoke(d)} label={`${d.delegateName} 대결 해제`} />}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
       )}
 
       <form className="delegation__form" onSubmit={onPreview}>
@@ -201,29 +208,29 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
       </form>
 
       {preview && (
-        <Card
-          aria-label="대결 지정 확인"
-          header={<strong>대결 지정 확인</strong>}
-          footer={
-            <>
-              <Button
-                disabled={busy}
-                onClick={() => {
-                  setPreview(null)
-                  setPreviewed(null)
-                }}
-              >
-                취소
-              </Button>
-              <Button variant="primary" disabled={busy} onClick={() => void submit(false)}>
-                대결 지정
-              </Button>
-            </>
-          }
-        >
-          <p>{preview.summary}</p>
-          <PreviewChanges preview={preview} />
-        </Card>
+        <section className="sheet" aria-labelledby="delegation-confirm-title">
+          <header className="sheet__head">
+            <h2 id="delegation-confirm-title" className="sheet__title">
+              대결 지정 확인
+            </h2>
+          </header>
+          <PreviewSheetBody preview={preview} danger={false} />
+          <footer className="sheet__foot">
+            <span className="sheet__when" />
+            <Button
+              disabled={busy}
+              onClick={() => {
+                setPreview(null)
+                setPreviewed(null)
+              }}
+            >
+              취소
+            </Button>
+            <Button variant="primary" disabled={busy} onClick={() => void submit(false)}>
+              대결 지정
+            </Button>
+          </footer>
+        </section>
       )}
       {error && (
         <p role="alert" className="alert">
@@ -243,6 +250,7 @@ function RevokeButton({ onRevoke, label }: { onRevoke(): Promise<void>; label: s
   const [busy, setBusy] = useState(false)
   return (
     <Button
+      className="btn--sm"
       aria-label={label}
       disabled={busy}
       onClick={async () => {

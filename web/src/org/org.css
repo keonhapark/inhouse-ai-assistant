@@ -187,12 +187,6 @@
   font-size: var(--fs-footnote);
 }
 
-.org__error {
-  margin: 0;
-  color: var(--danger);
-  font-size: var(--fs-footnote);
-}
-
 /* AI 에이전트: 에이전트마다 머리 + 설명 + 값 행 + 할 수 있는 일 목록 */
 .registry__body {
   display: grid;

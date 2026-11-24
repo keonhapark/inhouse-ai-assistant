@@ -386,34 +386,14 @@
   gap: var(--space-3);
 }
 
-.delegation h2 {
+.delegation__form h2 {
   margin: 0;
   font-size: var(--fs-title3);
 }
 
-.delegation p {
+/* 소개 글. 안쪽 시트의 문단은 시트 여백을 그대로 씁니다 */
+.delegation > p {
   margin: 0;
-}
-
-.delegation__list {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.delegation__list li {
-  display: grid;
-  gap: var(--space-1);
-  justify-items: start;
-  padding: var(--space-2) var(--space-3);
-  border: 0.5px solid var(--sep);
-  border-radius: var(--r-sm);
-}
-
-.delegation__list .muted {
-  font-size: var(--fs-caption);
 }
 
 .delegation__form {
@@ -460,9 +440,3 @@
   border: 0;
 }
 
-.delegation__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
