@@ -86,6 +86,8 @@ const PAIRS: [string, string, string?][] = [
   ['danger', 'surface'],
   ['danger', 'fill', 'surface'],
   ['neutral', 'surface'],
+  // 대결 지정 화면처럼 --bg 위 입력칸의 자리 표시·보조 글
+  ['text-2', 'fill-2', 'bg'],
 ]
 
 describe.each([

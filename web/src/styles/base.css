@@ -62,14 +62,14 @@ input[type='checkbox'],
 input[type='radio'] {
   height: auto;
   padding: 0;
-  accent-color: var(--accent-fill);
+  accent-color: var(--accent);
 }
 
 label {
   display: grid;
   gap: var(--space-1);
   color: var(--text-2);
-  font-size: var(--fs-caption);
+  font-size: var(--fs-footnote);
 }
 
 .visually-hidden {

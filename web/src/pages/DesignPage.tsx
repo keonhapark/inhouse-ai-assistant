@@ -3,7 +3,7 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import './pages.css'
 
-const TOKENS = ['bg', 'surface', 'border', 'text', 'text-muted', 'accent', 'success', 'warning', 'danger', 'local']
+const TOKENS = ['bg', 'surface', 'fill', 'fill-2', 'sep', 'sep-strong', 'text', 'text-2', 'accent', 'accent-fill', 'progress', 'success', 'warning', 'danger']
 
 /** DESIGN.md의 토큰과 기본 부품을 한 화면에 모아 라이트·다크에서 확인합니다. */
 export function DesignPage() {
