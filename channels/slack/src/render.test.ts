@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { actionCard, approvalCard, collect, escape, toMrkdwn } from './render.js'
+import { actionCard, approvalCard, collect, escape, notificationMessage, toMrkdwn } from './render.js'
 import { ev, flat } from './test-util.js'
 
 describe('render', () => {
@@ -32,6 +32,19 @@ describe('render', () => {
   it('차단과 오류를 보여 줍니다', () => {
     const t = collect(ev([{ type: 'blocked', blocked: { reason: '급여는 볼 수 없습니다.', code: 'policy_denied' } }, { type: 'done' }]))
     expect(t.reply!.text).toContain('처리할 수 없는 요청 급여는 볼 수 없습니다.')
+    const d = collect(ev([{ type: 'blocked', blocked: { code: 'policy_denied' } }, { type: 'done' }]))
+    expect(d.reply!.text).toContain('처리할 수 없는 요청 회사 정책상 처리할 수 없는 요청입니다. 담당 부서에 문의하세요.')
+  })
+
+  it('완료한 일 카드: 실행 취소 단추, 취소됨, 실행 취소 실패 문구', () => {
+    expect(flat(actionCard({ actionId: 'a', tool: 't', summary: '예약함', undoable: true }))).toContain('"text":"실행 취소"')
+    expect(flat(actionCard({ actionId: 'a', tool: 't', summary: '예약함', undoable: true }, 'undone'))).toContain('취소됨')
+    expect(flat(actionCard({ actionId: 'a', tool: 't', summary: '예약함', undoable: true }, { failed: '이미 바뀌었습니다.' }))).toContain('실행 취소하지 못했습니다. 이미 바뀌었습니다.')
+  })
+
+  it('결재 알림은 web 결재 대기로 잇습니다', () => {
+    const m = notificationMessage({ id: 'n', type: 'approval_pending', message: '결재 차례입니다.', createdAt: '2026-11-24T00:00:00Z', read: false } as never, 'http://web.test/')
+    expect(flat(m)).toContain('<http://web.test/approvals|결재 대기>')
   })
 
   it('되돌릴 수 없는 행동에는 되돌리기 버튼이 없습니다', () => {
@@ -77,8 +90,28 @@ describe('미리보기 카드 바뀌는 값', () => {
       undefined,
     )
     // 모르는 필드는 코드 이름 그대로 둡니다
-    expect(flat(card)).toContain('room A')
-    expect(flat(card)).toContain('start 14:00')
+    expect(flat(card)).toContain('`room` A')
+    expect(flat(card)).toContain('`start` 14:00')
+    // 표시 이름이 없으면 제목은 "실행 전 확인"만, 버튼은 "실행"
+    expect(flat(card)).toContain('*실행 전 확인*  ')
+    expect(flat(card)).toContain('"text":"실행"')
+  })
+
+  it('실행 전 확인 카드의 결정 상태와 실행 취소 불가 안내', () => {
+    const a = { approvalId: 'a', tool: 'approval_withdraw', toolLabel: '결재 회수', risk: 'irreversible' as const, preview: { dryRun: true as const, operation: 'x', summary: '회수', undoable: false, changes: [] } }
+    expect(flat(approvalCard(a, undefined))).toContain('실행한 뒤에는 실행 취소할 수 없습니다.')
+    expect(flat(approvalCard(a, undefined, 'rejected'))).toContain('실행 안 함')
+  })
+
+  it('없는 날짜·시각은 그대로 두고 날짜만 있는 값은 요일까지 보여 줍니다', () => {
+    const card = approvalCard(
+      { approvalId: 'a', tool: 'leave_request', risk: 'reversible_write', preview: { dryRun: true, operation: 'x', summary: '휴가', undoable: true, changes: [{ op: 'create', resource: 'leave', resourceId: null, before: null, after: { startsAt: '2026-02-30T10:00+09:00', startDate: '2026-11-24', endDate: '2026-02-30' } }] } },
+      undefined,
+    )
+    const s = flat(card)
+    expect(s).toContain('시작 2026-02-30T10:00+09:00')
+    expect(s).toContain('시작일 2026. 11. 24.(화)')
+    expect(s).toContain('종료일 2026-02-30')
   })
 
   it('필드 표시 이름, 시각, 금액을 사람이 읽는 꼴로 보여 주고 버튼과 제목은 일 이름입니다', () => {

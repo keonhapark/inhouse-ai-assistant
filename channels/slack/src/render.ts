@@ -137,7 +137,8 @@ const FIELD: Record<string, string> = {
   itemName: '품목',
   customerName: '고객사',
 }
-const field = (k: string) => FIELD[k] ?? k
+// 모르는 필드는 코드 이름이라 백틱으로 둡니다(snake_case의 _가 기울임으로 읽히지 않게)
+const field = (k: string) => (FIELD[k] ? escape(FIELD[k]) : `\`${escape(k)}\``)
 /** 상태 값(web display/names.ts ENUM_LABELS.status와 같음) */
 const STATUS: Record<string, string> = {
   in_progress: '진행 중', pending: '대기', approved: '승인', rejected: '반려', withdrawn: '회수', draft: '초안', confirmed: '확정',
@@ -146,10 +147,27 @@ const STATUS: Record<string, string> = {
 const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/
 const KST_DATETIME = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Seoul' })
 
-/** 값 하나를 사람이 읽는 글로 바꿉니다. 시각은 web과 같은 "2026. 11. 24. 오후 2:30", 금액 필드는 원 단위 */
+const YMD = /^(\d{4})-(\d{2})-(\d{2})$/
+const WEEK = ['일', '월', '화', '수', '목', '금', '토']
+/** YYYY-MM-DD가 달력에 있는 날인지(2026-02-30은 아님) */
+function realDay(ymd: string): boolean {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const t = new Date(Date.UTC(y, m - 1, d))
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d
+}
+
+/** 값 하나를 사람이 읽는 글로 바꿉니다. 시각은 web과 같은 "2026. 11. 24. 오후 2:30", 날짜는 "2026. 11. 24.(화)", 금액 필드는 원 단위 */
 function value(k: string, v: unknown): string {
   if (v === null || v === undefined || v === '') return '없음'
-  if (typeof v === 'string' && ISO_DATETIME.test(v)) return KST_DATETIME.format(new Date(v))
+  if (typeof v === 'string' && ISO_DATETIME.test(v)) {
+    // 꼴은 맞아도 없는 날(2026-02-30T10:00)이면 Date가 Invalid가 되거나(format이 던짐) 다음 달로 넘기므로 원래 값을 둡니다
+    const d = new Date(v)
+    return Number.isNaN(d.getTime()) || !realDay(v.slice(0, 10)) ? v : KST_DATETIME.format(d)
+  }
+  if (typeof v === 'string' && YMD.test(v)) {
+    const [y, m, day] = v.split('-').map(Number)
+    return realDay(v) ? `${y}. ${m}. ${day}.(${WEEK[new Date(Date.UTC(y, m - 1, day)).getUTCDay()]})` : v
+  }
   if (k === 'status' && typeof v === 'string') return STATUS[v] ?? v
   if (typeof v === 'number' && /(^|_)(amount|price)$|(Amount|Price)$/.test(k)) return `${v.toLocaleString('ko-KR')}원`
   return typeof v === 'object' ? JSON.stringify(v) : String(v)
@@ -171,7 +189,7 @@ export function approvalCard(a: Approval, agentName: string | undefined, state?:
       const n = after && k in after ? value(k, after[k]) : null
       // 바꾸기(전·후가 다 있음)는 달라진 값만 보여 줍니다. 문서 전체가 오면 바뀌지 않은 필드가 카드를 덮기 때문입니다.
       if (before && after && b === n) continue
-      lines.push(b !== null && n !== null ? `${escape(field(k))} ~${escape(short(b))}~ → ${escape(short(n))}` : `${escape(field(k))} ${escape(short(n ?? b ?? '없음'))}`)
+      lines.push(b !== null && n !== null ? `${field(k)} ~${escape(short(b))}~ → ${escape(short(n))}` : `${field(k)} ${escape(short(n ?? b ?? '없음'))}`)
     }
   }
   if (lines.length) blocks.push(...sections(lines.join('\n')))
@@ -184,13 +202,13 @@ export function approvalCard(a: Approval, agentName: string | undefined, state?:
       type: 'actions',
       elements: [
         // 실행 버튼은 일 이름(회의실 예약, 결재 회수)으로 둡니다. 표시 이름이 없으면 "실행"
-        button(a.toolLabel ?? '실행', ACTION.approve, a.approvalId, a.risk === 'irreversible' ? 'danger' : 'primary'),
+        button(short(a.toolLabel ?? '실행', 75), ACTION.approve, a.approvalId, a.risk === 'irreversible' ? 'danger' : 'primary'),
         button('취소', ACTION.reject, a.approvalId),
       ],
     })
     blocks.push(context(a.expiresAt ? `요청한 사람만 누를 수 있습니다. ${time(a.expiresAt)}까지 확인해 주세요.` : '요청한 사람만 누를 수 있습니다.'))
   }
-  return { text: `${title}: ${escape(p.summary ?? '')}`, blocks: limit(blocks) }
+  return { text: p.summary ? `${title} · ${escape(p.summary)}` : title, blocks: limit(blocks) }
 }
 
 /** 완료한 일 카드. undoable이면 실행 취소 버튼을 둡니다. */
