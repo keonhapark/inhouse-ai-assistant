@@ -193,6 +193,11 @@ class ChatService:
         c = self.conversations.get(conversation_id or "")
         return c.condition if c else None
 
+    def route_method_of(self, conversation_id: str | None) -> str | None:
+        """입구 라우터가 이 대화를 고른 방법(llm·keyword·fallback·explicit). 출구가 fallback 대화를 로컬로 묶을 때 씁니다(#308)."""
+        c = self.conversations.get(conversation_id or "")
+        return c.route_method if c else None
+
     def model_override_of(self, conversation_id: str | None) -> dict[str, str]:
         c = self.conversations.get(conversation_id or "")
         return c.model_override if c else {}

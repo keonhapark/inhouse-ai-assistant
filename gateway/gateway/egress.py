@@ -245,6 +245,8 @@ class Egress:
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
         # 평가 대화의 별칭 바꿔 끼우기(X-Eval-Model-Override, #346): cid → {"local": 별칭, "external": 별칭}
         self.override_of: Callable[[str | None], dict[str, str]] = lambda _cid: {}
+        # 위임 토큰 cid → 입구 라우터가 고른 방법(채팅 흐름이 기억, #308). 모르면 None
+        self.route_method_of: Callable[[str | None], str | None] = lambda _cid: None
         # 의미 캐시(#465). None이면 끔(기본, 평가 모드). main이 GATEWAY_SEMANTIC_CACHE=1일 때 붙입니다.
         self.cache: SemanticCache | None = None
         self.embed_alias = embed_alias  # 의미 캐시 임베딩에 쓸 로컬 별칭(model_info.mode: embedding)
@@ -349,6 +351,18 @@ class Egress:
                 request.state.model = {"name": body["model"]}
                 raise ProblemError(403, "model-policy", "모델 정책에 맞지 않습니다", "이 팩은 외부 LLM을 쓰지 않습니다")
             note = (f"{note}; " if note else "") + f"팩 외부 LLM 금지: {body['model']} 대신 {local}"
+            body = {**body, "model": local}
+        if (caller.agent is not None and self.locations.get(body["model"]) == "external"
+                and self.route_method_of(caller.conversation_id) == "fallback"
+                and CONDITION_GUARDS[self.condition_of(caller.conversation_id) or "full"].local_enforce):
+            # 입구 라우터가 부서를 고르지 못해 fallback 에이전트로 연 대화는 어느 부서 일인지 모르므로 로컬로만 실행합니다(#308).
+            # agent가 이미 로컬로 보내지만(force_local), 그 표시를 잃거나 어겨도 원문이 외부로 나가지 않게 출구에서 한 번 더 막습니다.
+            # 장치를 끄는 평가 조건(no_guard·baseline_tools)에서는 agent와 같게 외부를 허용합니다(contracts/eval/conditions.md).
+            local = self._local_for(caller)
+            if local is None:
+                request.state.model = {"name": body["model"]}
+                raise ProblemError(403, "model-policy", "모델 정책에 맞지 않습니다", "라우터 fallback 대화는 로컬 모델만 씁니다")
+            note = (f"{note}; " if note else "") + f"라우터 fallback 대화: {body['model']} 대신 {local}"
             body = {**body, "model": local}
         model = self._model(request, body["model"])
         location = model["location"]
