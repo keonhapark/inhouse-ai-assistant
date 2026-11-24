@@ -60,7 +60,10 @@ describe('왼쪽 탐색 막대', () => {
 
   it('사용자 메뉴에서 테마를 바꿉니다(시스템이면 data-theme를 지움)', async () => {
     const user = renderApp('/', 'mock.emp-1001')
-    await user.click(within(await nav()).getByRole('button', { name: /^한지우 / }))
+    // 이름은 보이는 글자(이름·부서·직급) 그대로이고, 메뉴 단추라는 것은 aria-haspopup으로 알립니다(WCAG 2.5.3)
+    const me = within(await nav()).getByRole('button', { name: /^한지우 인사팀 / })
+    expect(me).toHaveAttribute('aria-haspopup', 'menu')
+    await user.click(me)
     await user.click(await screen.findByRole('menuitemradio', { name: '어두움' }))
     expect(document.documentElement.dataset.theme).toBe('dark')
     await user.click(screen.getByRole('button', { name: /^한지우 / }))

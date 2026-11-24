@@ -164,7 +164,8 @@ describe('리뷰에서 고친 것', () => {
     )
     const user = renderInbox()
     await user.click(await screen.findByRole('tab', { name: '기안함' }))
-    expect(await screen.findByRole('button', { name: /^교육용 노트북 2대 구매 / })).toBeInTheDocument()
+    // 행 이름은 보이는 글자 전부: 제목 → 양식·기안자 → 금액·언제
+    expect(await screen.findByRole('button', { name: /^교육용 노트북 2대 구매 구매 요청 · \S+ .*원/ })).toBeInTheDocument()
     await delay(250)
     expect(screen.getByRole('button', { name: /^교육용 노트북 2대 구매 / })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^연차 휴가 신청\(11\/27~11\/28\) / })).toBeNull()

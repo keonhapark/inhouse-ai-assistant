@@ -35,7 +35,7 @@ export function Sidebar({ me, collapsed, onToggle, onOpenPalette, onLogout }: Pr
       </div>
 
       {/* 이름은 보이는 글자 그대로("찾기·이동 Ctrl K", WCAG 2.5.3). 접혀도 라벨은 시각적으로만 숨어 이름에 남습니다 */}
-      <button type="button" className="sidebar__search" onClick={onOpenPalette} aria-keyshortcuts="Control+K Meta+K" title={collapsed ? '찾기·이동' : undefined}>
+      <button type="button" className="sidebar__search" onClick={onOpenPalette} aria-keyshortcuts="Control+K Meta+K" title={collapsed ? '찾기·이동 Ctrl K' : undefined}>
         <Search aria-hidden />
         <span className="sidebar__label">찾기·이동</span>{' '}
         <kbd className="sidebar__label">Ctrl K</kbd>
