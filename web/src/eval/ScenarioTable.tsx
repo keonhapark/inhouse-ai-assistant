@@ -43,7 +43,7 @@ export function ScenarioTable({ rows, conditions: declared }: { rows: Row[]; con
       <div className="admin__row" role="group" aria-label="시나리오 필터">
         {sets.length > 1 && (
           <label className="admin__field">
-            <span className="muted">셋</span>
+            <span className="muted">세트</span>
             <select value={set} onChange={(e) => (setSet(e.target.value), setShown(PAGE))}>
               <option value="">전체</option>
               {sets.map((s) => (
@@ -153,7 +153,7 @@ function RunDetails({ runs }: { runs: Row[] }) {
           </strong>{' '}
           <span className="muted">
             경로 {r.route ?? '-'} · 넘긴 에이전트 {r.routed_agent ?? '-'}
-            {r.expected_agent ? `(기대 ${r.expected_agent})` : ''} · {r.duration_s != null ? `${r.duration_s.toFixed(1)}s` : '-'}
+            {r.expected_agent ? `(기대 ${r.expected_agent})` : ''} · {r.duration_s != null ? `${r.duration_s.toFixed(1)}초` : '-'}
           </span>
           {[...(r.incidents ?? []).map((t) => ['사고', t]), ...(r.shortfalls ?? []).map((t) => ['부족', t]), ...(r.error ? [['오류', r.error]] : [])].map(
             ([k, t], i) => (

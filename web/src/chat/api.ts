@@ -36,7 +36,7 @@ async function pump(call: () => Promise<StreamResponse>, onEvent: (e: ChatEvent)
       try {
         event = JSON.parse(msg.data) as ChatEvent
       } catch {
-        return { ok: false, message: '서버 응답을 읽지 못했습니다.', status, retryable: false }
+        return { ok: false, message: '서버 응답을 읽지 못했습니다. 잠시 뒤 다시 시도해 주세요.', status, retryable: false }
       }
       onEvent(event)
       if (event.type === 'done') {
@@ -98,7 +98,7 @@ export async function undoAction(actionId: string, idempotencyKey: string): Prom
     const { response, error } = await api.POST('/actions/{actionId}/undo', {
       params: { path: { actionId }, header: { 'Idempotency-Key': idempotencyKey } },
     })
-    return response.ok ? { ok: true } : { ok: false, message: problemTitle(error, '되돌리지 못했습니다.') }
+    return response.ok ? { ok: true } : { ok: false, message: problemTitle(error, '실행을 취소하지 못했습니다.') }
   } catch {
     return { ok: false, message: NETWORK }
   }

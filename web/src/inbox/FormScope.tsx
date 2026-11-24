@@ -39,7 +39,7 @@ export function FormScope({ value, forms, error, onChange }: Props) {
       )}
       {value.length === 0 && (
         <p role="alert" className="alert">
-          양식을 하나 이상 고릅니다.
+          양식을 하나 이상 고르세요.
         </p>
       )}
     </fieldset>

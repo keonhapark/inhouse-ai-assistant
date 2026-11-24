@@ -62,8 +62,16 @@ api.use(auth)
  */
 export function problemTitle(error: unknown, fallback = '요청을 처리하지 못했습니다.'): string {
   if (error && typeof error === 'object' && 'title' in error && typeof error.title === 'string' && error.title) {
-    const detail = 'detail' in error && typeof error.detail === 'string' && error.detail ? ` ${error.detail}` : ''
-    return error.title + detail
+    // 제목과 같은 말인 상세는 붙이지 않습니다(erp는 여러 오류에서 title과 detail이 같음, copy-audit.md 2절)
+    const raw = 'detail' in error && typeof error.detail === 'string' ? error.detail.trim() : ''
+    // 공백을 하나로, 끝 문장부호를 떼고 견줍니다
+    const norm = (s: string) => s.replace(/\s+/g, ' ').trim().replace(/[.!?。\s]+$/, '')
+    const t = norm(error.title)
+    const d = norm(raw)
+    if (!d || t.includes(d)) return error.title
+    // 상세가 제목을 품으면 상세 하나만 보입니다
+    if (d.includes(t)) return raw
+    return `${error.title} ${raw}`
   }
   return fallback
 }

@@ -89,6 +89,8 @@ class Deps:
     # 보내지 않습니다. 생각을 끄면 지연은 줄지만 도구를 부르지 않고 말로만 답하는 경우가 많아(#423 측정, 기대 도구 28/46 vs 44/46)
     # 기본은 켭니다(결정 0008, #535).
     plan_reasoning_effort: str | None = None
+    # 모델 프로필(#601, profiles.py의 ProfileCache·StaticProfile). 있으면 plan_reasoning_effort 대신 그 plan_effort를 씁니다
+    profile: Any = None
     # 도구 이름 → 직원 화면 표시 이름(#575, pack_tools.tool_labels). 미리보기·완료한 일의 toolLabel. 없으면 넣지 않습니다
     tool_labels: Mapping[str, str] = field(default_factory=dict)
 
@@ -186,8 +188,8 @@ def build_graph(deps: Deps, checkpointer: Any | None = None):
                                                                    [t.name for t in visible], write_optional(visible))},
                     *state.get("messages", [])]
         policy = model_policy_for(ctx.agent, condition, state.get("force_local", False))
-        extra = ({"reasoning_effort": deps.plan_reasoning_effort}
-                 if policy == "local_only" and deps.plan_reasoning_effort else None)
+        effort = deps.profile.get().plan_effort if deps.profile is not None else deps.plan_reasoning_effort
+        extra = {"reasoning_effort": effort} if policy == "local_only" and effort else None
         try:
             msg = await asyncio.to_thread(deps.llm.chat, messages, [openai_tool(t) for t in visible] or None,
                                           {"X-Delegation-Token": ctx.token}, policy, extra)

@@ -41,6 +41,7 @@ from gateway.budgets import BudgetLedger
 from gateway.cache import Probe, SemanticCache
 from gateway.confidential import Glossary
 from gateway.problems import ProblemError
+from gateway.profiles import DEFAULT_TIMEOUT_SECONDS, effort_for
 from gateway.redact import scrub
 from gateway.registry import AgentEntry, Registry
 from gateway.tokens import DelegationTokenIssuer
@@ -204,7 +205,7 @@ def policy_denial(caller: Caller, location: str) -> str | None:
 
 class Egress:
     def __init__(self, *, base_url: str, locations: dict[str, str], registry: Registry,
-                 issuer: DelegationTokenIssuer, audit: AuditLog, alerter: Alerter, timeout: float,
+                 issuer: DelegationTokenIssuer, audit: AuditLog, alerter: Alerter, timeout: float | None,
                  api_key: str | None = None, transport: httpx.AsyncBaseTransport | None = None,
                  redactor: Redactor = no_redaction, glossary: Glossary | None = None,
                  external_log: JsonlWriter | None = None, no_response_format: frozenset[str] = frozenset(),
@@ -217,9 +218,11 @@ class Egress:
                  provider_models: dict[str, str] | None = None,
                  vision_alias: str | None = None, eval_toolcall: bool = False,
                  local_reasoning_effort: str | None = None,
-                 embed_alias: str | None = None):
+                 embed_alias: str | None = None, profiles: dict[str, dict[str, Any]] | None = None):
         self.locations = locations
-        # 외부 별칭 요청을 로컬로 돌릴 때 채울 reasoning_effort(#427). None이면 채우지 않습니다.
+        # 별칭별 모델 프로필(#595, gateway/profiles.py). 시간 제한·로컬로 돌린 호출의 생각 단계를 여기서 읽습니다.
+        self.profiles = profiles or {}
+        # GATEWAY_LOCAL_REASONING_EFFORT(#427). 값이 있으면 프로필의 thinking.reroute를 덮어씁니다. None이면 프로필을 따릅니다.
         self.local_reasoning_effort = local_reasoning_effort
         # GATEWAY_EVAL_TOOLCALL=1: 토큰 없는 외부 호출을 받습니다(#268, 도구 호출 측정의 외부 기준). 측정 데이터는 지어낸 것입니다.
         # GATEWAY_EVAL_MODE와 따로 둡니다(#294): 정상·확인 셋 실행에서 열리면 대화 밖 외부 전송이 판정에서 빠집니다.
@@ -242,12 +245,14 @@ class Egress:
         self.local_alias = next((a for a, loc in locations.items() if loc == "local"), None)
         # 평가 대화의 별칭 바꿔 끼우기(X-Eval-Model-Override, #346): cid → {"local": 별칭, "external": 별칭}
         self.override_of: Callable[[str | None], dict[str, str]] = lambda _cid: {}
+        # 위임 토큰 cid → 입구 라우터가 고른 방법(채팅 흐름이 기억, #308). 모르면 None
+        self.route_method_of: Callable[[str | None], str | None] = lambda _cid: None
         # 의미 캐시(#465). None이면 끔(기본, 평가 모드). main이 GATEWAY_SEMANTIC_CACHE=1일 때 붙입니다.
         self.cache: SemanticCache | None = None
         self.embed_alias = embed_alias  # 의미 캐시 임베딩에 쓸 로컬 별칭(model_info.mode: embedding)
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._http = httpx.AsyncClient(base_url=base_url, transport=transport, headers=headers,
-                                       timeout=httpx.Timeout(timeout, connect=5.0))
+                                       timeout=httpx.Timeout(DEFAULT_TIMEOUT_SECONDS, connect=5.0))
         self._timeout = timeout
 
     async def aclose(self) -> None:
@@ -346,6 +351,18 @@ class Egress:
                 request.state.model = {"name": body["model"]}
                 raise ProblemError(403, "model-policy", "모델 정책에 맞지 않습니다", "이 팩은 외부 LLM을 쓰지 않습니다")
             note = (f"{note}; " if note else "") + f"팩 외부 LLM 금지: {body['model']} 대신 {local}"
+            body = {**body, "model": local}
+        if (caller.agent is not None and self.locations.get(body["model"]) == "external"
+                and self.route_method_of(caller.conversation_id) == "fallback"
+                and CONDITION_GUARDS[self.condition_of(caller.conversation_id) or "full"].local_enforce):
+            # 입구 라우터가 부서를 고르지 못해 fallback 에이전트로 연 대화는 어느 부서 일인지 모르므로 로컬로만 실행합니다(#308).
+            # agent가 이미 로컬로 보내지만(force_local), 그 표시를 잃거나 어겨도 원문이 외부로 나가지 않게 출구에서 한 번 더 막습니다.
+            # 장치를 끄는 평가 조건(no_guard·baseline_tools)에서는 agent와 같게 외부를 허용합니다(contracts/eval/conditions.md).
+            local = self._local_for(caller)
+            if local is None:
+                request.state.model = {"name": body["model"]}
+                raise ProblemError(403, "model-policy", "모델 정책에 맞지 않습니다", "라우터 fallback 대화는 로컬 모델만 씁니다")
+            note = (f"{note}; " if note else "") + f"라우터 fallback 대화: {body['model']} 대신 {local}"
             body = {**body, "model": local}
         model = self._model(request, body["model"])
         location = model["location"]
@@ -451,6 +468,15 @@ class Egress:
         r.raise_for_status()
         return [float(x) for x in r.json()["data"][0]["embedding"]]
 
+    def timeout_for(self, alias: str) -> float:
+        """별칭 호출 한 번의 시간 제한(초). LLM_TIMEOUT_SECONDS가 있으면 그 값, 없으면 프로필 timeoutSeconds(#595)."""
+        if self._timeout is not None:
+            return self._timeout
+        return float((self.profiles.get(alias) or {}).get("profile", {}).get("timeoutSeconds", DEFAULT_TIMEOUT_SECONDS))
+
+    def _http_timeout(self, alias: str) -> httpx.Timeout:
+        return httpx.Timeout(self.timeout_for(alias), connect=5.0)
+
     def _quiet_local(self, alias: str, sent: dict, note: str | None) -> tuple[dict, str | None]:
         """외부 별칭 요청을 로컬로 돌린 본문에 reasoning_effort를 채우고 감사 detail에 적습니다(#427).
 
@@ -459,10 +485,13 @@ class Egress:
         빼는 별칭(model_info.drop_params)이면 그대로 둡니다.
         """
         effort = self.local_reasoning_effort
+        if effort is None and alias in self.profiles:
+            effort = effort_for(self.profiles[alias], "reroute")   # 모델 프로필(#595)
         if (effort is None or "reasoning_effort" in sent or "think" in sent
                 or "reasoning_effort" in self.drop_params.get(alias, frozenset())):
             return sent, note
-        return {**sent, "reasoning_effort": effort}, (f"{note}; " if note else "") + f"생각 단계 끔(reasoning_effort={effort})"
+        word = "끔" if effort == "none" else "켬"
+        return {**sent, "reasoning_effort": effort}, (f"{note}; " if note else "") + f"생각 단계 {word}(reasoning_effort={effort})"
 
     def _swap(self, caller: Caller, alias: str) -> str:
         """평가 대화의 별칭 바꿔 끼우기. 위치가 같은 별칭으로만 바꿉니다(정책·가림이 그대로 적용되게).
@@ -557,7 +586,7 @@ class Egress:
     async def _once(self, caller: Caller, model: dict, before: dict, sent: dict,
                     note: str | None = None) -> Response:
         try:
-            r = await self._http.post("/v1/chat/completions", json=sent)
+            r = await self._http.post("/v1/chat/completions", json=sent, timeout=self._http_timeout(model["name"]))
         except httpx.HTTPError as e:
             await self._fail(caller, model, before, sent, e)
         self._mark_sent(caller, model, sent)
@@ -573,7 +602,7 @@ class Egress:
 
     async def _stream(self, caller: Caller, model: dict, before: dict, sent: dict,
                       note: str | None = None) -> Response:
-        req = self._http.build_request("POST", "/v1/chat/completions", json=sent)
+        req = self._http.build_request("POST", "/v1/chat/completions", json=sent, timeout=self._http_timeout(model["name"]))
         try:
             r = await self._http.send(req, stream=True)
         except httpx.HTTPError as e:
@@ -616,7 +645,7 @@ class Egress:
     # ---------- 실패·기록 ----------
     async def _fail(self, caller: Caller, model: dict, before: dict, sent: dict, e: httpx.HTTPError) -> NoReturn:
         if isinstance(e, httpx.TimeoutException):
-            status, code, title = 504, "llm-timeout", f"모델이 {self._timeout:g}초 안에 답하지 않았습니다"
+            status, code, title = 504, "llm-timeout", f"모델이 {self.timeout_for(model['name']):g}초 안에 답하지 않았습니다"
         else:
             status, code, title = 502, "llm-unavailable", "LLM 프록시에 연결하지 못했습니다"
         # 연결 전 실패가 아니면(읽기 시간 초과 등) 요청은 이미 나갔다고 봅니다.

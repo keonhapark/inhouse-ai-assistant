@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api, problemTitle, type Schemas } from '../api/client'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
+import { DateTimeField } from '../components/DatePicker'
 import { Card } from '../components/Card'
 import { newIdempotencyKey } from '../chat/api'
 import { PreviewChanges } from '../chat/parts'
@@ -149,7 +150,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
             const canRevoke = d.delegatorId === meId && (d.status === 'active' || d.status === 'scheduled')
             return (
               <li key={d.id}>
-                <div className="row">
+                <div className="delegation__head">
                   <strong>
                     {d.delegatorName} → {d.delegateName}
                   </strong>
@@ -176,19 +177,17 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
         {/* 요청이 오가는 동안 입력을 막아 확인 카드와 다른 값이 섞이지 않게 합니다. */}
         <fieldset className="delegation__fields" disabled={busy}>
         <DelegatePicker value={draft.delegateId} excludeId={meId} onChange={(delegateId) => edit({ delegateId })} />
-        <label>
-          시작
-          <input type="datetime-local" value={draft.startsAt} onChange={(e) => edit({ startsAt: e.target.value })} required />
-        </label>
-        <label>
-          끝
-          <input type="datetime-local" value={draft.endsAt} onChange={(e) => edit({ endsAt: e.target.value })} required />
-        </label>
+        <DateTimeField label="시작" value={draft.startsAt} disabled={busy} onChange={(startsAt) => edit({ startsAt })} />
+        <DateTimeField label="끝" value={draft.endsAt} disabled={busy} defaultTime="18:00" onChange={(endsAt) => edit({ endsAt })} />
         <FormScope value={draft.formTypes} forms={forms} error={formsError} onChange={(formTypes) => edit({ formTypes })} />
         <label>
-          금액 한도(원, 비우면 없음)
-          <input type="number" min={0} step={1} inputMode="numeric" value={draft.maxAmount} onChange={(e) => edit({ maxAmount: e.target.value })} />
+          금액 한도(원)
+          <input type="number" min={0} step={1} inputMode="numeric" aria-describedby="delegation-max-help" value={draft.maxAmount} onChange={(e) => edit({ maxAmount: e.target.value })} />
         </label>
+        {/* 도움말은 라벨 밖에 두어 입력칸 이름에 섞이지 않고 설명으로만 읽힙니다 */}
+        <small id="delegation-max-help" className="field-help">
+          비우면 한도 없음
+        </small>
         <label>
           사유
           <input maxLength={200} value={draft.reason} onChange={(e) => edit({ reason: e.target.value })} required />

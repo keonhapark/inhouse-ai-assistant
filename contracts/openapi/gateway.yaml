@@ -27,6 +27,13 @@ info:
       대화에서는 쓰지 않습니다(머리글 없음). 캐시를 끈 gateway는 머리글을 붙이지 않습니다.
       요청자를 키에 넣는 것은 권한이 같은 직원끼리도 이름·사유처럼 숫자가 아닌 부분만 다른 문장이 의미상 같게 잡혀 앞사람의 답이 다른
       사람에게 가지 않게 하려는 것입니다. 캐시는 사람마다 따로이고 사람 사이에 나누지 않습니다.
+    - 모델 프로필(#595, 결정 0009): 별칭마다 모델에 따라 다른 실행 설정을 `GET /v1/model-profiles`(토큰 없음, 사내 망 모듈용)로
+      돌려줍니다. 본문은 `ModelProfiles`입니다. 호출하는 쪽(agent·rag·incident)은 자기가 부르는 별칭의 `profile.thinking`에서 호출
+      목적(`plan` 계획 호출, `reroute` gateway가 로컬로 돌린 호출, `imageRead` 이미지 읽기, `ragAnswer` rag 답, `incident` 장애 분석)의
+      값을 읽어 `on`이면 `reasoning_effort: low`, `off`이면 `none`을 보내고, `default`이면 보내지 않습니다(모델 기본값).
+      `timeoutSeconds`는 그 별칭 호출 한 번의 시간 제한입니다. 각 모듈의 환경 변수(`AGENT_PLAN_REASONING_EFFORT`, `RAG_LLM_REASONING`,
+      `GATEWAY_LOCAL_REASONING_EFFORT`, `LLM_TIMEOUT_SECONDS` 등)는 값이 있을 때만 프로필을 덮어씁니다. 프로필은 gateway의 LiteLLM
+      별칭 표(`model_info.profile`)에서 읽으며, 바꾸려면 gateway를 다시 띄웁니다. 관리 화면은 같은 본문을 `GET /ops/models`로 봅니다.
     - 이미지 입력(#261): `messages[].content`에 OpenAI 호환 `image_url` 부분이 있으면, 요청한 별칭·에이전트 모델 정책과
       관계없이 로컬 비전 별칭 `local-vision`으로만 보냅니다(외부로 보내지 않음). 이미지는 `data:image/jpeg;base64,…` 또는
       `data:image/png;base64,…` data URL만 받고, 한 장의 디코딩 크기 상한은 5MB입니다. 넘으면 413(`urn:problem:payload-too-large`),
@@ -652,6 +659,21 @@ paths:
         "400": {$ref: "#/components/responses/Problem"}
         "403": {$ref: "#/components/responses/Problem"}
 
+  /ops/models:
+    get:
+      tags: [ops]
+      operationId: listModelProfiles
+      description: |
+        auditor 역할만(관리자 콘솔). LLM 별칭마다 실제 모델과 모델 프로필(#595, 결정 0009)을 돌려줍니다. 모듈용
+        `GET /v1/model-profiles`와 같은 본문입니다. 평가 전용 별칭(`evalOnly`)은 기본 경로에서 쓰지 않습니다.
+      responses:
+        "200":
+          description: 별칭별 모델 프로필
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ModelProfiles"}
+        "403": {$ref: "#/components/responses/Problem"}
+
   /ops/egress:
     get:
       tags: [ops]
@@ -851,6 +873,7 @@ components:
           properties:
             actionId: {type: string}
             tool: {type: string}
+            toolLabel: {type: string, description: "직원 화면에 보이는 도구 이름(#575·#607). agent ExecutedAction.toolLabel을 그대로 넘깁니다. 없으면 화면은 tool 코드 이름을 내지 않고 summary만 보여 줍니다"}
             summary: {type: string}
             undoable: {type: boolean}
         citations:
@@ -912,6 +935,45 @@ components:
           properties:
             delegatorName: {type: string}
             delegateName: {type: string}
+
+    ModelProfiles:
+      type: object
+      required: [aliases]
+      properties:
+        aliases:
+          type: array
+          items: {$ref: "#/components/schemas/ModelProfile"}
+
+    ModelProfile:
+      type: object
+      required: [alias, location, model, evalOnly, profile]
+      properties:
+        alias: {type: string, description: "LiteLLM 별칭(호출하는 쪽이 model에 쓰는 값)"}
+        location: {type: string, enum: [local, external]}
+        model: {type: string, description: "실제 모델 이름(LiteLLM litellm_params.model, 예: ollama_chat/qwen3.5:9b)"}
+        mode: {type: string, enum: [chat, embedding], description: 없으면 chat}
+        evalOnly: {type: boolean, description: 평가에서만 쓰는 별칭(모델 교체 회귀 등). 기본 경로에서는 쓰지 않습니다}
+        profile:
+          type: object
+          required: [thinking, timeoutSeconds, structuredOutput, vision]
+          properties:
+            thinking:
+              type: object
+              description: 호출 목적별 생각 단계. on이면 reasoning_effort low, off이면 none, default이면 보내지 않음(모델 기본값)
+              required: [plan, reroute, imageRead, ragAnswer, incident]
+              properties:
+                plan: {$ref: "#/components/schemas/ThinkingSetting"}
+                reroute: {$ref: "#/components/schemas/ThinkingSetting"}
+                imageRead: {$ref: "#/components/schemas/ThinkingSetting"}
+                ragAnswer: {$ref: "#/components/schemas/ThinkingSetting"}
+                incident: {$ref: "#/components/schemas/ThinkingSetting"}
+            timeoutSeconds: {type: integer, minimum: 1, description: 이 별칭 호출 한 번의 시간 제한(초)}
+            structuredOutput: {type: boolean, description: response_format(구조화 출력)을 지원하는지. false면 gateway가 400}
+            vision: {type: boolean, description: 이미지 입력을 받는 별칭인지. 이미지가 든 요청은 이 별칭(로컬)으로만 갑니다}
+
+    ThinkingSetting:
+      type: string
+      enum: ["on", "off", "default"]
 
     OpsMetrics:
       type: object

@@ -21,7 +21,7 @@ function vars(body: string): Record<string, string> {
 }
 
 const light = vars(block(':root {'))
-// 어두움 블록만 읽습니다. 옛 이름의 var() 별칭은 :root에만 있으므로 값을 풀 때만 밝음 블록을 봅니다.
+// 어두움 블록만 읽습니다. var() 참조는 :root에만 있으므로 값을 풀 때만 밝음 블록을 봅니다.
 const darkOnly = vars(block(":root[data-theme='dark'] {"))
 const dark = { ...light, ...darkOnly }
 const COLOR = /#[0-9a-f]{6}|rgb\(/i
@@ -86,12 +86,8 @@ const PAIRS: [string, string, string?][] = [
   ['danger', 'surface'],
   ['danger', 'fill', 'surface'],
   ['neutral', 'surface'],
-  // 옛 이름(화면을 옮기는 동안 쓰는 곳)
-  ['text-muted', 'surface'],
-  ['text-muted', 'bg'],
-  ['on-fill', 'accent'],
-  ['on-fill', 'danger'],
-  ['local', 'surface'],
+  // 대결 지정 화면처럼 --bg 위 입력칸의 자리 표시·보조 글
+  ['text-2', 'fill-2', 'bg'],
 ]
 
 describe.each([

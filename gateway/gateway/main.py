@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse, Response
 
 from gateway import redact
 from gateway.cache import SemanticCache
+from gateway.profiles import load_model_profiles
 from gateway.alerts import Alerter
 from gateway import audit_query, eval_reports, ops, slack_login
 from gateway.chat import AgentClient, ChatService
@@ -59,6 +60,8 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     audit = AuditLog(settings.audit_dir)
     alerter = Alerter(settings.alert_webhook_url, transport=alert_transport)
     model_info = load_model_info(settings.litellm_config)
+    model_profiles = load_model_profiles(settings.litellm_config)   # 별칭별 모델 프로필(#595)
+    profile_of = {p["alias"]: p for p in model_profiles}
     korean = KoreanRedactor()
     egress = Egress(base_url=settings.litellm_base_url,
                     locations={alias: info["location"] for alias, info in model_info.items()},
@@ -74,14 +77,14 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                             for a, i in model_info.items()
                             if "input_cost_per_token" in i and "output_cost_per_token" in i},
                     baseline_redactor=BaselineRedactor() if settings.eval_mode else korean,
-                    no_response_format=frozenset(a for a, i in model_info.items()
-                                                 if i.get("supports_response_format") is False),
-                    vision_alias=next((a for a, i in model_info.items()
-                                       if i.get("vision") and i["location"] == "local"), None),
+                    no_response_format=frozenset(a for a, p in profile_of.items() if not p["profile"]["structuredOutput"]),
+                    vision_alias=next((a for a, p in profile_of.items()
+                                       if p["profile"]["vision"] and p["location"] == "local"), None),
                     eval_toolcall=settings.eval_toolcall,
                     local_reasoning_effort=settings.local_reasoning_effort,
                     embed_alias=next((a for a, i in model_info.items()
-                                      if i.get("mode") == "embedding" and i["location"] == "local"), None))
+                                      if i.get("mode") == "embedding" and i["location"] == "local"), None),
+                    profiles=profile_of)
     if settings.semantic_cache and not settings.eval_mode:
         # 평가 실행 조건은 '캐시 끔'입니다(기획서). 평가 모드 스택에서는 설정과 관계없이 붙이지 않습니다.
         egress.cache = SemanticCache(egress.embed_text, threshold=settings.cache_threshold, ttl=settings.cache_ttl_seconds)
@@ -104,6 +107,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
                                  usage=egress.usage)
     egress.condition_of = app.state.chat.condition_of
     egress.unit_of = app.state.chat.unit_of
+    egress.route_method_of = app.state.chat.route_method_of
     egress.override_of = app.state.chat.model_override_of
     app.state.audit = audit
     app.state.alerter = alerter
@@ -138,7 +142,7 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     app.include_router(api)
     app.include_router(build_router(erp), prefix="/api")
     app.include_router(chat_router(app.state.chat), prefix="/api")
-    app.include_router(ops.build_router(erp, audit, registry, settings.audit_event_files, egress.budget),
+    app.include_router(ops.build_router(erp, audit, registry, settings.audit_event_files, egress.budget, model_profiles),
                        prefix="/api")
     app.include_router(audit_query.build_router(erp, audit, settings.audit_event_files), prefix="/api")
     app.include_router(eval_reports.build_router(erp, settings.eval_reports_dir), prefix="/api")
@@ -157,6 +161,11 @@ def create_app(settings: Settings | None = None, *, erp_transport: httpx.AsyncBa
     @app.post("/v1/embeddings")
     async def embeddings(request: Request) -> Response:
         return await egress.handle_embeddings(request)
+
+    @app.get("/v1/model-profiles")
+    async def model_profiles_v1() -> JSONResponse:
+        """별칭별 모델 프로필(#595). 사내 망 모듈(agent·rag·incident)이 호출 목적별 생각 단계·시간 제한을 읽습니다."""
+        return JSONResponse({"aliases": model_profiles})
 
     return app
 

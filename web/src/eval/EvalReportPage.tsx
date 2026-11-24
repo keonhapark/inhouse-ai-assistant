@@ -6,7 +6,7 @@ import { formatDateTime } from '../inbox/labels'
 import { conditionName, setName } from './labels'
 import { ScenarioTable } from './ScenarioTable'
 import { SetSection } from './SetSection'
-import '../inbox/inbox.css'
+import { Toolbar } from '../shell/Toolbar'
 import '../admin/admin.css'
 import './eval.css'
 
@@ -22,14 +22,15 @@ export function EvalReportPage() {
   const reportId = items.find((i) => i.reportId === params.get('report'))?.reportId ?? items[0]?.reportId
 
   return (
-    <main className="admin eval">
-      <h1>평가 리포트</h1>
+    <main className="admin eval" aria-labelledby="eval-title">
+      <Toolbar title="평가 리포트" titleId="eval-title" />
+      <div className="admin__body">
       {list.status === 'loading' && <p className="muted">불러오는 중입니다.</p>}
       {list.status === 'error' && <p role="alert">{list.message}</p>}
       {list.status === 'ok' && items.length === 0 && <p className="muted">아직 커밋된 평가 보고서가 없습니다.</p>}
       {items.length > 0 && (
         <label className="admin__field">
-          <span className="muted">보고서</span>
+          <span>보고서</span>
           <select value={reportId} onChange={(e) => setParams({ report: e.target.value })}>
             {items.map((i) => (
               <option key={i.reportId} value={i.reportId}>
@@ -41,6 +42,7 @@ export function EvalReportPage() {
         </label>
       )}
       {reportId && <ReportView key={reportId} reportId={reportId} />}
+      </div>
     </main>
   )
 }
@@ -66,12 +68,12 @@ function ReportView({ reportId }: { reportId: string }) {
           </p>
         )}
         <dl className="eval__dl">
-          <Item label="셋">{sets.map(setName).join(', ')}</Item>
+          <Item label="세트">{sets.map(setName).join(', ')}</Item>
           <Item label="조건">{meta.conditions.map(conditionName).join(', ')}</Item>
           <Item label="반복">{meta.repeats}회</Item>
           <Item label="회차">
             {meta.done_runs}/{meta.planned_runs}
-            {meta.retried_runs ? ` (다시 돌림 ${meta.retried_runs})` : ''}
+            {meta.retried_runs ? ` (다시 시도 ${meta.retried_runs}회)` : ''}
           </Item>
           <Item label="팩">{[meta.pack_version ?? meta.pack, meta.pack_stage != null ? `단계 ${meta.pack_stage}` : null].filter(Boolean).join(', ') || '-'}</Item>
           <Item label="모델(설정)">{meta.model ?? '-'}</Item>
@@ -86,7 +88,7 @@ function ReportView({ reportId }: { reportId: string }) {
           <Item label="비용">
             {meta.cost_spent_usd != null ? `$${meta.cost_spent_usd.toFixed(4)}` : '-'}
             {meta.cost_cap_usd != null ? ` / 상한 $${meta.cost_cap_usd}` : ''}
-            {meta.cost_unknown_runs ? ` (비용 모름 ${meta.cost_unknown_runs}회차)` : ''}
+            {meta.cost_unknown_runs ? ` (비용 정보 없음 ${meta.cost_unknown_runs}회차)` : ''}
           </Item>
         </dl>
         {!!meta.notes?.length && (
@@ -104,7 +106,7 @@ function ReportView({ reportId }: { reportId: string }) {
       {summary ? (
         summary.sets.map((s) => <SetSection key={s.set} s={s} conditions={meta.conditions} passK={summary.passK} />)
       ) : (
-        <p className="alert">이 보고서에는 요약(summary)이 없어 지표 표를 그리지 않습니다. 저장소의 같은 이름 .md 보고서를 보고, 아래 시나리오별 결과만 확인할 수 있습니다.</p>
+        <p className="alert">이 보고서에는 요약이 없어 지표 표를 그리지 않습니다. 지표는 저장소의 같은 이름 .md 보고서에서 보세요.</p>
       )}
 
       <ScenarioTable rows={rows} conditions={meta.conditions} />

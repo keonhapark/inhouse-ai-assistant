@@ -208,7 +208,7 @@ export function ChatPage() {
     try {
       dataUrls = await Promise.all(imgs.map(async (i) => ({ dataUrl: await toDataUrl(i) })))
     } catch {
-      setAttachErrors(['사진을 읽지 못해 보내지 않았습니다. 사진을 빼고 다시 붙여 주세요.'])
+      setAttachErrors(['사진을 읽지 못해 보내지 않았습니다. 사진을 빼고 다시 첨부하세요.'])
       return
     }
     setNotice(null)
@@ -416,7 +416,7 @@ export function ChatPage() {
                       ) : (it.attachmentCount ?? 0) > 0 ? (
                         <small className="msg__attached">
                           <Paperclip aria-hidden />
-                          사진 {it.attachmentCount}장 첨부(기록에는 사진을 남기지 않습니다)
+                          사진 {it.attachmentCount}장 첨부 · 사진은 기록에 남기지 않습니다
                         </small>
                       ) : null}
                     </div>
@@ -465,7 +465,7 @@ export function ChatPage() {
                         ((lastUser.attachmentCount ?? 0) > 0 && !lastUser.images?.length ? (
                           <span className="muted">사진을 다시 첨부해 보내 주세요.</span>
                         ) : (
-                          <Button onClick={() => void send(lastUser.text, lastUser.images?.length ? lastSent.current : [])}>다시 보내기</Button>
+                          <Button onClick={() => void send(lastUser.text, lastUser.images?.length ? lastSent.current : [])}>다시 시도</Button>
                         ))}
                     </div>
                   )

@@ -10,9 +10,12 @@ model_list:
       num_ctx: 8192                                  # docs/measurements/0-memory.md: 세션 동시 실행 메모리 여유
     model_info:
       location: local
-      # Ollama 0.40의 MLX 실행기에서 qwen3.5:9b는 구조화 출력(format)을 지원하지 않습니다
-      # ("structured output is unavailable"). gateway가 response_format 요청을 400으로 돌려줍니다.
-      supports_response_format: false
+      profile:                                       # 결정 0008·0009: 계획·로컬 돌림은 모델 기본(생각 켬), 나머지는 끔
+        thinking: {plan: default, reroute: default, imageRead: "off", ragAnswer: "off", incident: "off"}
+        timeoutSeconds: 120
+        # Ollama 0.40의 MLX 실행기에서 qwen3.5:9b는 구조화 출력(format)을 지원하지 않습니다
+        # ("structured output is unavailable"). gateway가 response_format 요청을 400으로 돌려줍니다.
+        structuredOutput: false
 
   - model_name: local-gguf                           # 구조화 출력(response_format)이 되는 로컬 판(#205)
     litellm_params:
@@ -23,7 +26,10 @@ model_list:
       num_ctx: 8192
     model_info:
       location: local
-      supports_response_format: true
+      profile:                                       # 결정 0008·0009: 계획·로컬 돌림은 모델 기본(생각 켬), 나머지는 끔
+        thinking: {plan: default, reroute: default, imageRead: "off", ragAnswer: "off", incident: "off"}
+        timeoutSeconds: 120
+        structuredOutput: true
 
   - model_name: local-vision                         # 이미지 입력 전용(#261). 이미지가 든 요청은 gateway가 모두 여기로 보냅니다
     litellm_params:
@@ -34,8 +40,11 @@ model_list:
       num_ctx: 8192
     model_info:
       location: local
-      vision: true
-      supports_response_format: true
+      profile:                                       # 결정 0008·0009: 계획·로컬 돌림은 모델 기본(생각 켬), 나머지는 끔
+        thinking: {plan: default, reroute: default, imageRead: "off", ragAnswer: "off", incident: "off"}
+        timeoutSeconds: 120
+        structuredOutput: true
+        vision: true
 
   - model_name: local-exaone                         # 평가 전용(모델 교체 회귀 #107·#346). 기본 경로에서는 쓰지 않습니다
     litellm_params:
@@ -46,6 +55,25 @@ model_list:
       num_ctx: 8192
     model_info:
       location: local
+      evalOnly: true
+      profile:
+        thinking: {plan: default, reroute: default, imageRead: "off", ragAnswer: "off", incident: "off"}
+        timeoutSeconds: 120
+
+  - model_name: local-gemma4                         # 평가 전용(모델 교체 회귀, 결정 0009·#595). 기본 경로에서는 쓰지 않습니다
+    litellm_params:
+      # Gemma 4 12B(Ollama gemma4:12b). 모델 파일은 디스크 여유가 있을 때 받습니다(사용자 결정). 같은 개발 묶음에서 생각을
+      # 끄는 쪽이 도구 호출이 더 나았습니다(끔 43/46, 켬 38/46, #586).
+      model: ollama_chat/gemma4:12b
+      api_base: os.environ/OLLAMA_BASE_URL
+      num_ctx: 8192
+    model_info:
+      location: local
+      evalOnly: true
+      profile:
+        thinking: {plan: "off", reroute: "off", imageRead: "off", ragAnswer: "off", incident: "off"}
+        timeoutSeconds: 120
+        structuredOutput: true                       # Ollama GGUF(llama.cpp 실행기)는 format을 받습니다. 이 모델로는 아직 확인 안 함
 
   - model_name: local-embed                          # rag 벡터 검색용 임베딩. 로컬만
     litellm_params:
@@ -74,6 +102,7 @@ model_list:
       api_key: os.environ/ANTHROPIC_API_KEY
     model_info:
       location: external
+      evalOnly: true
       drop_params: [temperature, top_p]              # Sonnet 5.5도 기본값이 아닌 샘플링 값을 400으로 거절합니다
       input_cost_per_token: 0.000002
       output_cost_per_token: 0.00001
@@ -88,6 +117,9 @@ model_list:
       api_key: os.environ/K_EXAONE_API_KEY
     model_info:
       location: external
+      evalOnly: true
+      profile:
+        timeoutSeconds: 120                          # 생각 단계는 끌 수 없음(공식 문서). 기본 effort max
       # 단가는 공식 문서에 없어 적지 않습니다. 비용 머리글이 없으면 비용 상한에 더해지지 않습니다.
 
 litellm_settings:

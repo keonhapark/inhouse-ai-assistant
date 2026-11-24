@@ -193,6 +193,11 @@ class ChatService:
         c = self.conversations.get(conversation_id or "")
         return c.condition if c else None
 
+    def route_method_of(self, conversation_id: str | None) -> str | None:
+        """입구 라우터가 이 대화를 고른 방법(llm·keyword·fallback·explicit). 출구가 fallback 대화를 로컬로 묶을 때 씁니다(#308)."""
+        c = self.conversations.get(conversation_id or "")
+        return c.route_method if c else None
+
     def model_override_of(self, conversation_id: str | None) -> dict[str, str]:
         c = self.conversations.get(conversation_id or "")
         return c.model_override if c else {}
@@ -239,7 +244,10 @@ class ChatService:
                                             "retryable": False})]
         out = []
         for a in state.get("actions") or []:
-            out.append(c.event("action", action={k: a[k] for k in ("actionId", "tool", "summary", "undoable")}))
+            action = {k: a[k] for k in ("actionId", "tool", "summary", "undoable")}
+            if isinstance(a.get("toolLabel"), str) and a["toolLabel"]:
+                action["toolLabel"] = a["toolLabel"]   # 도구 표시 이름(#607). 화면에 도구 코드 이름을 내지 않게 합니다
+            out.append(c.event("action", action=action))
         for m in state.get("messages") or []:
             out.append(c.event("message", text=m["content"], **({"model": model} if model else {})))
         if state.get("citations"):
@@ -253,6 +261,8 @@ class ChatService:
             c.status, c.pending = "awaiting_approval", ap.id
             approval = {"approvalId": ap.id, "tool": tp["tool"], "risk": tp["risk"], "preview": tp["preview"],
                         "expiresAt": iso(ap.expires_at)}
+            if isinstance(tp.get("toolLabel"), str) and tp["toolLabel"]:
+                approval["toolLabel"] = tp["toolLabel"]   # agent ToolPreview.toolLabel 그대로(#607)
             if isinstance(tp.get("fromAttachments"), bool):
                 # 이 턴에 agent가 첨부 이미지를 읽었는지(결정 0004). 화면이 "확인 필요"를 표시합니다(#395)
                 approval["fromAttachments"] = tp["fromAttachments"]

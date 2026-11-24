@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { landingPath } from '../shell/pending'
+import { Sparkles } from 'lucide-react'
 import { Button } from '../components/Button'
-import { Card } from '../components/Card'
 import { useAuth } from '../auth/useAuth'
 import './pages.css'
 
@@ -29,44 +29,53 @@ export function LoginPage() {
     if (!result.ok) setError(result.message)
   }
 
+  const errorId = error ? 'login-error' : undefined
   return (
-    <main className="login">
-      <Card className="login__card" aria-labelledby="login-title">
-        <form onSubmit={onSubmit} className="login__form" noValidate>
-          <h1 id="login-title">사내 AI 비서</h1>
-          <p className="muted">사번과 비밀번호로 로그인합니다.</p>
-          <label>
-            사번
-            <input
-              name="employeeNo"
-              autoComplete="username"
-              value={employeeNo}
-              onChange={(e) => setEmployeeNo(e.target.value)}
-              required
-              autoFocus
-            />
-          </label>
-          <label>
-            비밀번호
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
-          {error && (
-            <p role="alert" className="alert">
-              {error}
-            </p>
-          )}
-          <Button type="submit" variant="primary" disabled={pending || !employeeNo || !password}>
-            {pending ? '로그인 중' : '로그인'}
-          </Button>
-        </form>
-      </Card>
+    <main className="login" aria-labelledby="login-title">
+      <form onSubmit={onSubmit} className="login__sheet" noValidate>
+        <span className="login__logo" aria-hidden>
+          <Sparkles />
+        </span>
+        <h1 id="login-title" className="login__title">
+          사내 AI 비서
+        </h1>
+        <p className="login__intro">결재, 경비 정산, 회의실 예약, 사내 규정 질문을 대화로 처리합니다.</p>
+        <label className="login__field">
+          <span>사번</span>
+          <input
+            name="employeeNo"
+            autoComplete="username"
+            value={employeeNo}
+            onChange={(e) => setEmployeeNo(e.target.value)}
+            aria-invalid={!!error}
+            aria-describedby={errorId}
+            required
+            autoFocus
+          />
+        </label>
+        <label className="login__field">
+          <span>비밀번호</span>
+          <input
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            aria-invalid={!!error}
+            aria-describedby={errorId}
+            required
+          />
+        </label>
+        {error && (
+          <p role="alert" id="login-error" className="login__error">
+            {error}
+          </p>
+        )}
+        <Button type="submit" variant="primary" className="login__submit" disabled={pending || !employeeNo || !password}>
+          {pending ? '로그인 중' : '로그인'}
+        </Button>
+        <p className="login__help">사번이나 비밀번호를 모르면 IT 담당 부서에 문의해 주세요.</p>
+      </form>
     </main>
   )
 }
@@ -81,5 +90,5 @@ function FirstScreen({ roles }: { roles: string[] }) {
       alive = false
     }
   }, [roles])
-  return to ? <Navigate to={to} replace /> : <p className="page muted">불러오는 중입니다.</p>
+  return to ? <Navigate to={to} replace /> : <p role="status" className="page-loading">불러오는 중입니다.</p>
 }

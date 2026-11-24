@@ -1,5 +1,4 @@
-/* 사내 AI 비서 디자인 토큰. 기준은 ux/design-system/tokens.css(#563)이고 그대로 옮겼습니다(명세 ux/design-system.md 7절).
-   맨 아래 "옛 이름" 묶음은 화면을 새 이름으로 옮기는 동안(#557)만 두는 별칭입니다. 쓰는 곳이 없어지면 지웁니다. */
+/* 사내 AI 비서 디자인 토큰. 기준은 ux/design-system/tokens.css(#563)이고 그대로 옮겼습니다(명세 ux/design-system.md 7절). */
 
 :root {
   color-scheme: light;
@@ -113,29 +112,6 @@
   --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
   --dur-fast: 150ms;
   --dur: 220ms;
-
-  /* 옛 이름(#557 옮기는 동안만). 새 토큰을 가리키고, 값이 따로 있는 것은 어두움 블록에도 둡니다 */
-  --border: #e3e3e8;
-  --text-muted: var(--text-2);
-  --on-fill: #ffffff;
-  --local: var(--accent);
-  --font-sans: var(--font);
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Pretendard Variable', Pretendard, monospace;
-  --lh: var(--lh-body);
-  --fs-12: var(--fs-caption);
-  --fs-14: var(--fs-body);
-  --fs-16: var(--fs-headline);
-  --fs-20: var(--fs-title3);
-  --fs-24: var(--fs-title2);
-  --sp-4: var(--space-1);
-  --sp-8: var(--space-2);
-  --sp-12: var(--space-3);
-  --sp-16: var(--space-4);
-  --sp-24: var(--space-6);
-  --sp-32: var(--space-8);
-  --radius-control: var(--r-sm);
-  --radius-card: var(--r-md);
-  --shadow-card: var(--shadow-1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -170,9 +146,6 @@
     --seg-thumb: #636366;
     --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 6%);
     --shadow-pop: 0 0 0 0.5px rgb(255 255 255 / 10%), 0 12px 36px rgb(0 0 0 / 50%);
-    /* 옛 이름 */
-    --border: #3a3a3c;
-    --on-fill: #1c1c1e;
   }
 }
 
@@ -207,9 +180,6 @@
   --seg-thumb: #636366;
   --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 6%);
   --shadow-pop: 0 0 0 0.5px rgb(255 255 255 / 10%), 0 12px 36px rgb(0 0 0 / 50%);
-  /* 옛 이름 */
-  --border: #3a3a3c;
-  --on-fill: #1c1c1e;
 }
 
 @media (prefers-reduced-motion: reduce) {

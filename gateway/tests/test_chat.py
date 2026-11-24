@@ -28,6 +28,7 @@ class FakeAgent:
         self.route_to = "assistant"
         self.route_method = "keyword"
         self.preview_extra: dict = {}       # toolPreview에 더할 필드(예: fromAttachments)
+        self.action_extra: dict = {}        # 완료한 일(ExecutedAction)에 더할 필드(예: toolLabel)
         self.down = False
         self.waiting: dict[str, str] = {}   # approvalId -> conversationId
         self.broken_resume = False          # True면 /resume이 계약에 맞지 않는 RunState를 돌려줌
@@ -74,7 +75,7 @@ class FakeAgent:
             else:
                 state = {"status": "completed", "messages": [{"role": "assistant", "content": "예약했습니다"}],
                          "actions": [{"tool": "room_reserve", "actionId": "act_1", "summary": "예약함",
-                                      "undoable": True}]}
+                                      "undoable": True, **self.action_extra}]}
             return self._ok("RunState", {"conversationId": body["conversationId"], "agentId": agent_id, **state})
         return httpx.Response(404)
 

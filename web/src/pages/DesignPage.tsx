@@ -3,7 +3,7 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import './pages.css'
 
-const TOKENS = ['bg', 'surface', 'border', 'text', 'text-muted', 'accent', 'success', 'warning', 'danger', 'local']
+const TOKENS = ['bg', 'surface', 'fill', 'fill-2', 'sep', 'sep-strong', 'text', 'text-2', 'accent', 'accent-fill', 'progress', 'success', 'warning', 'danger']
 
 /** DESIGN.md의 토큰과 기본 부품을 한 화면에 모아 라이트·다크에서 확인합니다. */
 export function DesignPage() {
@@ -50,7 +50,7 @@ export function DesignPage() {
       </section>
 
       <section aria-labelledby="cards">
-        <h2 id="cards">미리보기 카드</h2>
+        <h2 id="cards">실행 전 확인 카드</h2>
         <Card
           header={
             <>
@@ -61,7 +61,7 @@ export function DesignPage() {
           }
           footer={
             <>
-              <span className="muted mono">만료 14:32</span>
+              <span className="muted mono">14:32까지 확인</span>
               <Button>취소</Button>
               <Button variant="primary">실행</Button>
             </>
