@@ -90,5 +90,5 @@ function FirstScreen({ roles }: { roles: string[] }) {
       alive = false
     }
   }, [roles])
-  return to ? <Navigate to={to} replace /> : <p className="login__loading">불러오는 중입니다.</p>
+  return to ? <Navigate to={to} replace /> : <p role="status" className="page-loading">불러오는 중입니다.</p>
 }

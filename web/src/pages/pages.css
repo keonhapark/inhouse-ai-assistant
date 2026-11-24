@@ -51,6 +51,7 @@
 /* 로그인(ux/research/ia.md 3절: 제품 이름, 소개 한 줄, 문의처). 가운데 시트 하나 */
 .login {
   display: grid;
+  min-height: 100vh;
   min-height: 100dvh;
   place-items: center;
   padding: var(--space-4);
@@ -92,7 +93,7 @@
 .login__intro,
 .login__help,
 .login__error,
-.login__loading {
+.page-loading {
   margin: 0;
   font-size: var(--fs-footnote);
   line-height: var(--lh-body);
@@ -104,12 +105,12 @@
 }
 
 .login__help,
-.login__loading {
+.page-loading {
   color: var(--text-2);
   font-size: var(--fs-caption);
 }
 
-.login__loading {
+.page-loading {
   padding: var(--space-8);
   text-align: center;
 }
@@ -126,7 +127,7 @@
 }
 
 .login__field input {
-  height: var(--control-h-lg);
+  height: var(--control-h);
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--r-sm);
