@@ -459,3 +459,13 @@ def test_pack_tool_display_names_must_be_known_tools(tmp_path) -> None:
     errors = check_pack(dst)
     assert [e for e in errors if "no_such_tool" in e] and not [e for e in errors if "room_reserve" in e]
 
+
+
+def test_fake_erp_problem_titles_match_erp() -> None:
+    """가짜 erp의 오류 제목이 실제 erp(Problems.java)와 같아야 화면·에이전트 시험이 같은 문구를 봅니다(#599)."""
+    import re
+
+    from fakes.erp.domain import TITLES
+
+    java = (ROOT / "erp/src/main/java/io/inhouse/erp/common/Problems.java").read_text(encoding="utf-8")
+    assert TITLES == dict(re.findall(r'Map\.entry\("([^"]+)", "([^"]+)"\)', java))

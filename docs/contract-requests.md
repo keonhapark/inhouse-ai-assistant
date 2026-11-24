@@ -19,3 +19,4 @@
 | 2026-11-23 | agent | #575 | tools.json 도구마다 `displayName`(필수), pack.yaml `tool_display_names`·양식 `tool.displayName`(선택), agent.yaml ToolPreview·ExecutedAction `toolLabel`(선택) | 도구 코드 이름이 화면까지 나감(#572 문구 점검). 리드 결정: 표시 이름은 계약, 팩이 덮어씀 | contract/agent-display-names PR, 구현 agent #575 |
 | 2026-11-23 | gateway | #595 | gateway.yaml `GET /v1/model-profiles`(모듈용)·`GET /ops/models`(관리 화면), 스키마 `ModelProfiles`·`ModelProfile`·`ThinkingSetting` | 결정 0009: 모델별 생각 단계·시간 제한·구조화 출력·이미지 입력을 별칭 프로필로 | contract/gateway-model-profiles PR, 구현 gateway·agent·rag·incident |
 | 2026-11-23 | gateway | #607 | gateway.yaml ChatEvent `action.toolLabel`(선택) | 완료한 일 카드에 도구 코드 이름 대신 표시 이름(#575) | contract/gateway-action-toollabel PR, 구현 gateway #607 |
+| 2026-11-23 | erp | #576 | 가짜 erp `TITLES`를 실제 erp `Problems.java` 제목(#599)과 맞추고 `internal` 추가, detail이 제목과 같으면 뺌, 두 목록이 같은지 보는 계약 시험 | erp 문구 정비(#599) 뒤 가짜 erp만 옛 문구 | contract/erp-fake-copy PR |
