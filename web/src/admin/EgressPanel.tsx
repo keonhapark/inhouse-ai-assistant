@@ -66,7 +66,7 @@ function EgressItem({ record: r }: { record: Record_ }) {
           {r.redactions.length > 0 ? <Badge tone="warning">가림 {r.redactions.length}곳: {kinds.join(', ')}</Badge> : <Badge>가림 없음</Badge>}
           <span className="muted egress__cost">
             {r.usage ? `${(r.usage.promptTokens ?? 0) + (r.usage.completionTokens ?? 0)}토큰 · ` : ''}
-            {r.costUsd == null ? '비용 모름' : formatUsd(r.costUsd)}
+            {r.costUsd == null ? '비용 정보 없음' : formatUsd(r.costUsd)}
           </span>
         </summary>
         <ol className="egress__messages">

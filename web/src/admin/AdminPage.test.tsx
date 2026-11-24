@@ -34,7 +34,7 @@ describe('운영 화면', () => {
     const agents = screen.getByRole('region', { name: '에이전트별' })
     const hr = within(agents).getByRole('row', { name: /인사/ })
     expect(hr).toHaveTextContent('0% (외부 0 · 사내 96)')
-    expect(within(screen.getByRole('region', { name: '차단 이유' })).getByText('위험 정책 거절')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: '차단 이유' })).getByText('정책 차단')).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: '에이전트 자동 선택' })).getByText('모델이 고름')).toBeInTheDocument()
     const budgets = screen.getByRole('region', { name: '외부 비용 상한' })
     expect(within(budgets).getByRole('row', { name: /구매자재/ })).toHaveTextContent('상한 넘음 · 사내 모델로 돌림')
@@ -66,7 +66,7 @@ describe('운영 화면', () => {
     await screen.findByRole('grid')
     await user.keyboard('{ArrowLeft>10/}{Enter}')
     await user.click(screen.getByRole('button', { name: '날짜로 보기' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('시작 날짜가 비었거나 끝 날짜보다 늦습니다. 날짜를 다시 고르세요.')
+    expect(screen.getByRole('alert')).toHaveTextContent('시작·끝 날짜를 모두 고르고, 시작을 끝보다 늦지 않게 고르세요.')
   })
 
   it('외부 전송 기록: 가린 자리를 표시하고 에이전트로 거릅니다', async () => {

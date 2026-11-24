@@ -96,9 +96,9 @@ describe('채팅 사진 첨부', () => {
     fireEvent.change(fileInput(), { target: { files: [gif, big, png('1.png'), png('2.png'), png('3.png'), png('4.png')] } })
     await screen.findByText(/x\.gif:/)
     const text = document.querySelector('.attach__errors')!.textContent!
-    expect(text).toContain('x.gif: JPEG·PNG 사진만 붙일 수 있습니다.')
-    expect(text).toContain('big.png: 5MB보다 큰 사진은 붙일 수 없습니다.')
-    expect(text).toContain('1장은 붙이지 않았습니다. 사진은 한 번에 3장까지 붙일 수 있습니다.')
+    expect(text).toContain('x.gif: JPEG·PNG 사진만 첨부할 수 있습니다.')
+    expect(text).toContain('big.png: 5MB보다 큰 사진은 첨부할 수 없습니다.')
+    expect(text).toContain('1장은 첨부하지 않았습니다. 사진은 한 번에 3장까지 첨부할 수 있습니다.')
     expect(within(screen.getByRole('list', { name: '보낼 사진' })).getAllByRole('listitem')).toHaveLength(3)
     expect(screen.getByRole('button', { name: '사진 첨부' })).toBeDisabled()
   })
@@ -227,7 +227,7 @@ describe('pickImages', () => {
   it('이미 붙인 수를 세어 3장까지만 받고, 뺀 장수를 알립니다', async () => {
     const { images, errors } = await pickImages([png('a.png'), png('b.png')], 2)
     expect(images.map((i) => i.name)).toEqual(['a.png'])
-    expect(errors).toEqual(['1장은 붙이지 않았습니다. 사진은 한 번에 3장까지 붙일 수 있습니다.'])
+    expect(errors).toEqual(['1장은 첨부하지 않았습니다. 사진은 한 번에 3장까지 첨부할 수 있습니다.'])
   })
 
   it('형식은 파일 앞 바이트로 봅니다(MIME이 비거나 image/jpg여도 JPEG면 받고, HEIC는 따로 안내)', async () => {
@@ -239,8 +239,8 @@ describe('pickImages', () => {
       ['a.jpg', 'image/jpeg'],
       ['b.jpeg', 'image/jpeg'],
     ])
-    expect(errors[0]).toContain('c.heic: HEIC 사진은 붙일 수 없습니다.')
-    expect(errors[1]).toBe('d.png: JPEG·PNG 사진만 붙일 수 있습니다.')
+    expect(errors[0]).toContain('c.heic: HEIC 사진은 첨부할 수 없습니다.')
+    expect(errors[1]).toBe('d.png: JPEG·PNG 사진만 첨부할 수 있습니다.')
   })
 
   it('보낼 때 만드는 data URL의 머리는 바이트로 본 형식입니다', async () => {

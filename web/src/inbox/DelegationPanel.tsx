@@ -183,10 +183,11 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
         <label>
           금액 한도(원)
           <input type="number" min={0} step={1} inputMode="numeric" aria-describedby="delegation-max-help" value={draft.maxAmount} onChange={(e) => edit({ maxAmount: e.target.value })} />
-          <small id="delegation-max-help" className="field-help">
-            비우면 한도 없음
-          </small>
         </label>
+        {/* 도움말은 라벨 밖에 두어 입력칸 이름에 섞이지 않고 설명으로만 읽힙니다 */}
+        <small id="delegation-max-help" className="field-help">
+          비우면 한도 없음
+        </small>
         <label>
           사유
           <input maxLength={200} value={draft.reason} onChange={(e) => edit({ reason: e.target.value })} required />

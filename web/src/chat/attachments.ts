@@ -41,15 +41,15 @@ export async function pickImages(files: File[], already: number): Promise<{ imag
       continue
     }
     if (kind === 'heic') {
-      errors.push(`${f.name}: HEIC 사진은 붙일 수 없습니다. 휴대폰 카메라 설정에서 JPEG(호환성 우선)로 저장해 주세요.`)
+      errors.push(`${f.name}: HEIC 사진은 첨부할 수 없습니다. 휴대폰 카메라 설정에서 JPEG(호환성 우선)로 저장해 주세요.`)
       continue
     }
     if (!kind) {
-      errors.push(`${f.name}: JPEG·PNG 사진만 붙일 수 있습니다.`)
+      errors.push(`${f.name}: JPEG·PNG 사진만 첨부할 수 있습니다.`)
       continue
     }
     if (f.size > MAX_BYTES) {
-      errors.push(`${f.name}: 5MB보다 큰 사진은 붙일 수 없습니다.`)
+      errors.push(`${f.name}: 5MB보다 큰 사진은 첨부할 수 없습니다.`)
       continue
     }
     if (already + images.length >= MAX_IMAGES) {
@@ -58,7 +58,7 @@ export async function pickImages(files: File[], already: number): Promise<{ imag
     }
     images.push({ id: `img-${++seq}`, name: f.name, mediaType: kind, bytes: f.size, file: f, url: URL.createObjectURL(f) })
   }
-  if (over) errors.push(`${over}장은 붙이지 않았습니다. 사진은 한 번에 ${MAX_IMAGES}장까지 붙일 수 있습니다.`)
+  if (over) errors.push(`${over}장은 첨부하지 않았습니다. 사진은 한 번에 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`)
   return { images, errors }
 }
 

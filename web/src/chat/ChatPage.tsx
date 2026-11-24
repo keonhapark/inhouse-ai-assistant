@@ -208,7 +208,7 @@ export function ChatPage() {
     try {
       dataUrls = await Promise.all(imgs.map(async (i) => ({ dataUrl: await toDataUrl(i) })))
     } catch {
-      setAttachErrors(['사진을 읽지 못해 보내지 않았습니다. 사진을 빼고 다시 붙여 주세요.'])
+      setAttachErrors(['사진을 읽지 못해 보내지 않았습니다. 사진을 빼고 다시 첨부하세요.'])
       return
     }
     setNotice(null)

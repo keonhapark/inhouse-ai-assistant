@@ -11,7 +11,7 @@ const CONDITION: Record<string, string> = {
 }
 export const conditionName = (c: string) => CONDITION[c] ?? c
 
-const SET: Record<string, string> = { confirm: '확인 셋', dev: '개발 셋', normal: '정상 셋' }
+const SET: Record<string, string> = { confirm: '확인 세트', dev: '개발 세트', normal: '정상 세트' }
 export const setName = (s: string) => SET[s] ?? s
 
 const CONCERN: Record<string, string> = {

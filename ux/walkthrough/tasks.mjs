@@ -18,7 +18,7 @@ async function pickDateTime(u, page, scope, label, offsetDays, hour) {
 }
 
 /** 결재 메뉴(이름 뒤에 결재할 문서 건수가 붙을 수 있음) */
-const approvalsLink = (page) => page.getByRole('link', { name: /^결재(,|$)/ })
+const approvalsLink = (page) => page.getByRole('link', { name: /^결재\s*(,|$)/ })
 
 /** 결재 상세의 승인: 승인 단추를 누르고 확인 팝오버에서 다시 승인합니다(#557) */
 async function approve(u, page, doc) {

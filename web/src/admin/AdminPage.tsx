@@ -48,7 +48,7 @@ export function AdminPage() {
     e.preventDefault()
     const p: Period = { kind: 'custom', from, to }
     const r = toRange(p)
-    if (!r) return setRangeError('시작 날짜가 비었거나 끝 날짜보다 늦습니다. 날짜를 다시 고르세요.')
+    if (!r) return setRangeError('시작·끝 날짜를 모두 고르고, 시작을 끝보다 늦지 않게 고르세요.')
     setPeriod(p)
     setRangeError(null)
     setRange(r)

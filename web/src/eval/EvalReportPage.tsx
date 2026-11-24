@@ -73,7 +73,7 @@ function ReportView({ reportId }: { reportId: string }) {
           <Item label="반복">{meta.repeats}회</Item>
           <Item label="회차">
             {meta.done_runs}/{meta.planned_runs}
-            {meta.retried_runs ? ` (다시 돌림 ${meta.retried_runs})` : ''}
+            {meta.retried_runs ? ` (다시 시도 ${meta.retried_runs}회)` : ''}
           </Item>
           <Item label="팩">{[meta.pack_version ?? meta.pack, meta.pack_stage != null ? `단계 ${meta.pack_stage}` : null].filter(Boolean).join(', ') || '-'}</Item>
           <Item label="모델(설정)">{meta.model ?? '-'}</Item>
@@ -88,7 +88,7 @@ function ReportView({ reportId }: { reportId: string }) {
           <Item label="비용">
             {meta.cost_spent_usd != null ? `$${meta.cost_spent_usd.toFixed(4)}` : '-'}
             {meta.cost_cap_usd != null ? ` / 상한 $${meta.cost_cap_usd}` : ''}
-            {meta.cost_unknown_runs ? ` (비용 모름 ${meta.cost_unknown_runs}회차)` : ''}
+            {meta.cost_unknown_runs ? ` (비용 정보 없음 ${meta.cost_unknown_runs}회차)` : ''}
           </Item>
         </dl>
         {!!meta.notes?.length && (

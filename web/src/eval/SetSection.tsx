@@ -127,7 +127,7 @@ function ConcernPart({ c, conditions, main }: { c: NonNullable<SetSummary['conce
           </Scroll>
         </>
       )}
-      <h4>결과 분포(회차 단위)와 실행 후 취소됨</h4>
+      <h4>결과 분포(회차 단위)와 실행 후 취소 건수</h4>
       <Scroll label="결과 분포 표">
         <table className="table">
           <thead>
@@ -236,7 +236,7 @@ function NormalPart({ n, conditions, passK }: { n: NonNullable<SetSummary['norma
 }
 
 function CommonPart({ c }: { c: SetSummary['common'] }) {
-  const sec = (v: number | null | undefined) => (v == null ? '-' : `${v.toFixed(1)}s`)
+  const sec = (v: number | null | undefined) => (v == null ? '-' : `${v.toFixed(1)}초`)
   return (
     <>
       <h3>실행 전 확인 요청(회차 합계)</h3>
@@ -315,7 +315,7 @@ function CommonPart({ c }: { c: SetSummary['common'] }) {
                 비용(달러)
               </th>
               <th scope="col" className="num">
-                비용 모름
+                비용 정보 없음
               </th>
             </tr>
           </thead>
