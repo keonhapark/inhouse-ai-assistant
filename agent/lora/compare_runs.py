@@ -5,7 +5,10 @@
 
     uv run python eval_dev/first_call_run.py --base-url <ollama>/v1 --model qwen3.5:9b --out <기본>.jsonl
     uv run python eval_dev/first_call_run.py --base-url <ollama>/v1 --model qwen3.5-9b-toolcall-lora --out <LoRA>.jsonl
-    uv run python lora/compare_runs.py <기본>.jsonl <LoRA>.jsonl
+    uv run python lora/compare_runs.py <기본>.jsonl <LoRA>.jsonl [--overlap <overlap.py 보고서>]
+
+`--overlap`을 주면 학습 데이터와 문장 틀이 겹친 개발 항목(#653)을 뺀 표도 함께 냅니다. 겹친 항목은 학습 때 거의 같은
+문장을 봤으므로 LoRA 효과를 부풀릴 수 있습니다.
 
 개발 묶음 항목(source=dev)만 셉니다. 기대 도구는 정답·대안 정답 도구 중 하나를 첫 행동으로 불렀는지입니다.
 LoRA는 생각 끔 형식으로 학습하므로(train_qlora.py) 기본·LoRA를 `--variant '{"thinking": false}'`와 생각 켬(변형 없음) 둘 다로
@@ -14,9 +17,9 @@ LoRA는 생각 끔 형식으로 학습하므로(train_qlora.py) 기본·LoRA를 
 
 from __future__ import annotations
 
+import argparse
 import json
 import statistics
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -55,16 +58,24 @@ def changed(base: list[dict[str, Any]], tuned: list[dict[str, Any]]) -> dict[str
     return {"better": better, "worse": worse}
 
 
-def main(argv: list[str] | None = None) -> int:
-    argv = sys.argv[1:] if argv is None else argv
-    if len(argv) != 2:
-        raise SystemExit("사용: compare_runs.py <기본 실행 jsonl> <LoRA 실행 jsonl>")
-    base, tuned = load(Path(argv[0])), load(Path(argv[1]))
+def table(base: list[dict[str, Any]], tuned: list[dict[str, Any]]) -> str:
     sb, st = score(base), score(tuned)
-    print("| 항목 | 기본 | LoRA |\n|---|---|---|")
-    for k in sb:
-        print(f"| {k} | {sb[k]} | {st[k]} |")
-    print(json.dumps(changed(base, tuned), ensure_ascii=False))
+    lines = ["| 항목 | 기본 | LoRA |", "|---|---|---|", *(f"| {k} | {sb[k]} | {st[k]} |" for k in sb)]
+    return "\n".join(lines) + "\n" + json.dumps(changed(base, tuned), ensure_ascii=False)
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("base", help="기본 실행 jsonl")
+    ap.add_argument("tuned", help="LoRA 실행 jsonl")
+    ap.add_argument("--overlap", help="lora/overlap.py 보고서(overlapIds를 뺀 비교를 더 냄)")
+    args = ap.parse_args(argv)
+    base, tuned = load(Path(args.base)), load(Path(args.tuned))
+    print(table(base, tuned))
+    if args.overlap:
+        ids = set(json.loads(Path(args.overlap).read_text("utf-8"))["overlapIds"])
+        print(f"\n학습 데이터와 문장 틀이 겹친 개발 항목 {len(ids & {r['id'] for r in base})}개를 뺀 비교(#653):\n")
+        print(table([r for r in base if r["id"] not in ids], [r for r in tuned if r["id"] not in ids]))
     return 0
 
 

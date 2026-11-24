@@ -102,6 +102,47 @@ def test_compare_runs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> Non
     out = capsys.readouterr().out
     assert "| expectedTool | 1/2 | 1/2 |" in out and "| clarifyNoTool | 1/1 | 0/1 |" in out
     assert '"better": ["a"]' in out and '"worse": ["b"]' in out
+    # 겹친 개발 항목(#653)을 뺀 표도 냅니다
+    (tmp_path / "ov.json").write_text(json.dumps({"overlapIds": ["a"]}), "utf-8")
+    assert compare_runs.main([str(tmp_path / "b.jsonl"), str(tmp_path / "t.jsonl"), "--overlap",
+                              str(tmp_path / "ov.json")]) == 0
+    out = capsys.readouterr().out
+    assert "겹친 개발 항목 1개를 뺀 비교" in out
+    assert out.split("뺀 비교")[1].count("| expectedTool | 1/1 | 0/1 |") == 1
+
+
+def test_skeleton_normalizes_ids_numbers_names_and_endings() -> None:
+    import overlap
+
+    names = overlap.pack_names()
+    assert overlap.skeleton("결재 doc-1077 회수해 줘", names) == overlap.skeleton("결재 doc-6617 회수해줘", names) == "결재#회수"
+    assert overlap.skeleton("3월 15일 연차 쓸게요", names) == overlap.skeleton("11월 28일 연차 쓸게요", names)
+    assert overlap.skeleton("회의실 예약 rsv-0042 취소해 줘", names) == overlap.skeleton("회의실 예약 rsv-8449 취소 부탁해요", names)
+    assert "@" in overlap.skeleton("박성민 사번 알려 줘", names)  # 팩 사람 이름
+    assert overlap.skeleton("132,000원 정산", names) == overlap.skeleton("5000원 정산", names)
+
+
+def test_overlap_report_marks_issue_examples(tmp_path: Path) -> None:
+    import overlap
+
+    train = tmp_path / "train.jsonl"
+    rows = [("결재 doc-6617 회수해 줘", "approval_withdraw"), ("내가 다른 사람한테 넘긴 대결 목록 보여 주세요", "delegation_list"),
+            ("내일 오후 3시부터 한 시간 회의실 잡아 줘", "room_reserve")]
+    train.write_text("".join(json.dumps({"messages": [{"role": "system", "content": "s"}, {"role": "user", "content": u},
+                                                      {"role": "assistant", "content": "", "tool_calls": [
+                                                          {"function": {"name": t, "arguments": {}}}]}]},
+                                        ensure_ascii=False) + "\n" for u, t in rows), "utf-8")
+    ev = tmp_path / "ev.jsonl"
+    ev.write_text("".join(json.dumps(x, ensure_ascii=False) + "\n" for x in [
+        {"id": "e1", "utterance": "결재 doc-1077 회수해 줘", "expected": {"type": "call", "tool": "approval_withdraw"}},
+        {"id": "e2", "utterance": "내가 다른 사람한테 맡긴 대결 목록 보여 줘", "expected": {"type": "call", "tool": "delegation_list"}},
+        {"id": "e3", "utterance": "법인카드 없이 쓴 식대도 정산돼?", "expected": {"type": "call", "tool": "policy_search"}}]),
+        "utf-8")
+    out = tmp_path / "ov.json"
+    assert overlap.main(["--train", str(train), "--against", str(ev), "--out", str(out)]) == 0
+    rep = json.loads(out.read_text("utf-8"))
+    assert rep["overlapIds"] == ["e1", "e2"] and rep["overlappingSameAnswer"] == 2
+    assert "text" not in rep["rows"][0]  # 문장은 --with-text일 때만
 
 
 def test_install_dry_run() -> None:
