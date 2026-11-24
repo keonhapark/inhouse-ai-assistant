@@ -2,7 +2,8 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
-import { DateField, DateTimeField, koDate } from './DatePicker'
+import { koDate } from '../display/dates'
+import { DateField, DateTimeField } from './DatePicker'
 
 // 고른 값은 <output>(암묵 역할 status)에 보입니다
 function Date1({ initial = '2026-11-23', max }: { initial?: string; max?: string }) {
