@@ -148,14 +148,14 @@ describe('실행 미리보기', () => {
     expect(v.line[0].who).toBe('나우진 팀장(재무팀) (대결: 이영수 팀원(생산관리팀))')
   })
 
-  it('견적: 고객사 이름이 있으면 ID는 빼고, 품목 줄은 "품목 수량개"로', () => {
+  it('견적: 고객사 이름이 있으면 ID는 빼고, 품목 내역은 "품목 수량개"로', () => {
     const v = previewView({
       op: 'create', resource: 'quote',
       after: { customerId: 'cus_0001', customerName: '가온테크(가상)', lines: [{ itemName: '평기어', quantity: 500 }, { itemCode: 'NUT-M8', quantity: null }], totalAmount: 13750000, note: null },
     })
     expect(v.rows.map((r) => [r.label, r.after])).toEqual([
       ['고객사', '가온테크(가상)'],
-      ['품목 줄', '평기어 500개, NUT-M8'],
+      ['품목 내역', '평기어 500개, NUT-M8'],
       ['합계', '13,750,000원'],
     ])
   })

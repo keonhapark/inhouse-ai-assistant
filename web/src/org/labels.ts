@@ -20,7 +20,7 @@ export const RISK_ACTION: Record<Schemas['RiskAction'], string> = {
 }
 
 type Override = NonNullable<Entry['riskPolicy']['overrides']>[number]
-const WHEN: Record<Override['when'], string> = { wide_scope: '범위가 넓을 때', always: '항상', arg_gt: '인자 조건이 맞을 때' }
+const WHEN: Record<Override['when'], string> = { wide_scope: '범위가 넓을 때', always: '항상', arg_gt: '값 조건이 맞을 때' }
 
 /** 받침이 있으면 a, 없으면 b(이/가, 은/는). 한글이 아니면 b */
 export function josa(word: string, a: string, b: string): string {

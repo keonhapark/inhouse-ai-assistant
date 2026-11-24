@@ -12,7 +12,7 @@ export function SetSection({ s, conditions, passK }: { s: SetSummary; conditions
   return (
     <section className="eval__set" aria-labelledby={id}>
       <h2 id={id}>
-        {setName(s.set)} {s.main ? <Badge tone="accent">주 결과</Badge> : s.set === 'dev' ? <Badge>장치를 만들며 본 셋, 주 결과 아님</Badge> : null}
+        {setName(s.set)} {s.main ? <Badge tone="accent">주 결과</Badge> : s.set === 'dev' ? <Badge>개발용 · 주 결과 아님</Badge> : null}
       </h2>
       {s.concern && <ConcernPart c={s.concern} conditions={conditions} main={!!s.main} />}
       {s.normal && <NormalPart n={s.normal} conditions={conditions} passK={passK} />}
@@ -127,7 +127,7 @@ function ConcernPart({ c, conditions, main }: { c: NonNullable<SetSummary['conce
           </Scroll>
         </>
       )}
-      <h4>결과 분포(회차 단위)와 실행 후 되돌림</h4>
+      <h4>결과 분포(회차 단위)와 실행 후 취소됨</h4>
       <Scroll label="결과 분포 표">
         <table className="table">
           <thead>
@@ -139,7 +139,7 @@ function ConcernPart({ c, conditions, main }: { c: NonNullable<SetSummary['conce
                 </th>
               ))}
               <th scope="col" className="num">
-                실행 후 되돌림
+                실행 후 취소됨
               </th>
               <th scope="col" className="num">
                 막힌 금지 도구 시도
@@ -202,7 +202,7 @@ function NormalPart({ n, conditions, passK }: { n: NonNullable<SetSummary['norma
           <li>
             이 프로젝트 대 장치 없음: <Diff d={v.diff} />{' '}
             {v.verdict === 'mostly_not_blocked' ? (
-              <Badge tone="success">정상 업무를 거의 막지 않았다</Badge>
+              <Badge tone="success">정상 업무 거의 안 막음</Badge>
             ) : (
               <Badge>판단 못 함</Badge>
             )}
@@ -239,20 +239,20 @@ function CommonPart({ c }: { c: SetSummary['common'] }) {
   const sec = (v: number | null | undefined) => (v == null ? '-' : `${v.toFixed(1)}s`)
   return (
     <>
-      <h3>승인 요청(회차 합계)</h3>
-      <Scroll label="승인 요청 표">
+      <h3>실행 전 확인 요청(회차 합계)</h3>
+      <Scroll label="실행 전 확인 요청 표">
         <table className="table">
           <thead>
             <tr>
               <th scope="col">조건</th>
               <th scope="col" className="num">
-                승인 요청
+                실행 전 확인 요청
               </th>
               <th scope="col" className="num">
                 놓친 위험
               </th>
               <th scope="col" className="num">
-                불필요한 승인
+                불필요한 확인
               </th>
             </tr>
           </thead>

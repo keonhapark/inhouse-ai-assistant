@@ -58,7 +58,7 @@ export async function pickImages(files: File[], already: number): Promise<{ imag
     }
     images.push({ id: `img-${++seq}`, name: f.name, mediaType: kind, bytes: f.size, file: f, url: URL.createObjectURL(f) })
   }
-  if (over) errors.push(`사진은 한 번에 ${MAX_IMAGES}장까지 붙일 수 있어 ${over}장은 붙이지 않았습니다.`)
+  if (over) errors.push(`${over}장은 붙이지 않았습니다. 사진은 한 번에 ${MAX_IMAGES}장까지 붙일 수 있습니다.`)
   return { images, errors }
 }
 

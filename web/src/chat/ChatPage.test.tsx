@@ -158,7 +158,7 @@ describe('직원 채팅', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '결재' })).toBeInTheDocument()
   })
 
-  it('서버 오류면 problem title과 다시 보내기를 보여 줍니다', async () => {
+  it('서버 오류면 problem title과 다시 시도를 보여 줍니다', async () => {
     let calls = 0
     server.use(
       http.post('*/api/conversations/:id/messages', () => {
@@ -174,10 +174,10 @@ describe('직원 채팅', () => {
     const user = renderChat()
     await say(user, '안녕')
     expect(await screen.findByText('모델 서버가 응답하지 않습니다.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '다시 보내기' }))
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
     expect(await screen.findByText(/맡을 부서를 찾지 못했습니다/)).toBeInTheDocument()
   })
-  it('스트림이 done 없이 닫히면 끊겼다고 알리고 다시 보내기는 주지 않습니다', async () => {
+  it('스트림이 done 없이 닫히면 끊겼다고 알리고 다시 시도는 주지 않습니다', async () => {
     server.use(
       http.post(
         '*/api/conversations/:id/messages',
@@ -190,11 +190,11 @@ describe('직원 채팅', () => {
     const user = renderChat()
     await say(user, '안녕')
     expect(await screen.findByText('응답이 중간에 끊겼습니다.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '다시 보내기' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull()
     expect(screen.getByLabelText('메시지')).toBeEnabled()
   })
 
-  it('4xx로 거절된 메시지는 다시 보내기를 주지 않습니다', async () => {
+  it('4xx로 거절된 메시지는 다시 시도를 주지 않습니다', async () => {
     server.use(
       http.post('*/api/conversations/:id/messages', () =>
         HttpResponse.json(
@@ -206,7 +206,7 @@ describe('직원 채팅', () => {
     const user = renderChat()
     await say(user, '안녕')
     expect(await screen.findByText('이 에이전트를 부를 수 없습니다.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '다시 보내기' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull()
   })
 
   it('실행 결정이 409로 거절되면 카드를 닫고 입력을 풉니다', async () => {

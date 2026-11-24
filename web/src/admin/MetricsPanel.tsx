@@ -18,7 +18,7 @@ const ROUTE_METHOD: [keyof Metrics['routing']['byMethod'], string][] = [
   ['llm', '모델이 고름'],
   ['keyword', '낱말로 고름'],
   ['explicit', '직원이 고름'],
-  ['fallback', '기본 에이전트로'],
+  ['fallback', '기본 에이전트'],
 ]
 
 /** 막대 하나. 값은 옆 글자로 읽고, 막대는 크기만 보여 줍니다(색 하나). */
@@ -100,7 +100,7 @@ export function MetricsPanel({ range }: { range: Range }) {
                   <td>
                     <span className="bar-cell">
                       <Bar value={a.llmRequests.external} max={n} label={`외부 ${a.llmRequests.external} / 전체 ${n}`} />
-                      {n === 0 ? <span className="muted">요청 없음</span> : `${percentText(a.llmRequests.external, n)} (외부 ${a.llmRequests.external} · 로컬 ${a.llmRequests.local})`}
+                      {n === 0 ? <span className="muted">요청 없음</span> : `${percentText(a.llmRequests.external, n)} (외부 ${a.llmRequests.external} · 사내 ${a.llmRequests.local})`}
                     </span>
                   </td>
                   <td className="num">{formatUsd(a.externalCostUsd)}</td>
@@ -137,7 +137,7 @@ export function MetricsPanel({ range }: { range: Range }) {
         </section>
 
         <section aria-labelledby="m-routing">
-          <h2 id="m-routing">입구 라우팅</h2>
+          <h2 id="m-routing">에이전트 자동 선택</h2>
           <table className="table">
             <tbody>
               {ROUTE_METHOD.map(([k, label]) => {
@@ -166,7 +166,7 @@ export function MetricsPanel({ range }: { range: Range }) {
         ) : (
           <>
             <p className="muted">
-              {m.budgets.period === 'month' ? '이번 달' : '오늘'} 누적입니다. 위 기간 필터와 관계없습니다. 상한을 넘으면 다음 요청부터 외부 요청을 로컬 모델로 내립니다.
+              {m.budgets.period === 'month' ? '이번 달' : '오늘'} 누적입니다. 위 기간 필터와 관계없습니다. 상한을 넘으면 다음 요청부터 외부 요청을 사내 모델로 돌립니다.
             </p>
             <table className="table">
               <thead>
@@ -188,7 +188,7 @@ export function MetricsPanel({ range }: { range: Range }) {
                         {b.limitUsd === 0 ? (
                           <Badge>상한 0 · 외부 안 씀</Badge>
                         ) : (
-                          (b.exceeded || b.usedUsd >= b.limitUsd) && <Badge tone="danger">상한 넘음 · 로컬로 내림</Badge>
+                          (b.exceeded || b.usedUsd >= b.limitUsd) && <Badge tone="danger">상한 넘음 · 사내 모델로 돌림</Badge>
                         )}
                       </span>
                     </td>

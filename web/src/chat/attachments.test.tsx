@@ -98,7 +98,7 @@ describe('채팅 사진 첨부', () => {
     const text = document.querySelector('.attach__errors')!.textContent!
     expect(text).toContain('x.gif: JPEG·PNG 사진만 붙일 수 있습니다.')
     expect(text).toContain('big.png: 5MB보다 큰 사진은 붙일 수 없습니다.')
-    expect(text).toContain('사진은 한 번에 3장까지 붙일 수 있어 1장은 붙이지 않았습니다.')
+    expect(text).toContain('1장은 붙이지 않았습니다. 사진은 한 번에 3장까지 붙일 수 있습니다.')
     expect(within(screen.getByRole('list', { name: '보낼 사진' })).getAllByRole('listitem')).toHaveLength(3)
     expect(screen.getByRole('button', { name: '사진 첨부' })).toBeDisabled()
   })
@@ -139,7 +139,7 @@ describe('채팅 사진 첨부(기록·추정·되돌리기)', () => {
     const user = renderChat()
     const list = await screen.findByRole('navigation', { name: '대화 목록' })
     await user.click(await within(list).findByRole('button', { name: /영수증/ }))
-    expect(await screen.findByText('사진 1장 첨부(기록에는 사진을 남기지 않습니다)')).toBeInTheDocument()
+    expect(await screen.findByText('사진 1장 첨부 · 사진은 기록에 남기지 않습니다')).toBeInTheDocument()
     const card = screen.getByRole('region', { name: '실행 전 확인: 경비 정산 상신' })
     expect(within(card).getByText('사진에서 읽은 값')).toBeInTheDocument()
   })
@@ -217,7 +217,7 @@ describe('채팅 사진 첨부(기록·추정·되돌리기)', () => {
     await screen.findByLabelText('메시지')
     await user.upload(fileInput(), png())
     await user.click(screen.getByRole('button', { name: '보내기' }))
-    await user.click(await screen.findByRole('button', { name: '다시 보내기' }))
+    await user.click(await screen.findByRole('button', { name: '다시 시도' }))
     await screen.findByRole('region', { name: '실행 전 확인: 경비 정산 상신' })
     expect((bodies[1].attachments as unknown[]).length).toBe(1)
   })
@@ -227,7 +227,7 @@ describe('pickImages', () => {
   it('이미 붙인 수를 세어 3장까지만 받고, 뺀 장수를 알립니다', async () => {
     const { images, errors } = await pickImages([png('a.png'), png('b.png')], 2)
     expect(images.map((i) => i.name)).toEqual(['a.png'])
-    expect(errors).toEqual(['사진은 한 번에 3장까지 붙일 수 있어 1장은 붙이지 않았습니다.'])
+    expect(errors).toEqual(['1장은 붙이지 않았습니다. 사진은 한 번에 3장까지 붙일 수 있습니다.'])
   })
 
   it('형식은 파일 앞 바이트로 봅니다(MIME이 비거나 image/jpg여도 JPEG면 받고, HEIC는 따로 안내)', async () => {

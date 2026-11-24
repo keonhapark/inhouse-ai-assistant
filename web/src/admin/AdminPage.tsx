@@ -48,7 +48,7 @@ export function AdminPage() {
     e.preventDefault()
     const p: Period = { kind: 'custom', from, to }
     const r = toRange(p)
-    if (!r) return setRangeError('시작 날짜가 끝 날짜보다 늦거나 비었습니다.')
+    if (!r) return setRangeError('시작 날짜가 비었거나 끝 날짜보다 늦습니다. 날짜를 다시 고르세요.')
     setPeriod(p)
     setRangeError(null)
     setRange(r)
@@ -82,7 +82,7 @@ export function AdminPage() {
           </Button>
         </form>
         <p className="admin__period" aria-live="polite">
-          {period.kind === 'custom' ? formatDateRange(period.from, period.to) : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}을 보고 있습니다.
+          보는 기간: {period.kind === 'custom' ? formatDateRange(period.from, period.to) : `최근 ${PRESETS.find((p) => p.preset === period.preset)?.label}`}
         </p>
         {rangeError && (
           <p role="alert" id="admin-range-error" className="admin__error">

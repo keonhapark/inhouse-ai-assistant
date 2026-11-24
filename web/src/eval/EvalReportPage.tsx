@@ -106,7 +106,7 @@ function ReportView({ reportId }: { reportId: string }) {
       {summary ? (
         summary.sets.map((s) => <SetSection key={s.set} s={s} conditions={meta.conditions} passK={summary.passK} />)
       ) : (
-        <p className="alert">이 보고서에는 요약(summary)이 없어 지표 표를 그리지 않습니다. 저장소의 같은 이름 .md 보고서를 보고, 아래 시나리오별 결과만 확인할 수 있습니다.</p>
+        <p className="alert">이 보고서에는 요약이 없어 지표 표를 그리지 않습니다. 지표는 저장소의 같은 이름 .md 보고서에서 보세요.</p>
       )}
 
       <ScenarioTable rows={rows} conditions={meta.conditions} />

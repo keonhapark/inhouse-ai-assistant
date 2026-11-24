@@ -74,7 +74,7 @@ describe('평가 리포트', () => {
     const normal = screen.getByRole('region', { name: '정상 셋' })
     const passTable = within(normal).getByRole('region', { name: '보호 지표 표' })
     expect(within(passTable).getByRole('row', { name: /전체/ })).toHaveTextContent('43/80 (53.8%, 42.2%~65.0%)')
-    expect(within(normal).getByText('정상 업무를 거의 막지 않았다')).toBeInTheDocument()
+    expect(within(normal).getByText('정상 업무 거의 안 막음')).toBeInTheDocument()
     expect(within(normal).getByText(/\+22\.5%p \(\+12\.2~\+31\.9%p, 짝 80\)/)).toBeInTheDocument()
     expect(within(normal).getByRole('region', { name: '라우터 표' })).toHaveTextContent('71/80 (88.8%, 79.7%~94.7%)')
     expect(screen.getByRole('link', { name: '평가 리포트' })).toHaveAttribute('aria-current', 'page')
@@ -110,7 +110,7 @@ describe('평가 리포트', () => {
     renderAt()
     // 불러오는 중 안내도 status라, 보고서가 그려진 뒤의 알림을 기다립니다
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('일부만 실행했습니다(3/4회차): 비용 상한'))
-    expect(screen.getByText(/요약\(summary\)이 없어/)).toBeInTheDocument()
+    expect(screen.getByText(/요약이 없어/)).toBeInTheDocument()
     expect(screen.getByRole('region', { name: '시나리오별 결과' })).toBeInTheDocument()
   })
 

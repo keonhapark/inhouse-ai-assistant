@@ -11,16 +11,16 @@ import { useLoad, usePaged } from './load'
 type Audit = Schemas['audit.schema']
 
 const KIND: Record<Audit['kind'], string> = {
-  'erp.write': 'erp 쓰기',
-  'erp.undo': 'erp 되돌리기',
-  'erp.denied': 'erp 거절',
+  'erp.write': '쓰기',
+  'erp.undo': '실행 취소',
+  'erp.denied': '거절',
   'auth.login': '로그인',
   'auth.delegation_token_issued': '위임 토큰 발급',
   'route.decided': '라우팅',
   'tool.called': '도구 실행',
   'tool.blocked': '도구 차단',
-  'execution_approval.requested': '실행 승인 요청',
-  'execution_approval.decided': '실행 승인 결정',
+  'execution_approval.requested': '실행 전 확인 요청',
+  'execution_approval.decided': '실행 전 확인 결정',
   'llm.request': 'LLM 요청',
   'llm.redacted': 'LLM 가림',
   'rag.answered': '규정 답변',

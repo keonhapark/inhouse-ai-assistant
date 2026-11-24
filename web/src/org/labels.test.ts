@@ -8,7 +8,7 @@ describe('labels', () => {
     expect(overrideWhen({ when: 'arg_gt', arg: 'amount', gt: 1000000 })).toBe('금액이 1,000,000원보다 클 때')
     expect(overrideWhen({ when: 'arg_gt', arg: 'quantity', gt: 10 })).toBe('수량이 10보다 클 때')
     expect(overrideWhen({ when: 'arg_gt', arg: 'total_amount', gt: 5000000 })).toBe('합계가 5,000,000원보다 클 때')
-    expect(overrideWhen({ when: 'arg_gt' })).toBe('인자 조건이 맞을 때')
+    expect(overrideWhen({ when: 'arg_gt' })).toBe('값 조건이 맞을 때')
   })
 
   it('부를 수 있는 사람', () => {
