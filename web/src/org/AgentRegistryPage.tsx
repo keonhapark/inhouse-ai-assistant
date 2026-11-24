@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { api, problemTitle, type Schemas } from '../api/client'
+import { useAuth } from '../auth/useAuth'
 import type { Risk } from '../components/Badge'
 import { GroupHead } from '../components/Group'
 import { agentLabel, toolName } from '../display/names'
@@ -76,6 +77,10 @@ function AgentSection({ agent: a, isFallback }: { agent: Entry; isFallback: bool
   const titleId = `agent-${a.id}-title`
   const name = agentLabel(a.name)
   const local = a.modelPolicy.mode === 'local_only'
+  // 도구 코드 이름은 감사 권한자에게만 작게 붙입니다(감사 로그의 작업 칸과 맞춰 볼 때). 직원에게는 표시 이름만 보입니다.
+  // 툴팁(title)은 키보드·터치·화면 낭독기로 볼 수 없어 글자로 둡니다
+  const { state } = useAuth()
+  const auditor = state.status === 'signed-in' && state.employee.roles.includes('auditor')
   return (
     <section id={`agent-${a.id}`} className="agent" aria-labelledby={titleId}>
       <header className="agent__head">
@@ -127,7 +132,13 @@ function AgentSection({ agent: a, isFallback }: { agent: Entry; isFallback: bool
                   <span className="group__main">
                     <span className="group__title">{toolName(t.name)}</span>
                     <span className="group__sub">
-                      {RISK_LABEL[t.risk]} · <code className="agent__code">{t.name}</code>
+                      {RISK_LABEL[t.risk]}
+                      {auditor && (
+                        <>
+                          {' · '}
+                          <code className="agent__code">{t.name}</code>
+                        </>
+                      )}
                     </span>
                     {overrides.map((o, i) => (
                       <span key={i} className="group__sub">

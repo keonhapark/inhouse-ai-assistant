@@ -13,11 +13,20 @@ export function parseYmd(v: string): Date | null {
   return d.getMonth() === Number(m[2]) - 1 ? d : null
 }
 
-/** 2026-11-23 → "2026년 11월 23일(월)" */
+/** 2026-11-23 → "2026. 11. 23.(월)"(display/format의 날짜 표기와 같음) */
 export function koDate(v: string): string {
   const d = parseYmd(v)
-  return d ? `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일(${WEEK[d.getDay()]})` : ''
+  return d ? `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.(${WEEK[d.getDay()]})` : ''
 }
+
+/** 화면 낭독기용 이름: 2026-11-23 → "2026년 11월 23일 월요일" */
+export function koDateSpoken(v: string): string {
+  const d = parseYmd(v)
+  return d ? `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEK[d.getDay()]}요일` : ''
+}
+
+/** 0~23시 → "오전 9시", "오후 2시"(12시는 오후 12시, 0시는 오전 12시) */
+export const koHour = (h: number) => `${h < 12 ? '오전' : '오후'} ${h % 12 === 0 ? 12 : h % 12}시`
 
 export const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
 /** 달을 옮기되 날짜는 그 달의 마지막 날을 넘지 않게 합니다(1월 31일 → 2월 28일) */

@@ -57,7 +57,7 @@ export function DesignPage() {
           </header>
           <p className="sheet__summary">3층 소회의실을 예약합니다.</p>
           <footer className="sheet__foot">
-            <span className="sheet__when">14:32까지 확인</span>
+            <span className="sheet__when">오후 2:32까지 확인</span>
             <Button>취소</Button>
             <Button variant="primary">회의실 예약</Button>
           </footer>

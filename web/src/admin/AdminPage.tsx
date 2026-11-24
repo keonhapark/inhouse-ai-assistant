@@ -24,7 +24,7 @@ const isTab = (v: string | undefined): v is Tab => TABS.some((t) => t.id === v)
 /**
  * 운영 화면(/ops/metrics, /ops/egress, /ops/audit). 화면 사이는 왼쪽 탐색 막대의 운영 묶음으로 옮깁니다(ia.md 2절).
  * 세 화면이 같은 경로(/ops/:tab)의 한 요소라 셋 사이를 메뉴로 옮겨도 고른 기간이 그대로 남습니다.
- * 평가 리포트(/ops/eval)는 기간을 쓰지 않는 다른 요소라, 거기를 들렀다 돌아오면 처음 기간(24시간)으로 돌아갑니다.
+ * 평가 보고서(/ops/eval)는 기간을 쓰지 않는 다른 요소라, 거기를 들렀다 돌아오면 처음 기간(24시간)으로 돌아갑니다.
  */
 export function AdminPage() {
   const params = useParams()

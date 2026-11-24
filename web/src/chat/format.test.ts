@@ -23,7 +23,7 @@ describe('changeRows', () => {
   it('날짜·시각 문자열은 현지 시각으로 바꾸고, 날짜만 있는 값은 그대로 둡니다', () => {
     const [at, day] = changeRows({ op: 'create', resource: 'delegation', after: { at: '2026-11-20T11:00:00.000Z', day: '2026-11-27' } })
     expect(at.after).not.toContain('T11:00')
-    expect(at.after).toMatch(/2026/)
+    expect(at.after).toMatch(/^2026\. 11\. 20\. 오[전후] \d{1,2}:00$/)
     expect(day.after).toBe('2026-11-27')
   })
 })
