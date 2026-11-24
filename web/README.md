@@ -165,7 +165,7 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 
 ### 실제 스택
 
-`infra/compose.yaml`의 `full` 프로필(erp, gateway, agent, rag, LiteLLM, 이 PC의 Ollama)을 세션 6 포트로 띄우고 web은 `npm run dev`로 붙여 찍었습니다. 이미지는 새로 빌드하지 않고 하루 전에 빌드한 것을 썼습니다. 직원 `E0007`이 AI 비서에 연차 규정을 묻고 오후 반차를 신청한 뒤, 팀장 `E0006`의 결재 대기에 그 문서가 들어온 것을 찍었습니다. 운영 화면은 감사 권한이 있는 `E0057`로 찍었습니다.
+`infra/compose.yaml`의 `full` 프로필(erp, gateway, agent, rag, LiteLLM, 이 PC의 Ollama)을 세션 6 포트로 띄우고 web은 `npm run dev`로 붙여 찍었습니다. erp·agent는 최신 develop(#634 결재 필드 순서, #635 답 문구)으로 다시 빌드했고, 나머지 이미지는 하루 전에 빌드한 것을 썼습니다. 직원 `E0007`이 AI 비서에 연차 규정을 묻고 오후 반차를 신청한 뒤, 팀장 `E0006`의 결재 대기에 그 문서가 들어온 것을 찍었습니다. 운영 화면은 감사 권한이 있는 `E0057`로 찍었습니다.
 
 | AI 비서: 규정 답(근거 규정 2건) | AI 비서: 반차 신청 → 완료한 일 |
 |---|---|
@@ -182,11 +182,6 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 | 조직도 | AI 에이전트 |
 |---|---|
 | ![실제 조직도](docs/images/stack-org.png) | ![실제 AI 에이전트](docs/images/stack-agents.png) |
-
-실제 스택 화면에는 아래 두 가지가 아직 보입니다. 찍을 때 쓴 이미지가 두 수정보다 먼저 빌드된 것이기 때문입니다.
-
-- 에이전트 답 본문에 "되돌릴 수 있습니다: …(행동 act_…)"처럼 내부 행동 ID와 옛 말이 들어갑니다. agent의 고정 안내 문구에서 고칩니다.
-- 결재 문서 상세의 필드 순서가 사유 → 종료일 → 종류 → 시작일로 나옵니다. erp가 양식 정의 순서로 돌려주도록 고쳤습니다(#634).
 
 다시 찍는 방법:
 
