@@ -258,7 +258,7 @@ export const tasks = [
       await u.check(panel.getByRole('radio', { name: /한지우/ }), '대결자 고르기')
       await pickDateTime(u, page, panel, '시작', 1, 9)
       await pickDateTime(u, page, panel, '끝', 3, 18)
-      await u.check(panel.getByRole('checkbox', { name: '모든 양식' }), '모든 양식 끄기', false)
+      // #642 뒤 양식 범위는 "고른 양식만"이 기본이라 휴가 신청만 고릅니다
       await u.check(panel.getByRole('checkbox', { name: '휴가 신청' }), '휴가 신청 고르기')
       await u.fill(panel.getByRole('textbox', { name: '사유' }), '출장', '사유')
       await u.click(panel.getByRole('button', { name: '내용 확인' }), '내용 확인')
@@ -272,7 +272,7 @@ export const tasks = [
         t,
       )
       await u.click(pv.getByRole('button', { name: '대결 지정', exact: true }), '대결 지정')
-      await u.see(panel.getByText(/서도윤 → 한지우/), '대결 목록')
+      await u.see(panel.getByRole('region', { name: '맡긴 대결' }).getByText('한지우 님에게 맡김'), '대결 목록')
       await u.shot('done')
       judge('등록한 위임이 목록에 보인다', true)
       judge('위임을 등록했다', true)
