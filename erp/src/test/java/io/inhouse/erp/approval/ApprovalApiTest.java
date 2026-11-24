@@ -45,6 +45,31 @@ class ApprovalApiTest extends ApiTestBase {
         return json(r).path("resource");
     }
 
+    private static List<String> names(JsonNode fields) {
+        List<String> out = new ArrayList<>();
+        fields.fieldNames().forEachRemaining(out::add);
+        return out;
+    }
+
+    /** 저장(jsonb)은 키 순서를 바꾸지만 응답 fields는 양식 정의(팩 forms.yaml properties) 순서입니다(#631). */
+    @Test
+    void fieldsFollowFormOrder() throws Exception {
+        String member = members("sales").get(1);
+        JsonNode doc = expense(member, 50_000);
+        List<String> want = List.of("amount", "spent_on", "merchant", "purpose");
+        String id = doc.path("id").asText();
+        assertThat(names(doc.path("fields"))).containsExactlyElementsOf(want);
+        assertThat(names(json(get("/approval-documents/" + id, member)).path("fields"))).containsExactlyElementsOf(want);
+        JsonNode listed = null;
+        for (JsonNode d : json(get("/approval-documents", member, "box", "outbox")).path("items")) {
+            if (d.path("id").asText().equals(id)) {
+                listed = d;
+            }
+        }
+        assertThat(listed).isNotNull();
+        assertThat(names(listed.path("fields"))).containsExactlyElementsOf(want);
+    }
+
     private MockHttpServletResponse approve(String emp, JsonNode doc) throws Exception {
         return post("/approval-documents/" + doc.path("id").asText() + "/approve", emp,
                 Map.of("version", doc.path("version").asInt()));
