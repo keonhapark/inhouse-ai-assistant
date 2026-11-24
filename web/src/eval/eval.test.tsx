@@ -108,7 +108,8 @@ describe('평가 리포트', () => {
     delete r.summary
     serve(r)
     renderAt()
-    expect(await screen.findByRole('status')).toHaveTextContent('일부만 실행했습니다(3/4회차): 비용 상한')
+    // 불러오는 중 안내도 status라, 보고서가 그려진 뒤의 알림을 기다립니다
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('일부만 실행했습니다(3/4회차): 비용 상한'))
     expect(screen.getByText(/요약\(summary\)이 없어/)).toBeInTheDocument()
     expect(screen.getByRole('region', { name: '시나리오별 결과' })).toBeInTheDocument()
   })

@@ -149,7 +149,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
             const canRevoke = d.delegatorId === meId && (d.status === 'active' || d.status === 'scheduled')
             return (
               <li key={d.id}>
-                <div className="row">
+                <div className="delegation__head">
                   <strong>
                     {d.delegatorName} → {d.delegateName}
                   </strong>

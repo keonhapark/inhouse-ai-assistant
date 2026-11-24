@@ -2,27 +2,6 @@
   color: var(--text-muted);
 }
 
-.login {
-  display: grid;
-  min-height: 100vh;
-  place-items: center;
-  padding: var(--sp-16);
-}
-
-.login__card {
-  width: min(360px, 100%);
-}
-
-.login__form {
-  display: grid;
-  gap: var(--sp-12);
-  padding: var(--sp-8) 0;
-}
-
-.login__form p {
-  margin: 0;
-}
-
 .page {
   display: grid;
   gap: var(--sp-24);
@@ -36,7 +15,7 @@
   gap: var(--sp-12);
 }
 
-.row {
+.page .row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -67,4 +46,107 @@
 
 .card p {
   margin: 0 0 var(--sp-4);
+}
+
+/* 로그인(ux/research/ia.md 3절: 제품 이름, 소개 한 줄, 문의처). 가운데 시트 하나 */
+.login {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100dvh;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--bg);
+}
+
+.login__sheet {
+  display: grid;
+  gap: var(--space-4);
+  width: min(360px, 100%);
+  padding: var(--space-8) var(--space-6) var(--space-6);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.login__logo {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+}
+
+.login__logo svg {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+
+.login__title {
+  margin: 0;
+  font-size: var(--fs-title2);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-title);
+}
+
+.login__intro,
+.login__help,
+.login__error,
+.page-loading {
+  margin: 0;
+  font-size: var(--fs-footnote);
+  line-height: var(--lh-body);
+}
+
+.login__intro {
+  margin-top: calc(-1 * var(--space-2));
+  color: var(--text-2);
+}
+
+.login__help,
+.page-loading {
+  color: var(--text-2);
+  font-size: var(--fs-caption);
+}
+
+.page-loading {
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.login__error {
+  color: var(--danger);
+}
+
+.login__field {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+}
+
+.login__field input {
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--fill-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-body);
+}
+
+.login__field input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.login__field input[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.login__submit {
+  width: 100%;
+  height: var(--control-h-lg);
 }
