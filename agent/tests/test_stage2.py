@@ -11,6 +11,7 @@ import pytest
 from agent_runtime.mcp_server.catalog import Catalog
 from agent_runtime.mcp_server.service import CallMeta
 from agent_runtime.registry import Registry, Requester
+from agent_runtime.run.graph import UNDO_HINT
 from tests.conftest import CONTRACTS, PACK_DIR
 from tests.mcp_support import Harness, make_harness, mint
 from tests.run_support import RunHarness, call, make_run_harness, say
@@ -146,7 +147,7 @@ async def test_new_agents_run_with_undo_guidance(r2: RunHarness, agent: str, too
     s = await _run(r2, agent, "올려 줘")
     assert s["status"] == "completed"
     assert s["actions"][0]["tool"] == tool and s["actions"][0]["undoable"]
-    assert "되돌릴 수 있습니다" in s["messages"][0]["content"]
+    assert UNDO_HINT in s["messages"][0]["content"]
     assert r2.llm.requests[0]["model_policy"] == policy
     names = {t["function"]["name"] for t in r2.llm.requests[0]["tools"]}
     assert tool in names and "leave_request" not in names
@@ -203,7 +204,7 @@ async def test_ticket_create_runs_with_undo_guidance(r2: RunHarness) -> None:
     r2.llm.script = [call("ticket_create", TICKET), say("접수했습니다.")]
     s = await _run(r2, "it_ops", "그룹웨어 접속이 안 돼요, 장애 접수해 줘")
     assert s["status"] == "completed" and s["actions"][0]["tool"] == "ticket_create"
-    assert "되돌릴 수 있습니다" in s["messages"][0]["content"]
+    assert UNDO_HINT in s["messages"][0]["content"]
     assert r2.llm.requests[0]["model_policy"] == "local_only"
 
 

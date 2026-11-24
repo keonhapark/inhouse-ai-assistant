@@ -13,7 +13,7 @@ import pytest
 from agent_runtime.llm import LLMError
 from agent_runtime.mcp_server.service import CallMeta
 from agent_runtime.registry import Requester
-from agent_runtime.run.graph import MAX_PLAN_STEPS
+from agent_runtime.run.graph import MAX_PLAN_STEPS, UNDO_HINT
 from agent_runtime.run.runner import Conflict
 from tests.conftest import CONTRACTS
 from tests.mcp_support import future_slot, future_weekday, mint
@@ -71,8 +71,22 @@ async def test_reversible_write_runs_and_offers_undo(r: RunHarness) -> None:
     assert s["status"] == "completed"
     [action] = s["actions"]
     assert action["tool"] == "leave_request" and action["undoable"] is True
-    assert action["actionId"] in s["messages"][0]["content"]
-    assert "되돌릴 수 있습니다" in s["messages"][0]["content"]
+    # 답 본문은 결과 문장 + 실행 취소 안내 한 문장(ux/copy-guide.md 2.3). 내부 행동 ID와 옛 말은 넣지 않고(#630)
+    # 실행 취소는 actions의 actionId로 카드 버튼이 합니다
+    assert s["messages"][0]["content"] == f"연차를 올렸습니다.\n{UNDO_HINT}"
+    assert action["actionId"] not in s["messages"][0]["content"]
+
+
+@pytest.mark.anyio
+async def test_undo_hint_once_for_several_undoable_actions(r: RunHarness) -> None:
+    days = ("2027-03-10", "2027-03-11")
+    args = [{"leave_type": "annual", "start_date": d, "end_date": d, "reason": "개인 사정"} for d in days]
+    r.llm.script = [call("leave_request", args[0], "c1"), call("leave_request", args[1], "c2"), say("연차 두 건을 올렸습니다.")]
+    s = await run(r, "3월 10일, 11일 연차 써 줘")
+    assert [a["undoable"] for a in s["actions"]] == [True, True]
+    content = s["messages"][0]["content"]
+    assert content == f"연차 두 건을 올렸습니다.\n{UNDO_HINT}"
+    assert not any(a["actionId"] in content for a in s["actions"]) and "되돌릴 수 있" not in content
     name, _, meta = r.caller.calls[0]
     assert meta["trustLevel"] == "user_direct" and meta["idempotencyKey"].startswith("agt-")
 
@@ -219,7 +233,7 @@ async def test_next_turn_after_taint_needs_confirmation(r: RunHarness) -> None:
     done = await r.runner.resume(token, conv, s["pendingApproval"]["approvalId"], "approve")
     assert done["status"] == "completed" and done["actions"][0]["tool"] == "leave_request"
     # 확인으로 올린 auto_with_undo도 되돌리기 안내는 그대로 붙입니다.
-    assert "되돌릴 수 있습니다" in done["messages"][0]["content"]
+    assert UNDO_HINT in done["messages"][0]["content"]
     executed = [c for c in r.caller.calls if c[0] == "leave_request" and not c[2].get("dryRun")]
     assert [c[2]["trustLevel"] for c in executed] == ["user_direct"]
 
