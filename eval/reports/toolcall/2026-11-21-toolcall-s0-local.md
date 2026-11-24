@@ -7,7 +7,7 @@
 | dirty | False |
 | machine | Linux-5.15.167.4-microsoft-standard-WSL2-x86_64-with-glibc2.39 x86_64 |
 | started_at | 2026-11-21T15:37:16+09:00 |
-| items | /tmp/claude-1000/-home-keonha-orca-workspaces-inhouse-ai-assistant-eval/3f1a2a77-b0fc-4538-a785-330fb9a377b0/scratchpad/stack-dev/agent/eval_dev/tool_calls.jsonl |
+| items | agent/eval_dev/tool_calls.jsonl |
 | itemsSha256 | 20b53cd56de748ed0258de04eda5e9d317ea522d92ba95286c7ce4cdbc15b499 |
 | itemCount | 60 |
 | maxStage | None |
