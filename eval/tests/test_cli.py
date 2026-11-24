@@ -161,3 +161,20 @@ def test_resume_refuses_different_model_override(tmp_path):
     p.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     with pytest.raises(SystemExit, match="모델 교체 값"):
         main(["run", "--config", str(p), "--scenarios", str(EVAL_DIR / "scenarios"), "--out", str(out), "--resume"])
+
+
+def test_public_path_hides_absolute_paths(tmp_path):
+    """보고서의 파일 경로는 저장소 기준 상대 경로나 파일 이름만 남깁니다(#621)."""
+    from harness.cli import public_path
+    assert public_path(ROOT / "agent/eval_dev/tool_calls.jsonl") == "agent/eval_dev/tool_calls.jsonl"
+    outside = tmp_path / "secret-dir" / "items.jsonl"
+    assert public_path(outside) == "items.jsonl"
+
+
+def test_reports_have_no_absolute_paths():
+    """eval/reports 아래 보고서에 실행 PC의 절대 경로(/tmp/·/home/)가 남지 않습니다(#621)."""
+    import re
+    bad = [str(p.relative_to(ROOT)) for p in (ROOT / "eval/reports").rglob("*") if p.is_file()
+           and p.suffix in (".md", ".json", ".jsonl")
+           and re.search(r"(?<![\\w.])/(tmp|home)/", p.read_text(encoding="utf-8", errors="replace"))]
+    assert bad == []

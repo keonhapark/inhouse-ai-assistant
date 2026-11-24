@@ -36,6 +36,15 @@ MODEL_OVERRIDES = ("local=local-exaone", "external=external-sonnet", "local=loca
                    "external=external-exaone")
 
 
+def public_path(path: Path) -> str:
+    """보고서에 남길 파일 경로. 저장소 안이면 저장소 기준 상대 경로, 밖이면 파일 이름만 적습니다(#621: 실행 PC의
+    개인 계정·임시 작업 폴더 절대 경로를 공개 보고서에 남기지 않음)."""
+    try:
+        return str(path.resolve().relative_to(ROOT.resolve()))
+    except ValueError:
+        return path.name
+
+
 def load_config(path: Path) -> dict[str, Any]:
     cfg = yaml.safe_load(path.read_text(encoding="utf-8"))
     gw = cfg.get("gateway", {})
@@ -391,7 +400,7 @@ def cmd_toolcall_run(args: argparse.Namespace) -> int:
         raise SystemExit(f"{rows_file}가 이미 있습니다")
     meta = {"title": args.title, "commit": _git("rev-parse", "HEAD"),
             "dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
-            "machine": f"{platform.platform()} {platform.machine()}", "started_at": _now(), "items": args.items,
+            "machine": f"{platform.platform()} {platform.machine()}", "started_at": _now(), "items": public_path(Path(args.items)),
             "itemsSha256": _sha256(Path(args.items)), "itemCount": len(items), "maxStage": args.max_stage,
             "model": args.model, "variant": variant, "repeats": args.repeats, "notes": list(args.note or [])}
     if bundle:
