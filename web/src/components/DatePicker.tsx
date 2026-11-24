@@ -1,10 +1,10 @@
 import * as Popover from '@radix-ui/react-popover'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
-import { addDays, addMonths, koDate, pad, parseYmd, toYmd, WEEK } from '../display/dates'
+import { addDays, addMonths, koDate, koHour, pad, parseYmd, toYmd, WEEK } from '../display/dates'
 
 /**
- * 한국식 날짜 고르개(ux/design-system.md 3.5, heuristics H-D2).
+ * 한국식 날짜 고르개(ux/design-system.md 3.5, heuristics H-D2). 날짜는 "2026. 11. 24.(화)", 시는 "오후 2시"로 보입니다.
  * 브라우저 기본 date·datetime-local은 언어에 따라 미국식(11/22/2026, 10:00 PM)으로 보여 쓰지 않습니다.
  * 값은 기본 입력과 같은 꼴(YYYY-MM-DD, YYYY-MM-DDTHH:mm)이라 부르는 쪽은 그대로 씁니다.
  * 달력은 WAI-ARIA 날짜 고르개 대화상자 패턴입니다: 화살표 하루·한 주, PageUp·PageDown 한 달, Home·End 주의 처음·끝, Enter로 고름.
@@ -56,7 +56,7 @@ export function DateTimeField({ value, onChange, defaultTime = '09:00', ...rest 
         <select className="datefield__time" aria-label={`${rest.label} 시`} value={hh} disabled={rest.disabled || !date} onChange={(e) => set(date, e.target.value, mm)}>
           {HOURS.map((h) => (
             <option key={h} value={h}>
-              {h}시
+              {koHour(Number(h))}
             </option>
           ))}
         </select>

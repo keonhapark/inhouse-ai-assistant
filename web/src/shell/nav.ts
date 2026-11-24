@@ -33,7 +33,7 @@ export const NAV: NavGroup[] = [
       { to: '/ops/metrics', label: '운영 지표', icon: ChartColumn },
       { to: '/ops/egress', label: '외부 전송 기록', icon: Globe },
       { to: '/ops/audit', label: '감사 로그', icon: ScrollText },
-      { to: '/ops/eval', label: '평가 리포트', icon: ClipboardCheck },
+      { to: '/ops/eval', label: '평가 보고서', icon: ClipboardCheck },
     ],
   },
 ]

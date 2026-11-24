@@ -8,7 +8,7 @@ import type { StatusTone } from '../display/conversation'
 import { previewView } from '../display/preview'
 import { toolName } from '../display/names'
 import { useLookups } from '../display/useLookups'
-import { formatTime } from './format'
+import { formatTime } from '../display/format'
 import { Markdown } from './markdown'
 import type { Citation, ThreadItem } from './thread'
 

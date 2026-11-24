@@ -8,8 +8,8 @@ import { tokenStore } from '../api/client'
 import { AuthProvider } from '../auth/AuthContext'
 import { server } from '../mocks/node'
 
-function renderAt(path: string) {
-  tokenStore.set('mock.emp-1001')
+function renderAt(path: string, employeeId = 'emp-1001') {
+  tokenStore.set(`mock.${employeeId}`)
   render(
     <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
@@ -231,12 +231,22 @@ describe('AI 에이전트', () => {
     expect(within(assistant).getByText('맞는 담당 AI가 없으면 전사 비서가 답합니다.')).toBeInTheDocument()
     expect(within(assistant).getByText('외부 AI 사용')).toBeInTheDocument()
     const reserve = within(assistant).getByText('회의실 예약').closest('li') as HTMLElement
-    expect(within(reserve).getByText('room_reserve')).toBeInTheDocument()
+    // 직원에게는 도구 코드 이름을 보이지 않습니다
+    expect(reserve).not.toHaveTextContent('room_reserve')
+    expect(within(reserve).getByText('회의실 예약')).not.toHaveAttribute('title')
     expect(reserve).toHaveTextContent('바로 실행')
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4)
 
     const finance = screen.getByRole('region', { name: '재무 담당 AI' })
     expect(within(finance).getByText('금액이 1,000,000원보다 클 때 실행 전 확인')).toBeInTheDocument()
+  })
+
+  it('감사 권한자에게는 도구 코드 이름을 이름의 툴팁으로 보여 줍니다', async () => {
+    renderAt('/agents', 'emp-2008')
+    const assistant = await screen.findByRole('region', { name: '전사 비서' })
+    const name = within(assistant).getByText('회의실 예약')
+    expect(name).toHaveAttribute('title', 'room_reserve')
+    expect(name.closest('li')).not.toHaveTextContent('room_reserve')
   })
 
   it('허용하지 않는 등급의 일은 "하지 않음"으로 보이고 예외를 붙이지 않습니다', async () => {

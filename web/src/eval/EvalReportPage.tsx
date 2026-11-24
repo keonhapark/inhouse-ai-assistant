@@ -13,7 +13,7 @@ import './eval.css'
 // openapi-typescript가 JSON Schema의 $defs를 속성으로 옮겨 적어 뺍니다(응답 본문에는 없음).
 type Report = Omit<Schemas['report.schema'], '$defs'>
 
-/** 평가 리포트(auditor). eval 하네스가 쓴 보고서 JSON을 gateway로 받아 보여 줍니다. 통계는 보고서 summary의 값을 그대로 씁니다. */
+/** 평가 보고서(auditor). eval 하네스가 쓴 보고서 JSON을 gateway로 받아 보여 줍니다. 통계는 보고서 summary의 값을 그대로 씁니다. */
 export function EvalReportPage() {
   const [params, setParams] = useSearchParams()
   const list = useLoad('eval-reports', () => api.GET('/eval/reports'), '평가 보고서 목록을 불러오지 못했습니다.')
@@ -23,7 +23,7 @@ export function EvalReportPage() {
 
   return (
     <main className="admin eval" aria-labelledby="eval-title">
-      <Toolbar title="평가 리포트" titleId="eval-title" />
+      <Toolbar title="평가 보고서" titleId="eval-title" />
       <div className="admin__body">
       {list.status === 'loading' && <p className="muted">불러오는 중입니다.</p>}
       {list.status === 'error' && <p role="alert" className="alert">{list.message}</p>}

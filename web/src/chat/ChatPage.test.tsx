@@ -120,7 +120,7 @@ describe('직원 채팅', () => {
     // 같은 말로 시작한 대화도 에이전트·시각으로 구별합니다(#556)
     const row = within(list).getByRole('button', { name: /연차 규정/ })
     expect(row).toHaveTextContent(/인사 담당 AI/)
-    expect(within(row).getByText(/^오늘 \d{2}:\d{2}$/)).toBeInTheDocument()
+    expect(within(row).getByText(/^오늘 오[전후] \d{1,2}:\d{2}$/)).toBeInTheDocument()
   })
 
   it('화면에 main과 h1이 있고, 새 대화의 제목은 "새 대화"입니다', async () => {

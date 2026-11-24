@@ -37,7 +37,7 @@ npm run gen:api  # 계약이 바뀌면 src/api/schema.d.ts를 다시 만듭니�
 | `src/inbox/` | 결재(`/approvals`: 결재 대기·대결 대기·결재 완료·기안함, 두 줄 행 목록과 상세, 결재선, 승인 확인 팝오버, 반려 사유)와 대결 설정(`/delegations`: 대결자 찾기, 날짜 고르개, 양식 범위, 내용 확인 → 대결 지정, 해제) |
 | `src/org/` | 조직도(사람 찾기, 부서 나무, 상위 경로, 구성원·하위 부서·담당 AI 에이전트)와 AI 에이전트(담당 부서, 사용할 수 있는 사람, AI 처리, 할 수 있는 일과 실행 방식). `/org`, `/agents` |
 | `src/admin/` | 운영 화면(auditor만, 탐색 막대의 운영 묶음). 기간 세그먼트와 날짜 범위, 운영 지표(합계, 에이전트별, 차단 이유, 에이전트 자동 선택, 비용 상한), 외부 전송 기록(가린 자리 표시), 감사 로그(이름 표시, 필터, 더 보기). `/ops/metrics`, `/ops/egress`, `/ops/audit` |
-| `src/eval/` | 평가 리포트(auditor만). eval 하네스의 보고서 JSON(`contracts/eval/report.schema.json`)을 gateway `/eval/reports`로 받아 실행 조건, 세트별 지표(비율과 95% 구간 막대, 짝 차이와 판정), 실행 전 확인 요청·경로·비용, 시나리오별 회차 결과를 보여 줍니다. 통계는 보고서 summary 값을 그대로 씁니다. `/ops/eval` |
+| `src/eval/` | 평가 보고서(auditor만). eval 하네스의 보고서 JSON(`contracts/eval/report.schema.json`)을 gateway `/eval/reports`로 받아 실행 조건, 세트별 지표(비율과 95% 구간 막대, 짝 차이와 판정), 실행 전 확인 요청·경로·비용, 시나리오별 회차 결과를 보여 줍니다. 통계는 보고서 summary 값을 그대로 씁니다. `/ops/eval` |
 | `src/chat/` | AI 비서(채팅). SSE 읽기(`sse.ts`), ChatEvent를 화면 상태로 바꾸는 리듀서(`thread.ts`), 실행 전 확인 시트·완료한 일 행·근거 규정 부품 |
 | `src/display/` | 화면 표시 이름(도구·필드·역할·담당 AI), 시각·금액·날짜 표기 |
 | `src/mocks/` | gateway 계약 모의 서버(MSW)와 지어낸 직원 데이터 |
@@ -153,15 +153,15 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 |---|---|
 | ![운영 지표](docs/images/ops-metrics-light.png) | ![운영 지표 어두움](docs/images/ops-metrics-dark.png) |
 
-| 감사 로그(이름 + 작은 ID) | 평가 리포트 |
+| 감사 로그(이름 + 작은 ID) | 평가 보고서 |
 |---|---|
-| ![감사 로그](docs/images/ops-audit-light.png) | ![평가 리포트](docs/images/ops-eval-light.png) |
+| ![감사 로그](docs/images/ops-audit-light.png) | ![평가 보고서](docs/images/ops-eval-light.png) |
 
 | 로그인 | 어두움 |
 |---|---|
 | ![로그인](docs/images/login-light.png) | ![로그인 어두움](docs/images/login-dark.png) |
 
-대결 설정·감사 로그·평가 리포트의 어두움 화면은 `docs/images/*-dark.png`에 있습니다.
+대결 설정·감사 로그·평가 보고서의 어두움 화면은 `docs/images/*-dark.png`에 있습니다.
 
 ### 실제 스택
 
