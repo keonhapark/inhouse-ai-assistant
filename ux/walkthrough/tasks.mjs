@@ -3,10 +3,10 @@
 // 재설계 뒤에도 같은 과업과 기준으로 다시 돌립니다(#564). 화면 이름이 바뀌면 찾는 이름만 고칩니다.
 
 const day = 86_400_000
-/** 날짜 고르개의 날 단추 이름(예: "2026년 11월 25일(수)")입니다 */
+/** 날짜 고르개의 날 단추 이름(예: "2026년 11월 25일 수요일")입니다 */
 const koDay = (offsetDays) => {
   const d = new Date(Date.now() + offsetDays * day)
-  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일(${'일월화수목금토'[d.getDay()]})`
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${'일월화수목금토'[d.getDay()]}요일`
 }
 
 /** 날짜 고르개로 날짜를 고르고 시를 고릅니다(#557 이후 대결 지정 입력) */
@@ -14,7 +14,9 @@ async function pickDateTime(u, page, scope, label, offsetDays, hour) {
   await u.click(scope.getByRole('button', { name: new RegExp(`^${label} `) }), `${label} 달력 열기`)
   const cal = page.getByRole('dialog', { name: `${label} 날짜 고르기` })
   await u.click(cal.getByRole('button', { name: new RegExp(`^${koDay(offsetDays).replace(/[()]/g, '\\$&')}`) }), `${label} 날짜`)
-  await u.select(scope.getByRole('combobox', { name: `${label} 시` }), `${String(hour).padStart(2, '0')}시`, `${label} 시`)
+  // 시 고르개는 "오전 9시", "오후 6시"처럼 씁니다(#557 구현)
+  const hourLabel = hour < 12 ? `오전 ${hour === 0 ? 12 : hour}시` : `오후 ${hour === 12 ? 12 : hour - 12}시`
+  await u.select(scope.getByRole('combobox', { name: `${label} 시` }), hourLabel, `${label} 시`)
 }
 
 /** 결재 메뉴(이름 뒤에 결재할 문서 건수가 붙을 수 있음) */
@@ -76,7 +78,10 @@ export const tasks = [
       judge('금액이 원 단위 쉼표 형식(42,000원)으로 보인다', /42,000\s*원/.test(t), t)
       judge('값 이름이 한국어(가맹점·사용일·금액)로 보인다', /가맹점/.test(t) && /사용일|날짜/.test(t), t)
       judge('누가 결재하는지(결재선)가 보인다', /결재선|팀장|서도윤/.test(t), t)
-      judge('사진에서 읽은 값이라 확인이 필요하다는 표시가 보인다', /(사진|이미지)[^.]{0,30}(확인 필요|확인한 뒤|맞는지)/.test(t), t)
+      judge('사진에서 읽은 값이라 확인이 필요하다는 표시가 보인다', /(사진|이미지)[^.]{0,30}(확인 필요|확인한 뒤|맞는지)/.test(t) ||
+          (/사진에서 읽은 값/.test(t) && /영수증과 맞는지 확인/.test(t)), // #557 뒤: 태그 + 아래 줄 안내(명세 3.6)
+        t,
+      )
       await u.click(card.getByRole('button', { name: '경비 정산 상신', exact: true }), '경비 정산 상신')
       await u.see(page.getByText(/올렸습니다|상신했습니다/).last(), '결과 안내', 10000)
       await u.shot('done')
@@ -126,7 +131,7 @@ export const tasks = [
       await u.see(log.getByText(/제20조/), '조문 번호')
       await u.shot('citations')
       const t = await txt(log)
-      judge('확인되지 않은 인용이 구별되어 보인다', /확인\s*(안|못|되지)|미확인/.test(t), t)
+      judge('확인되지 않은 인용이 구별되어 보인다', /확인\s*(안|못|되지)|미확인|원문 대조 안 됨/.test(t), t)
       judge('답과 근거 조문을 읽었다', true)
     },
   },
@@ -141,7 +146,7 @@ export const tasks = [
       ['확인', '휴가 기간·종류가 한국어 이름으로 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(approvalsLink(page), '결재로 이동')
+      await u.go(approvalsLink(page), '결재로 이동', '/approvals')
       await u.click(page.getByRole('tab', { name: '기안함' }), '기안함 탭')
       await u.click(page.getByRole('button', { name: /연차 휴가 신청/ }), '문서 열기')
       const doc = page.getByRole('region', { name: /결재 문서/ })
@@ -188,7 +193,7 @@ export const tasks = [
       ['확인', '승인한 문서가 처리함에 있다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(approvalsLink(page), '결재로 이동')
+      await u.go(approvalsLink(page), '결재로 이동', '/approvals')
       await u.click(page.getByRole('button', { name: /연차 휴가 신청/ }), '문서 열기')
       const doc = page.getByRole('region', { name: /결재 문서/ })
       await u.see(doc, '결재 문서 상세')
@@ -220,7 +225,7 @@ export const tasks = [
       ['확인', '이 결재 다음 단계(누가 이어 받는지)가 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(approvalsLink(page), '결재로 이동')
+      await u.go(approvalsLink(page), '결재로 이동', '/approvals')
       await u.click(page.getByRole('tab', { name: /^대결 대기/ }), '대결 대기 탭')
       await u.click(page.getByRole('button', { name: /출장 경비/ }), '문서 열기')
       const doc = page.getByRole('region', { name: /결재 문서/ })
@@ -247,7 +252,7 @@ export const tasks = [
       ['확인', '등록한 위임이 목록에 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '대결 설정', exact: true }), '대결 설정으로 이동')
+      await u.go(page.getByRole('link', { name: '대결 설정', exact: true }), '대결 설정으로 이동', '/delegations')
       const panel = page.getByRole('main', { name: '대결 설정' })
       await u.fill(panel.getByRole('searchbox', { name: '이름 검색' }), '한지우', '대결자 이름 찾기')
       await u.check(panel.getByRole('radio', { name: /한지우/ }), '대결자 고르기')
@@ -284,7 +289,7 @@ export const tasks = [
       ['확인', '어느 직원·어느 대화의 요청인지 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '외부 전송 기록', exact: true }), '외부 전송 기록으로 이동')
+      await u.go(page.getByRole('link', { name: '외부 전송 기록', exact: true }), '외부 전송 기록으로 이동', '/ops/egress')
       // 전화번호를 가린 기록 중 가장 최근(맨 위) 것을 엽니다.
       const row = page.getByRole('main').getByText(/가림 \d+곳: .*전화번호/).first()
       await u.click(row, '전화번호 가림 기록 펼치기')
@@ -310,7 +315,7 @@ export const tasks = [
       ['확인', '지금 보는 기간이 표 근처에 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '운영 지표', exact: true }), '운영 지표로 이동')
+      await u.go(page.getByRole('link', { name: '운영 지표', exact: true }), '운영 지표로 이동', '/ops/metrics')
       await u.click(page.getByRole('button', { name: '최근 7일', exact: true }), '최근 7일')
       await u.see(page.getByText(/최근 7일을 보고|보는 기간: 최근 7일/), '기간이 바뀜')
       const table = page.getByRole('region', { name: '에이전트별 표' })
@@ -335,16 +340,17 @@ export const tasks = [
       ['확인', '에이전트·작업이 사람이 읽는 이름으로 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '감사 로그', exact: true }), '감사 로그로 이동')
-      await u.select(page.getByRole('combobox', { name: '종류' }), '도구 차단', '종류: 도구 차단')
+      await u.go(page.getByRole('link', { name: '감사 로그', exact: true }), '감사 로그로 이동', '/ops/audit')
+      // #557 뒤 감사 로그 종류 이름이 용어집(1.5)대로 "도구 차단" → "정책 차단"
+      await u.select(page.getByRole('combobox', { name: '종류' }), '정책 차단', '종류: 정책 차단')
       await u.click(page.getByRole('button', { name: '적용', exact: true }), '적용')
       const table = page.getByRole('region', { name: '감사 이벤트 표' })
-      // 모든 행의 종류가 "도구 차단"이 될 때까지 기다립니다(필터 전 표를 세지 않게).
+      // 모든 행의 종류가 "정책 차단"이 될 때까지 기다립니다(필터 전 표를 세지 않게).
       const filtered = await page
         .waitForFunction(
           (el) => {
             const rows = [...el.querySelectorAll('tbody tr')]
-            return rows.length > 0 && rows.every((r) => r.textContent.includes('도구 차단'))
+            return rows.length > 0 && rows.every((r) => r.textContent.includes('정책 차단'))
           },
           await table.elementHandle(),
           { timeout: 5000 },
@@ -369,7 +375,7 @@ export const tasks = [
       ['확인', '왜 기대와 달랐는지 한 줄 이유가 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '평가 보고서', exact: true }), '평가 보고서로 이동')
+      await u.go(page.getByRole('link', { name: '평가 보고서', exact: true }), '평가 보고서로 이동', '/ops/eval')
       await u.select(page.getByRole('combobox', { name: '보기' }), '기대와 다른 회차가 있는 것만', '보기: 기대와 다름')
       const table = page.getByRole('region', { name: '시나리오별 결과 표' })
       // "이 프로젝트" 열(마지막 칸)이 기대와 다른 행을 눈으로 훑어 찾습니다.

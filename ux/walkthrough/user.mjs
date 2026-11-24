@@ -84,6 +84,19 @@ export class User {
     })
   }
 
+  /**
+   * 메뉴로 이동합니다. 이미 그 화면이면(역할별 첫 화면 등) 누르지 않고 "이미 있음"으로만 남깁니다.
+   * 재설계로 결재자·관리자가 로그인하면 바로 자기 화면에 서므로, 사람처럼 같은 메뉴를 다시 누르지 않습니다.
+   */
+  async go(loc, label, path) {
+    if (new URL(this.page.url()).pathname === path) {
+      this.steps.push({ kind: 'see', label: `${label}(이미 그 화면)`, ok: true, ms: 0 })
+      return
+    }
+    await this.click(loc, label)
+    await this.page.waitForURL((u) => u.pathname === path, { timeout: this.timeoutMs }).catch(() => {})
+  }
+
   /** 눈으로 찾는 단계입니다. 조작 수는 늘지 않지만 단계로 셉니다. */
   see(loc, label, timeoutMs = this.timeoutMs) {
     return this.#act('see', label, loc, async () => {}, timeoutMs)

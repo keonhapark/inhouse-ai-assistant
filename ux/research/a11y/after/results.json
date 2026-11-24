@@ -1,0 +1,656 @@
+{
+  "meta": {
+    "label": "after",
+    "at": "2026-11-24T08:03:48.347Z",
+    "web": "633573d",
+    "axeVersion": "4.14.1",
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa",
+      "wcag22aa",
+      "best-practice"
+    ]
+  },
+  "screens": [
+    {
+      "scheme": "light",
+      "screen": "로그인",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "로그인 오류",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "채팅 빈 화면",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "채팅 답·근거·완료한 일",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "채팅 실행 전 확인",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "screen": "결재 대기",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "#doc-open-doc-101",
+            "#doc-open-doc-105"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "결재 문서 상세(대결)",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 3,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "#doc-open-doc-102"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "대결 지정 확인",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "button[aria-labelledby=\"_r_a_ _r_b_\"]",
+            "button[aria-labelledby=\"_r_g_ _r_h_\"]"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 2
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "screen": "조직도",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "AI 에이전트",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        },
+        {
+          "id": "landmark-unique",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination",
+          "nodes": 1,
+          "targets": [
+            "section[aria-labelledby=\"agent-assistant-tools\"]"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 38
+        },
+        {
+          "id": "scrollable-region-focusable",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "screen": "운영 지표",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "button[aria-labelledby=\"_r_4_ _r_5_\"]",
+            "button[aria-labelledby=\"_r_a_ _r_b_\"]"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 2
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "screen": "외부 전송 기록",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "button[aria-labelledby=\"_r_4_ _r_5_\"]",
+            "button[aria-labelledby=\"_r_a_ _r_b_\"]"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "light",
+      "screen": "감사 로그",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "button[aria-labelledby=\"_r_4_ _r_5_\"]",
+            "button[aria-labelledby=\"_r_a_ _r_b_\"]"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "light",
+      "screen": "평가 보고서",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 91
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "로그인",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "로그인 오류",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "채팅 빈 화면",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "채팅 답·근거·완료한 일",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "채팅 실행 전 확인",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "결재 대기",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "#doc-open-doc-101",
+            "#doc-open-doc-105"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "결재 문서 상세(대결)",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 3,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "#doc-open-doc-102"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "대결 지정 확인",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "button[aria-labelledby=\"_r_a_ _r_b_\"]",
+            "button[aria-labelledby=\"_r_g_ _r_h_\"]"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 2
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "조직도",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "AI 에이전트",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        },
+        {
+          "id": "landmark-unique",
+          "impact": "moderate",
+          "wcag": [],
+          "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination",
+          "nodes": 1,
+          "targets": [
+            "section[aria-labelledby=\"agent-assistant-tools\"]"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 38
+        },
+        {
+          "id": "scrollable-region-focusable",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "운영 지표",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "button[aria-labelledby=\"_r_4_ _r_5_\"]",
+            "button[aria-labelledby=\"_r_a_ _r_b_\"]"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 2
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "외부 전송 기록",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "button[aria-labelledby=\"_r_4_ _r_5_\"]",
+            "button[aria-labelledby=\"_r_a_ _r_b_\"]"
+          ]
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "scheme": "dark",
+      "screen": "감사 로그",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 4,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_",
+            "button[aria-labelledby=\"_r_4_ _r_5_\"]",
+            "button[aria-labelledby=\"_r_a_ _r_b_\"]"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "scheme": "dark",
+      "screen": "평가 보고서",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "wcag": [
+            "wcag21a",
+            "wcag253"
+          ],
+          "help": "Elements must have their visible text as part of their accessible name",
+          "nodes": 2,
+          "targets": [
+            ".sidebar__search",
+            "#radix-_r_0_"
+          ]
+        }
+      ],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 91
+        }
+      ]
+    }
+  ]
+}

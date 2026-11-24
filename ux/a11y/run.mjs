@@ -24,7 +24,10 @@ async function login(page, url, account) {
   await page.getByLabel('사번').fill(account)
   await page.getByLabel('비밀번호').fill('demo')
   await page.getByRole('button', { name: '로그인' }).click()
-  await page.waitForURL(`${url}/`)
+  // 재설계 뒤에는 역할별 첫 화면으로 가므로(결재자 /approvals, 관리자 /ops/metrics) 로그인 화면을 떠나는 것만 기다립니다.
+    await page.waitForURL((u) => u.pathname !== '/login')
+    await page.getByRole('main').first().waitFor()
+    await page.waitForTimeout(400)
 }
 async function say(page, text, waitFor) {
   const box = page.getByRole('textbox', { name: '메시지' })
@@ -34,7 +37,13 @@ async function say(page, text, waitFor) {
   await page.waitForTimeout(1500) // 스트림 끝(done)까지 기다립니다
 }
 
-// 화면 이름, 계정, 그 상태로 만드는 조작
+// 화면 이름, 계정, 그 상태로 만드는 조작.
+// #557 재설계 뒤 주소(/approvals, /delegations, /ops/*)와 이름에 맞췄습니다. 화면 상태 14개는 기준선과 같은 것이고,
+// 캡처 파일 이름(SLUG)도 기준선과 같게 두어 전후를 짝지어 볼 수 있게 했습니다.
+const goLink = async (p, name, path) => {
+  if (new URL(p.url()).pathname !== path) await p.getByRole('link', { name, exact: true }).click()
+  await p.waitForURL((u) => u.pathname === path)
+}
 const screens = [
   ['로그인', null, async (p) => p.getByLabel('사번').waitFor()],
   ['로그인 오류', null, async (p) => {
@@ -43,79 +52,77 @@ const screens = [
     await p.getByRole('button', { name: '로그인' }).click()
     await p.getByRole('alert').waitFor()
   }],
-  ['채팅 빈 화면', 'E1001', async () => {}],
-  ['채팅 답·근거·실행한 일', 'E1001', async (p) => {
-    await say(p, '연차 규정 알려 줘', p.getByText(/근거 \d+건/))
-    await p.getByText(/근거 \d+건/).click()
-    await say(p, '내일 회의실 예약해 줘', p.getByRole('region', { name: '실행한 일' }))
+  ['채팅 빈 화면', 'E1001', async (p) => p.getByRole('textbox', { name: '메시지' }).waitFor()],
+  ['채팅 답·근거·완료한 일', 'E1001', async (p) => {
+    await say(p, '연차 규정 알려 줘', p.getByText(/근거( 규정)? \d+건/))
+    await p.getByText(/근거( 규정)? \d+건/).click()
+    await say(p, '내일 회의실 예약해 줘', p.getByRole('region', { name: '완료한 일' }))
   }],
-  ['채팅 실행 미리보기', 'E1001', async (p) => {
-    await say(p, '반차 결재 회수해 줘', p.getByRole('region', { name: /실행 미리보기/ }))
+  ['채팅 실행 전 확인', 'E1001', async (p) => {
+    await say(p, '반차 결재 회수해 줘', p.getByRole('region', { name: /실행 전 확인/ }))
   }],
-  ['승인함 내 차례', 'E2001', async (p) => {
-    await p.getByRole('link', { name: '승인함' }).click()
+  ['결재 대기', 'E2001', async (p) => {
+    await goLink(p, /^결재\s*(,|$)/, '/approvals')
     await p.getByRole('button', { name: /연차 휴가 신청/ }).waitFor()
   }],
-  ['승인함 문서 상세(대결)', 'E2001', async (p) => {
-    await p.getByRole('link', { name: '승인함' }).click()
-    await p.getByRole('tab', { name: '대결' }).click()
-    await p.getByRole('button', { name: /출장 경비/ }).click()
+  ['결재 문서 상세(대결)', 'E2001', async (p) => {
+    await goLink(p, /^결재\s*(,|$)/, '/approvals')
+    await p.getByRole('tab', { name: /^대결 대기/ }).click()
+    await p.getByRole('tabpanel').getByRole('button').first().click()
     await p.getByRole('region', { name: /결재 문서/ }).waitFor()
   }],
-  ['승인함 위임 미리보기', 'E2001', async (p) => {
-    await p.getByRole('link', { name: '승인함' }).click()
-    const panel = p.getByRole('complementary', { name: '대결 설정' })
-    await panel.getByRole('searchbox').fill('한지우')
-    await panel.getByRole('radio', { name: /한지우/ }).check()
-    await panel.getByRole('textbox', { name: '사유' }).fill('출장')
-    await panel.getByRole('button', { name: '미리보기' }).click()
-    await p.getByRole('region', { name: '위임 미리보기' }).waitFor()
+  ['대결 지정 확인', 'E2001', async (p) => {
+    await goLink(p, '대결 설정', '/delegations')
+    const main = p.getByRole('main', { name: '대결 설정' })
+    await main.getByRole('searchbox', { name: '이름 검색' }).fill('한지우')
+    await main.getByRole('radio', { name: /한지우/ }).check()
+    await main.getByRole('textbox', { name: '사유' }).fill('출장')
+    await main.getByRole('button', { name: '내용 확인' }).click()
+    await p.getByRole('region', { name: '대결 지정 확인' }).waitFor()
   }],
   ['조직도', 'E1001', async (p) => {
-    await p.getByRole('link', { name: '조직도' }).click()
+    await goLink(p, '조직도', '/org')
     await p.getByRole('navigation', { name: '부서' }).getByRole('button').first().waitFor()
   }],
-  ['에이전트', 'E1001', async (p) => {
-    await p.getByRole('link', { name: '에이전트' }).click()
+  ['AI 에이전트', 'E1001', async (p) => {
+    await goLink(p, 'AI 에이전트', '/agents')
     await p.getByRole('heading', { level: 1 }).waitFor()
     await p.waitForTimeout(500)
   }],
-  ['관리 운영 지표', 'E2008', async (p) => {
-    await p.getByRole('link', { name: '관리' }).click()
+  ['운영 지표', 'E2008', async (p) => {
+    await goLink(p, '운영 지표', '/ops/metrics')
     await p.getByRole('region', { name: '에이전트별 표' }).waitFor()
   }],
-  ['관리 외부 전송 기록', 'E2008', async (p) => {
-    await p.getByRole('link', { name: '관리' }).click()
-    await p.getByRole('tab', { name: '외부 전송 기록' }).click()
-    await p.getByRole('tabpanel').getByRole('listitem').first().waitFor()
+  ['외부 전송 기록', 'E2008', async (p) => {
+    await goLink(p, '외부 전송 기록', '/ops/egress')
+    await p.getByRole('main').getByRole('listitem').first().waitFor()
   }],
-  ['관리 감사 로그', 'E2008', async (p) => {
-    await p.getByRole('link', { name: '관리' }).click()
-    await p.getByRole('tab', { name: '감사 로그' }).click()
+  ['감사 로그', 'E2008', async (p) => {
+    await goLink(p, '감사 로그', '/ops/audit')
     await p.getByRole('region', { name: '감사 이벤트 표' }).waitFor()
   }],
-  ['평가 리포트', 'E2008', async (p) => {
-    await p.getByRole('link', { name: '평가' }).click()
+  ['평가 보고서', 'E2008', async (p) => {
+    await goLink(p, '평가 보고서', '/ops/eval')
     await p.getByRole('region', { name: '시나리오별 결과 표' }).waitFor()
   }],
 ]
 
-// 캡처 파일 이름. CI 경로 검사가 한글 파일 이름을 읽지 못해 영문으로 둡니다.
+// 캡처 파일 이름. CI 경로 검사가 한글 파일 이름을 읽지 못해 영문으로 둡니다. 기준선과 같은 이름입니다.
 const SLUG = {
   '로그인 오류': 'login-error',
   '로그인': 'login',
   '채팅 빈 화면': 'chat-empty',
-  '채팅 답·근거·실행한 일': 'chat-answer',
-  '채팅 실행 미리보기': 'chat-preview',
-  '승인함 내 차례': 'inbox',
-  '승인함 문서 상세(대결)': 'inbox-doc-delegated',
-  '승인함 위임 미리보기': 'inbox-delegation-preview',
+  '채팅 답·근거·완료한 일': 'chat-answer',
+  '채팅 실행 전 확인': 'chat-preview',
+  '결재 대기': 'inbox',
+  '결재 문서 상세(대결)': 'inbox-doc-delegated',
+  '대결 지정 확인': 'inbox-delegation-preview',
   '조직도': 'org',
-  '에이전트': 'agents',
-  '관리 운영 지표': 'admin-metrics',
-  '관리 외부 전송 기록': 'admin-egress',
-  '관리 감사 로그': 'admin-audit',
-  '평가 리포트': 'eval',
+  'AI 에이전트': 'agents',
+  '운영 지표': 'admin-metrics',
+  '외부 전송 기록': 'admin-egress',
+  '감사 로그': 'admin-audit',
+  '평가 보고서': 'eval',
 }
 
 const webVersion = buildMockWeb()
@@ -137,6 +144,7 @@ for (const scheme of ['light', 'dark']) {
       await ctx.close()
       continue
     }
+    await page.mouse.move(1279, 799) // 마지막으로 누른 메뉴에 마우스가 머문 채(hover) 찍히지 않게
     await page.screenshot({ path: `${shotDir}/${scheme}-${SLUG[name]}.jpg`, type: 'jpeg', quality: 70, fullPage: true })
     const r = await new AxeBuilder({ page }).withTags(TAGS).analyze()
     const violations = r.violations.map((v) => ({
