@@ -17,6 +17,8 @@ const { values: args } = parseArgs({
     label: { type: 'string', default: 'baseline' },
     only: { type: 'string' },
     rebuild: { type: 'boolean', default: false },
+    // 페르소나 기기 대신 이 창 크기로 돌립니다(예: 768x1024, 태블릿 폭 확인)
+    viewport: { type: 'string' },
   },
 })
 const root = resolve(import.meta.dirname, '..')
@@ -53,7 +55,7 @@ const receipt = resolve(root, '.cache/receipt.png')
   await p.close()
 }
 
-const meta = { label: args.label, at: new Date().toISOString(), mode: 'web 모의 데이터(msw)', web: webVersion, personas }
+const meta = { label: args.label, at: new Date().toISOString(), mode: 'web 모의 데이터(msw)', web: webVersion, viewport: args.viewport ?? '페르소나 기기', personas }
 const save = () => {
   const order = new Map(tasks.map((t, i) => [t.id, i]))
   results.sort((a, b) => order.get(a.id) - order.get(b.id))
@@ -63,7 +65,9 @@ const save = () => {
 
 for (const task of tasks.filter((t) => !only || only.includes(t.id))) {
   const persona = personas[task.persona]
-  const ctx = await browser.newContext({ viewport: persona.viewport, locale: 'ko-KR', timezoneId: 'Asia/Seoul' })
+  const [vw, vh] = args.viewport?.split('x').map(Number) ?? []
+  const viewport = vw ? { width: vw, height: vh } : persona.viewport
+  const ctx = await browser.newContext({ viewport, locale: 'ko-KR', timezoneId: 'Asia/Seoul' })
   const page = await ctx.newPage()
   const u = new User(page, { shotDir, taskId: task.id })
   const names = new Set(task.criteria.map(([, name]) => name))
@@ -81,7 +85,10 @@ for (const task of tasks.filter((t) => !only || only.includes(t.id))) {
     await page.getByLabel('사번').fill(persona.account)
     await page.getByLabel('비밀번호').fill('demo')
     await page.getByRole('button', { name: '로그인' }).click()
-    await page.waitForURL(`${url}/`)
+    // 재설계 뒤에는 역할별 첫 화면으로 가므로(결재자 /approvals, 관리자 /ops/metrics) 로그인 화면을 떠나는 것만 기다립니다.
+    await page.waitForURL((u) => u.pathname !== '/login')
+    await page.getByRole('main').first().waitFor()
+    await page.waitForTimeout(400) // 역할별 첫 화면으로 다시 보내는 이동이 끝날 때까지
     await task.run(u, page, { receipt, judge })
   } catch (err) {
     if (err instanceof Blocked) {
