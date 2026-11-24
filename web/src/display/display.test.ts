@@ -96,8 +96,10 @@ describe('대화 목록', () => {
 })
 
 describe('결재 문서 필드', () => {
-  it('양식 순서·이름·선택지 이름과 한국어 날짜로 폅니다', () => {
-    expect(formRows({ reason: '병원', end_date: '2026-12-28', leave_type: 'half_pm', start_date: '2026-12-28' }, leave)).toEqual([
+  it('받은 순서대로, 양식의 이름·선택지 이름과 한국어 날짜로 폅니다(양식 스키마의 키 순서는 따르지 않음)', () => {
+    // 실제 erp는 문서 필드를 양식 정의 순서로 주지만, 양식 목록의 properties는 jsonb가 키를 길이순으로 바꿔 줍니다
+    const jsonbLeave = { ...leave, fieldsSchema: { ...leave.fieldsSchema, properties: Object.fromEntries(['reason', 'end_date', 'leave_type', 'start_date'].map((k) => [k, (leave.fieldsSchema as { properties: Record<string, unknown> }).properties[k]])) } }
+    expect(formRows({ leave_type: 'half_pm', start_date: '2026-12-28', end_date: '2026-12-28', reason: '병원' }, jsonbLeave)).toEqual([
       { key: 'leave_type', label: '종류', value: '오후 반차' },
       { key: 'start_date', label: '시작일', value: '2026. 12. 28.(월)' },
       { key: 'end_date', label: '종료일', value: '2026. 12. 28.(월)' },
@@ -121,7 +123,8 @@ describe('실행 미리보기', () => {
     resourceId: null,
     after: {
       id: 'doc_9551a0b890f1', formId: 'expense', title: '경비 정산 - 김건우', requesterId: 'E0012', status: 'in_progress',
-      fields: { amount: 5800, spent_on: '2026-09-30', merchant: '바른마트 역삼점', purpose: '팀 회의 다과비', business_no: '581-31-95714' },
+      // #634 뒤 erp는 문서 필드를 양식 정의 순서로 돌려줍니다
+      fields: { amount: 5800, spent_on: '2026-09-30', merchant: '바른마트 역삼점', business_no: '581-31-95714', purpose: '팀 회의 다과비' },
       amount: 5800,
       steps: [{ order: 1, approverId: 'E0011', status: 'pending', actedBy: null, onBehalfOf: null, delegationId: null, actedAt: null, comment: null }],
       currentStep: 1, version: 1, createdAt: '2026-11-22T02:20:00Z', updatedAt: '2026-11-22T02:20:00Z',

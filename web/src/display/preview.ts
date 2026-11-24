@@ -77,11 +77,14 @@ function props(form?: Form): Record<string, Prop> {
   return ((form?.fieldsSchema as { properties?: Record<string, Prop> } | undefined)?.properties ?? {}) as Record<string, Prop>
 }
 
-/** 결재 문서의 fields를 양식 순서대로 폅니다. 양식의 금액 필드는 원 단위로 씁니다 */
+/**
+ * 결재 문서의 fields를 받은 순서대로 폅니다. erp가 문서 필드를 양식 정의 순서로 돌려주므로(#634) 그 순서를 그대로 씁니다.
+ * 양식 목록(/approval-forms)의 fieldsSchema.properties는 저장(jsonb)에서 키 순서가 바뀌어 순서 기준으로 쓰지 않고, 이름·선택지에만 씁니다(#557 리드 결정).
+ * 양식의 금액 필드는 원 단위로 씁니다
+ */
 export function formRows(fields: Record<string, unknown>, form: Form | undefined, ctx: Lookups = {}): { key: string; label: string; value: string }[] {
   const p = props(form)
-  const keys = [...Object.keys(p).filter((k) => k in fields), ...Object.keys(fields).filter((k) => !(k in p))]
-  return keys.map((key) => {
+  return Object.keys(fields).map((key) => {
     const prop = p[key]
     const v = fields[key]
     const money = typeof v === 'number' && (key === form?.amountField || isMoneyKey(key))
