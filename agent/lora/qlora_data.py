@@ -89,3 +89,9 @@ def collate(batch: list[Encoded], pad_id: int) -> dict[str, list[list[int]]]:
         mask.append([1] * len(e.input_ids) + [0] * pad)
         labels.append(e.labels + [IGNORE] * pad)
     return {"input_ids": ids, "attention_mask": mask, "labels": labels}
+
+
+def answer_positions(labels: list[list[int]]) -> list[list[bool]]:
+    """다음 토큰이 정답인 자리(True). 자리 t의 logits가 labels[t+1]을 맞히므로 한 칸 당기고 마지막 자리는 False입니다.
+    이 자리의 logits만 만들면 어휘(248,320) × 전체 길이 logits를 만들지 않아도 손실이 같습니다(#618)."""
+    return [[x != IGNORE for x in row[1:]] + [False] for row in labels]

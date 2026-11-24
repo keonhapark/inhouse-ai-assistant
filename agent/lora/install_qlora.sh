@@ -17,10 +17,11 @@ LLAMA="${QLORA_LLAMA_CPP:-$HOME/.cache/iaa-llama.cpp}"
 LLAMA_REF="${QLORA_LLAMA_CPP_REF:-master}"
 BACKEND="${QLORA_TORCH_BACKEND:-auto}"
 SYSTEM="${QLORA_SYSTEM:-}"
-# 2026-11-22 기준 PyPI 판(나온 지 몇 주 지난 것)
+# 2026-11-22 기준 PyPI 판(나온 지 몇 주 지난 것). flash-linear-attention(#618)은 Qwen3.5의 Gated DeltaNet 층(32층 중 24층)
+# 학습 커널입니다. 없으면 transformers가 파이썬 반복문 대체 구현을 써서 느립니다. 요구 패키지는 einops뿐이라 torch를 바꾸지 않습니다
 TORCH="torch==2.14.1"
-PKGS=("transformers==5.22.2" "peft==0.21.2" "bitsandbytes==0.50.2" "accelerate==1.15.0" "sentencepiece" "safetensors"
-      "httpx" "huggingface_hub")
+PKGS=("transformers==5.22.2" "peft==0.21.2" "bitsandbytes==0.50.2" "accelerate==1.15.0" "flash-linear-attention==0.6.0"
+      "sentencepiece" "safetensors" "httpx" "huggingface_hub")
 cd "$(dirname "$0")/.."                           # agent/
 
 if [[ -n "$SYSTEM" ]]; then
@@ -55,7 +56,7 @@ from datetime import datetime, timezone
 from importlib.metadata import version
 
 out, llama = sys.argv[1:3]
-pkgs = ["torch", "transformers", "peft", "bitsandbytes", "accelerate", "gguf"]
+pkgs = ["torch", "transformers", "peft", "bitsandbytes", "accelerate", "flash-linear-attention", "gguf"]
 info = {"installedAt": datetime.now(timezone.utc).isoformat(), "python": sys.version.split()[0],
         "versions": {p: version(p) for p in pkgs}, "llamaCppCommit": llama}
 try:

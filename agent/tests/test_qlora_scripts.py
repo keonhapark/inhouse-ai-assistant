@@ -107,11 +107,17 @@ def test_compare_runs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> Non
 def test_install_dry_run() -> None:
     r = subprocess.run(["bash", str(LORA / "install_qlora.sh"), "--dry-run"], capture_output=True, text=True)
     assert r.returncode == 0 and "transformers==" in r.stdout
+    assert "flash-linear-attention==" in r.stdout  # Gated DeltaNet 학습 커널(#618)
 
 
 def test_progress_line() -> None:
-    assert train_qlora.progress_line(120, 2488, 0.41234, 720) == "진행 120/2488 손실 0.4123 경과 12분 남은 약 237분"
+    assert train_qlora.progress_line(120, 2488, 0.41234, 720) == \
+        "진행 120/2488 손실 0.4123 경과 12분 남은 약 237분 단계당 6.0초"
     assert train_qlora.progress_line(0, 10, None, 5) == "진행 0/10 손실 - 경과 0분 남은 약 -"
+    # 이어 돌리면 이번 실행에서 돈 단계(150→160, 10단계 600초)로 어림합니다. 메모리는 있을 때만 붙입니다
+    assert train_qlora.progress_line(160, 311, 0.2, 600, start_step=150, peak_gb=11.24) == \
+        "진행 160/311 손실 0.2000 경과 10분 남은 약 151분 단계당 60.0초 GPU 최대 11.2GB"
+    assert train_qlora.progress_line(150, 311, None, 30, start_step=150).endswith("남은 약 -")
     assert train_qlora.parse(["--data", "d", "--out", "o"]).progress_minutes == 3
 
 
@@ -129,6 +135,37 @@ def test_training_kwargs_use_transformers5_names(tmp_path: Path) -> None:
     assert "warmup_ratio" not in kw and kw["warmup_steps"] == 0.03
     assert (kw["bf16"], kw["fp16"]) == (False, True)
     assert kw["output_dir"] == str(tmp_path / "checkpoints")
+    assert kw["ddp_find_unused_parameters"] is False  # 비전 쪽 등 학습하지 않는 층이 있어도 DDP가 찾지 않게
+
+
+def test_answer_positions_shift_labels_by_one() -> None:
+    # 자리 t의 logits가 labels[t+1]을 맞힙니다. 정답이 4·5번째 토큰이면 3·4번째 자리만 남깁니다(#618)
+    labels = [[-100, -100, -100, 11, 12, -100], [-100, 21, -100, -100, -100, -100]]
+    assert qd.answer_positions(labels) == [[False, False, True, True, False, False],
+                                           [True, False, False, False, False, False]]
+    # 남긴 자리 수 = 정답 토큰 수(첫 토큰 제외). Trainer의 num_items_in_batch(labels[..., 1:] 기준)와 같습니다
+    assert sum(map(sum, qd.answer_positions(labels))) == sum(x != -100 for row in labels for x in row[1:])
+
+
+def test_answer_positions_match_collate() -> None:
+    a = qd.Encoded([1, 2, 3, 4], [-100, -100, 3, 4])
+    b = qd.Encoded([1, 2, 3], [-100, 2, 3])
+    cols = qd.collate([a, b], pad_id=0)
+    assert qd.answer_positions(cols["labels"]) == [[False, True, True, False], [True, True, False, False]]
+
+
+def test_placement_map() -> None:
+    assert train_qlora.placement_map("one", {}) == {"": 0}
+    assert train_qlora.placement_map("one", {"LOCAL_RANK": "1"}) == {"": 1}  # torchrun 두 번째 프로세스
+    assert train_qlora.placement_map("split", {"LOCAL_RANK": "1"}) == "auto"
+    assert train_qlora.parse(["--data", "d", "--out", "o"]).placement == "one"
+
+
+def test_gated_delta_backend_falls_back_without_fla(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(sys.modules, "fla", None)  # 들여오기 실패
+    monkeypatch.setitem(sys.modules, "fla.ops", None)
+    monkeypatch.setitem(sys.modules, "fla.ops.gated_delta_rule", None)
+    assert train_qlora.gated_delta_backend() == "torch"
 
 
 def test_check_training_setup_catches_unknown_argument() -> None:
@@ -179,3 +216,33 @@ def test_sync_run_copies_new_and_changed_files(tmp_path: Path) -> None:
         assert (dst / "run.json").read_text() == '{"done": true}'
     finally:
         server.shutdown()
+
+
+def test_answer_loss_equals_full_logits_loss() -> None:
+    # 학습 환경(torch·transformers 5)에서만 돕니다. 작은 무작위 Qwen3.5 언어 모델로, 정답 자리 logits만 만든 손실이
+    # 전체 logits에 labels를 준 기본 손실과 같은지 봅니다(#618). 받는 것 없음
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("transformers.models.qwen3_5")
+    from transformers import Qwen3_5ForCausalLM, Qwen3_5TextConfig
+
+    torch.manual_seed(0)
+    cfg = Qwen3_5TextConfig(vocab_size=97, hidden_size=32, intermediate_size=64, num_hidden_layers=4,
+                            num_attention_heads=4, num_key_value_heads=2, head_dim=8, linear_num_key_heads=2,
+                            linear_num_value_heads=4, linear_key_head_dim=8, linear_value_head_dim=8,
+                            full_attention_interval=2)
+    model = Qwen3_5ForCausalLM(cfg).eval()
+    rows = [qd.Encoded(list(range(3, 15)), [-100] * 9 + [12, 13, 14]),
+            qd.Encoded(list(range(20, 27)), [-100] * 4 + [24, 25, 26])]
+    cols = qd.collate(rows, pad_id=0)
+    inputs = {k: torch.tensor(v) for k, v in cols.items()}
+    inputs["answer_positions"] = torch.tensor(qd.answer_positions(cols["labels"]), dtype=torch.bool)
+    n = int((inputs["labels"][:, 1:] != -100).sum())
+    with torch.no_grad():
+        full = model(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"],
+                     labels=inputs["labels"], num_items_in_batch=n).loss
+        mine, out = train_qlora.answer_loss(model, inputs, n)
+        mean, _ = train_qlora.answer_loss(model, inputs)
+    assert out.logits.shape == (n, 97)  # 정답 자리만
+    assert torch.allclose(mine, full, atol=1e-6) and torch.allclose(mean, full, atol=1e-6)
+    with torch.no_grad():
+        assert torch.allclose(train_qlora.answer_loss(model, inputs, n, scale=2)[0], 2 * full, atol=1e-6)

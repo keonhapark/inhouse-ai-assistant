@@ -12,6 +12,12 @@ chat template은 생각 끔(`enable_thinking=False`, 빈 `<think></think>` 뒤�
     ~/.cache/iaa-qlora-venv/bin/python lora/train_qlora.py --data <생성 폴더> --out <저장소 밖> --dry-run
     # 학습
     ~/.cache/iaa-qlora-venv/bin/python lora/train_qlora.py --data <생성 폴더> --out <저장소 밖> [--epochs 2] [--seed 7]
+    # GPU 두 장에 모델을 한 벌씩(데이터 병렬). 누적을 절반으로 줄여 한 최적화 단계의 예시 수(8)를 맞춥니다
+    torchrun --nproc_per_node 2 lora/train_qlora.py --data <생성 폴더> --out <저장소 밖> --grad-accum 4
+
+속도(#618): 모델은 기본으로 GPU 한 장에 다 올립니다(`--placement one`, 데이터 병렬이면 프로세스마다 자기 GPU).
+`--placement split`은 예전처럼 층을 여러 GPU에 나눠 올려 GPU가 차례로 돕니다. 손실은 정답 토큰을 맞히는 자리의 logits만
+만들어 계산하고(값은 기본 손실과 같음), Qwen3.5의 Gated DeltaNet 층은 flash-linear-attention이 있으면 그 커널을 씁니다.
 
 출력(`--out`): `adapter/`(PEFT 어댑터), `checkpoints/`, `run.json`(설정, 기본 모델 리비전, 데이터 manifest, 판 번호,
 저장소 커밋, 손실 기록, GPU, 걸린 시간).
@@ -32,18 +38,56 @@ from typing import Any
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 sys.path.insert(0, str(HERE))
-from qlora_data import collate, encode_all, read_rows  # noqa: E402
+from qlora_data import answer_positions, collate, encode_all, read_rows  # noqa: E402
 
 # 언어 모델의 attention(q·k·v·o)과 MLP(gate·up·down) 선형층. 비전 인코더는 이름에 visual이 들어가 빠집니다.
 DEFAULT_TARGETS = r".*language_model.*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)$"
 
 
-def progress_line(step: int, max_steps: int, loss: float | None, elapsed: float) -> str:
-    """'진행 120/2488 손실 0.4123 경과 12분 남은 약 236분'. 남은 시간은 지금까지의 평균 단계 시간으로 어림합니다."""
-    rest = (max_steps - step) * elapsed / step / 60 if step else None
+def progress_line(step: int, max_steps: int, loss: float | None, elapsed: float, start_step: int = 0,
+                  peak_gb: float | None = None) -> str:
+    """'진행 120/2488 손실 0.4123 경과 12분 남은 약 237분 단계당 6.0초 GPU 최대 11.2GB'.
+    남은 시간은 이번 실행에서 돈 단계(이어 돌리면 start_step부터)의 평균 단계 시간으로 어림합니다."""
+    done = step - start_step
+    per_step = elapsed / done if done > 0 else None
     loss_text = f"{loss:.4f}" if loss is not None else "-"
-    rest_text = f"{rest:.0f}분" if rest is not None else "-"
-    return f"진행 {step}/{max_steps} 손실 {loss_text} 경과 {elapsed / 60:.0f}분 남은 약 {rest_text}"
+    rest_text = f"{(max_steps - step) * per_step / 60:.0f}분" if per_step is not None else "-"
+    line = f"진행 {step}/{max_steps} 손실 {loss_text} 경과 {elapsed / 60:.0f}분 남은 약 {rest_text}"
+    if per_step is not None:
+        line += f" 단계당 {per_step:.1f}초"
+    if peak_gb is not None:
+        line += f" GPU 최대 {peak_gb:.1f}GB"
+    return line
+
+
+def placement_map(placement: str, env: dict[str, str]) -> dict[str, int] | str:
+    """from_pretrained의 device_map. one: 이 프로세스의 GPU 한 장에 다(torchrun이면 LOCAL_RANK), split: 층을 나눠 올림."""
+    if placement == "split":
+        return "auto"
+    return {"": int(env.get("LOCAL_RANK", "0"))}
+
+
+def answer_loss(model: Any, inputs: dict[str, Any], num_items_in_batch: Any = None, scale: int = 1) -> tuple[Any, Any]:
+    """정답 자리(`answer_positions`)의 logits만 만들어 교차 엔트로피 합을 냅니다. num_items_in_batch가 있으면 그 수로 나누고
+    (누적 전체 정답 토큰 수) scale을 곱하며, 없으면 이 배치의 정답 토큰 평균입니다. (손실, 모델 출력)을 돌려줍니다."""
+    import torch.nn.functional as F
+
+    keep, labels = inputs["answer_positions"], inputs["labels"]
+    out = model(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"], logits_to_keep=keep)
+    targets = labels[:, 1:][keep[:, :-1]]
+    loss = F.cross_entropy(out.logits.float(), targets, reduction="sum")
+    if num_items_in_batch is None:
+        return loss / max(targets.numel(), 1), out
+    return loss / num_items_in_batch * scale, out
+
+
+def gated_delta_backend() -> str:
+    """Qwen3.5 Gated DeltaNet 층이 쓸 구현. transformers는 fla를 들여올 수 있으면 그 커널, 아니면 torch 대체 구현을 씁니다."""
+    try:
+        from fla.ops.gated_delta_rule import chunk_gated_delta_rule  # noqa: F401
+    except Exception:  # noqa: BLE001 - 설치 안 됨·들여오기 실패 모두 torch 대체 구현으로 갑니다
+        return "torch"
+    return "fla"
 
 
 def training_kwargs(args: argparse.Namespace, out: Path, bf16: bool) -> dict[str, Any]:
@@ -54,7 +98,7 @@ def training_kwargs(args: argparse.Namespace, out: Path, bf16: bool) -> dict[str
             "warmup_steps": 0.03, "bf16": bf16, "fp16": not bf16, "logging_steps": 10, "eval_strategy": "epoch",
             "save_strategy": "epoch", "save_total_limit": 2, "seed": args.seed, "optim": "paged_adamw_8bit",
             "gradient_checkpointing": True, "gradient_checkpointing_kwargs": {"use_reentrant": False},
-            "remove_unused_columns": False, "report_to": []}
+            "remove_unused_columns": False, "ddp_find_unused_parameters": False, "report_to": []}
 
 
 def check_training_setup(kw: dict[str, Any], train: list[Any], valid: list[Any]) -> list[str]:
@@ -139,6 +183,8 @@ def parse(argv: list[str] | None) -> argparse.Namespace:
                     help="--out/checkpoints의 마지막 체크포인트에서 이어 돌림(없으면 처음부터)")
     ap.add_argument("--progress-minutes", type=float, default=3,
                     help="이 간격(분)마다 단계·손실·남은 시간을 한 줄로 출력(노트북 셀 출력용)")
+    ap.add_argument("--placement", choices=("one", "split"), default="one",
+                    help="one: GPU 한 장에 모델을 다 올림(기본, 데이터 병렬도 이것). split: 층을 여러 GPU에 나눠 올림(차례로 돎)")
     ap.add_argument("--dry-run", action="store_true")
     return ap.parse_args(argv)
 
@@ -169,10 +215,13 @@ def main(argv: list[str] | None = None) -> int:
         bf16_ok = False
     problems = check_training_setup(training_kwargs(args, out, bf16_ok), train, valid)
     print("학습 설정 확인:", "문제 없음" if not problems else "; ".join(problems), flush=True)
+    print(f"Gated DeltaNet 구현: {gated_delta_backend()}(fla가 아니면 대체 구현이라 느림, #618)", flush=True)
     if problems:
         raise SystemExit("학습 설정에 문제가 있습니다")
     if args.dry_run:
         return 0
+
+    import os
 
     import torch
     from peft import LoraConfig, get_peft_model
@@ -184,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
     bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
     compute = torch.bfloat16 if bf16 else torch.float16
     model = AutoModelForImageTextToText.from_pretrained(
-        args.base_model, revision=revision, device_map="auto", dtype=compute,
+        args.base_model, revision=revision, device_map=placement_map(args.placement, dict(os.environ)), dtype=compute,
         quantization_config=BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
                                                bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=compute))
     # prepare_model_for_kbit_training은 양자화하지 않은 큰 텐서(임베딩·lm_head·비전 쪽)를 fp32로 올려 T4 한 장(15GB)에서
@@ -194,7 +243,8 @@ def main(argv: list[str] | None = None) -> int:
     model.enable_input_require_grads()
     devices = sorted({str(d) for d in getattr(model, "hf_device_map", {}).values()})
     used = {i: round(torch.cuda.memory_allocated(i) / 2**30, 2) for i in range(torch.cuda.device_count())}
-    print(f"모델 올림: 장치 {devices}, GPU 메모리(GB) {used}", flush=True)
+    backend = gated_delta_backend()
+    print(f"모델 올림: 장치 {devices}, GPU 메모리(GB) {used}, Gated DeltaNet 구현 {backend}", flush=True)
     model = get_peft_model(model, LoraConfig(r=args.lora_r, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,
                                              target_modules=args.target_modules, task_type="CAUSAL_LM"))
     trainable, total = model.get_nb_trainable_parameters()
@@ -205,9 +255,26 @@ def main(argv: list[str] | None = None) -> int:
     pad_id = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
 
     def to_tensors(batch: list[Any]) -> dict[str, Any]:
-        return {k: torch.tensor(v) for k, v in collate(batch, pad_id).items()}
+        cols = collate(batch, pad_id)
+        return {k: torch.tensor(v) for k, v in cols.items()} | {"answer_positions": torch.tensor(
+            answer_positions(cols["labels"]), dtype=torch.bool)}
 
-    trainer = Trainer(
+    class AnswerLossTrainer(Trainer):
+        """정답 토큰을 맞히는 자리의 logits만 만들어 손실을 냅니다(#618). 어휘 248,320 × 전체 길이(p50 1,296)의 logits와
+        그 fp32 사본·기울기를 만들지 않습니다(정답은 예시당 약 50토큰). 손실 값은 기본 손실과 같습니다: 정답 토큰 교차
+        엔트로피 합을 누적 전체 정답 토큰 수(num_items_in_batch)로 나눕니다. 그래서 누적 단계 수로 다시 나누지 않습니다."""
+        loss_is_scaled_for_ga = True
+
+        def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):  # noqa: ANN001
+            if num_items_in_batch is None and model.training:
+                raise RuntimeError("학습 중 num_items_in_batch가 없어 누적 손실을 맞출 수 없습니다")
+            # num_items_in_batch가 모든 프로세스의 합이고 DDP는 기울기를 프로세스 수로 평균하므로 프로세스 수를 곱해
+            # 되돌립니다(Trainer 기본 compute_loss와 같은 처리)
+            scale = self.accelerator.num_processes if self.args.average_tokens_across_devices else 1
+            loss, out = answer_loss(model, inputs, num_items_in_batch, scale)
+            return (loss, out) if return_outputs else loss
+
+    trainer = AnswerLossTrainer(
         model=model, train_dataset=train, eval_dataset=valid, data_collator=to_tensors,
         args=TrainingArguments(**training_kwargs(args, out, bf16)))
     from transformers import TrainerCallback
@@ -218,6 +285,10 @@ def main(argv: list[str] | None = None) -> int:
         def __init__(self) -> None:
             self.last = 0.0
             self.loss: float | None = None
+            self.start_step = 0
+
+        def on_train_begin(self, args_, state, control, **kw):  # noqa: ANN001
+            self.start_step = state.global_step  # 이어 돌리면 체크포인트의 단계
 
         def on_log(self, args_, state, control, logs=None, **kw):  # noqa: ANN001
             if logs and "loss" in logs:
@@ -225,9 +296,13 @@ def main(argv: list[str] | None = None) -> int:
 
         def on_step_end(self, args_, state, control, **kw):  # noqa: ANN001
             now = time.time()
+            if not state.is_world_process_zero:
+                return
             if now - self.last >= args.progress_minutes * 60 or state.global_step == state.max_steps:
                 self.last = now
-                print(progress_line(state.global_step, state.max_steps, self.loss, now - started), flush=True)
+                peak = torch.cuda.max_memory_allocated() / 2**30 if torch.cuda.is_available() else None
+                print(progress_line(state.global_step, state.max_steps, self.loss, now - started, self.start_step,
+                                    peak), flush=True)
 
     class TimedSave(TrainerCallback):
         """epoch 끝 저장과 별도로 --save-minutes마다 체크포인트를 남깁니다(save_total_limit로 오래된 것은 지움)."""
@@ -239,7 +314,8 @@ def main(argv: list[str] | None = None) -> int:
             if due(time.time(), self.last, args.save_minutes):
                 self.last = time.time()
                 control.should_save = True
-                print(f"체크포인트 저장: 단계 {state.global_step}", flush=True)
+                if state.is_world_process_zero:
+                    print(f"체크포인트 저장: 단계 {state.global_step}", flush=True)
 
     trainer.add_callback(Progress())
     trainer.add_callback(TimedSave())
@@ -247,13 +323,17 @@ def main(argv: list[str] | None = None) -> int:
     print(f"이어 돌리기: {resume.name if resume else '없음(처음부터)'}", flush=True)
     started = time.time()
     trainer.train(resume_from_checkpoint=str(resume) if resume else None)
+    seconds = time.time() - started
+    steps_run = trainer.state.global_step - (int(resume.name.removeprefix("checkpoint-")) if resume else 0)
+    if not trainer.is_world_process_zero():
+        return 0
     model.save_pretrained(out / "adapter")
     tok.save_pretrained(out / "adapter")
 
     import peft
     import transformers
     manifest = json.loads((data / "manifest.json").read_text("utf-8")) if (data / "manifest.json").exists() else None
-    run = {"finishedAt": datetime.now(timezone.utc).isoformat(), "seconds": round(time.time() - started),
+    run = {"finishedAt": datetime.now(timezone.utc).isoformat(), "seconds": round(seconds),
            "resumedFrom": resume.name if resume else None,
            "baseModel": args.base_model, "revision": revision, "args": {k: v for k, v in vars(args).items()
                                                                        if k not in ("data", "out")},
@@ -262,6 +342,9 @@ def main(argv: list[str] | None = None) -> int:
                         "transformers": transformers.__version__, "peft": peft.__version__},
            "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
            "computeDtype": str(compute).removeprefix("torch."), "devices": devices,
+           "placement": args.placement, "processes": trainer.args.world_size, "gatedDeltaBackend": backend,
+           "secondsPerStep": round(seconds / max(steps_run, 1), 1),
+           # 이 프로세스(0번)가 잰 값. 데이터 병렬이면 다른 GPU도 비슷합니다
            "peakMemoryGB": {i: round(torch.cuda.max_memory_allocated(i) / 2**30, 2)
                             for i in range(torch.cuda.device_count())},
            "trainablePercent": round(100 * trainable / total, 3), "log": trainer.state.log_history}
