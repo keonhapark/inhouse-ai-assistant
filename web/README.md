@@ -119,7 +119,7 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 
 ## 화면
 
-재설계(#557) 뒤 화면입니다. 1440×900, `ko-KR`·`Asia/Seoul`로 Playwright headless Chromium에서 찍었습니다(2026-11-24).
+재설계(#557) 뒤 화면입니다. 1440×900, `ko-KR`·`Asia/Seoul`로 Playwright headless Chromium에서 찍었습니다(2026-11-24). 날짜는 "2026. 11. 24.", 시각은 "오후 2:30"으로 맞춘 뒤(#638) 다시 찍었습니다.
 
 ### 모의 서버
 
@@ -183,10 +183,10 @@ docker compose -f infra/compose.yaml --env-file .env --profile full up -d --buil
 |---|---|
 | ![실제 조직도](docs/images/stack-org.png) | ![실제 AI 에이전트](docs/images/stack-agents.png) |
 
-실제 스택에서 본 것 중 web 밖에서 고칠 것:
+실제 스택 화면에는 아래 두 가지가 아직 보입니다. 찍을 때 쓴 이미지가 두 수정보다 먼저 빌드된 것이기 때문입니다.
 
-- 에이전트 답 본문에 "되돌릴 수 있습니다: …(행동 act_…)"처럼 내부 행동 ID와 옛 말이 들어갑니다(agent 고정 안내 문구).
-- 결재 문서 상세의 필드 순서가 사유 → 종료일 → 종류 → 시작일로 나옵니다. 모의 서버는 양식 순서대로 나옵니다.
+- 에이전트 답 본문에 "되돌릴 수 있습니다: …(행동 act_…)"처럼 내부 행동 ID와 옛 말이 들어갑니다. agent의 고정 안내 문구에서 고칩니다.
+- 결재 문서 상세의 필드 순서가 사유 → 종료일 → 종류 → 시작일로 나옵니다. erp가 양식 정의 순서로 돌려주도록 고쳤습니다(#634).
 
 다시 찍는 방법:
 
