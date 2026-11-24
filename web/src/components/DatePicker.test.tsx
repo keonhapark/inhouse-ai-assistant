@@ -30,8 +30,8 @@ describe('날짜 고르개', () => {
   it('한국식으로 보이고(요일 포함), 라벨과 값이 단추 이름으로 읽힙니다', () => {
     render(<Date1 />)
     expect(koDate('2026-11-23')).toBe('2026. 11. 23.(월)')
-    // 화면에는 "2026. 11. 23.(월)", 이름은 낭독기가 점을 읽지 않게 년월일로 둡니다
-    expect(screen.getByRole('button', { name: '시작 2026년 11월 23일 월요일' })).toHaveTextContent('2026. 11. 23.(월)')
+    // 이름은 라벨 + 보이는 날짜 글자 그대로입니다(WCAG 2.5.3)
+    expect(screen.getByRole('button', { name: '시작 2026. 11. 23.(월)' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: '시작' })).toBeInTheDocument()
   })
 
@@ -52,7 +52,7 @@ describe('날짜 고르개', () => {
     expect(screen.getByRole('status')).toHaveTextContent('2026-12-27')
     expect(screen.queryByRole('dialog')).toBeNull()
     // 닫히면 초점이 단추로 돌아옵니다
-    expect(screen.getByRole('button', { name: /^시작 2026년 12월 27일/ })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /^시작 2026\. 12\. 27\./ })).toHaveFocus()
   })
 
   it('max보다 뒤의 날은 고를 수 없습니다', async () => {

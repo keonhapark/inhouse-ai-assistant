@@ -151,8 +151,8 @@ function Calendar({ labelId, label, value, onChange, min, max, invalid, describe
         aria-describedby={describedBy}
         disabled={disabled}
       >
-        {/* 화면 낭독기는 "2026. 11. 23."의 점을 소리 내어 읽기도 해, 이름은 년월일로 따로 둡니다 */}
-        <span id={valueId} className={selected ? undefined : 'datefield__placeholder'} aria-label={selected ? koDateSpoken(value) : undefined}>
+        {/* 이름은 라벨 + 보이는 날짜 글자 그대로입니다(WCAG 2.5.3). 달력의 날 단추는 숫자만 보여 이름을 년월일 요일로 둡니다 */}
+        <span id={valueId} className={selected ? undefined : 'datefield__placeholder'}>
           {selected ? koDate(value) : '날짜 고르기'}
         </span>
         <CalendarDays aria-hidden />

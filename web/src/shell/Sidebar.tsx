@@ -34,14 +34,11 @@ export function Sidebar({ me, collapsed, onToggle, onOpenPalette, onLogout }: Pr
         </button>
       </div>
 
-      <button type="button" className="sidebar__search" onClick={onOpenPalette} aria-label="찾기·이동" aria-keyshortcuts="Control+K Meta+K" title={collapsed ? '찾기·이동' : undefined}>
+      {/* 이름은 보이는 글자 그대로("찾기·이동 Ctrl K", WCAG 2.5.3). 접혀도 라벨은 시각적으로만 숨어 이름에 남습니다 */}
+      <button type="button" className="sidebar__search" onClick={onOpenPalette} aria-keyshortcuts="Control+K Meta+K" title={collapsed ? '찾기·이동' : undefined}>
         <Search aria-hidden />
-        <span className="sidebar__label" aria-hidden>
-          찾기·이동
-        </span>
-        <kbd className="sidebar__label" aria-hidden>
-          Ctrl K
-        </kbd>
+        <span className="sidebar__label">찾기·이동</span>{' '}
+        <kbd className="sidebar__label">Ctrl K</kbd>
       </button>
 
       {navFor(me).map((g) => (
@@ -71,12 +68,13 @@ export function Sidebar({ me, collapsed, onToggle, onOpenPalette, onLogout }: Pr
       ))}
 
       <Menu.Root>
-        <Menu.Trigger className="sidebar__me" aria-label={`${me.name} 사용자 메뉴`}>
+        {/* 이름은 보이는 글자(이름·부서·직급) 그대로입니다. 메뉴 단추라는 것은 aria-haspopup으로 읽힙니다 */}
+        <Menu.Trigger className="sidebar__me">
           <span className="avatar" aria-hidden>
             {initials(me.name)}
           </span>
           <span className="sidebar__label sidebar__who">
-            <span>{me.name}</span>
+            <span>{me.name}</span>{' '}
             <span className="sidebar__unit">
               {me.unitName} {gradeName(me.grade)}
             </span>

@@ -25,7 +25,8 @@ const problemJson = (status: number, code: string, title: string) =>
   HttpResponse.json({ type: `urn:problem:${code}`, title, status }, { status, headers: { 'Content-Type': 'application/problem+json' } })
 
 async function openDoc(user: ReturnType<typeof userEvent.setup>, title: string) {
-  await user.click(await screen.findByRole('button', { name: title }))
+  // 행 단추의 이름은 보이는 글자 전부(제목 → 양식·기안자 → 상태·언제)라 제목으로 시작하는지만 봅니다
+  await user.click(await screen.findByRole('button', { name: (n) => n.startsWith(`${title} `) }))
   return screen.findByRole('region', { name: `결재 문서: ${title}` })
 }
 
@@ -163,10 +164,10 @@ describe('리뷰에서 고친 것', () => {
     )
     const user = renderInbox()
     await user.click(await screen.findByRole('tab', { name: '기안함' }))
-    expect(await screen.findByRole('button', { name: '교육용 노트북 2대 구매' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^교육용 노트북 2대 구매 / })).toBeInTheDocument()
     await delay(250)
-    expect(screen.getByRole('button', { name: '교육용 노트북 2대 구매' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '연차 휴가 신청(11/27~11/28)' })).toBeNull()
+    expect(screen.getByRole('button', { name: /^교육용 노트북 2대 구매 / })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^연차 휴가 신청\(11\/27~11\/28\) / })).toBeNull()
   })
 
   it('문서를 열면 제목으로, 닫으면 그 행 버튼으로 초점이 옮겨 갑니다', async () => {
@@ -174,6 +175,6 @@ describe('리뷰에서 고친 것', () => {
     const doc = await openDoc(user, '연차 휴가 신청(11/27~11/28)')
     expect(within(doc).getByRole('heading', { name: '연차 휴가 신청(11/27~11/28)' })).toHaveFocus()
     await user.click(within(doc).getByRole('button', { name: '닫기' }))
-    expect(screen.getByRole('button', { name: '연차 휴가 신청(11/27~11/28)' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /^연차 휴가 신청\(11\/27~11\/28\) / })).toHaveFocus()
   })
 })
