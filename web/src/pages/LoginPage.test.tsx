@@ -51,7 +51,7 @@ describe('로그인', () => {
     expect(await screen.findByRole('navigation', { name: '주 메뉴' })).toHaveTextContent('한지우')
     expect(tokenStore.get()).toBe('mock.emp-1001')
 
-    await user.click(screen.getByRole('button', { name: '한지우 사용자 메뉴' }))
+    await user.click(screen.getByRole('button', { name: /^한지우 / }))
     await user.click(await screen.findByRole('menuitem', { name: '로그아웃' }))
     expect(await screen.findByLabelText('사번')).toBeInTheDocument()
     expect(tokenStore.get()).toBeNull()

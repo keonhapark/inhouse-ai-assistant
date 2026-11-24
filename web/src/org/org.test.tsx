@@ -218,7 +218,7 @@ describe('AI 에이전트', () => {
     expect(within(hr).getByText('사내 처리')).toBeInTheDocument()
     expect(within(hr).getByText('인사팀')).toBeInTheDocument()
     expect(within(hr).getByText('인사 정보는 외부 LLM으로 보내지 않습니다.')).toBeInTheDocument()
-    const tools = within(hr).getByRole('region', { name: '할 수 있는 일' })
+    const tools = within(hr).getByRole('region', { name: '인사 담당 AI 할 수 있는 일' })
     expect(within(tools).getByText('11가지')).toBeInTheDocument()
     // 실행 취소할 수 없는 일은 실행 전 확인, 넓은 범위의 대결 지정은 예외로 실행 전 확인
     const revoke = within(tools).getByText('대결 해제').closest('li') as HTMLElement
