@@ -369,7 +369,7 @@ export const tasks = [
       ['확인', '왜 기대와 달랐는지 한 줄 이유가 보인다'],
     ],
     async run(u, page, { judge }) {
-      await u.click(page.getByRole('link', { name: '평가 리포트', exact: true }), '평가 리포트로 이동')
+      await u.click(page.getByRole('link', { name: '평가 보고서', exact: true }), '평가 보고서로 이동')
       await u.select(page.getByRole('combobox', { name: '보기' }), '기대와 다른 회차가 있는 것만', '보기: 기대와 다름')
       const table = page.getByRole('region', { name: '시나리오별 결과 표' })
       // "이 프로젝트" 열(마지막 칸)이 기대와 다른 행을 눈으로 훑어 찾습니다.
