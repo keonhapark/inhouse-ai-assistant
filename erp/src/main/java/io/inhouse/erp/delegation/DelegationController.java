@@ -2,8 +2,8 @@ package io.inhouse.erp.delegation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.inhouse.erp.approval.ApprovalDocumentRepository;
+import io.inhouse.erp.approval.ApprovalService;
 import io.inhouse.erp.approval.ApprovalViews.DocumentView;
-import io.inhouse.erp.approval.ApprovalViews;
 import io.inhouse.erp.auth.ErpPrincipal;
 import io.inhouse.erp.auth.RequiredScope;
 import io.inhouse.erp.common.ApiException;
@@ -37,11 +37,14 @@ public class DelegationController {
 
     private final DelegationService delegations;
     private final ApprovalDocumentRepository docs;
+    private final ApprovalService approvals;
     private final WriteExecutor writes;
 
-    public DelegationController(DelegationService delegations, ApprovalDocumentRepository docs, WriteExecutor writes) {
+    public DelegationController(DelegationService delegations, ApprovalDocumentRepository docs,
+                                ApprovalService approvals, WriteExecutor writes) {
         this.delegations = delegations;
         this.docs = docs;
+        this.approvals = approvals;
         this.writes = writes;
     }
 
@@ -67,7 +70,7 @@ public class DelegationController {
     @Transactional(readOnly = true)
     public Items<DocumentView> acted(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String delegationId) {
         delegations.visible(p.employeeId(), delegationId);
-        return new Items<>(docs.findActedUnderDelegation(delegationId).stream().map(ApprovalViews::of).toList());
+        return new Items<>(docs.findActedUnderDelegation(delegationId).stream().map(approvals::view).toList());
     }
 
     @PostMapping("/delegations")

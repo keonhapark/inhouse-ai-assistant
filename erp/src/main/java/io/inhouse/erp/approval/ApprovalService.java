@@ -87,7 +87,7 @@ public class ApprovalService {
         if (!line.isEmpty()) {
             notifications.send(line.get(0), Notifications.APPROVAL_TURN, "결재 대기: " + docTitle, d.getId(), null);
         }
-        DocumentView view = ApprovalViews.of(d);
+        DocumentView view = view(d);
         return WriteOutcome.of(form.name() + " 결재를 올립니다(결재선 " + line.size() + "단계)",
                 new Change("create", "approval_document", d.getId(), null, json(view)), true, view, d.getId());
     }
@@ -98,7 +98,7 @@ public class ApprovalService {
         if (!ApprovalDocument.IN_PROGRESS.equals(d.getStatus()) || !d.nobodyActed()) {
             throw new ApiException(409, "undo-conflict", "이미 결재가 시작돼 실행 취소할 수 없습니다. 기안함에서 문서 상태를 확인하세요.");
         }
-        JsonNode before = json(ApprovalViews.of(d));
+        JsonNode before = json(view(d));
         close(d, ApprovalDocument.WITHDRAWN);
         DocumentView after = flushAndView(d);
         return WriteOutcome.of("상신을 취소하고 문서를 회수했습니다",
@@ -126,7 +126,7 @@ public class ApprovalService {
         if (version != d.getVersion()) {
             throw new ApiException(409, "version-conflict", "새로 고친 뒤 다시 확인하세요.");
         }
-        JsonNode before = json(ApprovalViews.of(d));
+        JsonNode before = json(view(d));
         OffsetDateTime now = OffsetDateTime.now(clock);
         step.act(approve ? "approved" : "rejected", actor, delegationId == null ? null : approver, delegationId, now,
                 comment);
@@ -163,7 +163,7 @@ public class ApprovalService {
         if (!d.getRequesterId().equals(p.employeeId())) {
             throw ApiException.forbidden("기안자만 회수할 수 있습니다.");
         }
-        JsonNode before = json(ApprovalViews.of(d));
+        JsonNode before = json(view(d));
         boolean futureApprovedLeave = ApprovalDocument.APPROVED.equals(d.getStatus()) && d.getLeaveDays().signum() > 0
                 && LeaveService.date("start_date", d.getFields().path("start_date").asText(null))
                 .isAfter(LocalDate.now(clock));
@@ -175,6 +175,11 @@ public class ApprovalService {
         DocumentView after = flushAndView(d);
         return WriteOutcome.of("'" + d.getTitle() + "' 문서를 회수합니다",
                 new Change("update", "approval_document", d.getId(), before, json(after)), false, after, d.getId());
+    }
+
+    /** 응답 형태(계약 ApprovalDocument). fields는 양식 정의 순서입니다. */
+    public DocumentView view(ApprovalDocument d) {
+        return ApprovalViews.of(d, forms.get(d.getFormId()));
     }
 
     /** 문서를 끝내고 휴가 잔여를 맞춥니다. */
@@ -219,7 +224,7 @@ public class ApprovalService {
                     .limit(max.max()).toList();
             default -> throw ApiException.validation("box", "outbox, inbox, delegated, done 중 하나");
         };
-        return found.stream().map(ApprovalViews::of).toList();
+        return found.stream().map(this::view).toList();
     }
 
     private static boolean deductsLeave(Pack.FormDef form) {
@@ -227,7 +232,7 @@ public class ApprovalService {
     }
 
     private DocumentView flushAndView(ApprovalDocument d) {
-        return ApprovalViews.of(docs.saveAndFlush(d));
+        return view(docs.saveAndFlush(d));
     }
 
     private JsonNode json(Object o) {

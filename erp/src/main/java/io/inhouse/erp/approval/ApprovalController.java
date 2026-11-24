@@ -50,7 +50,7 @@ public class ApprovalController {
     @OperationId("getApprovalDocument")
     @RequiredScope("approval:read")
     public DocumentView get(@AuthenticationPrincipal ErpPrincipal p, @PathVariable String documentId) {
-        return ApprovalViews.of(approvals.visible(p.employeeId(), documentId));
+        return approvals.view(approvals.visible(p.employeeId(), documentId));
     }
 
     /** 상신. 위임 토큰은 approval:request나 approval:request:&lt;formId&gt;가 있어야 합니다. */
