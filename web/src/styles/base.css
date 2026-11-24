@@ -9,9 +9,9 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-sans);
-  font-size: var(--fs-14);
-  line-height: var(--lh);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
 }
 
 h1,
@@ -22,15 +22,15 @@ h3 {
 }
 
 h1 {
-  font-size: var(--fs-24);
+  font-size: var(--fs-title2);
 }
 
 h2 {
-  font-size: var(--fs-20);
+  font-size: var(--fs-title3);
 }
 
 h3 {
-  font-size: var(--fs-16);
+  font-size: var(--fs-headline);
 }
 
 a {
@@ -39,29 +39,37 @@ a {
 
 code,
 .mono {
-  font-family: var(--font-mono);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Pretendard Variable', Pretendard, monospace;
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 input {
   height: var(--control-h);
-  padding: 0 var(--sp-8);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--surface);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--fill-2);
   color: var(--text);
   font: inherit;
 }
 
+/* 체크·라디오는 기본 모양을 두고 크기만 맞춥니다 */
+input[type='checkbox'],
+input[type='radio'] {
+  height: auto;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
 label {
   display: grid;
-  gap: var(--sp-4);
-  color: var(--text-muted);
-  font-size: var(--fs-12);
+  gap: var(--space-1);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
 }
 
 .visually-hidden {

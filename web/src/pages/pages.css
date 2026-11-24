@@ -1,31 +1,31 @@
 .muted {
-  color: var(--text-muted);
+  color: var(--text-2);
 }
 
 .page {
   display: grid;
-  gap: var(--sp-24);
+  gap: var(--space-6);
   max-width: 960px;
   margin: 0 auto;
-  padding: var(--sp-32) var(--sp-16);
+  padding: var(--space-8) var(--space-4);
 }
 
 .page section {
   display: grid;
-  gap: var(--sp-12);
+  gap: var(--space-3);
 }
 
 .page .row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--sp-8);
+  gap: var(--space-2);
 }
 
 .swatches {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--sp-8);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -34,18 +34,18 @@
 .swatches li {
   display: flex;
   align-items: center;
-  gap: var(--sp-8);
+  gap: var(--space-2);
 }
 
 .swatch {
   width: 24px;
   height: 24px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  border: 0.5px solid var(--sep-strong);
+  border-radius: var(--r-sm);
 }
 
 .card p {
-  margin: 0 0 var(--sp-4);
+  margin: 0 0 var(--space-1);
 }
 
 /* 로그인(ux/research/ia.md 3절: 제품 이름, 소개 한 줄, 문의처). 가운데 시트 하나 */

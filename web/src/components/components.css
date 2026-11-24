@@ -62,16 +62,16 @@
 
 /* 상태색은 테두리와 점에만 씁니다. --success·--warning은 흰 바탕 글자로 4.5:1에 못 미쳐 글자는 --text로 둡니다. */
 .badge {
-  --badge-color: var(--text-muted);
+  --badge-color: var(--text-2);
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-4);
+  gap: var(--space-1);
   height: 20px;
-  padding: 0 var(--sp-8);
+  padding: 0 var(--space-2);
   border: 1px solid var(--badge-color);
   border-radius: 999px;
   color: var(--text);
-  font-size: var(--fs-12);
+  font-size: var(--fs-caption);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -101,41 +101,40 @@
 }
 
 .badge--local {
-  --badge-color: var(--local);
+  --badge-color: var(--accent);
 }
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-1);
 }
 
 .card__header,
 .card__body,
 .card__footer {
-  padding: var(--sp-12) var(--sp-16);
+  padding: var(--space-3) var(--space-4);
 }
 
 .card__header {
   display: flex;
   align-items: center;
-  gap: var(--sp-8);
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-2);
+  border-bottom: 0.5px solid var(--sep);
 }
 
 .card__footer {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: var(--sp-8);
-  border-top: 1px solid var(--border);
+  gap: var(--space-2);
+  border-top: 0.5px solid var(--sep);
 }
 
 .alert {
-  padding: var(--sp-8) var(--sp-12);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--danger);
-  border-radius: var(--radius-control);
+  border-radius: var(--r-sm);
   color: var(--danger);
 }
 
