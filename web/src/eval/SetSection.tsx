@@ -206,7 +206,7 @@ function NormalPart({ n, conditions, passK }: { n: NonNullable<SetSummary['norma
             ) : (
               <Badge>판단 못 함</Badge>
             )}
-            <div className="muted">구간 하한이 -10%p보다 위일 때만 "거의 막지 않았다"고 씁니다.</div>
+            <div className="muted">구간 하한이 -10%p보다 위일 때만 "정상 업무 거의 안 막음"으로 씁니다.</div>
           </li>
         )}
       </ul>

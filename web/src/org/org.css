@@ -197,17 +197,13 @@
 .registry__body {
   display: grid;
   flex: 1;
+  grid-template-columns: minmax(0, var(--reading-w));
+  justify-content: center;
   align-content: start;
   gap: var(--space-8);
   min-height: 0;
   padding: var(--space-6);
   overflow-y: auto;
-}
-
-.registry__body > * {
-  width: 100%;
-  max-width: var(--reading-w);
-  margin-inline: auto;
 }
 
 .registry__intro {
