@@ -223,29 +223,30 @@ export function InboxPage() {
                       id={`doc-open-${d.id}`}
                       className="doc-row"
                       aria-current={open?.id === d.id ? 'true' : undefined}
-                      aria-labelledby={`doc-t-${d.id}`}
-                      aria-describedby={`doc-s-${d.id} doc-e-${d.id}`}
+                      // 이름은 행에 보이는 글자 전부(제목 → 양식·기안자 → 상태·금액·언제)입니다. 제목만 이름에 두면 보이는 글자와 어긋납니다(WCAG 2.5.3).
+                      // 부분 사이에 빈칸을 두어 이름이 붙어 읽히지 않게 합니다(flex·grid 안의 빈칸은 화면에 보이지 않음)
                       onClick={() => setOpen(d)}
                     >
                       <span className="doc-row__ico" aria-hidden>
                         <Icon />
                       </span>
                       <span className="doc-row__main">
-                        <span id={`doc-t-${d.id}`} className="doc-row__title">
+                        <span className="doc-row__title">
                           {d.title}
-                        </span>
-                        <span id={`doc-s-${d.id}`} className="doc-row__sub">
+                        </span>{' '}
+                        <span className="doc-row__sub">
                           {[d.formName, d.requesterName, d.viaDelegation && `${d.viaDelegation.originalApproverName} 대신`, settled && d.amount != null && formatWon(d.amount)]
                             .filter(Boolean)
                             .join(' · ')}
                         </span>
-                      </span>
-                      <span id={`doc-e-${d.id}`} className="doc-row__end">
+                      </span>{' '}
+                      <span className="doc-row__end">
                         {settled ? (
                           <span className={`status status--${TONE_DOT[st.tone]}`}>{st.label}</span>
                         ) : (
                           d.amount != null && <span className="doc-row__amt">{formatWon(d.amount)}</span>
                         )}
+                        {' '}
                         <small>{formatWhen(d.createdAt)}</small>
                       </span>
                     </button>

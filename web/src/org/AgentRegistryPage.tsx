@@ -119,7 +119,8 @@ function AgentSection({ agent: a, isFallback }: { agent: Entry; isFallback: bool
         )}
       </dl>
 
-      <section className="group" aria-labelledby={`agent-${a.id}-tools`}>
+      {/* 에이전트마다 같은 이름의 영역이 되지 않게 에이전트 이름을 앞에 붙입니다(landmark-unique) */}
+      <section className="group" aria-labelledby={`${titleId} agent-${a.id}-tools`}>
         <GroupHead id={`agent-${a.id}-tools`} title="할 수 있는 일" n={a.tools.length ? `${a.tools.length}가지` : undefined} />
         {a.tools.length === 0 && <p className="group__empty">할 수 있는 일이 없습니다.</p>}
         <ul className="group__list" hidden={a.tools.length === 0}>
