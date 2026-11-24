@@ -412,6 +412,11 @@
   border-radius: var(--r-sm);
 }
 
+/* 대결 섹션의 문단 여백을 0으로 두던 규칙(.delegation > p)이 고르개 안까지 닿지 않아 따로 둡니다 */
+.picker p {
+  margin: 0;
+}
+
 .picker legend {
   padding: 0 var(--space-1);
   color: var(--text-2);
