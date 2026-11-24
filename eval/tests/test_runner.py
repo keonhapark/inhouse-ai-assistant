@@ -260,3 +260,17 @@ def test_resume_skips_broken_line(erp_factory, tmp_path):
     f.write_text(whole + "\n" + json.dumps(asdict(rows[1]), ensure_ascii=False)[:40], encoding="utf-8")
     resume = load_rows_jsonl(f)
     assert [r.condition for r in resume.done] == [rows[0].condition]
+
+
+def test_broken_lines_count_as_reruns_in_report(tmp_path):
+    """쓰다가 끊긴 줄로 다시 돈 회차는 다시 돌린 횟수와 보고서 메모에 남습니다(#657)."""
+    from harness.runner import RunMeta, note_broken_reruns
+    f = tmp_path / "r.rows.jsonl"
+    f.write_text('{"a": 1}\n{"a": 2, "b"\n{"a": 3}\n', encoding="utf-8")
+    meta = RunMeta(commit="c", dirty=False, machine="m", started_at="s", retried_runs=1)
+    assert note_broken_reruns(meta, f) == 1
+    assert meta.retried_runs == 2 and "끊긴 줄 1개" in meta.notes[-1]
+    clean = tmp_path / "ok.rows.jsonl"
+    clean.write_text('{"a": 1}\n', encoding="utf-8")
+    meta2 = RunMeta(commit="c", dirty=False, machine="m", started_at="s")
+    assert note_broken_reruns(meta2, clean) == 0 and meta2.notes == [] and meta2.retried_runs == 0

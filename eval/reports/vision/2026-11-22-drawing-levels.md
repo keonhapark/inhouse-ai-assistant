@@ -28,6 +28,7 @@
 
 ## 조건과 다시 재는 방법
 
+- 측정 커밋: `73fb518`(#511 병합 커밋). 측정은 병합 전 브랜치에서 했고, 생성기(`eval/tools/make_images.py`)와 OCR 기준선(`rag/bench/drawing_ocr.py`)은 이 커밋과 같습니다. 다시 잴 때는 이 커밋을 체크아웃합니다(protocol 8절).
 - OCR: rag `ocr` 의존 그룹의 rapidocr-onnxruntime 1.4.4(Apache-2.0), WSL2 CPU. rag 코드는 고치지 않고, 생성기 단계만 바꿔 불렀습니다(아래 스크립트 요지).
 - 결과 기록: `2026-11-22-drawing-levels.json`(엔진·단계별 요약)
 
