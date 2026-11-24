@@ -365,12 +365,13 @@ export const inboxHandlers = [
         resource: 'delegation',
         resourceId: dryRun ? null : draft.id,
         before: null,
+        // 실제 erp처럼 대결 자원의 필드 이름 그대로 돌려줍니다. 표시 이름은 화면(display/preview)이 붙입니다
         after: {
-          대리인: nameOf(draft.delegateId),
-          시작: draft.startsAt,
-          끝: draft.endsAt,
-          양식: draft.scope.formTypes.join(', ') === '*' ? '모든 양식' : draft.scope.formTypes.join(', '),
-          금액한도: draft.scope.maxAmount ?? '없음',
+          delegateId: draft.delegateId,
+          startsAt: draft.startsAt,
+          endsAt: draft.endsAt,
+          scope: draft.scope,
+          reason: draft.reason,
         },
       },
     ]

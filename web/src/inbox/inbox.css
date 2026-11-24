@@ -423,6 +423,12 @@
   font-size: var(--fs-caption);
 }
 
+.picker__forms {
+  display: grid;
+  gap: var(--space-1);
+  padding-left: var(--space-6);
+}
+
 .picker__results {
   display: grid;
   gap: var(--space-1);
