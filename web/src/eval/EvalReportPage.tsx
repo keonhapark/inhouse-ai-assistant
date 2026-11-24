@@ -68,7 +68,7 @@ function ReportView({ reportId }: { reportId: string }) {
           </p>
         )}
         <dl className="eval__dl">
-          <Item label="셋">{sets.map(setName).join(', ')}</Item>
+          <Item label="세트">{sets.map(setName).join(', ')}</Item>
           <Item label="조건">{meta.conditions.map(conditionName).join(', ')}</Item>
           <Item label="반복">{meta.repeats}회</Item>
           <Item label="회차">

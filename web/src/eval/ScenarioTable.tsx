@@ -43,7 +43,7 @@ export function ScenarioTable({ rows, conditions: declared }: { rows: Row[]; con
       <div className="admin__row" role="group" aria-label="시나리오 필터">
         {sets.length > 1 && (
           <label className="admin__field">
-            <span className="muted">셋</span>
+            <span className="muted">세트</span>
             <select value={set} onChange={(e) => (setSet(e.target.value), setShown(PAGE))}>
               <option value="">전체</option>
               {sets.map((s) => (

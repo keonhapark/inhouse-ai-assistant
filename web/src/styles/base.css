@@ -12,6 +12,9 @@ body {
   font-family: var(--font);
   font-size: var(--fs-body);
   line-height: var(--lh-body);
+  /* 한글이 단어 중간에서 꺾이지 않게 합니다(명세 2.3) */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 h1,
