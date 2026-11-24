@@ -79,8 +79,8 @@ function Calendar({ labelId, label, value, onChange, min, max, invalid, describe
   const gridRef = useRef<HTMLTableElement>(null)
   const moved = useRef(false)
   const selected = parseYmd(value)
-  // 오늘은 처음 그릴 때 한 번 정합니다(다시 그릴 때마다 시계를 읽지 않게)
-  const [today] = useState(() => toYmd(new Date()))
+  // 오늘은 열 때마다 다시 읽습니다(그리는 동안 시계를 읽지 않게, 자정을 넘겨도 맞게)
+  const [today, setToday] = useState(() => toYmd(new Date()))
   const outOfRange = (ymd: string) => (!!min && ymd < min) || (!!max && ymd > max)
 
   // 키보드로 옮긴 날에 초점을 둡니다(달이 바뀌어 새로 그린 뒤에도)
@@ -91,7 +91,13 @@ function Calendar({ labelId, label, value, onChange, min, max, invalid, describe
   }, [open, focus])
 
   function onOpenChange(next: boolean) {
-    if (next) setFocus(parseYmd(value) ?? (max && today > max ? parseYmd(max)! : new Date()))
+    if (next) {
+      // 값이 없으면 오늘을, 오늘이 고를 수 있는 범위 밖이면 가장 가까운 끝 날을 엽니다
+      const now = toYmd(new Date())
+      const start = min && now < min ? min : max && now > max ? max : now
+      setToday(now)
+      setFocus(parseYmd(value) ?? parseYmd(start) ?? new Date())
+    }
     setOpen(next)
   }
 
@@ -107,6 +113,8 @@ function Calendar({ labelId, label, value, onChange, min, max, invalid, describe
   }
 
   function onKey(e: KeyboardEvent) {
+    // Alt+← 같은 브라우저 단축키는 그대로 둡니다
+    if (e.altKey || e.ctrlKey || e.metaKey) return
     const day = focus.getDay()
     const next =
       e.key === 'ArrowLeft' ? addDays(focus, -1)
@@ -154,18 +162,17 @@ function Calendar({ labelId, label, value, onChange, min, max, invalid, describe
           onOpenAutoFocus={(e) => {
             // 열면 고른 날(없으면 오늘)에 초점을 둡니다
             e.preventDefault()
-            moved.current = true
-            setFocus((f) => new Date(f))
+            gridRef.current?.querySelector<HTMLButtonElement>('[tabindex="0"]')?.focus()
           }}
         >
           <div className="datepicker__head">
-            <button type="button" className="icon-btn" aria-label="이전 달" onClick={() => move(addMonths(focus, -1))}>
+            <button type="button" className="icon-btn" aria-label="이전 달" onClick={() => setFocus(addMonths(focus, -1))}>
               <ChevronLeft aria-hidden />
             </button>
             <h3 id={gridId} className="datepicker__title" aria-live="polite">
               {title}
             </h3>
-            <button type="button" className="icon-btn" aria-label="다음 달" onClick={() => move(addMonths(focus, 1))}>
+            <button type="button" className="icon-btn" aria-label="다음 달" onClick={() => setFocus(addMonths(focus, 1))}>
               <ChevronRight aria-hidden />
             </button>
           </div>
@@ -193,7 +200,8 @@ function Calendar({ labelId, label, value, onChange, min, max, invalid, describe
                           data-date={ymd}
                           tabIndex={ymd === toYmd(focus) ? 0 : -1}
                           className={off ? 'datepicker__day is-off' : 'datepicker__day'}
-                          aria-label={koDate(ymd)}
+                          // 선택 상태는 gridcell의 aria-selected를 읽지 않는 화면 낭독기가 많아 이름에도 붙입니다
+                          aria-label={isSel ? `${koDate(ymd)}, 선택됨` : koDate(ymd)}
                           aria-current={ymd === today ? 'date' : undefined}
                           aria-disabled={outOfRange(ymd) || undefined}
                           onClick={() => pick(ymd)}
