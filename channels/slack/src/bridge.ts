@@ -35,9 +35,9 @@ export const MESSAGES = {
   othersThread: '이 스레드는 다른 사람의 대화입니다. 새 메시지로 시작해 주세요.',
   busy: '앞 메시지를 처리하는 중입니다. 답이 온 뒤에 보내 주세요.',
   onlyRequester: '실행을 요청한 사람만 누를 수 있습니다.',
-  empty: '무엇을 도와드릴까요? 회의실 예약, 연차 규정처럼 물어보면 맞는 부서 에이전트가 답합니다.',
+  empty: '요청을 적어 주세요. 예: 다음 주 화요일 회의실 잡아 줘, 연차 규정 알려 줘. 맞는 담당 AI가 답합니다.',
   movedToDm: '답에 개인 정보가 들어갈 수 있어 DM으로 이어 갑니다.',
-  staleCard: '이 카드는 더 누를 수 없습니다(브리지가 다시 시작됐거나 이미 처리함).',
+  staleCard: '이 카드는 더 누를 수 없습니다. 이미 처리했거나 시간이 지났으면 웹에서 확인하세요.',
   failed: '처리하지 못했습니다. 잠시 뒤 다시 시도해 주세요.',
 } as const
 
@@ -276,7 +276,7 @@ export class Bridge {
       this.approvals.set(a.approvalId, { slackUserId: user, channel, threadTs, ts, item: a, agentName: turn.agentName, at: this.now() })
     }
     if (!turn.reply && !turn.actions.length && !turn.approvals.length && !events.some((e) => e.type === 'approval_decided')) {
-      await this.slack.post(channel, threadTs, text('답이 비어 있습니다.'))
+      await this.slack.post(channel, threadTs, text('답을 받지 못했습니다. 다시 보내 주세요.'))
     }
     return events
   }

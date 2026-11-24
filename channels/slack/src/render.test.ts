@@ -25,13 +25,13 @@ describe('render', () => {
     )
     const s = flat(t.reply!)
     expect(s).toContain('> 15일의 유급휴가')
-    expect(s).toContain('인용 확인 안 됨')
-    expect(s).toContain('인사 · 로컬에서 처리')
+    expect(s).toContain('`원문 대조 안 됨`')
+    expect(s).toContain('인사 · 사내 처리')
   })
 
   it('차단과 오류를 보여 줍니다', () => {
     const t = collect(ev([{ type: 'blocked', blocked: { reason: '급여는 볼 수 없습니다.', code: 'policy_denied' } }, { type: 'done' }]))
-    expect(t.reply!.text).toContain('차단 급여는 볼 수 없습니다.')
+    expect(t.reply!.text).toContain('처리할 수 없는 요청 급여는 볼 수 없습니다.')
   })
 
   it('되돌릴 수 없는 행동에는 되돌리기 버튼이 없습니다', () => {
@@ -63,7 +63,8 @@ describe('미리보기 카드 바뀌는 값', () => {
       '인사',
     )
     const s = flat(card)
-    expect(s).toContain('~in_progress~ → withdrawn')
+    // 필드 표시 이름과 상태 이름으로 보입니다
+    expect(s).toContain('상태 ~진행 중~ → 회수')
     expect(s).toContain('~1~ → 2')
     expect(s).not.toContain('doc_1')
     expect(s).not.toContain('reason')
@@ -75,7 +76,25 @@ describe('미리보기 카드 바뀌는 값', () => {
       { approvalId: 'a', tool: 'room_reserve', risk: 'reversible_write', preview: { dryRun: true, operation: 'x', summary: '예약', undoable: true, changes: [{ op: 'create', resource: 'room', resourceId: null, before: null, after: { room: 'A', start: '14:00' } }] } },
       undefined,
     )
-    expect(flat(card)).toContain('`room` A')
-    expect(flat(card)).toContain('`start` 14:00')
+    // 모르는 필드는 코드 이름 그대로 둡니다
+    expect(flat(card)).toContain('room A')
+    expect(flat(card)).toContain('start 14:00')
+  })
+
+  it('필드 표시 이름, 시각, 금액을 사람이 읽는 꼴로 보여 주고 버튼과 제목은 일 이름입니다', () => {
+    const card = approvalCard(
+      {
+        approvalId: 'a', tool: 'room_reserve', toolLabel: '회의실 예약', risk: 'reversible_write', expiresAt: '2026-11-24T05:30:00Z',
+        preview: { dryRun: true, operation: 'x', summary: '예약', undoable: true, changes: [{ op: 'create', resource: 'room_reservation', resourceId: null, before: null, after: { startsAt: '2026-11-24T05:00:00Z', amount: 42000 } }] },
+      },
+      undefined,
+    )
+    const s = flat(card)
+    expect(s).toContain('*실행 전 확인: 회의실 예약*')
+    expect(s).toContain('시작 2026. 11. 24. 오후 2:00')
+    expect(s).toContain('금액 42,000원')
+    expect(s).toContain('"text":"회의실 예약"')
+    expect(s).toContain('오후 2:30까지 확인해 주세요.')
+    expect(s).not.toContain('room_reserve')
   })
 })

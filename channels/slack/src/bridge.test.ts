@@ -242,14 +242,14 @@ describe('Bridge 실행 승인과 되돌리기', () => {
   it('미리보기 카드를 올리고, 요청자가 실행하면 처리 중을 거쳐 실행함으로 바꿉니다', async () => {
     const { bridge, posts, updates, calls } = await withCard()
     const card = posts[1]
-    expect(flat(card.msg)).toContain('실행 미리보기: 결재 회수')
+    expect(flat(card.msg)).toContain('실행 전 확인: 결재 회수')
     expect(flat(card.msg)).toContain(ACTION.approve)
-    expect(flat(card.msg)).toContain('~pending~ → withdrawn')
+    expect(flat(card.msg)).toContain('상태 ~대기~ → 회수')
     await bridge.onDecision('U1', 'ap-1', 'approve', 'D1')
     expect(calls).toContain('decide tok-U1 ap-1 approve')
     expect(updates.map((u) => u.ts)).toEqual([card.ts, card.ts])
-    expect(flat(updates[0].msg)).toContain('처리하는 중')
-    expect(flat(updates[1].msg)).toContain('실행함')
+    expect(flat(updates[0].msg)).toContain('처리 중')
+    expect(flat(updates[1].msg)).toContain('완료')
     expect(flat(updates[1].msg)).not.toContain(ACTION.approve)
   })
 
@@ -277,7 +277,7 @@ describe('Bridge 실행 승인과 되돌리기', () => {
       },
     })
     await bridge.onDecision('U1', 'ap-1', 'approve', 'D1')
-    expect(flat(updates.at(-1)!.msg)).toContain('더 결정할 수 없음')
+    expect(flat(updates.at(-1)!.msg)).toContain('진행 불가')
     expect(posts.at(-1)!.msg.text).toBe('이미 결정한 실행 승인입니다.')
   })
 
@@ -295,7 +295,7 @@ describe('Bridge 실행 승인과 되돌리기', () => {
     fail = false
     await bridge.onDecision('U1', 'ap-1', 'approve', 'D1')
     expect(calls.filter((c) => c.startsWith('decide'))).toHaveLength(2)
-    expect(flat(updates.at(-1)!.msg)).toContain('실행함')
+    expect(flat(updates.at(-1)!.msg)).toContain('완료')
   })
 
   it('되돌리기는 요청자만, 같은 키로 한 번 부르고 카드를 되돌림으로 바꿉니다', async () => {
@@ -311,7 +311,7 @@ describe('Bridge 실행 승인과 되돌리기', () => {
     await bridge.onUndo('U1', 'act-9', 'D1')
     await bridge.onUndo('U1', 'act-9', 'D1')
     expect(calls.filter((c) => c.startsWith('undo'))).toEqual(['undo tok-U1 act-9 slack-undo-act-9'])
-    expect(flat(updates[0].msg)).toContain('되돌림')
+    expect(flat(updates[0].msg)).toContain('취소됨')
     expect(ephemerals.at(-1)!.text).toBe(MESSAGES.staleCard)
   })
 
@@ -346,7 +346,7 @@ describe('결재 알림', () => {
     await bridge.pollNotifications()
     expect(dms()).toHaveLength(1)
     expect(dms()[0].channel).toBe('D-U1')
-    expect(flat(dms()[0].msg)).toContain('http://web.test/inbox')
+    expect(flat(dms()[0].msg)).toContain('http://web.test/approvals')
     expect(flat(dms()[0].msg)).not.toContain(ACTION.approve)
   })
 
