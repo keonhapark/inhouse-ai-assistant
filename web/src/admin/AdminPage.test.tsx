@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
@@ -61,8 +61,10 @@ describe('운영 화면', () => {
   it('시작 날짜가 끝 날짜보다 늦으면 알립니다', async () => {
     const user = renderAdmin()
     await screen.findByText('에이전트 실행')
-    fireEvent.change(screen.getByLabelText('끝'), { target: { value: '2026-01-01' } })
-    fireEvent.change(screen.getByLabelText('시작'), { target: { value: '2026-01-02' } })
+    // 끝 날짜를 열흘 앞으로 옮겨 시작(엿새 전)보다 앞서게 합니다
+    await user.click(screen.getByRole('button', { name: /^끝 / }))
+    await screen.findByRole('grid')
+    await user.keyboard('{ArrowLeft>10/}{Enter}')
     await user.click(screen.getByRole('button', { name: '날짜로 보기' }))
     expect(screen.getByRole('alert')).toHaveTextContent('시작 날짜가 끝 날짜보다 늦거나 비었습니다.')
   })

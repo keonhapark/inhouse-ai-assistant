@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
+import { DateField } from '../components/DatePicker'
 import { Toolbar } from '../shell/Toolbar'
 import { AuditPanel } from './AuditPanel'
 import { EgressPanel } from './EgressPanel'
@@ -74,14 +75,8 @@ export function AdminPage() {
       </Toolbar>
       <div className="admin__body">
         <form className="admin__custom" aria-label="날짜 범위" onSubmit={applyCustom}>
-          <label className="admin__field">
-            <span>시작</span>
-            <input type="date" value={from} max={today} aria-invalid={!!rangeError} aria-describedby={rangeError ? 'admin-range-error' : undefined} onChange={(e) => setFrom(e.target.value)} />
-          </label>
-          <label className="admin__field">
-            <span>끝</span>
-            <input type="date" value={to} max={today} aria-invalid={!!rangeError} aria-describedby={rangeError ? 'admin-range-error' : undefined} onChange={(e) => setTo(e.target.value)} />
-          </label>
+          <DateField className="admin__field" label="시작" value={from} max={today} invalid={!!rangeError} describedBy={rangeError ? 'admin-range-error' : undefined} onChange={setFrom} />
+          <DateField className="admin__field" label="끝" value={to} max={today} invalid={!!rangeError} describedBy={rangeError ? 'admin-range-error' : undefined} onChange={setTo} />
           <Button type="submit" variant={period.kind === 'custom' ? 'primary' : 'secondary'}>
             날짜로 보기
           </Button>
