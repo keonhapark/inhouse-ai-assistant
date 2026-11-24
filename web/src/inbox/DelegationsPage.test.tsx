@@ -83,9 +83,9 @@ describe('대결 설정', () => {
     expect(await within(panel).findByRole('status')).toHaveTextContent('한지우를 대결자로 지정합니다.')
     const given = within(panel).getByRole('region', { name: '맡긴 대결' })
     expect(await within(given).findByText('한지우 님에게 맡김')).toBeInTheDocument()
-    await user.click(within(panel).getByRole('button', { name: '한지우 님 대결 해제' }))
+    await user.click(within(panel).getByRole('button', { name: /^한지우 님에게 맡긴 대결 해제\(2026\. / }))
     expect(await within(panel).findByRole('status')).toHaveTextContent('해제했습니다')
-    expect(within(panel).queryByRole('button', { name: '한지우 님 대결 해제' })).toBeNull()
+    expect(within(panel).queryByRole('button', { name: /^한지우 님에게 맡긴 대결 해제/ })).toBeNull()
   })
 
   it('모든 양식과 금액 한도를 고르면 모든 양식만 경고하고, 대결자 본인 문서가 없으면 그 경고는 없습니다', async () => {
@@ -100,6 +100,39 @@ describe('대결 설정', () => {
     expect(await within(preview).findByText('모든 양식, 500,000원 이하')).toBeInTheDocument()
     expect(within(preview).getByText('모든 양식을 대신 결재하게 됩니다. 필요한 양식만 고르는 편이 안전합니다.')).toBeInTheDocument()
     expect(preview).not.toHaveTextContent('금액 한도가 없어')
+    expect(preview).not.toHaveTextContent('님이 올린 문서')
+  })
+
+  it('"모든 양식"에 갔다가 돌아오면 골라 둔 양식을 되살리고, 도움말은 양식 묶음의 설명으로 읽힙니다', async () => {
+    const user = renderDelegations()
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
+    const group = await within(panel).findByRole('group', { name: '대신 결재할 양식' })
+    expect(group).toHaveAccessibleDescription('대신 결재할 양식을 하나 이상 고르세요.')
+    await user.click(within(panel).getByRole('checkbox', { name: '휴가 신청' }))
+    await user.click(within(panel).getByRole('radio', { name: '모든 양식' }))
+    await user.click(within(panel).getByRole('radio', { name: '고른 양식만' }))
+    expect(within(panel).getByRole('checkbox', { name: '휴가 신청' })).toBeChecked()
+  })
+
+  it('양식 목록을 못 받으면 모든 양식만 고를 수 있습니다', async () => {
+    server.use(http.get('*/api/approval-forms', () => problemJson(500, 'internal', '서버 오류')))
+    const user = renderDelegations()
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
+    expect(await within(panel).findByText(/모든 양식만 고를 수 있습니다/)).toBeInTheDocument()
+    expect(within(panel).getByRole('radio', { name: '고른 양식만' })).toBeDisabled()
+    await user.click(within(panel).getByRole('radio', { name: '모든 양식' }))
+    await fill(user, panel, '권나래', '출장', false)
+    expect(within(panel).getByRole('button', { name: '내용 확인' })).toBeEnabled()
+  })
+
+  it('결재 대기 목록을 못 받아도 확인 시트는 열리고 대결자 본인 문서 경고만 빠집니다', async () => {
+    server.use(http.get('*/api/inbox', () => problemJson(500, 'internal', '서버 오류')))
+    const user = renderDelegations()
+    const panel = await screen.findByRole('main', { name: '대결 설정' })
+    await fill(user, panel, '한지우', '교육 참석')
+    await user.click(within(panel).getByRole('button', { name: '내용 확인' }))
+    const preview = await within(panel).findByRole('region', { name: '대결 지정 확인' })
+    expect(preview).toHaveTextContent('금액 한도가 없어')
     expect(preview).not.toHaveTextContent('님이 올린 문서')
   })
 

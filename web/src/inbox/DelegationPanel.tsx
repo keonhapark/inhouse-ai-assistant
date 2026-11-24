@@ -89,10 +89,14 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
     setError(null)
     setNotice(null)
     try {
-      const { data, error: p } = await api.POST('/delegations', {
-        params: { query: { dryRun }, header: dryRun ? {} : { 'Idempotency-Key': sent.key } },
-        body: sent.body,
-      })
+      // 확인 시트는 대결자 본인 문서 경고와 함께 한 번에 보여 줍니다(경고가 나중에 끼어들지 않게)
+      const [{ data, error: p }, own] = await Promise.all([
+        api.POST('/delegations', {
+          params: { query: { dryRun }, header: dryRun ? {} : { 'Idempotency-Key': sent.key } },
+          body: sent.body,
+        }),
+        dryRun ? countOwnDocs(sent.body.delegateId) : Promise.resolve(null),
+      ])
       if (!data) {
         setError(problemTitle(p, dryRun ? '확인할 내용을 만들지 못했습니다.' : '대결을 지정하지 못했습니다.'))
         return
@@ -100,7 +104,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
       if ('dryRun' in data) {
         setPreview(data as Schemas['WritePreview'])
         setPreviewed(sent)
-        setOwnDocs(await countOwnDocs(sent.body.delegateId))
+        setOwnDocs(own)
       } else {
         setNotice(data.summary)
         setPreview(null)
@@ -159,11 +163,11 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
           canRevoke={(d) => d.status === 'active' || d.status === 'scheduled'}
         />
       )}
-      {items && items.some((d) => d.delegatorId !== meId) && (
+      {items && items.some((d) => d.delegateId === meId) && (
         <DelegationGroup
           id="delegation-taken"
           title="맡은 대결"
-          items={items.filter((d) => d.delegatorId !== meId)}
+          items={items.filter((d) => d.delegateId === meId)}
           rowTitle={(d) => `${d.delegatorName} 님 대신 결재`}
           forms={forms}
         />
@@ -215,6 +219,7 @@ export function DelegationPanel({ forms, formsError }: PanelProps) {
               onClick={() => {
                 setPreview(null)
                 setPreviewed(null)
+                setOwnDocs(null)
               }}
             >
               취소
@@ -274,7 +279,8 @@ function DelegationGroup(props: {
                   </span>
                 </span>
                 <span className={`status status--${TONE_DOT[st.tone]}`}>{st.label}</span>
-                {onRevoke && canRevoke?.(d) && <RevokeButton onRevoke={() => onRevoke(d)} label={`${d.delegateName} 님 대결 해제`} />}
+                {/* 같은 사람에게 여러 번 맡겼을 때 구별되게 이름에 시작 시각을 붙입니다 */}
+                {onRevoke && canRevoke?.(d) && <RevokeButton onRevoke={() => onRevoke(d)} label={`${d.delegateName} 님에게 맡긴 대결 해제(${formatDateTime(d.startsAt)}부터)`} />}
               </div>
             </li>
           )
