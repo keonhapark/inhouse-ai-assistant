@@ -105,9 +105,17 @@ describe('운영 화면', () => {
     await vi.waitFor(() => {
       const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1)
       expect(rows.length).toBeGreaterThan(0)
-      for (const r of rows) expect(r).toHaveTextContent('정책 차단')
+      // 종류 칸과 결과 배지가 모두 정책 차단입니다(denied라도 도구 정책 차단은 권한 없음이 아님)
+      for (const r of rows) expect(r.lastElementChild).toHaveTextContent('정책 차단')
     })
     expect(screen.getAllByText(/신뢰 등급/).length).toBeGreaterThan(0)
+    await user.selectOptions(screen.getByLabelText('종류'), 'rag.access_denied')
+    await user.click(screen.getByRole('button', { name: '적용' }))
+    await vi.waitFor(() => {
+      const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1)
+      expect(rows.length).toBeGreaterThan(0)
+      for (const r of rows) expect(r.lastElementChild).toHaveTextContent('권한 없음')
+    })
   })
 
   it('같은 조건으로 돌아오면 예전에 더 보기로 붙인 쪽을 다시 붙이지 않습니다', async () => {

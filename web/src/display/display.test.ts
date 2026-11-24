@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Schemas } from '../api/client'
 import { conversationRow } from './conversation'
 import { formatDate, formatDateRange, formatDateTime, formatTime, formatWhen, formatWon } from './format'
-import { agentLabel, roleName, toolName } from './names'
+import { agentLabel, operationName, roleName, toolName } from './names'
 import { formRows, previewView } from './preview'
 
 const expense: Schemas['ApprovalForm'] = {
@@ -66,6 +66,10 @@ describe('형식', () => {
   it('도구·역할 이름, 모르면 그대로', () => {
     expect(toolName('expense_request')).toBe('경비 정산 상신')
     expect(toolName('new_tool')).toBe('new_tool')
+    // 감사 로그 작업: erp operationId, 아니면 도구 이름, 모르면 그대로
+    expect(operationName('createRoomReservation')).toBe('회의실 예약')
+    expect(operationName('approval_withdraw')).toBe('결재 회수')
+    expect(operationName('unknownOp')).toBe('unknownOp')
     expect(roleName('sales_staff')).toBe('영업 담당')
     expect(roleName('x')).toBe('x')
   })

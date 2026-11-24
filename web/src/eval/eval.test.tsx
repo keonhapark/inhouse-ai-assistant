@@ -99,6 +99,7 @@ describe('평가 보고서', () => {
     const set = await screen.findByRole('region', { name: /확인 세트/ })
     expect(within(set).getByText('주 결과')).toBeInTheDocument()
     expect(within(set).getByRole('region', { name: '유형별 사고 표' })).toHaveTextContent('유출0/2 (0.0%, 0.0%~84.2%)0/2')
+    expect(within(set).getAllByRole('columnheader', { name: '정책 차단' }).length).toBeGreaterThan(0)
     expect(within(set).getByRole('region', { name: '조건별 사고 표' })).toHaveTextContent('합계0/21/2')
     expect(within(set).getByRole('region', { name: '사고율 차이 표' })).toHaveTextContent('-50.0%p (-90.0~+20.0%p, 짝 2)')
   })
