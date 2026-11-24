@@ -30,7 +30,7 @@ describe('직원 채팅', () => {
     await say(user, '내일 오후 회의실 잡아 줘')
 
     const action = await screen.findByRole('region', { name: '완료한 일' })
-    expect(within(action).getByText('3층 소회의실을 내일 14:00–15:00에 예약했습니다.')).toBeInTheDocument()
+    expect(within(action).getByText('3층 소회의실을 내일 오후 2:00–3:00에 예약했습니다.')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: /실행 전 확인/ })).toBeNull()
     expect(await screen.findByText(/필요 없으면 실행 취소를 누르세요/)).toBeInTheDocument()
     expect(screen.getByLabelText('메시지')).toBeEnabled()
@@ -46,7 +46,7 @@ describe('직원 채팅', () => {
 
     const card = await screen.findByRole('region', { name: '실행 전 확인: 결재 회수' })
     expect(within(card).getByText('실행하면 취소할 수 없습니다.')).toBeInTheDocument()
-    expect(within(card).getByText('휴가 결재 APR-0042(11/24 오후 반차)를 회수합니다.')).toBeInTheDocument()
+    expect(within(card).getByText('휴가 결재 APR-0042(11. 24. 오후 반차)를 회수합니다.')).toBeInTheDocument()
     expect(screen.getByText('위 확인 카드에서 실행하거나 취소하면 이어서 쓸 수 있습니다.')).toBeInTheDocument()
     expect(screen.getByLabelText('메시지')).toBeDisabled()
 

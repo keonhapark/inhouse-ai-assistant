@@ -30,7 +30,8 @@ describe('날짜 고르개', () => {
   it('한국식으로 보이고(요일 포함), 라벨과 값이 단추 이름으로 읽힙니다', () => {
     render(<Date1 />)
     expect(koDate('2026-11-23')).toBe('2026. 11. 23.(월)')
-    expect(screen.getByRole('button', { name: '시작 2026. 11. 23.(월)' })).toBeInTheDocument()
+    // 화면에는 "2026. 11. 23.(월)", 이름은 낭독기가 점을 읽지 않게 년월일로 둡니다
+    expect(screen.getByRole('button', { name: '시작 2026년 11월 23일 월요일' })).toHaveTextContent('2026. 11. 23.(월)')
     expect(screen.getByRole('group', { name: '시작' })).toBeInTheDocument()
   })
 
@@ -40,18 +41,18 @@ describe('날짜 고르개', () => {
     await user.click(screen.getByRole('button', { name: /^시작/ }))
     const dialog = await screen.findByRole('dialog', { name: '시작 날짜 고르기' })
     expect(within(dialog).getByRole('heading', { name: '2026년 11월' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: '2026. 11. 23.(월), 선택됨' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('button', { name: '2026년 11월 23일 월요일, 선택됨' })).toHaveFocus())
     await user.keyboard('{ArrowRight}{ArrowDown}')
-    expect(screen.getByRole('button', { name: '2026. 12. 1.(화)' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: '2026년 12월 1일 화요일' })).toHaveFocus()
     expect(within(dialog).getByRole('heading', { name: '2026년 12월' })).toBeInTheDocument()
     await user.keyboard('{PageDown}{Home}')
     // 2027. 1. 1.(금)이 든 주의 일요일
-    expect(screen.getByRole('button', { name: '2026. 12. 27.(일)' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: '2026년 12월 27일 일요일' })).toHaveFocus()
     await user.keyboard('{Enter}')
     expect(screen.getByRole('status')).toHaveTextContent('2026-12-27')
     expect(screen.queryByRole('dialog')).toBeNull()
     // 닫히면 초점이 단추로 돌아옵니다
-    expect(screen.getByRole('button', { name: /^시작 2026\. 12\. 27\./ })).toHaveFocus()
+    expect(screen.getByRole('button', { name: /^시작 2026년 12월 27일/ })).toHaveFocus()
   })
 
   it('max보다 뒤의 날은 고를 수 없습니다', async () => {
@@ -59,13 +60,13 @@ describe('날짜 고르개', () => {
     render(<Date1 max="2026-11-23" />)
     await user.click(screen.getByRole('button', { name: /^시작/ }))
     await screen.findByRole('dialog')
-    const late = screen.getByRole('button', { name: '2026. 11. 24.(화)' })
+    const late = screen.getByRole('button', { name: '2026년 11월 24일 화요일' })
     expect(late).toHaveAttribute('aria-disabled', 'true')
     await user.click(late)
     expect(screen.getByRole('status')).toHaveTextContent('2026-11-23')
   })
 
-  it('날짜와 시각: 날짜를 고르기 전에는 시각이 막혀 있고, 고르면 기본 시각을 붙이며 24시간제로 바꿉니다', async () => {
+  it('날짜와 시각: 날짜를 고르기 전에는 시각이 막혀 있고, 고르면 기본 시각을 붙이며, 시는 오전·오후로 보이고 값은 24시간제입니다', async () => {
     const user = userEvent.setup()
     render(<DateTime1 />)
     expect(screen.getByRole('button', { name: '끝 날짜 고르기' })).toBeInTheDocument()
@@ -77,15 +78,16 @@ describe('날짜 고르개', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: '끝 시' }), '21')
     await user.selectOptions(screen.getByRole('combobox', { name: '끝 분' }), '30')
     expect(screen.getByRole('status').textContent).toMatch(/T21:30$/)
+    expect(screen.getByRole('combobox', { name: '끝 시' })).toHaveDisplayValue('오후 9시')
   })
 
   it('범위 밖 날은 키보드 Enter로도 고르지 못하고, 값이 없으면 범위 안 가장 가까운 날을 엽니다', async () => {
     const user = userEvent.setup()
     render(<Date1 initial="" max="2020-01-15" />)
     await user.click(screen.getByRole('button', { name: '시작 날짜 고르기' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: '2020. 1. 15.(수)' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('button', { name: '2020년 1월 15일 수요일' })).toHaveFocus())
     await user.keyboard('{ArrowRight}{Enter}')
-    expect(screen.getByRole('button', { name: '2020. 1. 16.(목)' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: '2020년 1월 16일 목요일' })).toHaveFocus()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(/^$/)
   })

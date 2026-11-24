@@ -11,7 +11,7 @@ export type ConversationRow = {
   agent: string
   /** 상태 점과 이름. 진행 중이면 표시하지 않습니다 */
   status: { label: string; tone: StatusTone } | null
-  /** 마지막으로 바뀐 시각(없으면 만든 시각). 오늘 12:41 · 어제 · 11월 20일 */
+  /** 마지막으로 바뀐 시각(없으면 만든 시각). 오늘 오후 12:41 · 어제 오전 9:05 · 2026. 11. 20. */
   when: string
 }
 

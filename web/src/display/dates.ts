@@ -19,6 +19,12 @@ export function koDate(v: string): string {
   return d ? `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.(${WEEK[d.getDay()]})` : ''
 }
 
+/** 화면 낭독기용 이름: 2026-11-23 → "2026년 11월 23일 월요일" */
+export function koDateSpoken(v: string): string {
+  const d = parseYmd(v)
+  return d ? `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEK[d.getDay()]}요일` : ''
+}
+
 /** 0~23시 → "오전 9시", "오후 2시"(12시는 오후 12시, 0시는 오전 12시) */
 export const koHour = (h: number) => `${h < 12 ? '오전' : '오후'} ${h % 12 === 0 ? 12 : h % 12}시`
 

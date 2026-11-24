@@ -52,6 +52,8 @@ describe('형식', () => {
   it('시각은 "2026. 11. 22. 오후 2:30", 시각만은 "오후 2:30"(현지 시각)', () => {
     expect(formatDateTime(new Date(2026, 10, 22, 14, 30).toISOString())).toBe('2026. 11. 22. 오후 2:30')
     expect(formatTime(new Date(2026, 10, 22, 9, 5).toISOString())).toBe('오전 9:05')
+    expect(formatTime(new Date(2026, 10, 22, 12, 0).toISOString())).toBe('오후 12:00')
+    expect(formatTime(new Date(2026, 10, 22, 0, 0).toISOString())).toBe('오전 12:00')
     expect(formatTime('없음')).toBe('없음')
   })
 

@@ -168,6 +168,7 @@
 
 .egress__when {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .egress__cost {

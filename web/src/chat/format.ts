@@ -4,7 +4,6 @@ import { formatDateTime, ISO_DATETIME } from '../display/format'
 type Change = Schemas['Change']
 export type ChangeRow = { field: string; before?: string; after?: string }
 
-
 function text(v: unknown): string {
   if (v === null || v === undefined) return '없음'
   // 날짜·시각 문자열은 현지 시각으로 보여 줍니다.
