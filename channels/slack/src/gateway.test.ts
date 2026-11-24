@@ -65,6 +65,9 @@ describe('httpGateway', () => {
       }) as unknown as typeof fetch,
     })
     await expect(down.createConversation('t')).rejects.toBeInstanceOf(GatewayError)
+    // title이 없는 4xx는 상태 코드 대신 할 일을 적고, 상태는 status에 둡니다
+    const bare = httpGateway({ baseUrl: 'http://gw/api', bridgeSecret: 's', fetch: fakeFetch(() => new Response('{}', { status: 400 })).f })
+    await expect(bare.undo('t', 'a', 'k')).rejects.toMatchObject({ message: '요청을 처리할 수 없습니다. 계속되면 관리자에게 알려 주세요.', status: 400 })
   })
 
   it('되돌리기에 Idempotency-Key를 붙입니다', async () => {

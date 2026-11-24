@@ -21,8 +21,8 @@ export class GatewayError extends Error {
   }
 }
 
-export const UNAVAILABLE = '사내 비서 서버가 응답하지 않습니다. 잠시 뒤 다시 시도해 주세요.'
-export const RATE_LIMITED = '요청이 많아 잠시 막혔습니다. 잠시 뒤 다시 시도해 주세요.'
+export const UNAVAILABLE = '사내 AI 비서가 응답하지 않습니다. 잠시 뒤 다시 시도해 주세요.'
+export const RATE_LIMITED = '요청이 몰려 지금은 처리할 수 없습니다. 잠시 뒤 다시 시도해 주세요.'
 export const MISCONFIGURED = '슬랙 연결 설정이 맞지 않아 처리하지 못했습니다. 관리자에게 알려 주세요.'
 
 /** 브리지가 gateway에 바라는 것. 시험에서는 가짜로 바꿉니다. */
@@ -61,7 +61,7 @@ export function httpGateway({ baseUrl, bridgeSecret, fetch: f = fetch }: Options
   }
 
   async function* stream(res: Response): AsyncGenerator<ChatEvent> {
-    if (!res.body) throw new GatewayError('응답 본문이 없습니다.', res.status)
+    if (!res.body) throw new GatewayError('답을 받지 못했습니다. 잠시 뒤 다시 시도해 주세요.', res.status)
     let done = false
     for await (const msg of readSse(res.body)) {
       const e = JSON.parse(msg.data) as ChatEvent
@@ -123,5 +123,5 @@ async function problem(res: Response): Promise<GatewayError> {
     const after = Number(res.headers.get('Retry-After'))
     return new GatewayError(RATE_LIMITED, 429, internal, Number.isFinite(after) && after > 0 ? after : undefined)
   }
-  return new GatewayError(body.title || `요청이 거절됐습니다(${res.status}).`, res.status, internal)
+  return new GatewayError(body.title || '요청을 처리할 수 없습니다. 계속되면 관리자에게 알려 주세요.', res.status, internal)
 }
