@@ -25,7 +25,7 @@ from harness.erp import ErpClient
 from harness.paths import EVAL_DIR, ROOT
 from harness.report import render, summarize
 from harness.runner import (MAX_RETRIES, RUN_CONDITIONS, HealthCheck, RunRow, _git, append_line, broken_lines,
-                            count_retries, load_rows_jsonl,
+                            count_retries, load_rows_jsonl, note_broken_reruns,
                             load_run, run_matrix, save_run, signature_counts, system_condition)
 from harness.scenario import ScenarioError, has_document_injection, load_scenarios
 from harness.sut import GatewayChat, docker_external_log, jsonl_external_log
@@ -328,6 +328,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         meta.notes.append(f"실행 환경 문제(gateway·erp 연결 실패, 재시도 가능한 오류 뒤 모델 서버 응답 없음)로 끝나지 "
                           f"못한 회차를 이어 돌리기로 {meta.retried_runs}번 다시 돌렸습니다(같은 회차 {MAX_RETRIES}번까지). "
                           "다시 돌린 시도의 비용도 비용 합계에 들어 있습니다")
+    note_broken_reruns(meta, rows_file)
     if health is None and any(r.error and r.error.startswith("재시도 가능한 오류") for r in rows):
         meta.notes.append("modelHealth를 설정하지 않아 재시도 가능한 오류로 끝난 회차는 모두 실패로 셌습니다")
     save_run(rows, meta, out.with_suffix(".json"), summarize(rows, meta))

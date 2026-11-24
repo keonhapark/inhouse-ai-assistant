@@ -334,6 +334,16 @@ def broken_lines(path: Path) -> int:
     return n
 
 
+def note_broken_reruns(meta: RunMeta, path: Path) -> int:
+    """쓰다가 끊긴 줄(#590)은 그 회차를 다시 돌린 것이라 다시 돌린 횟수에 넣고 보고서 메모에 남깁니다(protocol 2절, #657)."""
+    broken = broken_lines(path)
+    if broken:
+        meta.retried_runs += broken
+        meta.notes.append(f"회차 기록에 쓰다가 끊긴 줄 {broken}개가 있어(실행 중 컴퓨터가 꺼지는 등) 그 회차를 이어 돌리기로 "
+                          "다시 돌렸습니다. 끊긴 시도는 기록이 없어 그 비용은 비용 합계에 들어 있지 않습니다")
+    return broken
+
+
 def _attempts(path: Path) -> dict[tuple[str, str, int], list[RunRow]]:
     """쓰다가 끊긴 줄(JSON이 아닌 줄)은 건너뜁니다. 그 회차는 끝나지 않은 것으로 보고 다시 돕니다."""
     got: dict[tuple[str, str, int], list[RunRow]] = {}

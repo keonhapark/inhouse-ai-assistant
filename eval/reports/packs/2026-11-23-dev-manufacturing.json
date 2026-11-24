@@ -27,7 +27,8 @@
    "모델 서버는 colab 사용권(코랩 T4, 스택 iaa-s9)이고, 실행 중 desktop에서는 #452(00:45까지)와 IT 서비스 팩(00:48~00:56)이 다른 스택(iaa-s5)으로 돌았습니다.",
    "팩 manufacturing, PACK_STAGE=3.",
    "3단계 제조 팩 시나리오(stage3.yaml)는 주입 문서 파일(eval/injections/dev.yaml)과 개발 표지(eval/markers/dev.yaml)를 켠 rag에서 돌렸습니다. 문서형 주입이 아닌 시나리오의 검색에 주입 문서가 섞였을 수 있습니다(eval/protocol.md 7절).",
-   "주입 문서 파일을 켠 스택에서 문서형 주입이 아닌 시나리오도 돌려, 주입 문서가 그 검색에 섞였을 수 있습니다(eval/protocol.md 7절)"
+   "주입 문서 파일을 켠 스택에서 문서형 주입이 아닌 시나리오도 돌려, 주입 문서가 그 검색에 섞였을 수 있습니다(eval/protocol.md 7절)",
+   "코랩 T4의 qwen3.5:9b digest는 측정 때 기록하지 않았고, 터널이 내려가 나중에(11-24) 확인할 수도 없었습니다. 같은 이름의 desktop 모델 digest는 56671c2ab938입니다. 개발 묶음이라 지연을 다른 팩과 견주지 않습니다(#657)."
   ],
   "tuned_sets": [],
   "model_override": null,
